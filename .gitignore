@@ -1,2 +1,5 @@
 .env
 node modules/
+study_agent.db
+*.db
+.DS_Store
