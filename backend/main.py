@@ -3,10 +3,10 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 from backend.solver import solve
 from backend.database import init_db, get_all_questions
+from backend.categories import get_all_categories
 
 app = FastAPI(title="AI学习伴侣")
 
-# 允许前端跨域请求
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,11 +14,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 定义请求格式
 class SolveRequest(BaseModel):
     question: str
 
-# 服务器启动时自动初始化数据库
 @app.on_event("startup")
 def startup():
     init_db()
@@ -29,11 +27,15 @@ def home():
 
 @app.post("/solve")
 def solve_question(req: SolveRequest):
-    """接收题目 → 查小题库 → 无缓存则AI解题 → 返回结构化答案"""
-    result = solve(req.question)
-    return result
+    """搜题 → 调做题系统 → 返回结构化答案（含 category / difficulty / steps）"""
+    return solve(req.question)
 
 @app.get("/questions")
 def list_questions():
-    """查看已保存的所有题目"""
+    """查看历史题目（含独立字段：category_level1, category_level2, difficulty_level, difficulty_score 等）"""
     return get_all_questions()
+
+@app.get("/categories")
+def categories():
+    """获取知识点分类列表"""
+    return get_all_categories()

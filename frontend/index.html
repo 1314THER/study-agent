@@ -14,106 +14,61 @@
             justify-content: center;
             padding: 40px 20px;
         }
-        .container {
-            max-width: 800px;
-            width: 100%;
-        }
-        h1 {
-            text-align: center;
-            font-size: 28px;
-            color: #1d1d1f;
-            margin-bottom: 8px;
-        }
-        .subtitle {
-            text-align: center;
-            color: #86868b;
-            margin-bottom: 30px;
-        }
-        .search-box {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 30px;
-        }
+        .container { max-width: 800px; width: 100%; }
+        h1 { text-align: center; font-size: 28px; color: #1d1d1f; margin-bottom: 8px; }
+        .subtitle { text-align: center; color: #86868b; margin-bottom: 30px; }
+        .search-box { display: flex; gap: 10px; margin-bottom: 30px; }
         .search-box input {
-            flex: 1;
-            padding: 14px 18px;
-            border: 1px solid #d2d2d7;
-            border-radius: 12px;
-            font-size: 16px;
-            outline: none;
-            transition: border-color 0.2s;
+            flex: 1; padding: 14px 18px; border: 1px solid #d2d2d7; border-radius: 12px;
+            font-size: 16px; outline: none; transition: border-color 0.2s;
         }
-        .search-box input:focus {
-            border-color: #0071e3;
-        }
+        .search-box input:focus { border-color: #0071e3; }
         .search-box button {
-            padding: 14px 28px;
-            background: #0071e3;
-            color: white;
-            border: none;
-            border-radius: 12px;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background 0.2s;
+            padding: 14px 28px; background: #0071e3; color: white; border: none;
+            border-radius: 12px; font-size: 16px; cursor: pointer; transition: background 0.2s;
         }
-        .search-box button:hover {
-            background: #0077ed;
-        }
+        .search-box button:hover { background: #0077ed; }
         .result {
-            background: white;
-            border-radius: 16px;
-            padding: 30px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-            display: none;
+            background: white; border-radius: 16px; padding: 30px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.08); display: none;
         }
         .result.show { display: block; }
-        .result h2 {
-            font-size: 18px;
-            color: #1d1d1f;
-            margin-bottom: 20px;
+
+        .meta-bar {
+            display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;
+            padding-bottom: 16px; border-bottom: 1px solid #e5e5e7;
         }
+        .tag {
+            padding: 4px 12px; border-radius: 20px; font-size: 13px; font-weight: 500;
+        }
+        .tag-category { background: #e8f5e9; color: #2e7d32; }
+        .tag-easy { background: #e3f2fd; color: #1565c0; }
+        .tag-medium { background: #fff3e0; color: #e65100; }
+        .tag-hard { background: #fce4ec; color: #c62828; }
+        .tag-extreme { background: #f3e5f5; color: #6a1b9a; }
+
+        .result h2 { font-size: 18px; color: #1d1d1f; margin-bottom: 20px; }
         .step {
-            margin-bottom: 20px;
-            padding-left: 12px;
-            border-left: 3px solid #0071e3;
+            margin-bottom: 20px; padding-left: 12px; border-left: 3px solid #0071e3;
         }
-        .step .title {
-            font-weight: 600;
-            color: #1d1d1f;
-            margin-bottom: 6px;
-        }
-        .step .content {
-            color: #515154;
-            line-height: 1.6;
-        }
+        .step .title { font-weight: 600; color: #1d1d1f; margin-bottom: 6px; }
+        .step .content { color: #515154; line-height: 1.6; }
         .final-answer {
-            margin-top: 20px;
-            padding: 16px;
-            background: #f0f7ff;
-            border-radius: 12px;
-            font-weight: 600;
-            color: #0071e3;
+            margin-top: 20px; padding: 16px; background: #f0f7ff; border-radius: 12px;
+            font-weight: 600; color: #0071e3;
         }
-        .loading {
-            text-align: center;
-            color: #86868b;
-            padding: 40px;
-            display: none;
-        }
+        .loading { text-align: center; color: #86868b; padding: 40px; display: none; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>AI学习伴侣</h1>
         <p class="subtitle">输入题目，AI 帮你做</p>
-
         <div class="search-box">
             <input type="text" id="questionInput" placeholder="输入题目...">
             <button onclick="solveQuestion()">搜索</button>
         </div>
-
         <div class="loading" id="loading">AI 正在解题中...</div>
-
         <div class="result" id="result"></div>
     </div>
 
@@ -124,10 +79,7 @@
             const loading = document.getElementById('loading');
             const question = input.value.trim();
 
-            if (!question) {
-                alert('请输入题目');
-                return;
-            }
+            if (!question) { alert('请输入题目'); return; }
 
             result.classList.remove('show');
             loading.style.display = 'block';
@@ -149,9 +101,27 @@
             }
         }
 
+        function levelClass(level) {
+            const map = { '容易': 'tag-easy', '中等': 'tag-medium', '困难': 'tag-hard', '极难': 'tag-extreme' };
+            return map[level] || 'tag-easy';
+        }
+
         function displayResult(data) {
             const result = document.getElementById('result');
-            let html = '<h2>解题过程</h2>';
+
+            // 元信息栏：分类 + 难度
+            const cat = data.category || {};
+            const diff = data.difficulty || {};
+            let metaHtml = '<div class="meta-bar">';
+            if (cat.level1) {
+                metaHtml += `<span class="tag tag-category">${cat.level1} → ${cat.level2 || ''}</span>`;
+            }
+            if (diff.level) {
+                metaHtml += `<span class="tag ${levelClass(diff.level)}">${diff.level}（${diff.total_score}分）</span>`;
+            }
+            metaHtml += '</div>';
+
+            let html = metaHtml + '<h2>解题过程</h2>';
 
             if (data.steps) {
                 data.steps.forEach(step => {

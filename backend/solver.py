@@ -19,7 +19,6 @@ def _read_prompt(name: str) -> str:
     with open(path, encoding="utf-8") as f:
         return f.read().strip()
 
-# 程序启动时读一次（改 .md 文件后需要重启服务器）
 SOLVER_PROMPT = _read_prompt("solver")
 VERIFIER_PROMPT = _read_prompt("verifier")
 FORMATTER_PROMPT = _read_prompt("formatter")
@@ -63,32 +62,26 @@ def call_deepseek(system_prompt: str, user_prompt: str) -> str:
     )
     if response.status_code != 200:
         raise Exception(f"API 请求失败: {response.status_code} {response.text}")
-    result = response.json()
-    return result["choices"][0]["message"]["content"]
+    return response.json()["choices"][0]["message"]["content"]
 
 # ---------- 三段式解题 ----------
 
 def solve(question: str) -> Dict[str, Any]:
-    # 先查小题库
     cached = find_question(question)
     if cached:
         return cached
 
-    print(f"[Solver] 新题目，正在解题：{question[:50]}...")
+    print(f"[Solver] 新题目：{question[:50]}...")
 
-    # 第1步：Solver — 解题
     solver_result = call_deepseek(SOLVER_PROMPT, question)
     print(f"[Solver] 完成，{len(solver_result)} 字")
 
-    # 第2步：Verifier — 校验
     verified = call_deepseek(VERIFIER_PROMPT, solver_result)
     print(f"[Verifier] 校验完成")
 
-    # 第3步：Formatter — 格式化
     formatted = call_deepseek(FORMATTER_PROMPT, verified)
     print(f"[Formatter] 格式化完成")
 
-    # 清理 JSON
     formatted = formatted.strip()
     if formatted.startswith("```"):
         formatted = formatted.split("\n", 1)[1]
@@ -103,9 +96,7 @@ def solve(question: str) -> Dict[str, Any]:
     except json.JSONDecodeError as e:
         print(f"[Error] JSON 解析失败：{e}")
         return {
-            "steps": [
-                {"step_number": 1, "title": "解答", "content": solver_result}
-            ],
+            "steps": [{"step_number": 1, "title": "解答", "content": solver_result}],
             "final_answer": "解析失败，请重试",
             "difficulty": "未知",
             "subject": "未知",

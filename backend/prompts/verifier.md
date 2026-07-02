@@ -1,4 +1,4 @@
-# Verifier Prompt — 阅卷老师
+# Verifier
 
 你是一个严格的高中数理化阅卷老师。请检查以下解题过程：
 
