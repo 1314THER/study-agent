@@ -577,3 +577,19 @@
 | POST | `/solve` | 搜题，返回完整结构化答案 |
 | GET | `/questions` | 查看历史题目 |
 | GET | `/categories` | 获取知识点分类列表 |
+
+### 当前 step 结构（V0.2 修订）
+
+新结构区分得分点与计算过程：
+
+```json
+{
+  "step_number": 1,
+  "title": "步骤标题",
+  "standard_writing": "得分点（默认显示，黑色）",
+  "detail": "计算过程（点开才展开，深灰色）",
+  "knowledge_point": "知识点"
+}
+```
+
+每个 step 由两部分构成：**得分点（standard_writing）**是评卷给分的关键结论，**计算过程（detail）**是中间的代入、推导和算式变形。前端默认显示得分点，计算过程通过箭头按钮展开。

@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI学习伴侣</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -28,6 +31,22 @@
             border-radius: 12px; font-size: 16px; cursor: pointer; transition: background 0.2s;
         }
         .search-box button:hover { background: #0077ed; }
+        .search-box button:disabled { background: #a0c4ff; cursor: not-allowed; }
+
+        .progress-area { margin-bottom: 30px; display: none; }
+        .progress-area.show { display: block; }
+        .progress-bar-track {
+            width: 100%; height: 6px;
+            background: #e5e5e7; border-radius: 3px; overflow: hidden;
+            margin-bottom: 10px;
+        }
+        .progress-bar-fill {
+            height: 100%; width: 0%;
+            background: linear-gradient(90deg, #0071e3, #00a2ff);
+            border-radius: 3px; transition: width 0.3s ease;
+        }
+        .progress-text { text-align: center; font-size: 14px; color: #86868b; }
+
         .result {
             background: white; border-radius: 16px; padding: 30px;
             box-shadow: 0 2px 12px rgba(0,0,0,0.08); display: none;
@@ -35,7 +54,7 @@
         .result.show { display: block; }
 
         .meta-bar {
-            display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px;
+            display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px;
             padding-bottom: 16px; border-bottom: 1px solid #e5e5e7;
         }
         .tag {
@@ -46,18 +65,41 @@
         .tag-medium { background: #fff3e0; color: #e65100; }
         .tag-hard { background: #fce4ec; color: #c62828; }
         .tag-extreme { background: #f3e5f5; color: #6a1b9a; }
+        .tag-token { background: #f5f5f7; color: #515154; }
 
         .result h2 { font-size: 18px; color: #1d1d1f; margin-bottom: 20px; }
-        .step {
-            margin-bottom: 20px; padding-left: 12px; border-left: 3px solid #0071e3;
+
+        .step { margin-bottom: 20px; }
+        .step-header {
+            display: flex; align-items: center; gap: 8px;
+            margin-bottom: 8px; padding-left: 12px;
+            border-left: 3px solid #0071e3;
         }
-        .step .title { font-weight: 600; color: #1d1d1f; margin-bottom: 6px; }
-        .step .content { color: #515154; line-height: 1.6; }
+        .step-number { font-weight: 600; font-size: 15px; color: #1d1d1f; }
+        .step-title { font-weight: 600; font-size: 15px; color: #1d1d1f; }
+        .expand-btn {
+            font-size: 12px; cursor: pointer; color: #86868b;
+            user-select: none; padding: 2px; line-height: 1;
+        }
+        .expand-btn:hover { color: #515154; }
+
+        .step-scoring {
+            margin-left: 23px; padding: 10px 0 10px 12px;
+            font-size: 15px; color: #1d1d1f; line-height: 1.7;
+            border-left: 1px solid #e5e5e7;
+        }
+        .step-detail {
+            margin-left: 23px; padding: 0 0 10px 12px;
+            font-size: 14px; color: #6e6e73; line-height: 1.7;
+            white-space: pre-wrap; display: none;
+            border-left: 1px solid #e5e5e7;
+        }
+        .step-detail.show { display: block; }
+
         .final-answer {
-            margin-top: 20px; padding: 16px; background: #f0f7ff; border-radius: 12px;
-            font-weight: 600; color: #0071e3;
+            margin-top: 24px; padding: 16px; background: #f0f7ff; border-radius: 12px;
+            font-weight: 600; font-size: 16px; color: #0071e3;
         }
-        .loading { text-align: center; color: #86868b; padding: 40px; display: none; }
     </style>
 </head>
 <body>
@@ -65,10 +107,16 @@
         <h1>AI学习伴侣</h1>
         <p class="subtitle">输入题目，AI 帮你做</p>
         <div class="search-box">
-            <input type="text" id="questionInput" placeholder="输入题目...">
-            <button onclick="solveQuestion()">搜索</button>
+            <input type="text" id="questionInput" placeholder="输入题目..." onkeydown="if(event.key==='Enter') solveQuestion()">
+            <button id="searchBtn" onclick="solveQuestion()">搜索</button>
         </div>
-        <div class="loading" id="loading">AI 正在解题中...</div>
+        <div class="progress-area" id="progressArea">
+            <div class="progress-bar-track">
+                <div class="progress-bar-fill" id="progressFill"></div>
+            </div>
+            <div class="progress-text" id="progressText"></div>
+            <div class="progress-text" id="tokenDisplay" style="margin-top:4px;font-size:13px;color:#86868b;height:18px"></div>
+        </div>
         <div class="result" id="result"></div>
     </div>
 
@@ -76,28 +124,102 @@
         async function solveQuestion() {
             const input = document.getElementById('questionInput');
             const result = document.getElementById('result');
-            const loading = document.getElementById('loading');
+            const btn = document.getElementById('searchBtn');
             const question = input.value.trim();
-
             if (!question) { alert('请输入题目'); return; }
-
             result.classList.remove('show');
-            loading.style.display = 'block';
+            btn.disabled = true;
+
+            // ---- 显示进度条 ----
+            const area = document.getElementById('progressArea');
+            const fill = document.getElementById('progressFill');
+            const text = document.getElementById('progressText');
+            area.classList.add('show');
+
+            function setProgress(pct, msg) {
+                fill.style.width = pct + '%';
+                text.textContent = msg;
+            }
+
+            var _tokenTotal = 0;
+            var _tokenDisplayed = 0;
+            var _animFrameId = null;
+
+            function animateToTarget() {
+                if (_animFrameId) return;
+                var startVal = _tokenDisplayed;
+                var endVal = _tokenTotal;
+                var duration = 600;
+                var startTime = null;
+                var display = document.getElementById('tokenDisplay');
+                function frame(ts) {
+                    if (!startTime) startTime = ts;
+                    var p = Math.min((ts - startTime) / duration, 1);
+                    _tokenDisplayed = Math.round(startVal + (endVal - startVal) * p);
+                    display.textContent = '消耗 ' + _tokenDisplayed + ' tokens';
+                    if (p < 1) {
+                        _animFrameId = requestAnimationFrame(frame);
+                    } else {
+                        _animFrameId = null;
+                        _tokenDisplayed = endVal;
+                        if (_tokenDisplayed < _tokenTotal) {
+                            animateToTarget();
+                        }
+                    }
+                }
+                _animFrameId = requestAnimationFrame(frame);
+            }
+
+            function addTokens(t) {
+                _tokenTotal += t.total_tokens || 0;
+                animateToTarget();
+            }
 
             try {
-                const response = await fetch('http://127.0.0.1:8000/solve', {
+                // ---- 第1步：解题 ----
+                setProgress(15, '第1步：AI 正在解题中...');
+                const r1 = await fetch('http://127.0.0.1:8000/solve/step1', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ question: question })
                 });
+                const d1 = await r1.json();
+                addTokens(d1.token_usage);
+                setProgress(35, '第1步完成，正在校验...');
 
-                const data = await response.json();
-                loading.style.display = 'none';
-                displayResult(data);
+                // ---- 第2步：校验 ----
+                const r2 = await fetch('http://127.0.0.1:8000/solve/step2', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: d1.content })
+                });
+                const d2 = await r2.json();
+                addTokens(d2.token_usage);
+                setProgress(65, '第2步完成，正在格式化...');
+
+                // ---- 第3步：格式化 ----
+                const r3 = await fetch('http://127.0.0.1:8000/solve/step3', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: d2.content, original_question: question })
+                });
+                const d3 = await r3.json();
+                addTokens(d3.token_usage);
+                setProgress(100, '处理完成');
+
+                // 检查是否有状态（不会做/错题）
+                if (d3.result && d3.result.status && d3.result.status !== '可解') {
+                    displayStatus(d3.result);
+                } else {
+                    displayResult(d3.result);
+                }
+
             } catch (err) {
-                loading.style.display = 'none';
+                setProgress(100, '请求失败');
                 result.innerHTML = '<p style="color:red">请求失败，请检查后端是否启动</p>';
                 result.classList.add('show');
+            } finally {
+                btn.disabled = false;
             }
         }
 
@@ -106,40 +228,93 @@
             return map[level] || 'tag-easy';
         }
 
-        function displayResult(data) {
-            const result = document.getElementById('result');
+        function toggleDetail(btn) {
+            var detail = btn.closest('.step').querySelector('.step-detail');
+            if (!detail) return;
+            var isOpen = detail.classList.toggle('show');
+            btn.textContent = isOpen ? '▼' : '▶';
+        }
 
-            // 元信息栏：分类 + 难度
-            const cat = data.category || {};
-            const diff = data.difficulty || {};
-            let metaHtml = '<div class="meta-bar">';
+        function displayStatus(data) {
+            var result = document.getElementById('result');
+            var status = data.status || '未知';
+            var reason = data.reason || '';
+            var isError = (status === '错题');
+            var bgColor = isError ? '#fff5f5' : '#fff8e1';
+            var borderColor = isError ? '#ffcdd2' : '#ffe082';
+            var icon = isError ? '&#9888;' : '&#128532;';
+            var label = isError ? '此题是错题' : '此题无法解答';
+
+            var html = '<div style="background:' + bgColor + ';border:2px solid ' + borderColor + ';border-radius:16px;padding:28px;text-align:center;margin-bottom:20px;">';
+            html += '<div style="font-size:48px;margin-bottom:12px;">' + icon + '</div>';
+            html += '<h2 style="font-size:20px;color:' + (isError ? '#c62828' : '#e65100') + ';margin-bottom:8px;">' + label + '</h2>';
+            if (reason) {
+                html += '<p style="font-size:15px;color:#555;line-height:1.6;margin-top:8px;white-space:pre-wrap;">' + reason + '</p>';
+            }
+            html += '</div>';
+
+            result.innerHTML = html;
+            result.classList.add('show');
+        }
+
+        function displayResult(data) {
+            var result = document.getElementById('result');
+            var cat = data.category || {};
+            var diff = data.difficulty || {};
+            var tok = data.token_usage || {};
+
+            var html = '<div class="meta-bar">';
             if (cat.level1) {
-                metaHtml += `<span class="tag tag-category">${cat.level1} → ${cat.level2 || ''}</span>`;
+                html += '<span class="tag tag-category">' + cat.level1 + ' → ' + (cat.level2 || '') + '</span>';
             }
             if (diff.level) {
-                metaHtml += `<span class="tag ${levelClass(diff.level)}">${diff.level}（${diff.total_score}分）</span>`;
+                html += '<span class="tag ' + levelClass(diff.level) + '">' + diff.level + '（' + diff.total_score + '分）</span>';
             }
-            metaHtml += '</div>';
+            // token 已在进度条中实时动画显示
+            html += '</div>';
 
-            let html = metaHtml + '<h2>解题过程</h2>';
+            html += '<h2>解题过程</h2>';
 
             if (data.steps) {
-                data.steps.forEach(step => {
-                    html += `
-                        <div class="step">
-                            <div class="title">第${step.step_number}步：${step.title}</div>
-                            <div class="content">${step.content}</div>
-                        </div>
-                    `;
-                });
+                for (var i = 0; i < data.steps.length; i++) {
+                    var step = data.steps[i];
+                    html += '<div class="step">';
+                    html += '<div class="step-header">';
+                    html += '<span class="step-number">第' + step.step_number + '步</span>';
+                    html += '<span class="step-title">' + (step.title || '') + '</span>';
+                    if (step.detail) {
+                        html += '<span class="expand-btn" onclick="toggleDetail(this)">&#9654;</span>';
+                    }
+                    html += '</div>';
+                    html += '<div class="step-scoring">' + (step.standard_writing || '') + '</div>';
+                    if (step.detail) {
+                        html += '<div class="step-detail">' + step.detail + '</div>';
+                    }
+                    html += '</div>';
+                }
             }
 
             if (data.final_answer) {
-                html += `<div class="final-answer">答案：${data.final_answer}</div>`;
+                html += '<div class="final-answer">答案：' + data.final_answer + '</div>';
             }
 
             result.innerHTML = html;
             result.classList.add('show');
+
+            // KaTeX 渲染
+            try {
+            renderMathInElement(result, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '\\\\(', right: '\\\\)', display: false},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\[', right: '\\]', display: true}
+                ],
+                ignoredTags: []
+            });
+            } catch(e) {
+                console.log('KaTeX error:', e);
+            }
         }
     </script>
 </body>
