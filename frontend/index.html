@@ -150,10 +150,10 @@
         <p class="subtitle">输入题目，AI 帮你做</p>
         <div class="type-selector">
             <span class="type-label">题型：</span>
-            <button class="type-btn active" data-type="" onclick="selectType(this, x27x27)">自动识别</button>
-            <button class="type-btn" data-type="选择题" onclick="selectType(this, x27选择题x27)">选择题</button>
-            <button class="type-btn" data-type="填空题" onclick="selectType(this, x27填空题x27)">填空题</button>
-            <button class="type-btn" data-type="大题" onclick="selectType(this, x27大题x27)">大题</button>
+            <button class="type-btn active" data-type="" onclick="selectType(this, '')">自动识别</button>
+            <button class="type-btn" data-type="选择题" onclick="selectType(this, '选择题')">选择题</button>
+            <button class="type-btn" data-type="填空题" onclick="selectType(this, '填空题')">填空题</button>
+            <button class="type-btn" data-type="大题" onclick="selectType(this, '大题')">大题</button>
         </div>
         <div class="search-box">
             <input type="text" id="questionInput" placeholder="输入题目..." onkeydown="if(event.key==='Enter') solveQuestion()">

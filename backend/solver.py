@@ -274,7 +274,7 @@ def step_verify_format_chunk(chunk: dict, question: str, solved: list) -> dict:
     ccontent = chunk["content"]
     cat = chunk.get("category")
     # 如果 solver 没输出板块，从内容中自动匹配
-    if not cat and ctype in ("子问", "整体", "大题"):
+    if not cat and ctype in ("子问", "整体", "大题", "选择题", "填空题"):
         for known_cat in CATEGORIES:
             if known_cat in ccontent:
                 cat = known_cat
