@@ -1,5 +1,6 @@
 """
 知识点分类（唯一数据源，按高考大题题型分类）
+非常规压轴题合并了原交叉压轴题和新定义题。
 选择题和填空题走专精 verifier，不参与板块路由。
 """
 
@@ -27,11 +28,9 @@ CATEGORIES = {
     "概率与统计": [
         "排列组合", "二项式定理", "概率", "统计", "条件概率与全概率",
     ],
-    "新定义题": [
+    "非常规压轴题": [
         "新定义理解", "新运算规则", "新概念应用",
-    ],
-    "交叉压轴题": [
-        "多板块综合",
+        "多板块综合", "信息迁移", "创新题型",
     ],
 }
 
@@ -61,10 +60,5 @@ def get_knowledge_points(level1: str) -> list:
 
 
 def validate_knowledge_points(level1: str, points: list) -> list:
-    if level1 == "交叉压轴题":
-        all_valid = set()
-        for v in CATEGORIES.values():
-            all_valid.update(v)
-        return [p for p in points if p in all_valid]
     valid = set(CATEGORIES.get(level1, []))
     return [p for p in points if p in valid]

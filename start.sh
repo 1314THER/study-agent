@@ -10,10 +10,5 @@ if lsof -i:8000 > /dev/null 2>&1; then
     exit 1
 fi
 
-echo "🚀 启动后端服务器..."
-python3 -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --reload &
-PID=$!
-echo "✅ 服务器已启动 (PID: $PID)"
-echo "🌐 前端: file://$SCRIPT_DIR/frontend/index.html"
-echo "📡 API:  http://127.0.0.1:8000"
-echo "🛑 停止: ./stop.sh"
+echo "启动后端服务器..."
+python3 -m uvicorn backend.main:app --host 127.0.0.1 --port 8000

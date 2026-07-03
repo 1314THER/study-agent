@@ -64,16 +64,15 @@
         .chunk-type { color: #515154; }
         .chunk-cat { color: #2e7d32; background: #e8f5e9; padding: 2px 8px; border-radius: 4px; }
         .chunk-diff { padding: 2px 8px; border-radius: 4px; }
+        .tag-type { background: #e3f2fd; color: #1565c0; }
+        .tag-type-simple { background: #f3e5f5; color: #6a1b9a; }
+        .tag-type-special { background: #fce4ec; color: #c62828; }
         .chunk-steps { padding: 12px 16px; }
         .chunk-steps .step { margin-bottom: 12px; }
         .chunk-steps .step:last-child { margin-bottom: 0; }
-        .progress-pct {
-            text-align: center; font-size: 24px; font-weight: 700;
-            color: #0071e3; margin-top: 6px;
-        }
-        .progress-token {
-            text-align: center; font-size: 12px; color: #86868b; margin-top: 4px;
-        }
+        .progress-pct { text-align: center; font-size: 24px; font-weight: 700; color: #0071e3; margin-top: 6px; }
+        .progress-token { text-align: center; font-size: 12px; color: #86868b; margin-top: 4px; }
+
 
         .progress-area { margin-bottom: 30px; display: none; }
         .progress-area.show { display: block; }
@@ -111,6 +110,11 @@
 
         .result h2 { font-size: 18px; color: #1d1d1f; margin-bottom: 20px; }
 
+        .xuebile { background: #fff5f5; border: 2px solid #ffcdd2; border-radius: 16px; padding: 40px 28px; text-align: center; margin-bottom: 20px; }
+        .xuebile-icon { font-size: 64px; margin-bottom: 12px; }
+        .xuebile-title { font-size: 28px; color: #c62828; font-weight: 700; margin-bottom: 12px; }
+        .xuebile-reason { font-size: 15px; color: #555; line-height: 1.6; }
+
         .step { margin-bottom: 20px; }
         .step-header {
             display: flex; align-items: center; gap: 8px;
@@ -118,30 +122,13 @@
             border-left: 3px solid #0071e3;
         }
         .step-number { font-weight: 600; font-size: 15px; color: #1d1d1f; }
-        .step-title { font-weight: 600; font-size: 15px; color: #1d1d1f; }
-        .expand-btn {
-            font-size: 12px; cursor: pointer; color: #86868b;
-            user-select: none; padding: 2px; line-height: 1;
-        }
-        .expand-btn:hover { color: #515154; }
+        .step-diff-tag { font-size: 12px; color: #86868b; margin-left: auto; background: #f5f5f7; padding: 2px 8px; border-radius: 4px; }
 
-        .step-scoring {
-            margin-left: 23px; padding: 10px 0 10px 12px;
-            font-size: 15px; color: #1d1d1f; line-height: 1.7;
-            border-left: 1px solid #e5e5e7;
-        }
-        .step-detail {
-            margin-left: 23px; padding: 0 0 10px 12px;
-            font-size: 14px; color: #6e6e73; line-height: 1.7;
-            white-space: pre-wrap; display: none;
-            border-left: 1px solid #e5e5e7;
-        }
-        .step-detail.show { display: block; }
+        .step-content { margin-left: 23px; padding: 8px 0 8px 12px; font-size: 15px; color: #1d1d1f; line-height: 1.7; border-left: 1px solid #e5e5e7; }
+        .step-kp { margin-left: 23px; padding: 2px 0 6px 12px; font-size: 13px; color: #2e7d32; border-left: 1px solid #e5e5e7; }
+        
 
-        .final-answer {
-            margin-top: 24px; padding: 16px; background: #f0f7ff; border-radius: 12px;
-            font-weight: 600; font-size: 16px; color: #0071e3;
-        }
+        .final-answer { margin: 0 16px 16px; padding: 16px; background: #f0f7ff; border-radius: 12px; font-weight: 600; font-size: 16px; color: #0071e3; }
     </style>
 </head>
 <body>
@@ -178,6 +165,8 @@
             _selectedType = type;
         }
 
+
+
         function setProgress(pct, msg, tokens) {
             document.getElementById('progressFill').style.width = pct + '%';
             document.getElementById('progressPct').textContent = Math.round(pct) + '%';
@@ -194,61 +183,43 @@
                 var step = steps[i];
                 html += '<div class="step">';
                 html += '<div class="step-header">';
-                html += '<span class="step-number">第' + step.step_number + '步</span>';
-                html += '<span class="step-title">' + (step.title || '') + '</span>';
-                if (step.detail) {
-                    html += '<span class="expand-btn" onclick="toggleDetail(this)">&#9654;</span>';
+                html += '<span class="step-number">' + step.step_number + '</span>';
+                if (step.step_difficulty) {
+                    html += '<span class="step-diff-tag">' + step.step_difficulty.level + ' (' + step.step_difficulty.score + '分)</span>';
                 }
                 html += '</div>';
-                html += '<div class="step-scoring">' + (step.standard_writing || '') + '</div>';
-                if (step.detail) {
-                    html += '<div class="step-detail">' + step.detail + '</div>';
+                html += '<div class="step-content">' + (step.standard_writing || '') + '</div>';
+                if (step.knowledge_point) {
+                    html += '<div class="step-kp">' + step.knowledge_point + '</div>';
                 }
                 html += '</div>';
             }
             return html;
         }
 
-        function levelClass(level) {
-            var map = { '容易': 'tag-easy', '中等': 'tag-medium', '困难': 'tag-hard', '极难': 'tag-extreme' };
-            return map[level] || 'tag-easy';
-        }
-
-        function toggleDetail(btn) {
-            var detail = btn.closest('.step').querySelector('.step-detail');
-            if (!detail) return;
-            var isOpen = detail.classList.toggle('show');
-            btn.textContent = isOpen ? '▼' : '▶';
-        }
-
-        function displayStatus(data) {
-            var result = document.getElementById('result');
-            var status = data.status || '未知';
-            var reason = data.reason || '';
-            var isError = (status === '错题');
-            var bgColor = isError ? '#fff5f5' : '#fff8e1';
-            var borderColor = isError ? '#ffcdd2' : '#ffe082';
-            var icon = isError ? '&#9888;' : '&#128532;';
-            var label = isError ? '此题是错题' : '此题无法解答';
-            var html = '<div style="background:' + bgColor + ';border:2px solid ' + borderColor + ';border-radius:16px;padding:28px;text-align:center;margin-bottom:20px;">';
-            html += '<div style="font-size:48px;margin-bottom:12px;">' + icon + '</div>';
-            html += '<h2 style="font-size:20px;color:' + (isError ? '#c62828' : '#e65100') + ';margin-bottom:8px;">' + label + '</h2>';
-            if (reason) {
-                html += '<p style="font-size:15px;color:#555;line-height:1.6;margin-top:8px;white-space:pre-wrap;">' + reason + '</p>';
-            }
-            html += '</div>';
-            result.innerHTML = html;
-            result.classList.add('show');
-        }
-
-        function displayResult(data) {
+        function displayResult(data, totalTokens) {
             var result = document.getElementById('result');
             var html = '<div class="meta-bar">';
+            // 知识点标签（仅大题有）
             if (data.knowledge_points && data.knowledge_points.length > 0) {
                 html += '<span class="tag tag-category">' + data.knowledge_points.slice(0,3).join(' / ') + '</span>';
             }
+            // 雪峰难度系数
+            var fc = data.chunk_results && data.chunk_results[0] || {};
+            var xf = fc.difficulty && fc.difficulty.total_score;
+            if (xf !== undefined && xf !== null) {
+                html += '<span class="tag" style="background:#e8f0fe;color:#1565c0;">雪峰难度系数：' + xf + '/12</span>';
+            }
+            // 武亮难度系数
+            if (data.step_difficulty_sum !== undefined) {
+                html += '<span class="tag" style="background:#fce4ec;color:#c62828;">武亮难度系数：' + data.step_difficulty_sum + '</span>';
+            }
             html += '</div>';
 
+            // 雷达图容器
+            html += '<div id="radarChart" style="display:flex;justify-content:center;margin-bottom:16px;"></div>';
+
+            // 块结果
             if (data.chunk_results && data.chunk_results.length > 0) {
                 for (var ci = 0; ci < data.chunk_results.length; ci++) {
                     var cr = data.chunk_results[ci];
@@ -258,42 +229,51 @@
                     html += '<div class="chunk-card">';
                     html += '<div class="chunk-header">';
                     html += '<span class="chunk-label">块' + chunkId + '</span>';
-                    if (cr.question_type) {
-                        html += '<span class="chunk-type">' + cr.question_type + '</span>';
+                    if (cr.chunk_type) {
+                        var tc = 'tag-type';
+                        if (cr.chunk_type === '选择题' || cr.chunk_type === '填空题') tc += ' tag-type-simple';
+                        else if (cr.chunk_type === '非常规压轴题') tc += ' tag-type-special';
+                        html += '<span class="tag ' + tc + '">' + cr.chunk_type + '</span>';
                     }
-                    if (cat.level1) {
-                        html += '<span class="chunk-cat">' + cat.level1 + '</span>';
-                    }
-                    if (diff.level) {
-                        html += '<span class="chunk-diff ' + levelClass(diff.level) + '">' + diff.level + '</span>';
-                    }
+                    if (cat.level1) html += '<span class="chunk-cat">' + cat.level1 + '</span>';
+                    if (diff.level) html += '<span class="chunk-diff ' + (diff.level === '容易' ? 'tag-easy' : diff.level === '中等' ? 'tag-medium' : diff.level === '困难' ? 'tag-hard' : 'tag-extreme') + '">' + diff.level + '</span>';
                     html += '</div>';
 
-                    if (cr.status && cr.status !== '可解') {
-                        html += '<div style="padding:12px;color:#c62828;">' + (cr.reason || '') + '</div>';
-                    } else {
-                        if (cr.steps && cr.steps.length > 0) {
-                            html += '<div class="chunk-steps">';
-                            html = renderSteps(html, cr.steps);
+                    if (cr.steps && cr.steps.length > 0) {
+                        html += '<div class="chunk-steps">';
+                        for (var si = 0; si < cr.steps.length; si++) {
+                            var step = cr.steps[si];
+                            html += '<div class="step">';
+                            html += '<div class="step-header">';
+                            html += '<span class="step-number">' + step.step_number + '</span>';
+                            if (step.step_difficulty) {
+                                html += '<span class="step-diff-tag">' + step.step_difficulty.level + ' (' + step.step_difficulty.score + '分)</span>';
+                            }
+                            html += '</div>';
+                            html += '<div class="step-content">' + (step.standard_writing || '') + '</div>';
+                            if (step.knowledge_point) {
+                                html += '<div class="step-kp">' + step.knowledge_point + '</div>';
+                            }
                             html += '</div>';
                         }
-                        if (cr.final_answer) {
-                            html += '<div class="final-answer">答案：' + cr.final_answer + '</div>';
-                        }
+                        html += '</div>';
+                    }
+                    if (cr.final_answer) {
+                        html += '<div class="final-answer">答案：' + cr.final_answer + '</div>';
                     }
                     html += '</div>';
                 }
             }
 
             // Token
-            var tok = data.token_usage || {};
-            if (tok.total_tokens) {
-                html += '<div style="text-align:center;margin-top:20px;font-size:13px;color:#86868b;">消耗 ' + tok.total_tokens + ' tokens</div>';
+            if (totalTokens) {
+                html += '<div style="text-align:center;margin-top:20px;font-size:13px;color:#86868b;">消耗 ' + totalTokens + ' tokens</div>';
             }
 
             result.innerHTML = html;
-            result.classList.add('show');
+            result.style.display = 'block';
 
+            // KaTeX 渲染
             try {
                 renderMathInElement(result, {
                     delimiters: [
@@ -304,9 +284,90 @@
                     ],
                     ignoredTags: []
                 });
-            } catch(e) {
-                console.log('KaTeX error:', e);
+            } catch(e) { console.log('KaTeX error:', e); }
+
+            // 画雷达图
+            var dims = fc.difficulty && fc.difficulty.dimensions;
+            if (dims && Object.keys(dims).length === 6) {
+                var canvas = document.createElement('canvas');
+                canvas.width = 240;
+                canvas.height = 320;
+                canvas.style.maxWidth = '100%';
+                document.getElementById('radarChart').appendChild(canvas);
+                var ctx = canvas.getContext('2d');
+                var cx = 120, cy = 130, radius = 95;
+                var labels = Object.keys(dims);
+                var values = labels.map(function(k) { return dims[k]; });
+                var n = 6;
+                for (var li = 1; li <= 2; li++) {
+                    var r = radius * li / 2;
+                    ctx.beginPath();
+                    for (var i = 0; i <= n; i++) {
+                        var angle = (i % n) * 2 * Math.PI / n - Math.PI / 2;
+                        var x = cx + r * Math.cos(angle);
+                        var y = cy + r * Math.sin(angle);
+                        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath(); ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1; ctx.stroke();
+                }
+                for (var i = 0; i < n; i++) {
+                    var angle = i * 2 * Math.PI / n - Math.PI / 2;
+                    ctx.beginPath(); ctx.moveTo(cx, cy);
+                    ctx.lineTo(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
+                    ctx.strokeStyle = '#eee'; ctx.stroke();
+                    var lx = cx + (radius + 16) * Math.cos(angle);
+                    var ly = cy + (radius + 16) * Math.sin(angle);
+                    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+                    ctx.font = '11px -apple-system, sans-serif';
+                    ctx.fillStyle = '#515154';
+                    ctx.fillText(labels[i] + ' ' + values[i], lx, ly);
+                }
+                ctx.beginPath();
+                for (var i = 0; i <= n; i++) {
+                    var angle = (i % n) * 2 * Math.PI / n - Math.PI / 2;
+                    var val = Math.min(values[i % n] / 2, 1);
+                    var x = cx + radius * val * Math.cos(angle);
+                    var y = cy + radius * val * Math.sin(angle);
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(0, 113, 227, 0.12)'; ctx.fill();
+                ctx.strokeStyle = '#0071e3'; ctx.lineWidth = 2; ctx.stroke();
+                for (var i = 0; i < n; i++) {
+                    var angle = i * 2 * Math.PI / n - Math.PI / 2;
+                    var val = Math.min(values[i] / 2, 1);
+                    var x = cx + radius * val * Math.cos(angle);
+                    var y = cy + radius * val * Math.sin(angle);
+                    ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#0071e3'; ctx.fill();
+                }
+                ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+                ctx.font = '12px -apple-system, sans-serif';
+                ctx.fillStyle = '#86868b';
+                ctx.fillText('六维难度分布', cx, canvas.height - 6);
             }
+        }
+
+        function displayXuebile(data) {
+            var result = document.getElementById('result');
+            var reason = data.detail || data.status || '未知错误';
+            var html = '<div class="xuebile"><div class="xuebile-icon">🧊</div><div class="xuebile-title">雪碧了</div><div class="xuebile-reason">' + reason + '</div></div>';
+            result.innerHTML = html;
+            result.classList.add('show'); result.style.display = 'block';
+        }
+
+        function levelClass(level) {
+            var map = { '容易': 'tag-easy', '中等': 'tag-medium', '困难': 'tag-hard', '极难': 'tag-extreme' };
+            return map[level] || 'tag-easy';
+        }
+
+        function isValidQuestion(text) {
+            if (!text || text.length < 5) return false;
+            // 必须有中文
+            if (!/[\u4e00-\u9fff]/.test(text)) return false;
+            // 必须有数学相关字符或较长中文字段
+            if (!/[0-9+\-\u00d7\u00f7=\u221a\u03c0\u03b8]/.test(text) && !/[\u4e00-\u9fff]{6,}/.test(text)) return false;
+            return true;
         }
 
         async function solveQuestion() {
@@ -315,6 +376,12 @@
             const btn = document.getElementById('searchBtn');
             const question = input.value.trim();
             if (!question) { alert('请输入题目'); return; }
+            if (!isValidQuestion(question)) {
+                result.classList.remove('show');
+                result.innerHTML = '<div class="xuebile"><div class="xuebile-icon">🧊</div><div class="xuebile-title">雪碧了</div><div class="xuebile-reason">输入无效，请检查是否为数学题</div></div>';
+                result.style.display = 'block';
+                return;
+            }
             result.classList.remove('show');
             btn.disabled = true;
 
@@ -326,57 +393,45 @@
             var totalTokens = 0;
 
             try {
-                // Step 1: 切块+解答
-                setProgress(13, '正在切块并解答...', 0);
+                // Step 1: Solver
+                setProgress(13, 'AI 正在思考（复杂题最多等 2 分钟）...', 0);
                 const r1 = await fetch('http://127.0.0.1:8000/solve/step1', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ question: question, question_type: _selectedType || null })
                 });
                 const d1 = await r1.json();
+                if (d1.error) { setProgress(100, '雪碧了'); displayXuebile(d1); return; }
                 totalTokens += (d1.token_usage?.total_tokens || 0);
-                var chunks = d1.chunks || [];
-                setProgress(78, '解答完成，共' + chunks.length + '个块', totalTokens);
 
-                // Step 2: 逐块校验（保持在78%，全部完成才跳91%）
-                var chunkResults = [];
-                var solved = [];
-                for (var ci = 0; ci < chunks.length; ci++) {
-                    var ch = chunks[ci];
-                    setProgress(78, '校验块' + (ci + 1) + '/' + chunks.length + '...', totalTokens);
+                // Step 2: Verifier
+                setProgress(78, 'AI 正在归类知识点并评分...', totalTokens);
+                const r2 = await fetch('http://127.0.0.1:8000/solve/step2', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: question, content: d1.content, category: d1.category || null })
+                });
+                const d2 = await r2.json();
+                if (d2.error) { setProgress(100, '雪碧了'); displayXuebile(d2); return; }
+                totalTokens += (d2.token_usage?.total_tokens || 0);
 
-                    var r2 = await fetch('http://127.0.0.1:8000/solve/step2', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            chunk_content: ch.content,
-                            chunk_id: ch.id,
-                            chunk_type: ch.type,
-                            chunk_category: ch.category,
-                            question: question,
-                            solved_json: JSON.stringify(solved)
-                        })
-                    });
-                    var d2 = await r2.json();
-                    totalTokens += (d2.token_usage?.total_tokens || 0);
-                    chunkResults.push(d2.result);
-                    solved.push(d2.result);
-                }
-                setProgress(91, '全部校验完成', totalTokens);
+                // Step 3: Formatter
+                setProgress(91, '全局校验中...', totalTokens);
+                const r3 = await fetch('http://127.0.0.1:8000/solve/step3', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: question, chunk_results: JSON.stringify(d2.chunk_results) })
+                });
+                const d3 = await r3.json();
+                totalTokens += (d3.token_usage?.total_tokens || 0);
 
-                // 展示 --> 100%
-                setProgress(100, '处理完成', totalTokens);
-                var resultData = {
-                    chunk_results: chunkResults,
-                    chunks: chunks,
-                    token_usage: { total_tokens: totalTokens }
-                };
-                displayResult(resultData);
-
+                setProgress(100, '完成', totalTokens);
+                if (d3.error) { displayXuebile(d3); return; }
+                displayResult(d3, totalTokens);
             } catch (err) {
-                setProgress(100, '请求失败', totalTokens);
+                setProgress(100, '请求失败');
                 result.innerHTML = '<p style="color:red">请求失败，请检查后端是否启动</p>';
-                result.classList.add('show');
+                result.classList.add('show'); result.style.display = 'block';
             } finally {
                 btn.disabled = false;
             }

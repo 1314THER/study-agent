@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
-from backend.solver import solve, solve_multi, step_solver_only, step_verify_format_chunk
+from backend.solver import solve, solve_multi, step_solver_only, step_verify_all, step_final_check, _xuebile, _extract_solver_status
 from backend.database import init_db, get_all_questions
 from backend.categories import get_all_categories
 
@@ -22,25 +22,40 @@ class Step1Request(BaseModel):
     question_type: Optional[str] = Field(None, description="题型（可选）")
 
 class Step2Request(BaseModel):
-    chunk_content: str = Field(..., description="块内容")
-    chunk_id: int = Field(..., description="块编号")
-    chunk_type: str = Field("整体", description="块类型")
-    chunk_category: Optional[str] = Field(None, description="板块")
-    question: str = Field(..., description="母题")
-    solved_json: str = Field("[]", description="已解的块(JSON)")
+    question: str = Field(..., description="原题")
+    content: str = Field(..., description="Solver 输出的完整解答")
+    category: Optional[str] = Field(None, description="板块")
+
+
+class Step3Request(BaseModel):
+    question: str = Field(..., description="原题")
+    chunk_results: str = Field(..., description="Verifier 输出的各块结果 JSON")
+    solver_difficulty: Optional[int] = Field(None, description="雪峰难度系数")
 
 @app.post("/solve/step1")
 def api_step1(req: Step1Request):
-    """第1步：切块+解答"""
-    return step_solver_only(req.question, req.question_type)
+    """第1步：解答"""
+    result = step_solver_only(req.question, req.question_type)
+    status = _extract_solver_status(result["content"])
+    if status:
+        return _xuebile(status, f"Solver 判定：{status}")
+    return result
 
 @app.post("/solve/step2")
+@app.post("/solve/step2")
 def api_step2(req: Step2Request):
-    """第2步：校验+格式化一个块"""
+    result = step_verify_all(req.content, req.question, req.category)
+    return result
+
+
+@app.post("/solve/step3")
+def api_step3(req: Step3Request):
     import json
-    solved = json.loads(req.solved_json) if req.solved_json else []
-    chunk = {"id": req.chunk_id, "type": req.chunk_type, "content": req.chunk_content, "category": req.chunk_category}
-    return step_verify_format_chunk(chunk, req.question, solved)
+    chunk_results = json.loads(req.chunk_results)
+    token_total = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    final = step_final_check(req.question, chunk_results, [], token_total, req.solver_difficulty)
+    return final
+
 
 @app.post("/solve")
 def api_solve(req: SolveRequest):
