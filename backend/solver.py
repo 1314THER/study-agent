@@ -184,10 +184,22 @@ def _parse_chunks(text: str) -> list:
         qtype = "整体"
         category = None
         for line in lines:
-            if line.startswith("题型："):
-                qtype = line.split("：")[1].strip()
-            if line.startswith("板块："):
-                category = line.split("：")[1].strip()
+            if line.startswith("题型") and ("：" in line or ":" in line):
+                sep = "：" if "：" in line else ":"
+                val = line.split(sep, 1)[1].strip()
+                if val and not val.startswith("["):
+                    qtype = val
+            if line.startswith("板块") and ("：" in line or ":" in line):
+                sep = "：" if "：" in line else ":"
+                val = line.split(sep, 1)[1].strip()
+                # 取第一个连续中文词作为板块名（去掉后面的注释）
+                import re as _re
+                m = _re.match(r'([一-鿿]+)', val)
+                if m:
+                    candidate = m.group(1)
+                    # 只取存在于CATEGORIES中的板块
+                    if candidate in CATEGORIES:
+                        category = candidate
         chunks.append({"id": chunk_id, "type": qtype or "整体", "category": category, "content": content.strip()})
     return chunks
 
@@ -207,7 +219,7 @@ def _load_verifier_prompt(category: str, is_cross: bool, involved: list) -> str:
         return prompt
     path = os.path.join(PROMPTS_DIR, "verifiers", f"{category}.md")
     if not os.path.exists(path):
-        path = os.path.join(PROMPTS_DIR, "verifiers", "fallback.md")
+        raise FileNotFoundError(f"找不到板块对应的 verifier: {category}（路径: {path}）")
     with open(path, encoding="utf-8") as f:
         return f.read().strip()
 
@@ -264,7 +276,7 @@ def step_verify_format_chunk(chunk: dict, question: str, solved: list) -> dict:
     # 如果 solver 没输出板块，从内容中自动匹配
     if not cat and ctype in ("子问", "整体", "大题"):
         for known_cat in CATEGORIES:
-            if known_cat in ccontent_lower:
+            if known_cat in ccontent:
                 cat = known_cat
                 break
 
