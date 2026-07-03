@@ -1,36 +1,36 @@
 """
-做题系统：三段式AI处理
-提示词从 prompts/ 目录读取。
+做题系统：三阶流程
+Solver（切块+解答） -> 解析块 -> 逐块 Verifier + Formatter -> 聚合
 """
 
 import os
 import json
-import httpx
 import re
-from typing import Dict, Any
-from backend.database import find_question, save_question
+import httpx
+from typing import Dict, Any, List, Optional, Tuple
 
-# ---------- 状态检测 ----------
-STATUS_PATTERN = re.compile(r'^\[(?:状态|确认|修正)：(.+?)\]')
+from backend.categories import CATEGORIES, get_knowledge_points, validate_knowledge_points
 
-def _extract_status(text: str) -> str:
-    """从 LLM 输出的第一行检测状态：可解 / 不会做 / 错题"""
-    first_line = text.strip().split('\n')[0].strip()
-    m = STATUS_PATTERN.match(first_line)
-    if m:
-        status = m.group(1).strip()
-        if status in ("可解", "不会做", "错题"):
-            return status
-    return "可解"
-
-# ---------- 读取提示词 ----------
+# ---------- 目录 ----------
 PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
+
+# ---------- 正则 ----------
+TYPE_PATTERN = re.compile(r'^\[题型：(.+?)\]')
+CATEGORY_PATTERN = re.compile(r'^\[板块：(.+?)\]')
+STATUS_PATTERN = re.compile(r'^\[(?:确认|修正)：(.+?)\]')
+STEP_HEADER_PATTERN = re.compile(r'^步骤(\d+)\s*[：:]\s*(.+)$')
+FINAL_ANSWER_PATTERN = re.compile(r'^最终答案[：:]\s*(.+)$')
+KNOWLEDGE_POINT_PATTERN = re.compile(r'^知识点[：:]\s*(.+)$')
+BRIEF_PATTERN = re.compile(r'^简略过程[：:]\s*(.+)$')
+DETAIL_PATTERN = re.compile(r'^计算过程[：:]\s*(.+)$')
+CHUNK_PATTERN = re.compile(r'###\s*块(\d+)\s*')
+
+# ---------- 读取 prompt ----------
 def _read_prompt(name: str) -> str:
     with open(os.path.join(PROMPTS_DIR, f"{name}.md"), encoding="utf-8") as f:
         return f.read().strip()
 
 SOLVER_PROMPT = _read_prompt("solver")
-VERIFIER_PROMPT = _read_prompt("verifier")
 FORMATTER_PROMPT = _read_prompt("formatter")
 
 # ---------- API Key ----------
@@ -48,8 +48,7 @@ def get_api_key() -> str:
     raise ValueError("未找到 DEEPSEEK_API_KEY")
 
 # ---------- 调用 DeepSeek ----------
-def call_deepseek(system_prompt: str, user_prompt: str):
-    """返回 (content, token_usage)"""
+def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3):
     api_key = get_api_key()
     resp = httpx.post(
         "https://api.deepseek.com/v1/chat/completions",
@@ -58,12 +57,12 @@ def call_deepseek(system_prompt: str, user_prompt: str):
             "model": "deepseek-chat",
             "messages": [
                 {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt}
+                {"role": "user", "content": user_prompt},
             ],
-            "temperature": 0.3,
-            "max_tokens": 32000
+            "temperature": temperature,
+            "max_tokens": 32000,
         },
-        timeout=180
+        timeout=180,
     )
     if resp.status_code != 200:
         raise Exception(f"API 请求失败: {resp.status_code} {resp.text}")
@@ -72,189 +71,352 @@ def call_deepseek(system_prompt: str, user_prompt: str):
     usage = data.get("usage", {})
     return content, usage
 
-# ---------- 三步独立函数 ----------
-
-def step_solver(question: str) -> dict:
-    """第1步：Solver 解题，返回 text + tokens"""
-    content, usage = call_deepseek(SOLVER_PROMPT, question)
-    status = _extract_status(content)
-    return {"content": content, "token_usage": usage, "status": status}
-
-def step_verifier(content: str) -> dict:
-    """第2步：Verifier 校验，返回 text + tokens"""
-    verified, usage = call_deepseek(VERIFIER_PROMPT, content)
-    status = _extract_status(verified)
-    return {"content": verified, "token_usage": usage, "status": status}
-
+# ---------- 提取器 ----------
+def _extract_status(text: str) -> str:
+    first_line = text.strip().split("\n")[0].strip()
+    m = STATUS_PATTERN.match(first_line)
+    if m:
+        status = m.group(1).strip()
+        if status in ("可解", "不会做", "错题"):
+            return status
+    return "可解"
 
 def _extract_json(text: str) -> str:
-    """从 LLM 输出中提取 JSON 字符串（去掉 markdown 代码块标记和其他杂音）"""
     text = text.strip()
-
-    # 如果被 ```json ... ``` 包裹，提取中间内容
-    m = re.search(r'```(?:json)?\s*\n?(.*?)\n?```', text, re.DOTALL)
+    m = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", text, re.DOTALL)
     if m:
         text = m.group(1).strip()
-
-    # 去掉开头的非 JSON 前缀（直到第一个 { 或 [）
-    first_brace = text.find('{')
-    first_bracket = text.find('[')
-    if first_brace >= 0:
-        if first_bracket >= 0 and first_bracket < first_brace:
-            text = text[first_bracket:]
-        else:
-            text = text[first_brace:]
-    elif first_bracket >= 0:
-        text = text[first_bracket:]
-
-    # 去掉末尾的非 JSON 后缀（从最后一个 } 或 ] 之后截断）
-    last_brace = text.rfind('}')
-    last_bracket = text.rfind(']')
-    if last_brace >= 0:
-        if last_bracket >= 0 and last_bracket > last_brace:
-            text = text[:last_bracket + 1]
-        else:
-            text = text[:last_brace + 1]
-    elif last_bracket >= 0:
-        text = text[:last_bracket + 1]
-
+    first = text.find("{")
+    if first >= 0:
+        text = text[first:]
+    last = text.rfind("}")
+    if last >= 0:
+        text = text[: last + 1]
     return text.strip()
 
-
-def _build_fallback(verifier_content: str) -> dict:
-    """解析验证器输出，构造一个兜底的 result dict"""
-    steps = []
-    lines = verifier_content.split('\n')
-    current_step = None
-    current_title = ""
-    current_writing = ""
-    current_detail = ""
-    current_kp = ""
-
-    def flush_step():
-        nonlocal current_step, current_title, current_writing, current_detail, current_kp
-        if current_step is not None:
-            steps.append({
-                "step_number": current_step,
-                "title": current_title.strip(),
-                "standard_writing": current_writing.strip(),
-                "detail": current_detail.strip(),
-                "knowledge_point": current_kp.strip()
-            })
-
-    step_pattern = re.compile(r'步骤(\d+)\s*[：:]\s*(.*)')
-
-    for line in lines:
-        # 检测步骤标题行
-        m = step_pattern.match(line.strip())
+def _parse_final_answer(text: str) -> str:
+    for line in text.split("\n"):
+        m = FINAL_ANSWER_PATTERN.match(line.strip())
         if m:
-            flush_step()
-            current_step = int(m.group(1))
-            current_title = m.group(2)
-            current_writing = ""
-            current_detail = ""
-            current_kp = ""
-            continue
+            return m.group(1).strip()
+    return ""
 
+def _parse_steps(text: str) -> list:
+    steps = []
+    current_step = None
+    in_step = False
+    lines = text.split("\n")
+    for line in lines:
         stripped = line.strip()
-        # 检测得分点 / 计算过程 / 知识点
-        if stripped.startswith('得分点') and (':' in stripped or '：' in stripped):
-            current_writing += stripped.split('：', 1)[-1].split(':', 1)[-1] + '\n'
-        elif stripped.startswith('计算过程') and (':' in stripped or '：' in stripped):
-            current_detail += stripped.split('：', 1)[-1].split(':', 1)[-1] + '\n'
-        elif stripped.startswith('知识点') and (':' in stripped or '：' in stripped):
-            current_kp += stripped.split('：', 1)[-1].split(':', 1)[-1] + '\n'
-        elif stripped.startswith('最终答案') and (':' in stripped or '：' in stripped):
-            final_answer = stripped.split('：', 1)[-1].split(':', 1)[-1].strip()
-        elif current_step is not None:
-            # 当前步骤的非标记行——归入计算过程
-            current_detail += line + '\n'
+        m = STEP_HEADER_PATTERN.match(stripped)
+        if m:
+            if current_step is not None:
+                steps.append(current_step)
+            current_step = {
+                "step_number": int(m.group(1)),
+                "title": m.group(2).strip(),
+                "standard_writing": "",
+                "detail": "",
+                "knowledge_point": "",
+            }
+            in_step = True
+            continue
+        if not in_step or current_step is None:
+            continue
+        m = KNOWLEDGE_POINT_PATTERN.match(stripped)
+        if m:
+            current_step["knowledge_point"] = m.group(1).strip()
+            continue
+        m = BRIEF_PATTERN.match(stripped)
+        if m:
+            current_step["standard_writing"] = m.group(1).strip()
+            continue
+        m = DETAIL_PATTERN.match(stripped)
+        if m:
+            current_step["detail"] = m.group(1).strip()
+            continue
+        if not stripped.startswith("最终答案") and not stripped.startswith("[确认"):
+            if current_step["detail"]:
+                current_step["detail"] += "\n" + line
+            else:
+                current_step["detail"] = line
+    
+    if current_step is not None:
+        steps.append(current_step)
 
-    flush_step()
+    # 兜底：如果没解析出任何步骤但文本有内容，回退为整段
+    if not steps:
+        content = text.strip()
+        # 去掉状态行和最终答案行
+        for marker in ("[确认", "最终答案", "题型", "板块"):
+            content = "\n".join(l for l in content.split("\n") if not l.strip().startswith(marker))
+        content = content.strip()
+        if content:
+            steps.append({
+                "step_number": 1,
+                "title": "解答",
+                "standard_writing": "",
+                "detail": content,
+                "knowledge_point": "",
+            })
+    return steps
 
+def _parse_sub_answers(text: str) -> list:
+    parts = re.split(r'(?:^|\s+)\((\d+)\)\s*', text.strip())
+    if len(parts) < 2:
+        return []
+    results = []
+    for i in range(1, len(parts), 2):
+        if i + 1 < len(parts):
+            results.append(f"({parts[i]}) {parts[i+1].strip()}")
+    return results
+
+# ---------- 块解析 ----------
+def _parse_chunks(text: str) -> list:
+    parts = CHUNK_PATTERN.split(text)
+    if len(parts) < 3:
+        return [{"id": 1, "type": "整体", "content": text}]
+    chunks = []
+    for i in range(1, len(parts) - 1, 2):
+        chunk_id = int(parts[i])
+        content = parts[i + 1].strip()
+        lines = content.split("\n")
+        qtype = "整体"
+        category = None
+        for line in lines:
+            if line.startswith("题型："):
+                qtype = line.split("：")[1].strip()
+            if line.startswith("板块："):
+                category = line.split("：")[1].strip()
+        chunks.append({"id": chunk_id, "type": qtype or "整体", "category": category, "content": content.strip()})
+    return chunks
+
+# ---------- Verifier 路由 ----------
+def _load_verifier_prompt(category: str, is_cross: bool, involved: list) -> str:
+    if is_cross:
+        path = os.path.join(PROMPTS_DIR, "verifiers", "交叉压轴题.md")
+        with open(path, encoding="utf-8") as f:
+            prompt = f.read().strip()
+        if len(involved) >= 2:
+            prompt = prompt.replace("{板块A}", involved[0]).replace("{板块B}", involved[1])
+        all_kps = set()
+        for cat in involved:
+            all_kps.update(get_knowledge_points(cat))
+        kp_str = "、".join(sorted(all_kps))
+        prompt = prompt.replace("可选知识点：多板块综合", f"可选知识点：{kp_str}")
+        return prompt
+    path = os.path.join(PROMPTS_DIR, "verifiers", f"{category}.md")
+    if not os.path.exists(path):
+        path = os.path.join(PROMPTS_DIR, "verifiers", "fallback.md")
+    with open(path, encoding="utf-8") as f:
+        return f.read().strip()
+
+# ---------- 块上下文 ----------
+def _build_context(chunk: dict, solved: list) -> str:
+    parts = []
+    for dep_id in chunk.get("depends_on", []):
+        prev = next((s for s in solved if s.get("chunk_id") == dep_id), None)
+        if prev:
+            answer = prev.get("final_answer", "")
+            parts.append(f"第({dep_id})问答案：{answer}")
+    return "\n".join(parts) if parts else ""
+
+# ---------- 聚合 ----------
+def aggregate_chunks(chunks: list, results: list) -> dict:
+    steps_all = []
+    sub_answers = []
+    kps = set()
+    for r in results:
+        for step in r.get("steps", []):
+            steps_all.append(dict(step))
+        sa = r.get("sub_answers") or []
+        sub_answers.extend(sa)
+        for kp in r.get("knowledge_points", []):
+            kps.add(kp)
+    final_answers = [r.get("final_answer", "") for r in results if r.get("final_answer")]
     return {
-        "steps": steps if steps else [
-            {"step_number": 1, "title": "解答", "standard_writing": verifier_content[:500], "detail": "", "knowledge_point": ""}
-        ],
-        "final_answer": final_answer if 'final_answer' in dir() else "",
-        "difficulty": {"level": "未知", "total_score": 0, "dimensions": {}},
-        "category": {"level1": None, "level2": None},
-        "knowledge_points": [],
-        "common_mistakes": []
+        "steps": steps_all,
+        "final_answer": " | ".join(final_answers) if len(final_answers) > 1 else (final_answers[0] if final_answers else ""),
+        "sub_answers": sub_answers if sub_answers else None,
+        "knowledge_points": list(kps),
+        "chunk_results": results,
+        "chunks": chunks,
     }
 
+# ---------- Solver 步 ----------
+def step_solver_only(question: str, question_type: str = None) -> dict:
+    """仅做 solver（切块+解答），返回解析后的 chunks"""
+    prompt = SOLVER_PROMPT
+    if question_type:
+        prompt += f"\n\n注意：已知本题为{question_type}，请按该题型切块和解答。"
+    content, usage = call_deepseek(prompt, question)
+    chunks = _parse_chunks(content)
+    if not chunks:
+        chunks = [{"id": 1, "type": question_type or "整体", "content": content}]
+    return {"content": content, "chunks": chunks, "token_usage": usage}
 
-def step_formatter(content: str, original_question: str = None) -> dict:
-    """第3步：Formatter 格式化 + 存库，返回 result + tokens"""
-    # 检查 verifier 是否确认了 不会做/错题
-    status = _extract_status(content)
+# ---------- Verifier + Formatter 步（一个块）----------
+def step_verify_format_chunk(chunk: dict, question: str, solved: list) -> dict:
+    cid = chunk["id"]
+    ctype = chunk.get("type", "整体")
+    ccontent = chunk["content"]
+    cat = chunk.get("category")
+    # 如果 solver 没输出板块，从内容中自动匹配
+    if not cat and ctype in ("子问", "整体", "大题"):
+        for known_cat in CATEGORIES:
+            if known_cat in ccontent_lower:
+                cat = known_cat
+                break
+
+    ctx_parts = [f"原题：{question}"]
+    dep_ctx = _build_context(chunk, solved)
+    if dep_ctx:
+        ctx_parts.append(dep_ctx)
+    context = "\n".join(ctx_parts)
+
+    # Verifier
+    is_cross = cat == "交叉压轴题"
+    verifier_prompt = _load_verifier_prompt(cat or ctype, is_cross, [cat] if cat else [])
+    verified_out, v_usage = call_deepseek(verifier_prompt, f"{context}\n\n解答内容：\n{ccontent}")
+    status = _extract_status(verified_out)
+
+    # Formatter
+    v_output = {
+        "content": verified_out,
+        "status": status,
+        "question_type": ctype,
+        "category": cat,
+        "involved": [cat] if cat else [],
+    }
+    f_result = _step_formatter(v_output, ccontent)
+
+    token_total = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
+    for u in (v_usage, f_result["token_usage"]):
+        for k in token_total:
+            token_total[k] += u.get(k, 0)
+
+    result = f_result["result"]
+    result["chunk_id"] = cid
+    return {"result": result, "token_usage": token_total}
+
+# ---------- Formatter（纯机械 + AI 纠错）----------
+def _step_formatter(verifier_output: dict, original_question: str = None) -> dict:
+    content = verifier_output["content"]
+    _content_for_ai = content[:6000]
+    qtype = verifier_output.get("question_type", "大题")
+    category = verifier_output.get("category", "未知")
+    involved = verifier_output.get("involved", [])
+    status = verifier_output.get("status", "可解")
+
     if status in ("不会做", "错题"):
-        lines = content.strip().split('\n', 1)
+        lines = content.strip().split("\n", 1)
         reason = lines[1].strip() if len(lines) > 1 else ""
-        # 去掉可能的第一行标记（如 [确认：不会做]）
-        if reason.startswith('['):
-            reason = ''
+        if reason.startswith("["):
+            reason = ""
         result = {
-            "status": status,
-            "reason": reason,
-            "steps": [],
-            "final_answer": "无法解答" if status == "不会做" else "错题",
+            "status": status, "reason": reason,
+            "steps": [], "final_answer": "无法解答" if status == "不会做" else "错题",
             "difficulty": {"level": "未知", "total_score": 0, "dimensions": {}},
-            "category": {"level1": None, "level2": None},
-            "knowledge_points": [],
-            "common_mistakes": []
+            "category": {"level1": category if category else qtype, "level2": None},
+            "knowledge_points": [], "common_mistakes": [],
         }
         return {"result": result, "token_usage": {}}
 
-    # 把原题传给 formatter，帮助它理解上下文
-    user_msg = content
-    if original_question:
-        user_msg = f"原题：{original_question}\n\n解题过程：\n{content}"
+    steps = _parse_steps(content)
+    _parsed_final_answer = _parse_final_answer(content)
+    _sub_answers = _parse_sub_answers(_parsed_final_answer)
 
-    formatted, usage = call_deepseek(FORMATTER_PROMPT, user_msg)
+    # 知识点
+    raw_kps = []
+    for s in steps:
+        kp = s.get("knowledge_point", "")
+        if kp:
+            for item in kp.split("、"):
+                item = item.strip()
+                if item:
+                    raw_kps.append(item)
 
-    # 提取 JSON
-    cleaned = _extract_json(formatted)
+    if qtype in ("选择题", "填空题"):
+        valid_kps = [kp for kp in raw_kps if kp]
+    elif involved:
+        valid_kps = []
+        for kp in raw_kps:
+            found = False
+            for cat in involved:
+                if kp in CATEGORIES.get(cat, []):
+                    found = True
+                    break
+            if found:
+                valid_kps.append(kp)
+    else:
+        valid_kps = validate_knowledge_points(category, raw_kps)
 
+    seen = set()
+    unique_kps = []
+    for kp in valid_kps:
+        if kp not in seen:
+            seen.add(kp)
+            unique_kps.append(kp)
+
+    # AI 难度评分 + JSON 纠错
+    steps_json_str = json.dumps(steps, ensure_ascii=False, indent=2)
+    diff_input = (
+        f"【原题】\n{original_question or '(未提供)'}\n\n"
+        f"【完整解题过程】\n{_content_for_ai}\n\n"
+        f"【机械解析步骤 JSON】\n{steps_json_str}\n\n"
+        f"【最终答案】\n{_parsed_final_answer}"
+    )
+    formatted, usage = call_deepseek(FORMATTER_PROMPT, diff_input, temperature=0.2)
+
+    difficulty = {"level": "中等", "total_score": 4, "dimensions": {}}
+    common_mistakes = []
+    corrections = None
     try:
-        result = json.loads(cleaned)
-        # 验证关键字段
-        if 'steps' not in result or not isinstance(result['steps'], list) or len(result['steps']) == 0:
-            raise ValueError("JSON 缺少有效 steps")
-    except (json.JSONDecodeError, ValueError) as e:
-        print(f"[Error] 首次 JSON 解析失败：{e}")
-        print(f"[Debug] 原始输出：{formatted[:300]}")
+        diff_json = json.loads(_extract_json(formatted))
+        if "difficulty" in diff_json:
+            difficulty = diff_json["difficulty"]
+        if "common_mistakes" in diff_json:
+            common_mistakes = diff_json["common_mistakes"]
+        if "corrections" in diff_json and diff_json["corrections"] is not None:
+            corrections = diff_json["corrections"]
+    except (json.JSONDecodeError, ValueError):
+        pass
 
-        # 自动重试一次，带更明确的指令
-        retry_prompt = (
-            f"原题：{original_question}\n\n"
-            f"解题过程：\n{content}\n\n"
-            "注意：请只输出一个合法的 JSON 对象，不要包含任何其他文字、注释、或 markdown 标记。"
-            "JSON 必须包含 steps 数组（每个 step 包含 step_number, title, standard_writing, detail, knowledge_point）、"
-            "final_answer、category、knowledge_points、difficulty、common_mistakes 字段。"
-        )
-        formatted2, _ = call_deepseek(FORMATTER_PROMPT, retry_prompt)
-        cleaned2 = _extract_json(formatted2)
-        try:
-            result = json.loads(cleaned2)
-            if 'steps' not in result or not isinstance(result['steps'], list) or len(result['steps']) == 0:
-                raise ValueError("重试后 JSON 仍缺少有效 steps")
-            print("[Recovery] 重试成功")
-        except (json.JSONDecodeError, ValueError) as e2:
-            print(f"[Error] 重试仍失败：{e2}")
-            result = _build_fallback(content)
+    if corrections:
+        if "final_answer" in corrections and corrections["final_answer"]:
+            _parsed_final_answer = corrections["final_answer"]
+        if "knowledge_points" in corrections and corrections["knowledge_points"]:
+            unique_kps = []
+            seen = set()
+            for kp in corrections["knowledge_points"]:
+                if kp not in seen:
+                    seen.add(kp)
+                    unique_kps.append(kp)
+        if "steps" in corrections and corrections["steps"]:
+            for cor_step in corrections["steps"]:
+                sn = cor_step.get("step_number")
+                for existing in steps:
+                    if existing["step_number"] == sn:
+                        for field in ("title", "standard_writing", "detail", "knowledge_point"):
+                            if field in cor_step and cor_step[field]:
+                                existing[field] = cor_step[field]
 
-    # 存库
+    result = {
+        "status": status, "question_type": qtype,
+        "steps": steps, "final_answer": _parsed_final_answer,
+        "sub_answers": _sub_answers if _sub_answers else None,
+        "category": {"level1": category if category else qtype, "level2": unique_kps[0] if unique_kps else None},
+        "knowledge_points": unique_kps,
+        "difficulty": difficulty, "common_mistakes": common_mistakes,
+    }
     if original_question:
-        result["token_usage"] = usage
+        from backend.database import save_question
         save_question(original_question, result)
-
     return {"result": result, "token_usage": usage}
 
-# ---------- 聚合函数（兼容旧接口）----------
-
-def solve(question: str) -> Dict[str, Any]:
-    """完整三步解题，返回最终 result 带累计 token"""
+# ---------- 完整流程 ----------
+def solve_multi(question: str, question_type: str = None) -> dict:
+    from backend.database import find_question
     cached = find_question(question)
     if cached:
         return cached
@@ -264,22 +426,21 @@ def solve(question: str) -> Dict[str, Any]:
         for k in token_total:
             token_total[k] += u.get(k, 0)
 
-    r1 = step_solver(question)
+    r1 = step_solver_only(question, question_type)
     _add(r1["token_usage"])
+    chunks = r1["chunks"]
 
-    r2 = step_verifier(r1["content"])
-    _add(r2["token_usage"])
+    solved = []
+    chunk_results = []
+    for chunk in chunks:
+        r2 = step_verify_format_chunk(chunk, question, solved)
+        _add(r2["token_usage"])
+        chunk_results.append(r2["result"])
+        solved.append(r2["result"])
 
-    r3 = step_formatter(r2["content"], question)
-    _add(r3["token_usage"])
+    final = aggregate_chunks(chunks, chunk_results)
+    final["token_usage"] = token_total
+    return final
 
-    result = r3["result"]
-    result["token_usage"] = token_total
-    return result
-
-
-if __name__ == "__main__":
-    from backend.database import init_db
-    init_db()
-    r = solve("已知椭圆x²/4+y²/3=1，求右焦点坐标")
-    print(json.dumps(r, ensure_ascii=False, indent=2)[:500])
+def solve(question: str, question_type: str = None) -> dict:
+    return solve_multi(question, question_type)

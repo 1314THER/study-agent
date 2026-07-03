@@ -7,7 +7,6 @@
 import sqlite3
 import json
 import os
-from backend.categories import format_category_prompt
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "study_agent.db")
 
