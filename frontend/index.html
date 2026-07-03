@@ -204,11 +204,10 @@
             if (data.knowledge_points && data.knowledge_points.length > 0) {
                 html += '<span class="tag tag-category">' + data.knowledge_points.slice(0,3).join(' / ') + '</span>';
             }
-            // 雪峰难度系数
-            var fc = data.chunk_results && data.chunk_results[0] || {};
-            var xf = fc.difficulty && fc.difficulty.total_score;
-            if (xf !== undefined && xf !== null) {
-                html += '<span class="tag" style="background:#e8f0fe;color:#1565c0;">雪峰难度系数：' + xf + '/12</span>';
+            // 整体难度（从各块难度取每维最大值计算）
+            var od = data.overall_difficulty;
+            if (od && od.total_score !== undefined) {
+                html += '<span class="tag" style="background:#e8f0fe;color:#1565c0;">难度系数：' + od.total_score + '/12</span>';
             }
             // 武亮难度系数
             if (data.step_difficulty_sum !== undefined) {
@@ -286,8 +285,8 @@
                 });
             } catch(e) { console.log('KaTeX error:', e); }
 
-            // 画雷达图
-            var dims = fc.difficulty && fc.difficulty.dimensions;
+            // 画雷达图（用整体难度维度）
+            var dims = od && od.dimensions;
             if (dims && Object.keys(dims).length === 6) {
                 var canvas = document.createElement('canvas');
                 canvas.width = 240;

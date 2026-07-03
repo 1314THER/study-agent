@@ -19,7 +19,6 @@ PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
 
 # ---------- 正则 ----------
 SOLVER_STATUS_PATTERN = re.compile(r'^\[(?:状态|确认|修正)：(.+?)\]')
-SOLVER_DIFFICULTY_PATTERN = re.compile(r'^(?:难度系数|雪峰难度)[：:][\s]*?(\d+)\s*/\s*12')
 BRIEF_PATTERN = re.compile(r'^简略过程[：:]\s*(.+)$')
 KNOWLEDGE_POINT_PATTERN = re.compile(r'^知识点[：:]\s*(.+)$')
 STEP_HEADER_PATTERN = re.compile(r'^步骤(\d+)\s*(?:[（(]?小块[）)]?)?[：:]\s*(.*)$')
@@ -28,6 +27,11 @@ CHUNK_PATTERN = re.compile(r'###\s*块(\d+)\s*')
 # Verifier 输出中的块级字段
 BLOCK_TYPE_PATTERN = re.compile(r'^块类型[：:]\s*(.+)$')
 BLOCK_CATEGORY_PATTERN = re.compile(r'^板块[：:]\s*(.+)$')
+# Solver 结构化状态字段
+IS_MATH_PATTERN = re.compile(r'^是否数学题[：:]\s*(.+)$')
+IS_MISTAKE_PATTERN = re.compile(r'^是否错题[：:]\s*(.+)$')
+CAN_SOLVE_PATTERN = re.compile(r'^是否能做出来[：:]\s*(.+)$')
+STATUS_PLAIN_PATTERN = re.compile(r'^状态[：:]\s*(.+)$')
 BLOCK_DIFFICULTY_PATTERN = re.compile(r'^块难度[：:]\s*(.+)$')
 BLOCK_FINAL_ANSWER_PATTERN = re.compile(r'^块最终答案[：:]\s*(.+)$')
 BLOCK_KP_PATTERN = re.compile(r'^块知识点[：:]\s*(.+)$')
@@ -99,17 +103,28 @@ def _extract_json(text: str) -> str:
     return text.strip()
 
 
-def _extract_solver_difficulty(text: str) -> Optional[int]:
-    """从 Solver 输出中提取雪峰难度系数（如 难度系数：5/12 → 5）"""
-    for line in text.split("\n"):
-        stripped = line.strip()
-        m = SOLVER_DIFFICULTY_PATTERN.match(stripped)
-        if m:
-            try:
-                return int(m.group(1))
-            except ValueError:
-                return None
-    return None
+def _compute_overall_difficulty(chunk_results: list) -> dict:
+    """从各块难度计算整体题目难度：每维取最大值，再求和"""
+    dim_keys = ["常规程度", "步骤复杂度", "交叉板块", "计算量", "理解难度", "分类讨论"]
+    max_dims = {k: 0 for k in dim_keys}
+    for cr in chunk_results:
+        dims = cr.get("difficulty", {}).get("dimensions", {})
+        if not isinstance(dims, dict):
+            continue
+        for k in dim_keys:
+            val = dims.get(k, 0)
+            if isinstance(val, (int, float)) and val > max_dims[k]:
+                max_dims[k] = val
+    total = sum(max_dims.values())
+    if total <= 2:
+        level = "容易"
+    elif total <= 5:
+        level = "中等"
+    elif total <= 8:
+        level = "困难"
+    else:
+        level = "极难"
+    return {"level": level, "total_score": total, "dimensions": max_dims}
 
 
 def _extract_solver_status(text: str) -> Optional[str]:
@@ -124,13 +139,45 @@ def _extract_solver_status(text: str) -> Optional[str]:
     return None
 
 
+def _check_solver_viable(content: str) -> Optional[str]:
+    """检查 Solver 输出是否可解。返回 None 表示可解，str 表示雪碧了的原因。"""
+    for line in content.split("\n"):
+        stripped = line.strip()
+        m = IS_MATH_PATTERN.match(stripped)
+        if m and m.group(1).strip() == "否":
+            return "不是数学题"
+        m = IS_MISTAKE_PATTERN.match(stripped)
+        if m and m.group(1).strip() == "是":
+            return "题目本身有错"
+        m = CAN_SOLVE_PATTERN.match(stripped)
+        if m and m.group(1).strip() == "否":
+            return "Solver 判定：不会做"
+        m = STATUS_PLAIN_PATTERN.match(stripped)
+        if m:
+            s = m.group(1).strip()
+            if s == "不会做":
+                return "Solver 判定：不会做"
+            if s == "错题":
+                return "Solver 判定：错题"
+        m = SOLVER_STATUS_PATTERN.match(stripped)
+        if m:
+            s = m.group(1).strip()
+            if s in ("不会做", "错题"):
+                return f"Solver 判定：{s}"
+    return None
+
+
 def _extract_category(text: str) -> Optional[str]:
-    """从 Solver 输出中提取板块"""
+    """从 Solver 输出中提取板块（精确匹配 Solver 写死的板块名）"""
     for line in text.split("\n"):
         stripped = line.strip()
         m = BLOCK_CATEGORY_PATTERN.match(stripped)
         if m:
             val = m.group(1).strip()
+            # 精确匹配 CATEGORIES key
+            if val in CATEGORIES:
+                return val
+            # 提取第一个连续中文字段再匹配（兼容板块后跟补充说明）
             m2 = re.match(r'([一-鿿]+)', val)
             if m2:
                 candidate = m2.group(1)
@@ -235,13 +282,7 @@ def _split_chunks(text: str) -> tuple:
 # ---------- Verifier 路由 ----------
 def _load_verifier_prompt(category: str) -> str:
     """加载对应板块的 Verifier prompt"""
-    alias = {
-        "交叉压轴题": "非常规压轴题",
-        "新定义题": "非常规压轴题",
-        "整体": "函数与导数",  # 兜底默认
-    }
-    cat = alias.get(category, category)
-    path = os.path.join(PROMPTS_DIR, "verifiers", f"{cat}.md")
+    path = os.path.join(PROMPTS_DIR, "verifiers", f"{category}.md")
     if not os.path.exists(path):
         # 尝试从内容自动匹配第一个存在的板块
         for known in CATEGORIES:
@@ -301,6 +342,9 @@ def step_solver_only(question: str, question_type: str = None) -> dict:
     if question_type:
         prompt += f"\n\n注意：已知本题为{question_type}。"
     content, usage = call_deepseek(prompt, question)
+    viable_reason = _check_solver_viable(content)
+    if viable_reason:
+        return _xuebile("不可解", viable_reason)
     cat = _extract_category(content)
     return {
         "content": content,
@@ -314,8 +358,11 @@ def step_solver_only(question: str, question_type: str = None) -> dict:
 # ---------- Verifier 步（一次调用，切全部）----------
 def step_verify_all(content: str, question: str, category: str = None) -> dict:
     """一次 Verifier：将完整解答切成大块/小块 + 归类知识点 + 打分"""
-    alias = {"交叉压轴题": "非常规压轴题", "新定义题": "非常规压轴题", "整体": "函数与导数"}
-    verifier_cat = alias.get(category or "整体", category or "整体")
+    verifier_cat = category
+    if not verifier_cat:
+        verifier_cat = _extract_category(content)
+    if not verifier_cat:
+        verifier_cat = "函数与导数"  # 最后兜底
 
     verifier_prompt = _load_verifier_prompt(verifier_cat)
     user_prompt = f"原题：{question}\n\n解答内容：\n{content}"
@@ -348,8 +395,8 @@ def step_verify_all(content: str, question: str, category: str = None) -> dict:
             "final_answer": meta.get("final_answer", ""),
             "knowledge_points": ["非常规压轴题"] if is_special else unique_kps,
         })
-    solver_diff = _extract_solver_difficulty(content)
-    return {"chunk_results": chunk_results, "token_usage": v_usage, "solver_difficulty": solver_diff}
+    overall_diff = _compute_overall_difficulty(chunk_results)
+    return {"chunk_results": chunk_results, "token_usage": v_usage, "overall_difficulty": overall_diff}
 
 
 # ---------- 向后兼容：Step2 API ----------
@@ -362,7 +409,7 @@ def step_verify_chunk(chunk: dict, question: str, solved: list) -> dict:
 
 
 # ---------- Formatter：全局校验 ----------
-def _aggregate_from_chunks(question: str, chunk_results: list, token_total: dict, solver_difficulty: int = None) -> dict:
+def _aggregate_from_chunks(question: str, chunk_results: list, token_total: dict) -> dict:
     """聚合 Verifier 输出为最终 JSON（当 Formatter 失败时的兜底）"""
     kps = set()
     answers = []
@@ -375,19 +422,19 @@ def _aggregate_from_chunks(question: str, chunk_results: list, token_total: dict
         for step in cr.get("steps", []):
             sd = step.get("step_difficulty", {})
             step_sum += sd.get("score", 0) if isinstance(sd, dict) else 0
+    overall = _compute_overall_difficulty(chunk_results)
     return {
         "status": "可解",
         "chunk_results": chunk_results,
         "final_answer": " | ".join(answers) if len(answers) > 1 else (answers[0] if answers else ""),
         "knowledge_points": list(kps),
         "step_difficulty_sum": step_sum,
-        "step_difficulty_sum": step_sum,
-        "solver_difficulty": solver_difficulty,
+        "overall_difficulty": overall,
         "token_usage": {k: token_total.get(k, 0) for k in token_total},
     }
 
 
-def step_final_check(question: str, chunk_results: list, chunks_raw: list, token_total: dict, solver_difficulty: int = None) -> dict:
+def step_final_check(question: str, chunk_results: list, chunks_raw: list, token_total: dict) -> dict:
     """全局校验 + 聚合（如果 Formatter 输出雪碧了，兜底用 Verifier 的结果）"""
     input_data = {
         "question": question,
@@ -403,7 +450,6 @@ def step_final_check(question: str, chunk_results: list, chunks_raw: list, token
     try:
         result = json.loads(_extract_json(formatted))
         if "error" in result:
-            # Formatter 发现了问题，但兜底用 Verifier 的数据
             return _aggregate_from_chunks(question, chunk_results, token_total)
         # 计算武亮难度系数（步骤难度之和）
         step_sum = 0
@@ -412,7 +458,7 @@ def step_final_check(question: str, chunk_results: list, chunks_raw: list, token
                 sd = step.get("step_difficulty", {})
                 step_sum += sd.get("score", 0) if isinstance(sd, dict) else 0
         result["step_difficulty_sum"] = step_sum
-        result["solver_difficulty"] = solver_difficulty
+        result["overall_difficulty"] = _compute_overall_difficulty(chunk_results)
         result["token_usage"] = {k: token_total.get(k, 0) for k in token_total}
         return result
     except (json.JSONDecodeError, ValueError):
@@ -436,10 +482,9 @@ def solve_multi(question: str, question_type: str = None) -> dict:
     # 2. Solver（1 次调用）
     r1 = step_solver_only(question, question_type)
 
-    # 3. 雪碧了
-    solver_status = _extract_solver_status(r1["content"])
-    if solver_status:
-        return _xuebile(solver_status)
+    # 3. 雪碧了（step_solver_only 已在内部检查）
+    if r1.get("error"):
+        return r1
 
     _add(r1["token_usage"])
 
@@ -449,7 +494,7 @@ def solve_multi(question: str, question_type: str = None) -> dict:
     chunk_results = v_result["chunk_results"]
 
     # 5. Formatter（1 次调用，全局校验）
-    final = step_final_check(question, chunk_results, [], token_total, v_result.get("solver_difficulty"))
+    final = step_final_check(question, chunk_results, [], token_total)
     if "error" in final:
         return final
 

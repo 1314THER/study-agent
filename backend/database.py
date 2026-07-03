@@ -7,6 +7,12 @@
 import sqlite3
 import json
 import os
+from backend.categories import CATEGORIES
+
+# 结构化字段的合法值（写死，不依赖模型输出）
+_VALID_CATEGORIES = set(CATEGORIES.keys())
+_VALID_DIFFICULTY_LEVELS = {"容易", "中等", "困难", "极难"}
+_VALID_DIMENSION_KEYS = {"常规程度", "步骤复杂度", "交叉板块", "计算量", "理解难度", "分类讨论"}
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "study_agent.db")
 
@@ -77,26 +83,59 @@ def find_question(question_text: str):
     return None
 
 
+def _sanitize_category(cat: dict) -> tuple:
+    """确保 category 字段的值来自 CATEGORIES 字典"""
+    if not isinstance(cat, dict):
+        return None, None
+    level1 = cat.get("level1")
+    level2 = cat.get("level2")
+    if level1 not in _VALID_CATEGORIES:
+        level1 = None
+    if not level1:
+        level2 = None
+    elif level2 and level2 not in CATEGORIES.get(level1, []):
+        level2 = None
+    return level1, level2
+
+
+def _sanitize_difficulty(diff) -> tuple:
+    """确保 difficulty 字段的值符合规范"""
+    if not isinstance(diff, dict):
+        return None, None, "{}"
+    level = diff.get("level")
+    if level not in _VALID_DIFFICULTY_LEVELS:
+        level = None
+    score = diff.get("total_score")
+    dims = diff.get("dimensions", {})
+    if isinstance(dims, dict):
+        dims = {k: v for k, v in dims.items() if k in _VALID_DIMENSION_KEYS}
+    return level, score, json.dumps(dims, ensure_ascii=False)
+
+
+def _sanitize_knowledge_points(level1: str, points: list) -> list:
+    """确保知识点来自对应板块的列表"""
+    if not level1 or level1 not in CATEGORIES:
+        return []
+    valid = set(CATEGORIES[level1])
+    return [p for p in points if p in valid]
+
+
 def save_question(question_text: str, answer_dict: dict):
-    """从 answer_dict 提取各字段，分别存入数据库"""
+    """从 answer_dict 提取各字段，分别存入数据库（入库前清洗，保证字段来自字典）"""
 
-    # 处理 category
+    # 处理 category（清洗）
     category = answer_dict.get("category", {})
-    if not isinstance(category, dict):
-        category = {}
-    category_level1 = category.get("level1")
-    category_level2 = category.get("level2")
+    category_level1, category_level2 = _sanitize_category(category)
 
-    # 处理 difficulty
+    # 处理 difficulty（清洗）
     difficulty = answer_dict.get("difficulty", {})
-    if isinstance(difficulty, dict):
-        difficulty_level = difficulty.get("level")
-        difficulty_score = difficulty.get("total_score")
-        difficulty_dimensions = json.dumps(difficulty.get("dimensions", {}), ensure_ascii=False)
-    else:
-        difficulty_level = str(difficulty) if difficulty else None
-        difficulty_score = None
-        difficulty_dimensions = None
+    difficulty_level, difficulty_score, difficulty_dimensions = _sanitize_difficulty(difficulty)
+
+    # 处理 knowledge_points（清洗）
+    raw_kps = answer_dict.get("knowledge_points", [])
+    if not isinstance(raw_kps, list):
+        raw_kps = []
+    clean_kps = _sanitize_knowledge_points(category_level1, raw_kps)
 
     conn = get_connection()
     conn.execute(
@@ -114,12 +153,14 @@ def save_question(question_text: str, answer_dict: dict):
             difficulty_score,
             difficulty_dimensions,
             json.dumps(answer_dict.get("common_mistakes", []), ensure_ascii=False),
-            json.dumps(answer_dict.get("knowledge_points", []), ensure_ascii=False)
+            json.dumps(clean_kps, ensure_ascii=False)
         )
     )
     conn.commit()
     conn.close()
     print(f"[Database] 题目已保存（{category_level1} → {category_level2}，难度 {difficulty_level}）")
+    if raw_kps != clean_kps:
+        print(f"  [Sanitize] 知识点被清理: {raw_kps} → {clean_kps}")
 
 
 def get_all_questions():

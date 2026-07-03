@@ -30,15 +30,13 @@ class Step2Request(BaseModel):
 class Step3Request(BaseModel):
     question: str = Field(..., description="原题")
     chunk_results: str = Field(..., description="Verifier 输出的各块结果 JSON")
-    solver_difficulty: Optional[int] = Field(None, description="雪峰难度系数")
 
 @app.post("/solve/step1")
 def api_step1(req: Step1Request):
     """第1步：解答"""
     result = step_solver_only(req.question, req.question_type)
-    status = _extract_solver_status(result["content"])
-    if status:
-        return _xuebile(status, f"Solver 判定：{status}")
+    if result.get("error"):
+        return result
     return result
 
 @app.post("/solve/step2")
@@ -53,7 +51,7 @@ def api_step3(req: Step3Request):
     import json
     chunk_results = json.loads(req.chunk_results)
     token_total = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-    final = step_final_check(req.question, chunk_results, [], token_total, req.solver_difficulty)
+    final = step_final_check(req.question, chunk_results, [], token_total)
     return final
 
 
