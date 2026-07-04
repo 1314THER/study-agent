@@ -12,7 +12,7 @@ from backend.categories import CATEGORIES
 # 结构化字段的合法值（写死，不依赖模型输出）
 _VALID_CATEGORIES = set(CATEGORIES.keys())
 _VALID_DIFFICULTY_LEVELS = {"容易", "中等", "困难", "极难"}
-_VALID_DIMENSION_KEYS = {"常规程度", "步骤复杂度", "交叉板块", "计算量", "理解难度", "分类讨论"}
+_VALID_DIMENSION_KEYS = {"常规程度", "计算量", "理解难度", "分类讨论", "涉及到的知识点数量"}
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "study_agent.db")
 

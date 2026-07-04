@@ -45,7 +45,6 @@ def api_step1(req: Step1Request):
     return result
 
 @app.post("/solve/step2")
-@app.post("/solve/step2")
 def api_step2(req: Step2Request):
     result = step_verify_all(req.content, req.question, req.category, question_type=req.question_type, teacher=req.teacher)
     return result

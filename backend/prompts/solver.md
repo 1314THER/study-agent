@@ -122,3 +122,9 @@
 - 变量名必须用 $ 包裹，如 $a$、$f(x)$、$D(a)$
 - 下标写 `$x_1$`
 - 函数名写 `\ln`、`\log`、`\sin`、`\cos`
+- 多行公式环境（如 \begin{align*}、\begin{cases}、\begin{matrix} 等）必须被 $$ 包裹，不允许裸写，例如：
+  $$
+  \begin{align*}
+  ...
+  \end{align*}
+  $$

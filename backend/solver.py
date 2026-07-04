@@ -177,20 +177,22 @@ def _extract_solver_status(text: str) -> Optional[str]:
 
 def _check_solver_viable(content: str) -> Optional[str]:
     """检查 Solver 输出是否可解。返回 None 表示可解，str 表示雪碧了的原因。"""
+    def _strip_brackets(s: str) -> str:
+        return s.strip().strip('[]')
     for line in content.split("\n"):
         stripped = line.strip()
         m = IS_MATH_PATTERN.match(stripped)
-        if m and m.group(1).strip() == "否":
+        if m and _strip_brackets(m.group(1)) == "否":
             return "不是数学题"
         m = IS_MISTAKE_PATTERN.match(stripped)
-        if m and m.group(1).strip() == "是":
+        if m and _strip_brackets(m.group(1)) == "是":
             return "题目本身有错"
         m = CAN_SOLVE_PATTERN.match(stripped)
-        if m and m.group(1).strip() == "否":
+        if m and _strip_brackets(m.group(1)) == "否":
             return "Solver 判定：不会做"
         m = STATUS_PLAIN_PATTERN.match(stripped)
         if m:
-            s = m.group(1).strip()
+            s = _strip_brackets(m.group(1))
             if s == "不会做":
                 return "Solver 判定：不会做"
             if s == "错题":
@@ -212,15 +214,10 @@ def _extract_category(text: str) -> Optional[str]:
         m = BLOCK_CATEGORY_PATTERN.match(stripped)
         if m:
             val = m.group(1).strip()
-            # 精确匹配 CATEGORIES key
+            # Solver 输出可能带括号如 [解析几何]，去掉外层括号
+            val = val.strip('[]')
             if val in CATEGORIES:
                 return val
-            # 提取第一个连续中文字段再匹配（兼容板块后跟补充说明）
-            m2 = re.match(r'([一-鿿]+)', val)
-            if m2:
-                candidate = m2.group(1)
-                if candidate in CATEGORIES:
-                    return candidate
     return None
 
 
