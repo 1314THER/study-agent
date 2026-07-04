@@ -126,6 +126,18 @@
 
         .step-content { margin-left: 23px; padding: 8px 0 8px 12px; font-size: 15px; color: #1d1d1f; line-height: 1.7; border-left: 1px solid #e5e5e7; }
         .step-kp { margin-left: 23px; padding: 2px 0 6px 12px; font-size: 13px; color: #2e7d32; border-left: 1px solid #e5e5e7; }
+        .detail-toggle {
+            cursor: pointer; color: #0071e3; font-size: 13px;
+            user-select: none; padding: 4px 0 2px 23px;
+        }
+        .detail-toggle:hover { text-decoration: underline; }
+        .detail-content {
+            display: none; margin-left: 23px; padding: 8px 0 8px 12px;
+            font-size: 14px; color: #1d1d1f; line-height: 1.7;
+            border-left: 1px solid #e5e5e7; background: #fafafa;
+            border-radius: 0 6px 6px 0;
+        }
+        .detail-content.show { display: block; }
         
 
         .final-answer { margin: 0 16px 16px; padding: 16px; background: #f0f7ff; border-radius: 12px; font-weight: 600; font-size: 16px; color: #0071e3; }
@@ -189,6 +201,10 @@
                 }
                 html += '</div>';
                 html += '<div class="step-content">' + (step.standard_writing || '') + '</div>';
+                if (step.detailed_writing) {
+                    html += '<div class="detail-toggle" onclick="toggleDetail(this)">展开详细过程 ▸</div>';
+                    html += '<div class="detail-content">' + step.detailed_writing + '</div>';
+                }
                 if (step.knowledge_point) {
                     html += '<div class="step-kp">' + step.knowledge_point + '</div>';
                 }
@@ -250,6 +266,10 @@
                             }
                             html += '</div>';
                             html += '<div class="step-content">' + (step.standard_writing || '') + '</div>';
+                            if (step.detailed_writing) {
+                                html += '<div class="detail-toggle" onclick="toggleDetail(this)">展开详细过程 ▸</div>';
+                                html += '<div class="detail-content">' + step.detailed_writing + '</div>';
+                            }
                             if (step.knowledge_point) {
                                 html += '<div class="step-kp">' + step.knowledge_point + '</div>';
                             }
@@ -355,6 +375,20 @@
             result.classList.add('show'); result.style.display = 'block';
         }
 
+        function toggleDetail(el) {
+            var content = el.nextElementSibling;
+            var isOpen = !content.classList.contains('show');
+            content.classList.toggle('show');
+            el.textContent = isOpen ? '收起详细过程 ▾' : '展开详细过程 ▸';
+            if (isOpen && window.renderMathInElement) {
+                try { renderMathInElement(content, { delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\(', right: '\\)', display: false},
+                    {left: '\\[', right: '\\]', display: true}
+                ], ignoredTags: [] }); } catch(e) { console.log('KaTeX error:', e); }
+            }
+        }
         function levelClass(level) {
             var map = { '容易': 'tag-easy', '中等': 'tag-medium', '困难': 'tag-hard', '极难': 'tag-extreme' };
             return map[level] || 'tag-easy';

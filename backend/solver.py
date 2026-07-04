@@ -20,6 +20,8 @@ PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
 # ---------- 正则 ----------
 SOLVER_STATUS_PATTERN = re.compile(r'^\[(?:状态|确认|修正)：(.+?)\]')
 BRIEF_PATTERN = re.compile(r'^简略过程[：:]\s*(.+)$')
+DETAIL_PATTERN = re.compile(r'^详细过程[：:]\s*(.+)$')
+REARRANGED_PATTERN = re.compile(r'^整理后的过程[：:]\s*(.+)$')
 KNOWLEDGE_POINT_PATTERN = re.compile(r'^知识点[：:]\s*(.+)$')
 STEP_HEADER_PATTERN = re.compile(r'^步骤(\d+)\s*(?:[（(]?小块[）)]?)?[：:]\s*(.*)$')
 CHUNK_PATTERN = re.compile(r'###\s*块(\d+)\s*')
@@ -159,6 +161,8 @@ def _check_solver_viable(content: str) -> Optional[str]:
                 return "Solver 判定：不会做"
             if s == "错题":
                 return "Solver 判定：错题"
+            if s == "非数学题":
+                return "不是数学题"
         m = SOLVER_STATUS_PATTERN.match(stripped)
         if m:
             s = m.group(1).strip()
@@ -234,6 +238,7 @@ def _parse_steps(text: str) -> list:
                 "step_number": int(m.group(1)),
                 "title": (m.group(2) or "").strip(),
                 "standard_writing": "",
+                "detailed_writing": "",
                 "knowledge_point": "",
                 "step_difficulty": None,
             }
@@ -251,6 +256,14 @@ def _parse_steps(text: str) -> list:
         bm = BRIEF_PATTERN.match(stripped)
         if bm:
             current_step["standard_writing"] = bm.group(1).strip()
+            continue
+        dm2 = DETAIL_PATTERN.match(stripped)
+        if dm2:
+            current_step["detailed_writing"] = dm2.group(1).strip()
+            continue
+        rp = REARRANGED_PATTERN.match(stripped)
+        if rp:
+            current_step["detailed_writing"] = rp.group(1).strip()
             continue
         dm = STEP_DIFFICULTY_PATTERN.match(stripped)
         if dm:
