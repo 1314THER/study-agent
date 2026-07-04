@@ -25,13 +25,13 @@
             flex: 1; padding: 14px 18px; border: 1px solid #d2d2d7; border-radius: 12px;
             font-size: 16px; outline: none; transition: border-color 0.2s;
         }
-        .search-box input:focus { border-color: #0071e3; }
+        .search-box input:focus { border-color: #7c3aed; }
         .search-box button {
-            padding: 14px 28px; background: #0071e3; color: white; border: none;
+            padding: 14px 28px; background: #7c3aed; color: white; border: none;
             border-radius: 12px; font-size: 16px; cursor: pointer; transition: background 0.2s;
         }
-        .search-box button:hover { background: #0077ed; }
-        .search-box button:disabled { background: #a0c4ff; cursor: not-allowed; }
+        .search-box button:hover { background: #7c3aed; }
+        .search-box button:disabled { background: #c4b5fd; cursor: not-allowed; }
 
         .type-selector {
             display: flex; align-items: center; gap: 8px;
@@ -43,9 +43,9 @@
             background: white; font-size: 14px; cursor: pointer;
             transition: all 0.2s; color: #1d1d1f;
         }
-        .type-btn:hover { border-color: #0071e3; color: #0071e3; }
+        .type-btn:hover { border-color: #7c3aed; color: #7c3aed; }
         .type-btn.active {
-            background: #0071e3; color: white; border-color: #0071e3;
+            background: #7c3aed; color: white; border-color: #7c3aed;
         }
 
         .chunk-card {
@@ -58,8 +58,8 @@
             border-bottom: 1px solid #e0e0e0; font-size: 13px;
         }
         .chunk-label {
-            font-weight: 600; color: #0071e3;
-            background: #e8f0fe; padding: 2px 8px; border-radius: 4px;
+            font-weight: 600; color: #7c3aed;
+            background: #ede9fe; padding: 2px 8px; border-radius: 4px;
         }
         .chunk-type { color: #515154; }
         .chunk-cat { color: #2e7d32; background: #e8f5e9; padding: 2px 8px; border-radius: 4px; }
@@ -70,8 +70,9 @@
         .chunk-steps { padding: 12px 16px; }
         .chunk-steps .step { margin-bottom: 12px; }
         .chunk-steps .step:last-child { margin-bottom: 0; }
-        .progress-pct { text-align: center; font-size: 24px; font-weight: 700; color: #0071e3; margin-top: 6px; }
+        .progress-pct { text-align: center; font-size: 24px; font-weight: 700; color: #7c3aed; margin-top: 6px; }
         .progress-token { text-align: center; font-size: 12px; color: #86868b; margin-top: 4px; }
+        .progress-timer { text-align: center; font-size: 14px; color: #7c3aed; margin-top: 6px; font-weight: 600; }
 
 
         .progress-area { margin-bottom: 30px; display: none; }
@@ -83,7 +84,7 @@
         }
         .progress-bar-fill {
             height: 100%; width: 0%;
-            background: linear-gradient(90deg, #0071e3, #00a2ff);
+            background: linear-gradient(90deg, #7c3aed, #8b5cf6);
             border-radius: 3px; transition: width 0.3s ease;
         }
         .progress-text { text-align: center; font-size: 14px; color: #86868b; }
@@ -110,16 +111,16 @@
 
         .result h2 { font-size: 18px; color: #1d1d1f; margin-bottom: 20px; }
 
-        .xuebile { background: #fff5f5; border: 2px solid #ffcdd2; border-radius: 16px; padding: 40px 28px; text-align: center; margin-bottom: 20px; }
+        .xuebile { background: #faf5ff; border: 2px solid #e9d5ff; border-radius: 16px; padding: 40px 28px; text-align: center; margin-bottom: 20px; }
         .xuebile-icon { font-size: 64px; margin-bottom: 12px; }
-        .xuebile-title { font-size: 28px; color: #c62828; font-weight: 700; margin-bottom: 12px; }
+        .xuebile-title { font-size: 28px; color: #7c3aed; font-weight: 700; margin-bottom: 12px; }
         .xuebile-reason { font-size: 15px; color: #555; line-height: 1.6; }
 
         .step { margin-bottom: 20px; }
         .step-header {
             display: flex; align-items: center; gap: 8px;
             margin-bottom: 8px; padding-left: 12px;
-            border-left: 3px solid #0071e3;
+            border-left: 3px solid #7c3aed;
         }
         .step-number { font-weight: 600; font-size: 15px; color: #1d1d1f; }
         .step-diff-tag { font-size: 12px; color: #86868b; margin-left: auto; background: #f5f5f7; padding: 2px 8px; border-radius: 4px; }
@@ -127,7 +128,7 @@
         .step-content { margin-left: 23px; padding: 8px 0 8px 12px; font-size: 15px; color: #1d1d1f; line-height: 1.7; border-left: 1px solid #e5e5e7; }
         .step-kp { margin-left: 23px; padding: 2px 0 6px 12px; font-size: 13px; color: #2e7d32; border-left: 1px solid #e5e5e7; }
         .detail-toggle {
-            cursor: pointer; color: #0071e3; font-size: 13px;
+            cursor: pointer; color: #7c3aed; font-size: 13px;
             user-select: none; padding: 4px 0 2px 23px;
         }
         .detail-toggle:hover { text-decoration: underline; }
@@ -140,13 +141,13 @@
         .detail-content.show { display: block; }
         
 
-        .final-answer { margin: 0 16px 16px; padding: 16px; background: #f0f7ff; border-radius: 12px; font-weight: 600; font-size: 16px; color: #0071e3; }
+        .final-answer { margin: 0 16px 16px; padding: 16px; background: #f0f7ff; border-radius: 12px; font-weight: 600; font-size: 16px; color: #7c3aed; }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>你好，我是张雪峰老师</h1>
-        <p class="subtitle">输入题目，AI 帮你做</p>
+        <h1>AI做题系统</h1>
+        <p class="subtitle">张雪峰老师教你做数学</p>
         <div class="type-selector">
             <span class="type-label">题型：</span>
             <button class="type-btn active" data-type="" onclick="selectType(this, '')">自动识别</button>
@@ -165,6 +166,7 @@
             <div class="progress-pct" id="progressPct">0%</div>
             <div class="progress-text" id="progressText"></div>
             <div class="progress-token" id="progressToken" style="display:none;"></div>
+            <div class="progress-timer" id="progressTimer" style="display:none;"></div>
         </div>
         <div class="result" id="result"></div>
     </div>
@@ -195,18 +197,18 @@
                 var step = steps[i];
                 html += '<div class="step">';
                 html += '<div class="step-header">';
-                html += '<span class="step-number">步骤' + step.step_number + '：' + (step.title || '') + '</span>';
+                html += '<span class="step-number">步骤' + step.step_number + '：' + escapeHtml(step.title || '') + '</span>';
                 if (step.step_difficulty) {
                     html += '<span class="step-diff-tag">' + step.step_difficulty.level + ' (' + step.step_difficulty.score + '分)</span>';
                 }
                 html += '</div>';
-                html += '<div class="step-content">' + (step.standard_writing || '') + '</div>';
+                html += '<div class="step-content">' + escapeHtml(step.standard_writing || '') + '</div>';
                 if (step.detailed_writing) {
                     html += '<div class="detail-toggle" onclick="toggleDetail(this)">展开详细过程 ▸</div>';
-                    html += '<div class="detail-content">' + step.detailed_writing + '</div>';
+                    html += '<div class="detail-content">' + escapeHtml(step.detailed_writing) + '</div>';
                 }
                 if (step.knowledge_point) {
-                    html += '<div class="step-kp">' + step.knowledge_point + '</div>';
+                    html += '<div class="step-kp">' + escapeHtml(step.knowledge_point) + '</div>';
                 }
                 html += '</div>';
             }
@@ -223,7 +225,7 @@
             // 整体难度（从各块难度取每维最大值计算）
             var od = data.overall_difficulty;
             if (od && od.total_score !== undefined) {
-                html += '<span class="tag" style="background:#e8f0fe;color:#1565c0;">雪峰难度系数：' + od.total_score + '/15</span>';
+                html += '<span class="tag" style="background:#ede9fe;color:#1565c0;">雪峰难度系数：' + od.total_score + '/15</span>';
             }
             // 武亮难度系数
             if (data.step_difficulty_sum !== undefined) {
@@ -260,18 +262,18 @@
                             var step = cr.steps[si];
                             html += '<div class="step">';
                             html += '<div class="step-header">';
-                            html += '<span class="step-number">步骤' + step.step_number + '：' + (step.title || '') + '</span>';
+                            html += '<span class="step-number">步骤' + step.step_number + '：' + escapeHtml(step.title || '') + '</span>';
                             if (step.step_difficulty) {
                                 html += '<span class="step-diff-tag">' + step.step_difficulty.level + ' (' + step.step_difficulty.score + '分)</span>';
                             }
                             html += '</div>';
-                            html += '<div class="step-content">' + (step.standard_writing || '') + '</div>';
+                            html += '<div class="step-content">' + escapeHtml(step.standard_writing || '') + '</div>';
                             if (step.detailed_writing) {
                                 html += '<div class="detail-toggle" onclick="toggleDetail(this)">展开详细过程 ▸</div>';
-                                html += '<div class="detail-content">' + step.detailed_writing + '</div>';
+                                html += '<div class="detail-content">' + escapeHtml(step.detailed_writing) + '</div>';
                             }
                             if (step.knowledge_point) {
-                                html += '<div class="step-kp">' + step.knowledge_point + '</div>';
+                                html += '<div class="step-kp">' + escapeHtml(step.knowledge_point) + '</div>';
                             }
                             html += '</div>';
                         }
@@ -361,14 +363,14 @@
                 }
                 ctx.closePath();
                 ctx.fillStyle = 'rgba(0, 113, 227, 0.12)'; ctx.fill();
-                ctx.strokeStyle = '#0071e3'; ctx.lineWidth = 2; ctx.stroke();
+                ctx.strokeStyle = '#7c3aed'; ctx.lineWidth = 2; ctx.stroke();
                 for (var i = 0; i < n; i++) {
                     var angle = i * 2 * Math.PI / n - Math.PI / 2;
                     var val = Math.min(values[i] / 2, 1);
                     var x = cx + radius * val * Math.cos(angle);
                     var y = cy + radius * val * Math.sin(angle);
                     ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 2 * Math.PI);
-                    ctx.fillStyle = '#0071e3'; ctx.fill();
+                    ctx.fillStyle = '#7c3aed'; ctx.fill();
                 }
                 ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
                 ctx.font = '12px -apple-system, sans-serif';
@@ -380,11 +382,23 @@
         function displayXuebile(data) {
             var result = document.getElementById('result');
             var reason = data.detail || data.status || '未知错误';
-            var html = '<div class="xuebile"><div class="xuebile-icon">🧊</div><div class="xuebile-title">雪碧了</div><div class="xuebile-reason">' + reason + '</div></div>';
+            var formatted = reason;
+            if (reason.indexOf('不是数学题') >= 0) {
+                formatted = '这个题不是数学题';
+            } else if (reason.indexOf('不会做') >= 0 || reason.indexOf('不可解') >= 0) {
+                formatted = '因为张老师不会做这个题';
+            } else if (reason.indexOf('错题') >= 0) {
+                formatted = '这个题是错题';
+            }
+            formatted += '<br>张雪峰老师，我还记得你～';
+            var html = '<div class="xuebile"><div class="xuebile-icon">💀</div><div class="xuebile-title">雪碧了</div><div class="xuebile-reason">' + formatted + '</div></div>';
             result.innerHTML = html;
             result.classList.add('show'); result.style.display = 'block';
         }
 
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
         function toggleDetail(el) {
             var content = el.nextElementSibling;
             var isOpen = !content.classList.contains('show');
@@ -404,6 +418,29 @@
             return map[level] || 'tag-easy';
         }
 
+        var _stepTimer = null;
+        function startStepTimer() {
+            var startTime = Date.now();
+            var timerEl = document.getElementById('progressTimer');
+            timerEl.style.display = 'block';
+            if (_stepTimer) clearInterval(_stepTimer);
+            _stepTimer = setInterval(function() {
+                var elapsed = Math.floor((Date.now() - startTime) / 1000);
+                timerEl.textContent = '已思考 ' + elapsed + 's/300s';
+                if (elapsed > 30) {
+                    var textEl = document.getElementById('progressText');
+                    if (textEl.textContent.indexOf('你做不过我你信吗？') === -1) {
+                        textEl.textContent = '你做不过我你信吗？';
+                    }
+                }
+            }, 1000);
+        }
+        function stopStepTimer() {
+            if (_stepTimer) {
+                clearInterval(_stepTimer);
+                _stepTimer = null;
+            }
+        }
         function isValidQuestion(text) {
             if (!text || text.length < 5) return false;
             // 必须有中文
@@ -421,7 +458,7 @@
             if (!question) { alert('请输入题目'); return; }
             if (!isValidQuestion(question)) {
                 result.classList.remove('show');
-                result.innerHTML = '<div class="xuebile"><div class="xuebile-icon">🧊</div><div class="xuebile-title">雪碧了</div><div class="xuebile-reason">输入无效，请检查是否为数学题</div></div>';
+                result.innerHTML = '<div class="xuebile"><div class="xuebile-icon">💀</div><div class="xuebile-title">雪碧了</div><div class="xuebile-reason">这个题不是数学题<br>张雪峰老师，我还记得你～</div></div>';
                 result.style.display = 'block';
                 return;
             }
@@ -438,13 +475,14 @@
             try {
                 // Step 1: Solver
                 setProgress(13, 'AI 正在思考（复杂题最多等 2 分钟）...', 0);
+                startStepTimer();
                 const r1 = await fetch('http://127.0.0.1:8000/solve/step1', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ question: question, question_type: _selectedType || null })
                 });
                 const d1 = await r1.json();
-                if (d1.error) { setProgress(100, '雪碧了'); displayXuebile(d1); return; }
+                if (d1.error) { stopStepTimer(); setProgress(100, '雪碧了'); displayXuebile(d1); return; }
                 totalTokens += (d1.token_usage?.total_tokens || 0);
 
                 // Step 2: Verifier
@@ -455,7 +493,7 @@
                     body: JSON.stringify({ question: question, content: d1.content, category: d1.category || null, question_type: _selectedType || null })
                 });
                 const d2 = await r2.json();
-                if (d2.error) { setProgress(100, '雪碧了'); displayXuebile(d2); return; }
+                if (d2.error) { stopStepTimer(); setProgress(100, '雪碧了'); displayXuebile(d2); return; }
                 totalTokens += (d2.token_usage?.total_tokens || 0);
 
                 // Step 3: Formatter
@@ -468,10 +506,12 @@
                 const d3 = await r3.json();
                 totalTokens += (d3.token_usage?.total_tokens || 0);
 
+                stopStepTimer();
                 setProgress(100, '完成', totalTokens);
                 if (d3.error) { displayXuebile(d3); return; }
                 displayResult(d3, totalTokens);
             } catch (err) {
+                stopStepTimer();
                 console.error('请求失败:', err);
                 setProgress(100, '请求失败');
                 result.innerHTML = '<p style="color:red">请求失败: ' + err.message + '</p>';

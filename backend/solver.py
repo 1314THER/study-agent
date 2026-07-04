@@ -66,20 +66,24 @@ def get_api_key() -> str:
 
 
 # ---------- 调用 DeepSeek ----------
-def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3):
+def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3, model: str = "deepseek-chat", reasoning_effort: str = None):
     api_key = get_api_key()
+    body = {
+        "model": model,
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_prompt},
+        ],
+        "temperature": temperature,
+        "max_tokens": 32000,
+    }
+    if reasoning_effort:
+        body["reasoning_effort"] = reasoning_effort
+        body["thinking"] = {"type": "enabled"}
     resp = httpx.post(
         "https://api.deepseek.com/v1/chat/completions",
         headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        json={
-            "model": "deepseek-chat",
-            "messages": [
-                {"role": "system", "content": system_prompt},
-                {"role": "user", "content": user_prompt},
-            ],
-            "temperature": temperature,
-            "max_tokens": 32000,
-        },
+        json=body,
         timeout=300,
     )
     if resp.status_code != 200:
@@ -354,7 +358,7 @@ def step_solver_only(question: str, question_type: str = None) -> dict:
     prompt = SOLVER_PROMPT
     if question_type:
         prompt += f"\n\n注意：已知本题为{question_type}。"
-    content, usage = call_deepseek(prompt, question)
+    content, usage = call_deepseek(prompt, question, model="deepseek-v4-pro", reasoning_effort="high")
     viable_reason = _check_solver_viable(content)
     if viable_reason:
         return _xuebile("不可解", viable_reason)
@@ -383,13 +387,12 @@ def step_verify_all(content: str, question: str, category: str = None, question_
 
     verifier_prompt = _load_verifier_prompt(verifier_cat)
     user_prompt = f"原题：{question}\n\n解答内容：\n{content}"
-    verified_out, v_usage = call_deepseek(verifier_prompt, user_prompt, temperature=0.3)
+    verified_out, v_usage = call_deepseek(verifier_prompt, user_prompt, temperature=0.3, model="deepseek-v4-flash")
 
     # 解析 Verifier 输出（可能含多个 ### 块N）
     header, raw_chunks = _split_chunks(verified_out)
 
-    # 非常规压轴题：不分步骤，硬编码知识点
-    is_special = (verifier_cat == "非常规压轴题")
+    # 非常规压轴题使用标准管线
 
     chunk_results = []
     for pc in raw_chunks:
@@ -410,7 +413,7 @@ def step_verify_all(content: str, question: str, category: str = None, question_
             "difficulty": _recalc_difficulty(meta.get("difficulty")),
             "steps": steps,
             "final_answer": meta.get("final_answer", ""),
-            "knowledge_points": ["非常规压轴题"] if is_special else unique_kps,
+            "knowledge_points": unique_kps,
         })
     overall_diff = _compute_overall_difficulty(chunk_results)
     return {"chunk_results": chunk_results, "token_usage": v_usage, "overall_difficulty": overall_diff}
@@ -460,7 +463,7 @@ def step_final_check(question: str, chunk_results: list, chunks_raw: list, token
     formatted, usage = call_deepseek(
         FORMATTER_PROMPT,
         json.dumps(input_data, ensure_ascii=False, indent=2),
-        temperature=0.2,
+        temperature=0.2, model="deepseek-v4-flash"
     )
     for k in token_total:
         token_total[k] += usage.get(k, 0)
