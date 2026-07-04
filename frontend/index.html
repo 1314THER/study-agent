@@ -195,7 +195,7 @@
                 var step = steps[i];
                 html += '<div class="step">';
                 html += '<div class="step-header">';
-                html += '<span class="step-number">' + step.step_number + '</span>';
+                html += '<span class="step-number">步骤' + step.step_number + '：' + (step.title || '') + '</span>';
                 if (step.step_difficulty) {
                     html += '<span class="step-diff-tag">' + step.step_difficulty.level + ' (' + step.step_difficulty.score + '分)</span>';
                 }
@@ -260,7 +260,7 @@
                             var step = cr.steps[si];
                             html += '<div class="step">';
                             html += '<div class="step-header">';
-                            html += '<span class="step-number">' + step.step_number + '</span>';
+                            html += '<span class="step-number">步骤' + step.step_number + '：' + (step.title || '') + '</span>';
                             if (step.step_difficulty) {
                                 html += '<span class="step-diff-tag">' + step.step_difficulty.level + ' (' + step.step_difficulty.score + '分)</span>';
                             }
@@ -303,7 +303,16 @@
                     ],
                     ignoredTags: []
                 });
-            } catch(e) { console.log('KaTeX error:', e); }
+            } catch(e)
+            // 渲染标准过程中的 LaTeX
+            result.querySelectorAll('.step-content').forEach(function(el) {
+                try { renderMathInElement(el, { delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\\\(', right: '\\\\)', display: false},
+                    {left: '\\\\[', right: '\\\\]', display: true}
+                ], ignoredTags: [] }); } catch(e) { console.log('KaTeX error:', e); }
+            }); { console.log('KaTeX error:', e); }
 
             // 画雷达图（用整体难度维度）
             var dims = od && od.dimensions;

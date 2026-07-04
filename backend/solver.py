@@ -20,8 +20,8 @@ PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
 # ---------- 正则 ----------
 SOLVER_STATUS_PATTERN = re.compile(r'^\[(?:状态|确认|修正)：(.+?)\]')
 BRIEF_PATTERN = re.compile(r'^简略过程[：:]\s*(.+)$')
+STANDARD_PATTERN = re.compile(r'^标准过程[：:]\s*(.+)$')
 DETAIL_PATTERN = re.compile(r'^详细过程[：:]\s*(.+)$')
-REARRANGED_PATTERN = re.compile(r'^整理后的过程[：:]\s*(.+)$')
 KNOWLEDGE_POINT_PATTERN = re.compile(r'^知识点[：:]\s*(.+)$')
 STEP_HEADER_PATTERN = re.compile(r'^步骤(\d+)\s*(?:[（(]?小块[）)]?)?[：:]\s*(.*)$')
 CHUNK_PATTERN = re.compile(r'###\s*块(\d+)\s*')
@@ -257,13 +257,13 @@ def _parse_steps(text: str) -> list:
         if bm:
             current_step["standard_writing"] = bm.group(1).strip()
             continue
+        sm = STANDARD_PATTERN.match(stripped)
+        if sm:
+            current_step["standard_writing"] = sm.group(1).strip()
+            continue
         dm2 = DETAIL_PATTERN.match(stripped)
         if dm2:
             current_step["detailed_writing"] = dm2.group(1).strip()
-            continue
-        rp = REARRANGED_PATTERN.match(stripped)
-        if rp:
-            current_step["detailed_writing"] = rp.group(1).strip()
             continue
         dm = STEP_DIFFICULTY_PATTERN.match(stripped)
         if dm:
