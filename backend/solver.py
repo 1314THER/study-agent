@@ -106,8 +106,8 @@ def _extract_json(text: str) -> str:
 
 
 def _compute_overall_difficulty(chunk_results: list) -> dict:
-    """从各块难度计算整体题目难度：每维取最大值，再求和"""
-    dim_keys = ["常规程度", "步骤复杂度", "交叉板块", "计算量", "理解难度", "分类讨论"]
+    """从各块难度计算整体题目难度：每维取最大值，再求和（5维 0-3，总分 0-15）"""
+    dim_keys = ["常规程度", "计算量", "理解难度", "分类讨论", "涉及到的知识点数量"]
     max_dims = {k: 0 for k in dim_keys}
     for cr in chunk_results:
         dims = cr.get("difficulty", {}).get("dimensions", {})
@@ -118,11 +118,11 @@ def _compute_overall_difficulty(chunk_results: list) -> dict:
             if isinstance(val, (int, float)) and val > max_dims[k]:
                 max_dims[k] = val
     total = sum(max_dims.values())
-    if total <= 2:
+    if total <= 3:
         level = "容易"
-    elif total <= 5:
+    elif total <= 7:
         level = "中等"
-    elif total <= 8:
+    elif total <= 11:
         level = "困难"
     else:
         level = "极难"
@@ -310,18 +310,18 @@ def _load_verifier_prompt(category: str) -> str:
 
 # ---------- 雪碧了 ----------
 def _recalc_difficulty(diff: dict) -> dict:
-    """确保 total_score 等于六维度之和"""
+    """确保 total_score 等于维度之和（5维 0-3，总分 0-15）"""
     if not diff or not isinstance(diff, dict):
         return {"level": "未知", "total_score": 0, "dimensions": {}}
     dims = diff.get("dimensions", {})
-    if isinstance(dims, dict) and len(dims) == 6:
+    if isinstance(dims, dict):
         total = sum(v for v in dims.values() if isinstance(v, (int, float)))
         diff["total_score"] = total
-        if total <= 2:
+        if total <= 3:
             diff["level"] = "容易"
-        elif total <= 5:
+        elif total <= 7:
             diff["level"] = "中等"
-        elif total <= 8:
+        elif total <= 11:
             diff["level"] = "困难"
         else:
             diff["level"] = "极难"
@@ -369,13 +369,17 @@ def step_solver_only(question: str, question_type: str = None) -> dict:
 
 
 # ---------- Verifier 步（一次调用，切全部）----------
-def step_verify_all(content: str, question: str, category: str = None) -> dict:
+def step_verify_all(content: str, question: str, category: str = None, question_type: str = None) -> dict:
     """一次 Verifier：将完整解答切成大块/小块 + 归类知识点 + 打分"""
-    verifier_cat = category
-    if not verifier_cat:
-        verifier_cat = _extract_category(content)
-    if not verifier_cat:
-        verifier_cat = "函数与导数"  # 最后兜底
+    # 选择题/填空题强制用题型路由 verifier
+    if question_type in ("选择题", "填空题"):
+        verifier_cat = question_type
+    else:
+        verifier_cat = category
+        if not verifier_cat:
+            verifier_cat = _extract_category(content)
+        if not verifier_cat:
+            verifier_cat = "函数与导数"  # 最后兜底
 
     verifier_prompt = _load_verifier_prompt(verifier_cat)
     user_prompt = f"原题：{question}\n\n解答内容：\n{content}"

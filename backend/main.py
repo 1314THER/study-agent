@@ -25,6 +25,7 @@ class Step2Request(BaseModel):
     question: str = Field(..., description="原题")
     content: str = Field(..., description="Solver 输出的完整解答")
     category: Optional[str] = Field(None, description="板块")
+    question_type: Optional[str] = Field(None, description="题型")
 
 
 class Step3Request(BaseModel):
@@ -42,7 +43,7 @@ def api_step1(req: Step1Request):
 @app.post("/solve/step2")
 @app.post("/solve/step2")
 def api_step2(req: Step2Request):
-    result = step_verify_all(req.content, req.question, req.category)
+    result = step_verify_all(req.content, req.question, req.category, question_type=req.question_type)
     return result
 
 

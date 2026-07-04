@@ -223,7 +223,7 @@
             // 整体难度（从各块难度取每维最大值计算）
             var od = data.overall_difficulty;
             if (od && od.total_score !== undefined) {
-                html += '<span class="tag" style="background:#e8f0fe;color:#1565c0;">难度系数：' + od.total_score + '/12</span>';
+                html += '<span class="tag" style="background:#e8f0fe;color:#1565c0;">雪峰难度系数：' + od.total_score + '/15</span>';
             }
             // 武亮难度系数
             if (data.step_difficulty_sum !== undefined) {
@@ -303,7 +303,8 @@
                     ],
                     ignoredTags: []
                 });
-            } catch(e)
+            } catch(e) { console.log('KaTeX error:', e); }
+
             // 渲染标准过程中的 LaTeX
             result.querySelectorAll('.step-content').forEach(function(el) {
                 try { renderMathInElement(el, { delimiters: [
@@ -312,7 +313,7 @@
                     {left: '\\\\(', right: '\\\\)', display: false},
                     {left: '\\\\[', right: '\\\\]', display: true}
                 ], ignoredTags: [] }); } catch(e) { console.log('KaTeX error:', e); }
-            }); { console.log('KaTeX error:', e); }
+            });
 
             // 画雷达图（用整体难度维度）
             var dims = od && od.dimensions;
@@ -326,7 +327,7 @@
                 var cx = 120, cy = 130, radius = 95;
                 var labels = Object.keys(dims);
                 var values = labels.map(function(k) { return dims[k]; });
-                var n = 6;
+                var n = Object.keys(dims).length;
                 for (var li = 1; li <= 2; li++) {
                     var r = radius * li / 2;
                     ctx.beginPath();
@@ -353,7 +354,7 @@
                 ctx.beginPath();
                 for (var i = 0; i <= n; i++) {
                     var angle = (i % n) * 2 * Math.PI / n - Math.PI / 2;
-                    var val = Math.min(values[i % n] / 2, 1);
+                    var val = Math.min(values[i % n] / 3, 1);
                     var x = cx + radius * val * Math.cos(angle);
                     var y = cy + radius * val * Math.sin(angle);
                     if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
@@ -451,7 +452,7 @@
                 const r2 = await fetch('http://127.0.0.1:8000/solve/step2', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question: question, content: d1.content, category: d1.category || null })
+                    body: JSON.stringify({ question: question, content: d1.content, category: d1.category || null, question_type: _selectedType || null })
                 });
                 const d2 = await r2.json();
                 if (d2.error) { setProgress(100, '雪碧了'); displayXuebile(d2); return; }
@@ -471,8 +472,9 @@
                 if (d3.error) { displayXuebile(d3); return; }
                 displayResult(d3, totalTokens);
             } catch (err) {
+                console.error('请求失败:', err);
                 setProgress(100, '请求失败');
-                result.innerHTML = '<p style="color:red">请求失败，请检查后端是否启动</p>';
+                result.innerHTML = '<p style="color:red">请求失败: ' + err.message + '</p>';
                 result.classList.add('show'); result.style.display = 'block';
             } finally {
                 btn.disabled = false;
