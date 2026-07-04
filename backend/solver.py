@@ -46,6 +46,29 @@ def _read_prompt(name: str) -> str:
         return f.read().strip()
 
 
+TEACHER_CONFIG = {
+    "liangliang": {
+        "solver": {"model": "deepseek-v4-flash", "reasoning_effort": None},
+        "verifier": {"model": "deepseek-v4-flash"},
+        "formatter": {"model": "deepseek-v4-flash"},
+    },
+    "taotao": {
+        "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "low"},
+        "verifier": {"model": "deepseek-v4-flash"},
+        "formatter": {"model": "deepseek-v4-flash"},
+    },
+    "xuefeng": {
+        "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
+        "verifier": {"model": "deepseek-v4-flash"},
+        "formatter": {"model": "deepseek-v4-flash"},
+    },
+    "ji": {
+        "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
+        "verifier": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
+        "formatter": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
+    },
+}
+
 SOLVER_PROMPT = _read_prompt("solver")
 FORMATTER_PROMPT = _read_prompt("formatter")
 
@@ -80,16 +103,23 @@ def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3
     if reasoning_effort:
         body["reasoning_effort"] = reasoning_effort
         body["thinking"] = {"type": "enabled"}
-    resp = httpx.post(
-        "https://api.deepseek.com/v1/chat/completions",
-        headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-        json=body,
-        timeout=300,
-    )
-    if resp.status_code != 200:
-        raise Exception(f"API 请求失败: {resp.status_code} {resp.text}")
-    data = resp.json()
-    content = data["choices"][0]["message"]["content"]
+    try:
+        resp = httpx.post(
+            "https://api.deepseek.com/v1/chat/completions",
+            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+            json=body,
+            timeout=300,
+        )
+        if resp.status_code != 200:
+            raise Exception(f"状态码 {resp.status_code}: {resp.text[:200]}")
+        data = resp.json()
+        content = data["choices"][0]["message"]["content"]
+    except httpx.TimeoutException:
+        raise Exception("API 请求超时（300s）")
+    except httpx.ConnectError:
+        raise Exception("无法连接到 API 服务器")
+    except (httpx.HTTPError, KeyError, json.JSONDecodeError) as e:
+        raise Exception(f"API 请求异常: {str(e)[:200]}")
     usage = data.get("usage", {})
     return content, usage
 
@@ -276,6 +306,9 @@ def _parse_steps(text: str) -> list:
             except (json.JSONDecodeError, ValueError):
                 current_step["step_difficulty"] = {"level": "未知", "score": 0}
             continue
+        if current_step and current_step["detailed_writing"] and stripped:
+            current_step["detailed_writing"] += "\n" + stripped
+            continue
     if current_step is not None:
         steps.append(current_step)
     return steps
@@ -353,12 +386,14 @@ def _xuebile(status: str, detail: str = "") -> dict:
 
 
 # ---------- Solver 步 ----------
-def step_solver_only(question: str, question_type: str = None) -> dict:
+def step_solver_only(question: str, question_type: str = None, teacher: str = None) -> dict:
     """Solver：解答 + 输出板块"""
+    config = TEACHER_CONFIG.get(teacher or "liangliang", TEACHER_CONFIG["liangliang"])
     prompt = SOLVER_PROMPT
     if question_type:
         prompt += f"\n\n注意：已知本题为{question_type}。"
-    content, usage = call_deepseek(prompt, question, model="deepseek-v4-pro", reasoning_effort="high")
+    solver_cfg = config["solver"]
+    content, usage = call_deepseek(prompt, question, model=solver_cfg["model"], reasoning_effort=solver_cfg.get("reasoning_effort"))
     viable_reason = _check_solver_viable(content)
     if viable_reason:
         return _xuebile("不可解", viable_reason)
@@ -373,9 +408,9 @@ def step_solver_only(question: str, question_type: str = None) -> dict:
 
 
 # ---------- Verifier 步（一次调用，切全部）----------
-def step_verify_all(content: str, question: str, category: str = None, question_type: str = None) -> dict:
+def step_verify_all(content: str, question: str, category: str = None, question_type: str = None, teacher: str = None) -> dict:
     """一次 Verifier：将完整解答切成大块/小块 + 归类知识点 + 打分"""
-    # 选择题/填空题强制用题型路由 verifier
+    config = TEACHER_CONFIG.get(teacher or "liangliang", TEACHER_CONFIG["liangliang"])
     if question_type in ("选择题", "填空题"):
         verifier_cat = question_type
     else:
@@ -387,7 +422,8 @@ def step_verify_all(content: str, question: str, category: str = None, question_
 
     verifier_prompt = _load_verifier_prompt(verifier_cat)
     user_prompt = f"原题：{question}\n\n解答内容：\n{content}"
-    verified_out, v_usage = call_deepseek(verifier_prompt, user_prompt, temperature=0.3, model="deepseek-v4-flash")
+    v_model = config["verifier"]["model"]
+    verified_out, v_usage = call_deepseek(verifier_prompt, user_prompt, temperature=0.3, model=v_model)
 
     # 解析 Verifier 输出（可能含多个 ### 块N）
     header, raw_chunks = _split_chunks(verified_out)
@@ -454,8 +490,10 @@ def _aggregate_from_chunks(question: str, chunk_results: list, token_total: dict
     }
 
 
-def step_final_check(question: str, chunk_results: list, chunks_raw: list, token_total: dict) -> dict:
+def step_final_check(question: str, chunk_results: list, chunks_raw: list, token_total: dict, teacher: str = None) -> dict:
     """全局校验 + 聚合（如果 Formatter 输出雪碧了，兜底用 Verifier 的结果）"""
+    config = TEACHER_CONFIG.get(teacher or "liangliang", TEACHER_CONFIG["liangliang"])
+    f_cfg = config["formatter"]
     input_data = {
         "question": question,
         "chunk_results": chunk_results,
@@ -463,7 +501,7 @@ def step_final_check(question: str, chunk_results: list, chunks_raw: list, token
     formatted, usage = call_deepseek(
         FORMATTER_PROMPT,
         json.dumps(input_data, ensure_ascii=False, indent=2),
-        temperature=0.2, model="deepseek-v4-flash"
+        temperature=0.2, model=f_cfg["model"], reasoning_effort=f_cfg.get("reasoning_effort")
     )
     for k in token_total:
         token_total[k] += usage.get(k, 0)
@@ -486,7 +524,7 @@ def step_final_check(question: str, chunk_results: list, chunks_raw: list, token
 
 
 # ---------- 完整流程 ----------
-def solve_multi(question: str, question_type: str = None) -> dict:
+def solve_multi(question: str, question_type: str = None, teacher: str = None) -> dict:
     from backend.database import find_question, save_question
 
     # 1. 查缓存
@@ -500,7 +538,7 @@ def solve_multi(question: str, question_type: str = None) -> dict:
             token_total[k] += u.get(k, 0)
 
     # 2. Solver（1 次调用）
-    r1 = step_solver_only(question, question_type)
+    r1 = step_solver_only(question, question_type, teacher=teacher)
 
     # 3. 雪碧了（step_solver_only 已在内部检查）
     if r1.get("error"):
@@ -509,12 +547,12 @@ def solve_multi(question: str, question_type: str = None) -> dict:
     _add(r1["token_usage"])
 
     # 4. Verifier（1 次调用，切全部）
-    v_result = step_verify_all(r1["content"], question, r1.get("category"))
+    v_result = step_verify_all(r1["content"], question, r1.get("category"), teacher=teacher)
     _add(v_result["token_usage"])
     chunk_results = v_result["chunk_results"]
 
     # 5. Formatter（1 次调用，全局校验）
-    final = step_final_check(question, chunk_results, [], token_total)
+    final = step_final_check(question, chunk_results, [], token_total, teacher=teacher)
     if "error" in final:
         return final
 

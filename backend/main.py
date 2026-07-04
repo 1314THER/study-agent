@@ -16,26 +16,30 @@ def startup():
 class SolveRequest(BaseModel):
     question: str
     question_type: Optional[str] = Field(None, description="题型（可选）")
+    teacher: Optional[str] = Field(None, description="老师（可选）")
 
 class Step1Request(BaseModel):
     question: str
     question_type: Optional[str] = Field(None, description="题型（可选）")
+    teacher: Optional[str] = Field(None, description="老师（可选）")
 
 class Step2Request(BaseModel):
     question: str = Field(..., description="原题")
     content: str = Field(..., description="Solver 输出的完整解答")
     category: Optional[str] = Field(None, description="板块")
     question_type: Optional[str] = Field(None, description="题型")
+    teacher: Optional[str] = Field(None, description="老师（可选）")
 
 
 class Step3Request(BaseModel):
     question: str = Field(..., description="原题")
     chunk_results: str = Field(..., description="Verifier 输出的各块结果 JSON")
+    teacher: Optional[str] = Field(None, description="老师（可选）")
 
 @app.post("/solve/step1")
 def api_step1(req: Step1Request):
     """第1步：解答"""
-    result = step_solver_only(req.question, req.question_type)
+    result = step_solver_only(req.question, req.question_type, teacher=req.teacher)
     if result.get("error"):
         return result
     return result
@@ -43,7 +47,7 @@ def api_step1(req: Step1Request):
 @app.post("/solve/step2")
 @app.post("/solve/step2")
 def api_step2(req: Step2Request):
-    result = step_verify_all(req.content, req.question, req.category, question_type=req.question_type)
+    result = step_verify_all(req.content, req.question, req.category, question_type=req.question_type, teacher=req.teacher)
     return result
 
 
@@ -52,14 +56,14 @@ def api_step3(req: Step3Request):
     import json
     chunk_results = json.loads(req.chunk_results)
     token_total = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-    final = step_final_check(req.question, chunk_results, [], token_total)
+    final = step_final_check(req.question, chunk_results, [], token_total, teacher=req.teacher)
     return final
 
 
 @app.post("/solve")
 def api_solve(req: SolveRequest):
     """完整多块求解"""
-    return solve_multi(req.question, req.question_type)
+    return solve_multi(req.question, req.question_type, teacher=req.teacher)
 
 @app.get("/")
 def home():
