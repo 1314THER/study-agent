@@ -141,7 +141,7 @@ def _extract_json(text: str) -> str:
 
 def _compute_overall_difficulty(chunk_results: list) -> dict:
     """从各块难度计算整体题目难度：每维取最大值，再求和（5维 0-3，总分 0-15）"""
-    dim_keys = ["常规程度", "计算量", "理解难度", "分类讨论", "涉及到的知识点数量"]
+    dim_keys = ["非常规程度", "计算量", "理解难度", "分类讨论", "知识点密度"]
     max_dims = {k: 0 for k in dim_keys}
     for cr in chunk_results:
         dims = cr.get("difficulty", {}).get("dimensions", {})
@@ -518,52 +518,3 @@ def step_final_check(question: str, chunk_results: list, chunks_raw: list, token
         return result
     except (json.JSONDecodeError, ValueError):
         return _aggregate_from_chunks(question, chunk_results, token_total)
-
-
-# ---------- 完整流程 ----------
-def solve_multi(question: str, question_type: str = None, teacher: str = None) -> dict:
-    from backend.database import find_question, save_question
-
-    # 1. 查缓存
-    cached = find_question(question)
-    if cached:
-        return cached
-
-    token_total = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-    def _add(u):
-        for k in token_total:
-            token_total[k] += u.get(k, 0)
-
-    # 2. Solver（1 次调用）
-    r1 = step_solver_only(question, question_type, teacher=teacher)
-
-    # 3. 雪碧了（step_solver_only 已在内部检查）
-    if r1.get("error"):
-        return r1
-
-    _add(r1["token_usage"])
-
-    # 4. Verifier（1 次调用，切全部）
-    v_result = step_verify_all(r1["content"], question, r1.get("category"), teacher=teacher)
-    _add(v_result["token_usage"])
-    chunk_results = v_result["chunk_results"]
-
-    # 5. Formatter（1 次调用，全局校验）
-    final = step_final_check(question, chunk_results, [], token_total, teacher=teacher)
-    if "error" in final:
-        return final
-
-    # 6. 入库
-    try:
-        first = chunk_results[0] if chunk_results else {}
-        final["category"] = first.get("category")
-        final["difficulty"] = first.get("difficulty")
-        save_question(question, final)
-    except Exception as e:
-        print(f"[Warn] 保存到数据库失败: {e}")
-
-    return final
-
-
-def solve(question: str, question_type: str = None) -> dict:
-    return solve_multi(question, question_type)

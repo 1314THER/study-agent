@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>历史题目 - 数学最强大脑</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <a href="/" class="sidebar-logo">成为<br>数学高手</a>
+            <nav>
+                <a href="index.html" class="nav-item" data-page="solve">
+                    <span class="nav-icon">🔍</span>
+                    <span class="nav-label">和老师对答案</span>
+                </a>
+                <a href="teach.html" class="nav-item" data-page="teach">
+                    <span class="nav-icon">📖</span>
+                    <span class="nav-label">老师手把手<br>教你做题</span>
+                    <span class="nav-badge">预留</span>
+                </a>
+                <a href="history.html" class="nav-item active" data-page="history">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-label">错题本</span>
+                </a>
+            </nav>
+        </aside>
+        <main class="main-content">
+            <div class="container">
+                <h1>历史题目</h1>
+                <p class="subtitle" id="historyCount">加载中...</p>
+
+                <!-- Search (reserved) -->
+                <div class="history-search">
+                    <input type="text" placeholder="搜索题目...（即将上线）" disabled>
+                </div>
+
+                <!-- List View -->
+                <div id="listView">
+                    <div id="skeletonArea">
+                        <div class="skeleton-card"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+                        <div class="skeleton-card"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+                        <div class="skeleton-card"><div class="skeleton-line"></div><div class="skeleton-line short"></div></div>
+                    </div>
+                    <div id="historyCards"></div>
+                    <div id="emptyState" class="empty-state" style="display:none">
+                        <div class="empty-icon">📋</div>
+                        <p>还没有搜过题</p>
+                        <p class="empty-desc">去搜题做题页搜索题目，结果会自动保存在这里</p>
+                        <a href="index.html" class="empty-link">去搜题 →</a>
+                    </div>
+                </div>
+
+                <!-- Detail View -->
+                <div id="detailView" style="display:none">
+                    <button class="back-btn" onclick="backToList()">← 返回列表</button>
+                    <div id="detailQuestion"></div>
+                    <div id="detailResult"></div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        var _selectedTeacher = localStorage.getItem('teacher') || 'liangliang';
+
+        // ---- History Functions ----
+        var allQuestions = [];
+
+        function loadQuestions() {
+            var listEl = document.getElementById('historyCards');
+            var skeletonEl = document.getElementById('skeletonArea');
+            var emptyEl = document.getElementById('emptyState');
+            var countEl = document.getElementById('historyCount');
+
+            // Try cache first
+            var cached = localStorage.getItem('questions_cache');
+            if (cached) {
+                try {
+                    var cachedData = JSON.parse(cached);
+                    if (cachedData.length > 0) {
+                        renderList(cachedData);
+                    }
+                } catch(e) {}
+            }
+
+            fetch('http://127.0.0.1:8000/questions')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    skeletonEl.style.display = 'none';
+                    localStorage.setItem('questions_cache', JSON.stringify(data));
+                    renderList(data);
+                })
+                .catch(function(err) {
+                    console.error('Failed to load questions:', err);
+                    skeletonEl.style.display = 'none';
+                    if (!cached) {
+                        emptyEl.style.display = 'block';
+                        countEl.textContent = '加载失败';
+                    }
+                });
+        }
+
+        function renderList(data) {
+            var listEl = document.getElementById('historyCards');
+            var emptyEl = document.getElementById('emptyState');
+            var skeletonEl = document.getElementById('skeletonArea');
+            var countEl = document.getElementById('historyCount');
+
+            skeletonEl.style.display = 'none';
+            allQuestions = data;
+
+            if (!data || data.length === 0) {
+                emptyEl.style.display = 'block';
+                listEl.innerHTML = '';
+                countEl.textContent = '暂无记录';
+                return;
+            }
+
+            emptyEl.style.display = 'none';
+            countEl.textContent = '共 ' + data.length + ' 道题';
+
+            var html = '';
+            for (var i = 0; i < data.length; i++) {
+                var q = data[i];
+                var preview = (q.content || '').substring(0, 60);
+                if ((q.content || '').length > 60) preview += '...';
+
+                var diffClass = 'tag-easy';
+                if (q.difficulty_level === '中等') diffClass = 'tag-medium';
+                else if (q.difficulty_level === '困难') diffClass = 'tag-hard';
+                else if (q.difficulty_level === '极难') diffClass = 'tag-extreme';
+
+                var catTag = '';
+                if (q.category_level1) {
+                    catTag = '<span class="tag tag-category">' + escapeHtml(q.category_level1) + '</span>';
+                }
+
+                var dateStr = '';
+                if (q.created_at) {
+                    var d = new Date(q.created_at.replace(' ', 'T') + 'Z');
+                    var offset = 8 * 60;
+                    var local = new Date(d.getTime() + offset * 60000);
+                    var y = local.getUTCFullYear();
+                    var m = String(local.getUTCMonth() + 1).padStart(2, '0');
+                    var day = String(local.getUTCDate()).padStart(2, '0');
+                    var h = String(local.getUTCHours()).padStart(2, '0');
+                    var min = String(local.getUTCMinutes()).padStart(2, '0');
+                    dateStr = y + '-' + m + '-' + day + ' ' + h + ':' + min;
+                }
+
+                var score = q.difficulty_score !== null ? '(' + q.difficulty_score + '分)' : '';
+
+                html += '<div class="history-card" data-id="' + q.id + '" onclick="showDetail(' + q.id + ')">';
+                html += '<div class="hc-preview">' + escapeHtml(preview) + '</div>';
+                html += '<div class="hc-meta">';
+                html += catTag;
+                if (q.difficulty_level) {
+                    html += '<span class="tag ' + diffClass + '">' + escapeHtml(q.difficulty_level) + ' ' + score + '</span>';
+                }
+                html += '<span class="hc-date">' + dateStr + '</span>';
+                html += '</div></div>';
+            }
+            listEl.innerHTML = html;
+            try { renderMathInElement(listEl, { delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false},{left: '\\(', right: '\\)', display: false},{left: '\\[', right: '\\]', display: true}], ignoredTags: ['script', 'style'] }); } catch(e) {}
+        }
+
+        function showDetail(id) {
+            document.getElementById('listView').style.display = 'none';
+            document.getElementById('detailView').style.display = 'block';
+            document.getElementById('historyCount').style.display = 'none';
+            var resultEl = document.getElementById('detailResult');
+            resultEl.innerHTML = '<p style="text-align:center;color:#86868b;padding:40px;">加载中...</p>';
+
+            fetch('http://127.0.0.1:8000/questions/' + id)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.error) {
+                        var errMsg = data.message || data.reason || data.error;
+                        resultEl.innerHTML = '<p style="color:red;text-align:center;padding:40px;">加载失败: ' + escapeHtml(errMsg) + '</p>';
+                        return;
+                    }
+                    // Show question
+                    var qHtml = '<div class="detail-question"><h3>题目</h3><div class="question-text">' + escapeHtml(data.content || '') + '</div></div>';
+                    document.getElementById('detailQuestion').innerHTML = qHtml;
+                    try { renderMathInElement(document.getElementById('detailQuestion'), { delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}], ignoredTags: [] }); } catch(e) {}
+                    var answerData = data.answer_json;
+                    if (!answerData) {
+                        resultEl.innerHTML = '<p style="color:#86868b;text-align:center;padding:40px;">该题暂无解析</p>';
+                        return;
+                    }
+                    displayDetailResult(answerData);
+                })
+                .catch(function(err) {
+                    var msg = err && err.message ? err.message : '无法连接到服务器，请确认后端已启动';
+                    resultEl.innerHTML = '<p style="color:red;text-align:center;padding:40px;">加载失败: ' + msg + '</p>';
+                });
+        }
+
+        function backToList() {
+            document.getElementById('detailView').style.display = 'none';
+            document.getElementById('listView').style.display = 'block';
+            document.getElementById('historyCount').style.display = 'block';
+            document.getElementById('detailQuestion').innerHTML = '';
+        }
+
+        // ---- Display Result (copied from index.html, adapted) ----
+        function displayDetailResult(data) {
+            var result = document.getElementById('detailResult');
+            var html = '<div class="meta-bar">';
+            if (data.knowledge_points && data.knowledge_points.length > 0) {
+                html += '<span class="tag tag-category">' + data.knowledge_points.slice(0,3).join(' / ') + '</span>';
+            }
+            var od = data.overall_difficulty;
+            if (od && od.total_score !== undefined) {
+                html += '<span class="tag" style="background:#e8f0fe;color:#1565c0;">雪峰难度系数：' + od.total_score + '/15</span>';
+            }
+            if (data.step_difficulty_sum !== undefined) {
+                html += '<span class="tag" style="background:#fce4ec;color:#c62828;">武亮难度系数：' + data.step_difficulty_sum + '</span>';
+            }
+            html += '</div>';
+
+            // Radar chart container
+            html += '<div id="detailRadarChart" style="display:flex;justify-content:center;margin-bottom:16px;"></div>';
+
+            // Chunk results
+            if (data.chunk_results && data.chunk_results.length > 0) {
+                for (var ci = 0; ci < data.chunk_results.length; ci++) {
+                    var cr = data.chunk_results[ci];
+                    var chunkId = cr.chunk_id || (ci + 1);
+                    var cat = cr.category || {};
+                    var diff = cr.difficulty || {};
+                    html += '<div class="chunk-card">';
+                    html += '<div class="chunk-header">';
+                    html += '<span class="chunk-label">块' + chunkId + '</span>';
+                    if (cr.chunk_type) {
+                        var tc = 'tag-type';
+                        if (cr.chunk_type === '选择题' || cr.chunk_type === '填空题') tc += ' tag-type-simple';
+                        else if (cr.chunk_type === '非常规压轴题') tc += ' tag-type-special';
+                        html += '<span class="tag ' + tc + '">' + escapeHtml(cr.chunk_type) + '</span>';
+                    }
+                    if (cat.level1) html += '<span class="chunk-cat">' + escapeHtml(cat.level1) + '</span>';
+                    if (diff.level) html += '<span class="chunk-diff ' + levelClass(diff.level) + '">' + escapeHtml(diff.level) + '</span>';
+                    html += '</div>';
+
+                    if (cr.steps && cr.steps.length > 0) {
+                        html += '<div class="chunk-steps">';
+                        for (var si = 0; si < cr.steps.length; si++) {
+                            var step = cr.steps[si];
+                            html += '<div class="step">';
+                            html += '<div class="step-header">';
+                            html += '<span class="step-number">步骤' + step.step_number + '：' + escapeHtml(step.title || '') + '</span>';
+                            if (step.step_difficulty) {
+                                html += '<span class="step-diff-tag">' + escapeHtml(step.step_difficulty.level) + ' (' + step.step_difficulty.score + '分)</span>';
+                            }
+                            html += '</div>';
+                            html += '<div class="step-content">' + escapeHtml(step.standard_writing || '') + '</div>';
+                            if (step.detailed_writing) {
+                                html += '<div class="detail-toggle" onclick="toggleDetail(this)">展开详细过程 ▸</div>';
+                                html += '<div class="detail-content">' + escapeHtml(step.detailed_writing) + '</div>';
+                            }
+                            if (step.knowledge_point) {
+                                html += '<div class="step-kp">' + escapeHtml(step.knowledge_point) + '</div>';
+                            }
+                            html += '</div>';
+                        }
+                        html += '</div>';
+                    }
+                    if (cr.final_answer) {
+                        html += '<div class="final-answer">答案：' + escapeHtml(cr.final_answer) + '</div>';
+                    }
+                    html += '</div>';
+                }
+            }
+
+            result.innerHTML = html;
+
+            // KaTeX
+            try {
+                renderMathInElement(result, {
+                    delimiters: [
+                        {left: '$$', right: '$$', display: true},
+                        {left: '\\(', right: '\\)', display: false},
+                        {left: '$', right: '$', display: false},
+                        {left: '\\[', right: '\\]', display: true}
+                    ],
+                    ignoredTags: []
+                });
+            } catch(e) { console.log('KaTeX error:', e); }
+
+            // Radar chart
+            var dims = od && od.dimensions;
+            if (dims && Object.keys(dims).length >= 5) {
+                var dpr = window.devicePixelRatio || 1;
+                var canvas = document.createElement('canvas');
+                var cssW = 400, cssH = 360;
+                canvas.width = cssW * dpr;
+                canvas.height = cssH * dpr;
+                canvas.style.width = cssW + 'px';
+                canvas.style.height = cssH + 'px';
+                canvas.style.maxWidth = '100%';
+                document.getElementById('detailRadarChart').appendChild(canvas);
+                var ctx = canvas.getContext('2d');
+                ctx.scale(dpr, dpr);
+                var cx = 200, cy = 185, radius = 100;
+                var labels = Object.keys(dims);
+                var values = labels.map(function(k) { return dims[k]; });
+                var n = labels.length;
+                var gridColors = ['#f0f0f0', '#e5e5e7', '#d8d8dc'];
+                for (var ri = 1; ri <= 3; ri++) {
+                    var r = radius * ri / 3;
+                    ctx.beginPath();
+                    for (var i = 0; i <= n; i++) {
+                        var angle = (i % n) * 2 * Math.PI / n - Math.PI / 2;
+                        var x = cx + r * Math.cos(angle);
+                        var y = cy + r * Math.sin(angle);
+                        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                    }
+                    ctx.closePath();
+                    ctx.strokeStyle = gridColors[ri - 1];
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+                for (var i = 0; i < n; i++) {
+                    var angle = i * 2 * Math.PI / n - Math.PI / 2;
+                    ctx.beginPath(); ctx.moveTo(cx, cy);
+                    ctx.lineTo(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
+                    ctx.strokeStyle = '#ececee';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    var label = labels[i] + ' ' + values[i];
+                    ctx.font = '13px -apple-system, sans-serif';
+                    ctx.fillStyle = '#1d1d1f';
+                    var lr = radius + 16;
+                    var nx = cx + lr * Math.cos(angle);
+                    var ny = cy + lr * Math.sin(angle);
+                    var deg = ((i / n) * 360) % 360;
+                    if (deg < 18 || deg >= 342) { ctx.textAlign = 'center'; ctx.textBaseline = 'bottom'; }
+                    else if (deg >= 18 && deg < 72) { ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; }
+                    else if (deg >= 72 && deg < 108) { ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; }
+                    else if (deg >= 108 && deg < 162) { ctx.textAlign = 'center'; ctx.textBaseline = 'top'; }
+                    else if (deg >= 162 && deg < 198) { ctx.textAlign = 'center'; ctx.textBaseline = 'top'; }
+                    else if (deg >= 198 && deg < 252) { ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; }
+                    else if (deg >= 252 && deg < 288) { ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; }
+                    else { ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; }
+                    ctx.fillText(label, nx, ny);
+                }
+                ctx.beginPath();
+                for (var i = 0; i <= n; i++) {
+                    var angle = (i % n) * 2 * Math.PI / n - Math.PI / 2;
+                    var val = Math.min(values[i % n] / 3, 1);
+                    var x = cx + radius * val * Math.cos(angle);
+                    var y = cy + radius * val * Math.sin(angle);
+                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+                }
+                ctx.closePath();
+                var grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+                grad.addColorStop(0, 'rgba(0, 113, 227, 0.25)');
+                grad.addColorStop(1, 'rgba(0, 113, 227, 0.06)');
+                ctx.fillStyle = grad;
+                ctx.fill();
+                ctx.strokeStyle = '#0071e3';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                for (var i = 0; i < n; i++) {
+                    var angle = i * 2 * Math.PI / n - Math.PI / 2;
+                    var val = Math.min(values[i] / 3, 1);
+                    var x = cx + radius * val * Math.cos(angle);
+                    var y = cy + radius * val * Math.sin(angle);
+                    ctx.beginPath(); ctx.arc(x, y, 4.5, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#0071e3';
+                    ctx.fill();
+                    ctx.beginPath(); ctx.arc(x, y, 2, 0, 2 * Math.PI);
+                    ctx.fillStyle = '#fff';
+                    ctx.fill();
+                }
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'bottom';
+                ctx.font = '13px -apple-system, sans-serif';
+                ctx.fillStyle = '#86868b';
+                ctx.fillText('五维难度分布', cx, cssH - 10);
+            }
+        }
+
+        // ---- Utility Functions ----
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        function toggleDetail(el) {
+            var content = el.nextElementSibling;
+            var isOpen = !content.classList.contains('show');
+            content.classList.toggle('show');
+            el.textContent = isOpen ? '收起详细过程 ▾' : '展开详细过程 ▸';
+            if (isOpen && window.renderMathInElement) {
+                try { renderMathInElement(content, { delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\(', right: '\\)', display: false},
+                    {left: '\\[', right: '\\]', display: true}
+                ], ignoredTags: [] }); } catch(e) { console.log('KaTeX error:', e); }
+            }
+        }
+
+        function levelClass(level) {
+            var map = { '容易': 'tag-easy', '中等': 'tag-medium', '困难': 'tag-hard', '极难': 'tag-extreme' };
+            return map[level] || 'tag-easy';
+        }
+
+        // ---- Init ----
+        document.addEventListener('DOMContentLoaded', loadQuestions);
+    </script>
+</body>
+</html>

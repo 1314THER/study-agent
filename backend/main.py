@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
-from backend.solver import solve, solve_multi, step_solver_only, step_verify_all, step_final_check, _xuebile, _extract_solver_status
+from backend.solver import step_solver_only, step_verify_all, step_final_check, _xuebile, _extract_solver_status
 from backend.database import init_db, get_all_questions
 from backend.categories import get_all_categories
 
@@ -17,6 +17,7 @@ class SolveRequest(BaseModel):
     question: str
     question_type: Optional[str] = Field(None, description="题型（可选）")
     teacher: Optional[str] = Field(None, description="老师（可选）")
+    save: bool = True
 
 class Step1Request(BaseModel):
     question: str
@@ -35,6 +36,7 @@ class Step3Request(BaseModel):
     question: str = Field(..., description="原题")
     chunk_results: str = Field(..., description="Verifier 输出的各块结果 JSON")
     teacher: Optional[str] = Field(None, description="老师（可选）")
+    save: bool = False
 
 @app.post("/solve/step1")
 def api_step1(req: Step1Request):
@@ -48,6 +50,28 @@ def api_step1(req: Step1Request):
 def api_step2(req: Step2Request):
     result = step_verify_all(req.content, req.question, req.category, question_type=req.question_type, teacher=req.teacher)
     return result
+class SaveQuestionRequest(BaseModel):
+    question: str
+    answer_json: dict
+
+
+@app.post("/questions/save")
+def api_save_question(req: SaveQuestionRequest):
+    """保存题目到错题本（如已存在则提示）"""
+    from backend.database import find_question, save_question
+    existing = find_question(req.question)
+    if existing:
+        return {"saved": False, "reason": "already_exists", "message": "该题已在错题本中"}
+    # 从 chunk_results 提取分类和难度（兼容前端未传的情况）
+    chunk_results = req.answer_json.get("chunk_results", [])
+    first = chunk_results[0] if chunk_results else {}
+    req.answer_json["category"] = first.get("category")
+    req.answer_json["difficulty"] = first.get("difficulty")
+    # 将答案结构化数据写入数据库
+    save_question(req.question, req.answer_json)
+    return {"saved": True, "message": "已加入错题本"}
+
+
 
 
 @app.post("/solve/step3")
@@ -56,13 +80,19 @@ def api_step3(req: Step3Request):
     chunk_results = json.loads(req.chunk_results)
     token_total = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
     final = step_final_check(req.question, chunk_results, [], token_total, teacher=req.teacher)
+
+    if req.save:
+        from backend.database import save_question
+        first = chunk_results[0] if chunk_results else {}
+        final["category"] = first.get("category")
+        final["difficulty"] = first.get("difficulty")
+        try:
+            save_question(req.question, final)
+        except Exception as e:
+            print(f"[Warn] 保存到数据库失败: {e}")
+
     return final
 
-
-@app.post("/solve")
-def api_solve(req: SolveRequest):
-    """完整多块求解"""
-    return solve_multi(req.question, req.question_type, teacher=req.teacher)
 
 @app.get("/")
 def home():
@@ -71,6 +101,15 @@ def home():
 @app.get("/questions")
 def list_questions():
     return get_all_questions()
+
+@app.get("/questions/{qid}")
+def get_question(qid: int):
+    """返回单题完整记录（含 answer_json）"""
+    from backend.database import get_question_by_id
+    result = get_question_by_id(qid)
+    if result is None:
+        return {"error": "not_found", "id": qid}
+    return result
 
 @app.get("/categories")
 def categories():

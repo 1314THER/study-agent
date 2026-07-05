@@ -12,7 +12,7 @@ from backend.categories import CATEGORIES
 # 结构化字段的合法值（写死，不依赖模型输出）
 _VALID_CATEGORIES = set(CATEGORIES.keys())
 _VALID_DIFFICULTY_LEVELS = {"容易", "中等", "困难", "极难"}
-_VALID_DIMENSION_KEYS = {"常规程度", "计算量", "理解难度", "分类讨论", "涉及到的知识点数量"}
+_VALID_DIMENSION_KEYS = {"非常规程度", "计算量", "理解难度", "分类讨论", "知识点密度"}
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "study_agent.db")
 
@@ -186,3 +186,22 @@ def get_all_questions():
                     pass
         result.append(d)
     return result
+
+def get_question_by_id(qid: int):
+    """返回单题完整记录（含 answer_json），所有 JSON 字段已解析。无记录返回 None。"""
+    conn = get_connection()
+    row = conn.execute(
+        "SELECT * FROM questions WHERE id = ?", (qid,)
+    ).fetchone()
+    conn.close()
+    if not row:
+        return None
+    d = dict(row)
+    for key in ("answer_json", "difficulty_dimensions", "knowledge_points", "common_mistakes"):
+        val = d.get(key)
+        if val:
+            try:
+                d[key] = json.loads(val)
+            except (json.JSONDecodeError, TypeError):
+                pass
+    return d
