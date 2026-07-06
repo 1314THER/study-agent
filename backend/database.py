@@ -67,6 +67,13 @@ def init_db():
         );
     """)
     conn.commit()
+    # 迁移：新增 question_type 列（首次创建时一并添加，已存在则跳过）
+    try:
+        conn.execute("ALTER TABLE questions ADD COLUMN question_type TEXT")
+        conn.commit()
+        print("[Database] 新增 question_type 列")
+    except sqlite3.OperationalError:
+        pass  # 列已存在
     conn.close()
     print("[Database] 数据库初始化完成")
 
@@ -137,13 +144,24 @@ def save_question(question_text: str, answer_dict: dict):
         raw_kps = []
     clean_kps = _sanitize_knowledge_points(category_level1, raw_kps)
 
+    # 提取 question_type（从 chunk_results[0].chunk_type 或 answer_dict 顶层）
+    question_type = answer_dict.get("question_type")
+    if not question_type:
+        chunk_results = answer_dict.get("chunk_results", [])
+        if chunk_results and isinstance(chunk_results, list):
+            first = chunk_results[0]
+            if isinstance(first, dict):
+                question_type = first.get("chunk_type")
+    if question_type not in ("选择题", "填空题", "大题", "非常规压轴题"):
+        question_type = None
+
     conn = get_connection()
     conn.execute(
         """INSERT OR REPLACE INTO questions
            (content, answer_json, category_level1, category_level2,
             difficulty_level, difficulty_score, difficulty_dimensions,
-            common_mistakes, knowledge_points)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            common_mistakes, knowledge_points, question_type)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             question_text.strip(),
             json.dumps(answer_dict, ensure_ascii=False),
@@ -153,7 +171,8 @@ def save_question(question_text: str, answer_dict: dict):
             difficulty_score,
             difficulty_dimensions,
             json.dumps(answer_dict.get("common_mistakes", []), ensure_ascii=False),
-            json.dumps(clean_kps, ensure_ascii=False)
+            json.dumps(clean_kps, ensure_ascii=False),
+            question_type,
         )
     )
     conn.commit()
@@ -168,7 +187,7 @@ def get_all_questions():
     rows = conn.execute(
         """SELECT id, content, category_level1, category_level2,
                   difficulty_level, difficulty_score, difficulty_dimensions,
-                  knowledge_points, created_at
+                  knowledge_points, question_type, created_at
            FROM questions ORDER BY created_at DESC"""
     ).fetchall()
     conn.close()
@@ -205,3 +224,70 @@ def get_question_by_id(qid: int):
             except (json.JSONDecodeError, TypeError):
                 pass
     return d
+
+
+def search_questions(keywords=None, categories=None, difficulties=None, types=None, limit=200):
+    """按关键词（AND 多词匹配）+ 板块 + 难度 + 题型筛选"""
+    conn = get_connection()
+    where_clauses = []
+    params = []
+
+    if keywords:
+        for kw in keywords:
+            if kw.strip():
+                where_clauses.append("content LIKE ?")
+                params.append(f"%{kw.strip()}%")
+
+    if categories:
+        placeholders = ",".join("?" for _ in categories)
+        where_clauses.append(f"category_level1 IN ({placeholders})")
+        params.extend(categories)
+
+    if difficulties:
+        placeholders = ",".join("?" for _ in difficulties)
+        where_clauses.append(f"difficulty_level IN ({placeholders})")
+        params.extend(difficulties)
+
+    if types:
+        placeholders = ",".join("?" for _ in types)
+        where_clauses.append(f"question_type IN ({placeholders})")
+        params.extend(types)
+
+    where_sql = " AND ".join(where_clauses) if where_clauses else "1"
+    rows = conn.execute(
+        f"""SELECT id, content, category_level1, category_level2,
+                   difficulty_level, difficulty_score, difficulty_dimensions,
+                   knowledge_points, question_type, created_at
+            FROM questions WHERE {where_sql}
+            ORDER BY created_at DESC LIMIT ?""",
+        params + [limit]
+    ).fetchall()
+    conn.close()
+
+    result = []
+    for r in rows:
+        d = dict(r)
+        for key in ("difficulty_dimensions", "knowledge_points"):
+            val = d.get(key)
+            if val:
+                try:
+                    d[key] = json.loads(val)
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        result.append(d)
+    return result
+
+
+def delete_question(qid: int) -> bool:
+    """删除指定 id 的题目，返回是否成功删除"""
+    conn = get_connection()
+    cursor = conn.execute("DELETE FROM questions WHERE id = ?", (qid,))
+    deleted = cursor.rowcount > 0
+    conn.commit()
+    conn.close()
+    return deleted
+
+
+def ai_search_questions(query: str, limit: int = 20):
+    """AI 语义搜索预留接口（当前返回空列表）"""
+    return {"query": query, "results": [], "total": 0, "note": "AI 搜索功能开发中"}

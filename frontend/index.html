@@ -23,9 +23,14 @@
                     <span class="nav-label">老师手把手<br>教你做题</span>
                     <span class="nav-badge">预留</span>
                 </a>
+                                <a href="exam.html" class="nav-item" data-page="exam">
+                    <span class="nav-icon">📝</span>
+                    <span class="nav-label">组卷</span>
+                    <span class="nav-badge">开发中</span>
+                </a>
                 <a href="history.html" class="nav-item" data-page="history">
                     <span class="nav-icon">📋</span>
-                    <span class="nav-label">错题本</span>
+                    <span class="nav-label">个人题库</span>
                 </a>
             </nav>
         </aside>
@@ -66,10 +71,11 @@
             <textarea id="questionInput" placeholder="输入题目..." rows="1" onkeydown="if(event.key==='Enter' && !event.shiftKey) { event.preventDefault(); solveQuestion(); }" oninput="autoResize(this)"></textarea>
             <button id="searchBtn" onclick="solveQuestion()">搜索</button>
         </div>
-                        <div class="save-toggle">
+                <div class="save-toggle">
                     <label class="toggle-label">
-                        <input type="checkbox" id="saveToggle" checked>
-                        <span class="toggle-text">加入到错题本</span>
+                        <span class="toggle-icon">📋</span>
+                        <input type="checkbox" id="saveToggle" checked class="toggle-switch">
+                        <span class="toggle-text">自动加入个人题库</span>
                     </label>
                 </div>
                 <div class="progress-area" id="progressArea">
@@ -83,7 +89,10 @@
         </div>
         <div class="result" id="result"></div>
         <div id="saveAfterArea" class="save-after-area" style="display:none">
-            <button id="saveAfterBtn" class="save-after-btn" onclick="saveAfterSolve()">加入到错题本</button>
+            <button id="saveAfterBtn" class="save-after-btn" onclick="saveAfterSolve()">
+                <span class="btn-icon">📋</span>
+                <span>加入个人题库</span>
+            </button>
         </div>
             </div>
         </main>
@@ -504,7 +513,8 @@ var _selectedTeacher = "liangliang";
                 if (d3.error) { displayXuebile(d3); return; }
                 _lastResult = d3;
                 document.getElementById('saveAfterArea').style.display = 'block';
-                document.getElementById('saveAfterBtn').textContent = '加入到错题本';
+                document.getElementById('saveAfterBtn').textContent = '加入个人题库';
+                document.getElementById('saveAfterBtn').innerHTML = '<span class="btn-icon">📋</span><span>加入个人题库</span>';
                 document.getElementById('saveAfterBtn').disabled = false;
                 document.getElementById('saveAfterBtn').className = 'save-after-btn';
                 displayResult(d3, totalTokens);
@@ -532,7 +542,9 @@ async function saveAfterSolve() {
                 });
                 const result = await resp.json();
                 const btn = document.getElementById('saveAfterBtn');
-                btn.textContent = result.message || (result.saved ? '\u2713 已加入错题本' : '已在错题本中');
+                var msg = result.message || (result.saved ? '已加入个人题库' : '已在个人题库中');
+                var icon = result.saved ? '✅' : '📋';
+                btn.innerHTML = '<span class="btn-icon">' + icon + '</span><span>' + msg + '</span>';
                 btn.disabled = true;
                 btn.className = 'save-after-btn saved';
             } catch(e) {

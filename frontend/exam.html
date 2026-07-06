@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>组卷 - 数学最强大脑</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body class="theme-liangliang exam-page">
+    <div class="app-layout">
+        <aside class="sidebar">
+            <a href="/" class="sidebar-logo">成为<br>数学高手</a>
+            <nav>
+                <a href="index.html" class="nav-item" data-page="solve">
+                    <span class="nav-icon">🔍</span>
+                    <span class="nav-label">和老师对答案</span>
+                </a>
+                <a href="teach.html" class="nav-item" data-page="teach">
+                    <span class="nav-icon">📖</span>
+                    <span class="nav-label">老师手把手<br>教你做题</span>
+                    <span class="nav-badge">预留</span>
+                </a>
+                <a href="exam.html" class="nav-item active" data-page="exam">
+                    <span class="nav-icon">📝</span>
+                    <span class="nav-label">组卷</span>
+                    <span class="nav-badge">开发中</span>
+                </a>
+                <a href="history.html" class="nav-item" data-page="history">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-label">个人题库</span>
+                </a>
+            </nav>
+        </aside>
+        <div class="exam-layout">
+            <div class="exam-sidebar no-print">
+                <div class="exam-sidebar-inner">
+                    <input class="exam-title-input" id="examTitle" placeholder="试卷名称" value="试卷" oninput="onSettingsChange()">
+                    <input class="exam-subtitle-input" id="examSubtitle" placeholder="副标题（考试时间、总分等，选填）" oninput="onSettingsChange()">
+
+                    <div class="exam-mode-toggle">
+                        <button class="exam-mode-btn active" data-mode="student" onclick="setMode('student')">📝 学生版</button>
+                        <button class="exam-mode-btn" data-mode="teacher" onclick="setMode('teacher')">📖 教师版</button>
+                    </div>
+ 
+                    <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;margin-bottom:12px;background:#f5f5f7;border-radius:8px;">
+                        <input type="checkbox" id="optBreaks" checked onchange="examState.optimizeBreaks = this.checked; renderPreview();" style="accent-color:#0071e3;">
+                        <label for="optBreaks" style="font-size:13px;color:#515154;cursor:pointer;">更频繁的换页 <span style="font-size:11px;color:#86868b;">更频繁换页</span></label>
+                    </div>
+
+                    <div class="exam-qlist" id="examQlist">
+                        <div style="text-align:center;padding:40px;color:#86868b;font-size:14px;">加载中...</div>
+                    </div>
+                </div>
+                <div class="exam-bottom">
+                    <button class="eb-btn eb-clear" onclick="clearAll()">🗑 清空</button>
+                    <button class="eb-btn eb-export" onclick="exportStudentPDF()">📥 学生版</button>
+                    <button class="eb-btn eb-export" onclick="exportTeacherPDF()">📖 教师版</button>
+                </div>
+            </div>
+            <div class="exam-main">
+                <div class="zoom-bar no-print">
+                    <button class="zoom-btn" onclick="zoomOut()">−</button>
+                    <span class="zoom-label" id="zoomLabel">100%</span>
+                    <button class="zoom-btn" onclick="zoomIn()">+</button>
+                    <button class="zoom-btn" onclick="zoomReset()" style="width:auto;padding:0 10px;font-size:12px;">⤒ 适应</button>
+                </div>
+                <div class="exam-preview" id="examPreview">
+                    <div style="text-align:center;padding:80px 20px;color:#86868b;font-size:16px;">还没有加入题目<br><br><a href="history.html" style="color:#0071e3;text-decoration:none;">→ 去个人题库选题</a></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="export-overlay" id="exportOverlay" style="display:none;">
+        <div class="export-dialog">
+            <div class="ed-icon">📄</div>
+            <div class="ed-title" id="exportTitle">正在生成PDF...</div>
+            <div class="export-spinner" id="exportSpinner"></div>
+            <div class="ed-text" id="exportText">请稍候</div>
+        </div>
+    </div>
+
+    <script>
+        var _examCartKey = 'exam_cart';
+        var examState = {
+            title: '试卷',
+            subtitle: '',
+            mode: 'student',
+            optimizeBreaks: true,
+            questions: []
+        };
+
+        // ---- Cart ----
+        function getExamCart() {
+            try {
+                var raw = localStorage.getItem(_examCartKey);
+                return raw ? JSON.parse(raw) : [];
+            } catch(e) { return []; }
+        }
+
+        // ---- Load ----
+        function loadExam() {
+            var cart = getExamCart();
+            if (cart.length === 0) {
+                document.getElementById('examPreview').innerHTML =
+                    '<div style="text-align:center;padding:80px 20px;color:#86868b;font-size:16px;">' +
+                    '还没有加入题目<br><br>' +
+                    '<a href="history.html" style="color:#0071e3;text-decoration:none;">→ 去个人题库选题</a></div>';
+                document.getElementById('examQlist').innerHTML =
+                    '<div style="text-align:center;padding:40px;color:#86868b;font-size:14px;">暂无题目</div>';
+                return;
+            }
+
+            document.getElementById('examQlist').innerHTML =
+                '<div style="text-align:center;padding:40px;color:#86868b;font-size:14px;">正在加载题目详情...</div>';
+
+            var promises = cart.map(function(item) {
+                return fetch('http://127.0.0.1:8000/questions/' + item.id)
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.error) return null;
+                        return {
+                            id: data.id,
+                            content: data.content || '',
+                            answer_json: data.answer_json || null,
+                            settings: item.settings || {
+                                blankHeight: 120,
+                                showDifficulty: false,
+                                showDetailedProcess: false,
+                                showKnowledgePoints: true
+                            }
+                        };
+                    })
+                    .catch(function() { return null; });
+            });
+
+            Promise.all(promises).then(function(results) {
+                examState.questions = results.filter(function(q) { return q !== null; });
+                renderQuestionList();
+                renderPreview();
+            }).catch(function(err) {
+                console.error('[exam] load failed:', err);
+                document.getElementById('examQlist').innerHTML = '<div style="text-align:center;padding:40px;color:#c62828;font-size:14px;">加载失败，请确认后端已启动 (端口8000)</div>';
+            });
+        }
+
+        // ---- Render Question List ----
+        function renderQuestionList() {
+            var container = document.getElementById('examQlist');
+            var html = '';
+            for (var i = 0; i < examState.questions.length; i++) {
+                var q = examState.questions[i];
+                var s = q.settings;
+                var preview = (q.content || '').replace(/\$+/g, '').substring(0, 40);
+                html += '<div class="exam-qitem" data-idx="' + i + '" draggable="true" ondragstart="onDragStart(event)" ondragover="event.preventDefault()" ondrop="onDrop(event)" ondragend="this.classList.remove(\'dragging\')">';
+                html += '<div class="exam-qitem-header" onclick="toggleQItem(this)">';
+                html += '<span class="exam-qitem-arrow">▶</span>';
+                html += '<span class="exam-qitem-num">' + (i + 1) + '</span>';
+                html += '<span class="exam-qitem-preview">' + escapeHtml(preview) + '</span>';
+                html += '<button class="exam-move-btn" onclick="event.stopPropagation();moveQuestion(' + i + ', -1)" title="上移">↑</button>';
+                html += '<button class="exam-move-btn" onclick="event.stopPropagation();moveQuestion(' + i + ', 1)" title="下移">↓</button>';
+                html += '<button class="exam-qitem-remove" onclick="event.stopPropagation();removeQ(' + i + ')" title="移除">✕</button>';
+                html += '</div>';
+                html += '<div class="exam-qitem-settings" style="display:none;">';
+                html += '<div class="setting-row">';
+                html += '<span class="setting-label">空白高度</span>';
+                html += '<input type="range" class="setting-slider" min="10" max="1000" value="' + s.blankHeight + '" onchange="updateSetting(' + i + ',\'blankHeight\',this.value)">';
+                html += '<input type="number" class="setting-input" min="10" max="1000" value="' + s.blankHeight + '" style="width:70px;padding:2px 6px;border:1px solid #c7c7cc;border-radius:6px;font-size:13px;text-align:center;" oninput="var r=this.parentNode;r.querySelector(\'.setting-slider\').value=this.value;r.querySelector(\'.setting-slider-value\').textContent=this.value+\'px\';" onchange="updateSetting(' + i + ',\'blankHeight\',this.value)">';
+                html += '</div>';
+                html += '<div class="setting-row">';
+                html += '<span class="setting-label">难度标签</span>';
+                html += '<input type="checkbox" class="setting-checkbox" ' + (s.showDifficulty ? 'checked' : '') + ' onchange="updateSetting(' + i + ',\'showDifficulty\',this.checked)">';
+                html += '</div>';
+                html += '<div class="setting-row">';
+                html += '<span class="setting-label">详细过程</span>';
+                html += '<input type="checkbox" class="setting-checkbox" ' + (s.showDetailedProcess ? 'checked' : '') + ' onchange="updateSetting(' + i + ',\'showDetailedProcess\',this.checked)">';
+                html += '</div>';
+                html += '<div class="setting-row">';
+                html += '<span class="setting-label">知识点</span>';
+                html += '<input type="checkbox" class="setting-checkbox" ' + (s.showKnowledgePoints ? 'checked' : '') + ' onchange="updateSetting(' + i + ',\'showKnowledgePoints\',this.checked)">';
+                html += '</div>';
+                html += '<div class="setting-row">';
+                html += '<span class="setting-label">答题卡框</span>';
+                html += '<input type="checkbox" class="setting-checkbox" ' + (s.showAnswerBox ? 'checked' : '') + ' onchange="updateSetting(' + i + ',\'showAnswerBox\',this.checked)">';
+                html += '</div>';
+                html += '</div></div>';
+            }
+            container.innerHTML = html;
+        }
+
+        function toggleQItem(header) {
+            var settings = header.nextElementSibling;
+            if (!settings || !settings.classList.contains('exam-qitem-settings')) return;
+            var isOpen = settings.style.display !== 'none';
+            settings.style.display = isOpen ? 'none' : 'block';
+            var arrow = header.querySelector('.exam-qitem-arrow');
+            if (arrow) arrow.classList.toggle('open', !isOpen);
+        }
+
+        function updateSetting(idx, key, value) {
+            if (key === 'blankHeight') {
+                examState.questions[idx].settings.blankHeight = parseInt(value);
+                // Update the display value
+                var input = document.querySelector('.exam-qitem[data-idx="' + idx + '"] .setting-input');
+                if (input) input.value = value;
+                var slider = document.querySelector('.exam-qitem[data-idx="' + idx + '"] .setting-slider-value');
+                if (slider) slider.textContent = value + 'px';
+            } else if (key === 'showDifficulty' || key === 'showDetailedProcess' || key === 'showKnowledgePoints' || key === 'showAnswerBox') {
+                examState.questions[idx].settings[key] = value;
+            }
+            saveSettingsToCart();
+            renderPreview();
+        }
+
+        function saveSettingsToCart() {
+            var cart = getExamCart();
+            for (var i = 0; i < cart.length; i++) {
+                var q = examState.questions.find(function(qq) { return qq.id === cart[i].id; });
+                if (q) {
+                    cart[i].settings = q.settings;
+                }
+            }
+            localStorage.setItem(_examCartKey, JSON.stringify(cart));
+        }
+
+        function removeQ(idx) {
+            var q = examState.questions[idx];
+            examState.questions.splice(idx, 1);
+            // Also remove from cart
+            var cart = getExamCart();
+            cart = cart.filter(function(item) { return item.id !== q.id; });
+            localStorage.setItem(_examCartKey, JSON.stringify(cart));
+            renderQuestionList();
+            if (examState.questions.length === 0) {
+                document.getElementById('examPreview').innerHTML =
+                    '<div style="text-align:center;padding:80px 20px;color:#86868b;font-size:16px;">' +
+                    '还没有加入题目<br><br>' +
+                    '<a href="history.html" style="color:#0071e3;text-decoration:none;">→ 去个人题库选题</a></div>';
+            } else {
+                renderPreview();
+            }
+        }
+
+        function clearAll() {
+            examState.questions = [];
+            localStorage.setItem(_examCartKey, '[]');
+            renderQuestionList();
+            document.getElementById('examPreview').innerHTML =
+                '<div style="text-align:center;padding:80px 20px;color:#86868b;font-size:16px;">' +
+                '还没有加入题目<br><br>' +
+                '<a href="history.html" style="color:#0071e3;text-decoration:none;">→ 去个人题库选题</a></div>';
+        }
+
+        // ---- Mode ----
+        function setMode(mode) {
+            examState.mode = mode;
+            document.querySelectorAll('.exam-mode-btn').forEach(function(b) {
+                b.classList.toggle('active', b.dataset.mode === mode);
+            });
+            renderPreview();
+        }
+
+        // ---- Settings Change ----
+        function onSettingsChange() {
+            examState.title = document.getElementById('examTitle').value || '试卷';
+            examState.subtitle = document.getElementById('examSubtitle').value || '';
+            renderPreview();
+        }
+
+                // ---- Render Preview ----
+function renderPreview() {
+            try {
+            console.log('[exam] renderPreview called, qs:', examState.questions.length);
+            var qs = examState.questions;
+            if (qs.length === 0) return;
+            var mode = examState.mode;
+            var opt = examState.optimizeBreaks;
+            
+            var el = document.getElementById('examPreview');
+            el.classList.add('paginated');
+            el.innerHTML = '';
+            
+            // ---- Page management ----
+            var curPage = null;
+            var nextMustNewPage = false;
+            var PH = 1123;  // A4 height in px
+            
+            function newPage() {
+                var p = document.createElement('div');
+                p.className = 'a4-page';
+                p.style.overflow = 'visible';
+                el.appendChild(p);
+                return p;
+            }
+            curPage = newPage();
+            
+            // ---- Append content with real DOM measurement ----
+            function appendHtml(html) {
+                var tmp = document.createElement('div');
+                tmp.innerHTML = html;
+                var children = Array.from(tmp.children);
+                if (children.length === 0) {
+                    curPage.innerHTML += html;
+                    // Measure the added text
+                    var pRect = curPage.getBoundingClientRect();
+                    var added = curPage.lastChild;
+                    if (added) {
+                        var aRect = added.getBoundingClientRect();
+                        if (aRect.bottom > pRect.top + PH) {
+                            nextMustNewPage = true;
+                        } else if (pRect.top + PH - aRect.bottom < 3) {
+                            nextMustNewPage = true;
+                        }
+                    }
+                    return;
+                }
+                for (var ci = 0; ci < children.length; ci++) {
+                    if (nextMustNewPage) {
+                        curPage = newPage();
+                        nextMustNewPage = false;
+                    }
+                    curPage.appendChild(children[ci]);
+                    var pRect = curPage.getBoundingClientRect();
+                    var cRect = children[ci].getBoundingClientRect();
+                    // Overflow check
+                    if (cRect.bottom > pRect.top + PH) {
+                        curPage.removeChild(children[ci]);
+                        curPage = newPage();
+                        curPage.appendChild(children[ci]);
+                        pRect = curPage.getBoundingClientRect();
+                        cRect = children[ci].getBoundingClientRect();
+                    }
+                    // 3px rule
+                    var remaining = (pRect.top + PH) - cRect.bottom;
+                    if (remaining < 30) {
+                        nextMustNewPage = true;
+                    }
+                }
+            }
+            
+            
+            // ---- Title ----
+            var title = examState.title || '试卷', subtitle = examState.subtitle || '';
+            appendHtml(
+                '<div class="preview-header"><div class="preview-title">' + escapeHtml(title) +
+                '</div>' + (subtitle ? '<div class="preview-subtitle">' + escapeHtml(subtitle) + '</div>' : '') +
+                '</div><hr class="preview-divider">'
+            );
+            
+            // ---- Questions ----
+            for (var i = 0; i < qs.length; i++) {
+                var q = qs[i], s = q.settings, cr = q.answer_json && q.answer_json.chunk_results;
+                
+                // Question number + content
+                appendHtml(
+                    '<div style="font-weight:600;margin-bottom:6px;">' + (i + 1) + '. ' + (q.content || '') + '</div>'
+                );
+                
+                if (mode === 'teacher' && cr) {
+                    // Teacher: each step individually with real measurement
+                    for (var ci = 0; ci < cr.length; ci++) {
+                        var ch = cr[ci], st = ch.steps || [];
+                        for (var si = 0; si < st.length; si++) {
+                            var sw = st[si].standard_writing || '';
+                            var stepHtml = '<div class="teacher-process"><div>' + sw + '</div></div>';
+                            if (st[si].knowledge_point && s.showKnowledgePoints) {
+                                stepHtml += '<div class="teacher-kp">知识点：' + escapeHtml(st[si].knowledge_point) + '</div>';
+                            }
+                            appendHtml(stepHtml);
+                        }
+                        if (s.showDifficulty && ch.difficulty) {
+                            appendHtml('<div class="teacher-difficulty">难度：' + ch.difficulty.level + '</div>');
+                        }
+                        if (ch.final_answer) {
+                            appendHtml('<div style="margin-top:6px;">答案：' + ch.final_answer + '</div>');
+                        }
+                    }
+                } else {
+                    // Student: blank area
+                    var bh = Math.max(s.blankHeight || 200, 10);
+                    if (s.showAnswerBox) {
+                        var boxMargin = opt ? 80 : 40;
+                        var pRect = curPage.getBoundingClientRect();
+                        var lastChild = curPage.lastElementChild;
+                        var remain;
+                        if (lastChild) {
+                            var lRect = lastChild.getBoundingClientRect();
+                            remain = (pRect.top + PH) - lRect.bottom;
+                        } else {
+                            remain = PH;
+                        }
+                        var labelHtml = '<div style="position:absolute;bottom:0;left:0;right:0;text-align:center;font-weight:700;font-size:6pt;font-family:SimHei;">超出答题区域的答案无效</div>';
+                        if (bh + boxMargin > remain) {
+                            var box1 = Math.max(remain - boxMargin, 10);
+                            var box2 = Math.max(bh - box1, 10);
+                            appendHtml("<div class=\"answer-box-container\"><div class=\"answer-box\" style=\"height:" + box1 + "px;position:relative;\">" + labelHtml + "</div></div>");
+                            nextMustNewPage = true;
+                            appendHtml("<div class=\"answer-box-container\"><div class=\"answer-box\" style=\"height:" + box2 + "px;position:relative;\">" + labelHtml + "</div></div>");
+                        } else {
+                            appendHtml("<div class=\"answer-box-container\"><div class=\"answer-box\" style=\"height:" + bh + "px;position:relative;\">" + labelHtml + "</div></div>");
+                        }
+                    } else {
+                        appendHtml(
+                            '<div class="student-blank" style="min-height:' + bh + 'px;"></div>'
+                        );
+                    }
+                }
+                
+                // 150px rule (student + opt, after question completes)
+                if (mode === 'student' && opt) {
+                    var lastCh = curPage.lastElementChild;
+                    if (lastCh) {
+                        var pR = curPage.getBoundingClientRect();
+                        var lR = lastCh.getBoundingClientRect();
+                        var remain = (pR.top + PH) - lR.bottom;
+                        if (remain < 150) {
+                            curPage = newPage();
+                        }
+                    }
+                }
+                
+            }
+            
+            // ---- Answers section (student mode) ----
+            // Set overflow hidden after all content is placed
+            var allPages = el.querySelectorAll('.a4-page');
+            for (var pi = 0; pi < allPages.length; pi++) {
+                allPages[pi].style.overflow = 'hidden';
+            }
+            
+            // KaTeX rendering
+            try { renderMathInElement(el, { delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}], ignoredTags: [] }); } catch(e) {}
+        } catch(e) {
+            console.error("[exam] renderPreview error:", e);
+        }
+        }
+        function showExportOverlay(text) {
+            document.getElementById('exportOverlay').style.display = 'flex';
+            document.getElementById('exportText').textContent = text || '请稍候';
+            document.getElementById('exportSpinner').style.display = 'block';
+        }
+
+        function hideExportOverlay() {
+            document.getElementById('exportOverlay').style.display = 'none';
+
+        }
+        function checkHtml2Pdf() {
+            if (typeof html2pdf === "undefined") {
+                return false;
+            }
+            return true;
+        }
+
+        async function exportStudentPDF() {
+            setMode('student');
+            await new Promise(function(r) { setTimeout(r, 600); });
+            await exportPDF('学生版');
+        }
+        async function exportTeacherPDF() {
+            setMode('teacher');
+            await new Promise(function(r) { setTimeout(r, 600); });
+            await exportPDF('教师版');
+        }
+        async function exportPDF(modeLabel) {
+            var qs = examState.questions;
+            if (!checkHtml2Pdf()) { alert("PDF库加载失败，请刷新页面重试"); return; }
+            if (qs.length === 0) { alert('请先加入题目'); return; }
+
+            showExportOverlay('正在生成PDF，请稍候...');
+
+            // Wait a moment for KaTeX to finish rendering
+            await new Promise(function(resolve) { setTimeout(resolve, 500); });
+
+            var element = document.querySelector('.exam-preview');
+            if (!element) {
+                hideExportOverlay();
+                alert('生成失败，请重试');
+                return;
+            }
+
+            var titleBase = (examState.title || "试卷").replace(/[\/\\?%*:|"<>]/g, "_");
+            var title = titleBase + (modeLabel ? "_" + modeLabel : "");
+
+            var opt = {
+                margin: 0,
+                filename: title + '.pdf',
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: {
+                    scale: 2,
+                    useCORS: true,
+                    letterRendering: true,
+                    width: 794
+                },
+                jsPDF: {
+                    unit: 'px',
+                    format: [794, 1123],
+                    orientation: 'portrait'
+                },
+                pagebreak: {
+                    mode: ['avoid-all', 'css', 'legacy'],
+                    before: '.answer-page-title'
+                }
+            };
+
+            try {
+                document.getElementById('exportTitle').textContent = '正在生成PDF...';
+                // Toggle overflow for full capture
+                var a4p = element.querySelectorAll('.a4-page');
+                for (var ip = 0; ip < a4p.length; ip++) {
+                    a4p[ip].style.overflow = 'visible';
+                    a4p[ip].style.height = 'auto';
+                    a4p[ip].style.border = "none"; a4p[ip].style.boxShadow = "none"; a4p[ip].style.marginBottom = "0";
+                }
+                await html2pdf().set(opt).from(element).save();
+                // Restore
+                for (var ip = 0; ip < a4p.length; ip++) {
+                    a4p[ip].style.overflow = 'hidden';
+                    a4p[ip].style.border = ""; a4p[ip].style.boxShadow = ""; a4p[ip].style.marginBottom = "";
+                    a4p[ip].style.height = '';
+                }
+                document.getElementById('exportTitle').textContent = '导出成功';
+                document.getElementById('exportText').textContent = '文件已下载';
+
+            } catch (err) {
+                // Restore on error too
+                var a4p2 = element.querySelectorAll('.a4-page');
+                for (var ip = 0; ip < a4p2.length; ip++) {
+                    a4p2[ip].style.border = ""; a4p2[ip].style.boxShadow = ""; a4p2[ip].style.marginBottom = "";
+                    a4p2[ip].style.overflow = 'hidden';
+                    a4p2[ip].style.height = '';
+                }
+                console.error('PDF export error:', err);
+
+                document.getElementById('exportTitle').textContent = '导出失败，尝试打印方式...';
+                document.getElementById('exportText').textContent = err.message || '未知错误';
+                // Fallback: window.print
+                await new Promise(function(resolve) { setTimeout(resolve, 1000); });
+                try { window.print(); } catch(e2) {}
+            }
+            hideExportOverlay();
+        }
+
+
+
+        // ---- Zoom ----
+        var _zoomLevel = 1.0;
+        function zoomIn() { _zoomLevel = Math.min(_zoomLevel + 0.1, 2.0); applyZoom(); }
+        function zoomOut() { _zoomLevel = Math.max(_zoomLevel - 0.1, 0.3); applyZoom(); }
+        function zoomReset() { 
+            var el = document.querySelector('.exam-preview');
+            if (!el) return;
+            var pw = el.scrollWidth;
+            var mw = document.querySelector('.exam-main').clientWidth;
+            var aw = mw - 80;
+            _zoomLevel = Math.min(aw / pw, 1.0);
+            applyZoom();
+        }
+        function applyZoom() {
+            var el = document.querySelector('.exam-preview');
+            if (!el) return;
+            el.style.transform = 'scale(' + _zoomLevel + ')';
+            el.style.transformOrigin = 'top center';
+            var label = document.getElementById('zoomLabel');
+            if (label) label.textContent = Math.round(_zoomLevel * 100) + '%';
+        }
+
+        // ---- Utils ----
+        function escapeHtml(str) {
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        // ---- Init ----
+var _dragIdx = -1;
+function onDragStart(e) {
+    _dragIdx = parseInt(e.currentTarget.dataset.idx);
+    e.dataTransfer.effectAllowed = "move";
+    e.currentTarget.classList.add("dragging");
+}
+function onDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove("dragging");
+    var dstIdx = parseInt(e.currentTarget.dataset.idx);
+    if (_dragIdx < 0 || _dragIdx === dstIdx) { _dragIdx = -1; return; }
+    var tmp = examState.questions[_dragIdx];
+    examState.questions[_dragIdx] = examState.questions[dstIdx];
+    examState.questions[dstIdx] = tmp;
+    var cart = getExamCart();
+    var newCart = [];
+    for (var i = 0; i < examState.questions.length; i++) {
+        var q = examState.questions[i];
+        var found = cart.find(function(c) { return c.id === q.id; });
+        if (found) newCart.push(found);
+    }
+    localStorage.setItem(_examCartKey, JSON.stringify(newCart));
+    _dragIdx = -1;
+    renderQuestionList();
+    renderPreview();
+}
+        function moveQuestion(idx, direction) {
+            var newIdx = idx + direction;
+            if (newIdx < 0 || newIdx >= examState.questions.length) return;
+            var tmp = examState.questions[idx];
+            examState.questions[idx] = examState.questions[newIdx];
+            examState.questions[newIdx] = tmp;
+            var cart = getExamCart();
+            var newCart = [];
+            for (var i = 0; i < examState.questions.length; i++) {
+                var existing = cart.find(function(c) { return c.id === examState.questions[i].id; });
+                if (existing) newCart.push(existing);
+            }
+            localStorage.setItem(_examCartKey, JSON.stringify(newCart));
+            renderQuestionList();
+            renderPreview();
+        }
+        document.addEventListener('DOMContentLoaded', function() {
+            loadExam();
+        });
+    </script>
+</body>
+</html>

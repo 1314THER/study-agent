@@ -1,9 +1,12 @@
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+
 from pydantic import BaseModel, Field
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
 from backend.solver import step_solver_only, step_verify_all, step_final_check, _xuebile, _extract_solver_status
-from backend.database import init_db, get_all_questions
+from backend.database import init_db, get_all_questions, search_questions, delete_question
 from backend.categories import get_all_categories
 
 app = FastAPI(title="你好，我是张雪峰老师")
@@ -57,19 +60,20 @@ class SaveQuestionRequest(BaseModel):
 
 @app.post("/questions/save")
 def api_save_question(req: SaveQuestionRequest):
-    """保存题目到错题本（如已存在则提示）"""
+    """保存题目到个人题库（如已存在则提示）"""
     from backend.database import find_question, save_question
     existing = find_question(req.question)
     if existing:
-        return {"saved": False, "reason": "already_exists", "message": "该题已在错题本中"}
+        return {"saved": False, "reason": "already_exists", "message": "该题已在个人题库中"}
     # 从 chunk_results 提取分类和难度（兼容前端未传的情况）
     chunk_results = req.answer_json.get("chunk_results", [])
     first = chunk_results[0] if chunk_results else {}
     req.answer_json["category"] = first.get("category")
     req.answer_json["difficulty"] = first.get("difficulty")
+    req.answer_json["question_type"] = first.get("chunk_type")
     # 将答案结构化数据写入数据库
     save_question(req.question, req.answer_json)
-    return {"saved": True, "message": "已加入错题本"}
+    return {"saved": True, "message": "已加入个人题库"}
 
 
 
@@ -86,6 +90,7 @@ def api_step3(req: Step3Request):
         first = chunk_results[0] if chunk_results else {}
         final["category"] = first.get("category")
         final["difficulty"] = first.get("difficulty")
+        final["question_type"] = first.get("chunk_type")
         try:
             save_question(req.question, final)
         except Exception as e:
@@ -96,11 +101,28 @@ def api_step3(req: Step3Request):
 
 @app.get("/")
 def home():
-    return {"message": "你好，我是张雪峰老师 - 后端已启动"}
+    return HTMLResponse("""<html><head><script>location.href="/index.html"</script></head><body><a href="/index.html">进入数学最强大脑</a></body></html>""")
 
 @app.get("/questions")
 def list_questions():
     return get_all_questions()
+
+
+@app.get("/questions/search")
+def api_search_questions(
+    q: str = "",
+    category: str = "",
+    difficulty: str = "",
+    question_type: str = "",
+    limit: int = 200,
+):
+    """搜索个人题库：关键词（空格分隔为 AND 匹配）+ 板块 + 难度 + 题型筛选"""
+    keywords = [kw.strip() for kw in q.split() if kw.strip()] if q else None
+    categories = [c.strip() for c in category.split(",") if c.strip()] if category else None
+    difficulties = [d.strip() for d in difficulty.split(",") if d.strip()] if difficulty else None
+    types = [t.strip() for t in question_type.split(",") if t.strip()] if question_type else None
+    return search_questions(keywords, categories, difficulties, types, limit=limit)
+
 
 @app.get("/questions/{qid}")
 def get_question(qid: int):
@@ -114,3 +136,43 @@ def get_question(qid: int):
 @app.get("/categories")
 def categories():
     return get_all_categories()
+
+
+@app.delete("/questions/{qid}")
+def api_delete_question(qid: int):
+    """删除个人题库中的一道题"""
+    ok = delete_question(qid)
+    if not ok:
+        return {"deleted": False, "message": "未找到该题"}
+    return {"deleted": True, "id": qid, "message": "已删除"}
+
+
+
+
+class AiSearchRequest(BaseModel):
+    query: str
+    limit: int = 20
+
+
+@app.post("/questions/ai-search")
+def api_ai_search_questions(req: AiSearchRequest):
+    """AI 语义搜索（预留）"""
+    from backend.database import ai_search_questions
+    return ai_search_questions(req.query, req.limit)
+
+
+class AiAssembleRequest(BaseModel):
+    query: str
+
+
+@app.post("/exam/ai-assemble")
+def api_ai_assemble(req: AiAssembleRequest):
+    """AI 一键组卷（预留）"""
+    return {"query": req.query, "results": [], "total": 0, "note": "AI 组卷功能开发中"}
+
+
+# ---- Static files: serve frontend (must be last) ----
+import os
+_frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
+if os.path.isdir(_frontend_path):
+    app.mount("/", StaticFiles(directory=_frontend_path, html=True), name="frontend")
