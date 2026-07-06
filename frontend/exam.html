@@ -27,7 +27,7 @@
                 <a href="exam.html" class="nav-item active" data-page="exam">
                     <span class="nav-icon">📝</span>
                     <span class="nav-label">组卷</span>
-                    <span class="nav-badge">开发中</span>
+                    
                 </a>
                 <a href="history.html" class="nav-item" data-page="history">
                     <span class="nav-icon">📋</span>
@@ -48,28 +48,30 @@
  
                     <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;margin-bottom:12px;background:#f5f5f7;border-radius:8px;">
                         <input type="checkbox" id="optBreaks" checked onchange="examState.optimizeBreaks = this.checked; renderPreview();" style="accent-color:#0071e3;">
-                        <label for="optBreaks" style="font-size:13px;color:#515154;cursor:pointer;">更频繁的换页 <span style="font-size:11px;color:#86868b;">更频繁换页</span></label>
+                        <label for="optBreaks" style="font-size:13px;color:#515154;cursor:pointer;">更频繁的换页 <span style="font-size:11px;color:#86868b;">确保题目不会出现在纸张底部</span></label>
+                        <span style="flex:1;"></span>
+                        <button class="eb-btn eb-clear" onclick="clearAll()" style="padding:4px 10px;font-size:13px;background:transparent;border:1px solid #c7c7cc;border-radius:8px;cursor:pointer;color:#515154;">🗑 清空</button>
                     </div>
 
                     <div class="exam-qlist" id="examQlist">
                         <div style="text-align:center;padding:40px;color:#86868b;font-size:14px;">加载中...</div>
                     </div>
                 </div>
-                <div class="exam-bottom">
-                    <button class="eb-btn eb-clear" onclick="clearAll()">🗑 清空</button>
-                    <button class="eb-btn eb-export" onclick="exportStudentPDF()">📥 学生版</button>
-                    <button class="eb-btn eb-export" onclick="exportTeacherPDF()">📖 教师版</button>
-                </div>
             </div>
+            <div class="resize-handle" style="width:4px;cursor:col-resize;background:#e5e5e7;flex-shrink:0;"></div>
             <div class="exam-main">
-                <div class="zoom-bar no-print">
-                    <button class="zoom-btn" onclick="zoomOut()">−</button>
-                    <span class="zoom-label" id="zoomLabel">100%</span>
-                    <button class="zoom-btn" onclick="zoomIn()">+</button>
-                    <button class="zoom-btn" onclick="zoomReset()" style="width:auto;padding:0 10px;font-size:12px;">⤒ 适应</button>
-                </div>
+
                 <div class="exam-preview" id="examPreview">
                     <div style="text-align:center;padding:80px 20px;color:#86868b;font-size:16px;">还没有加入题目<br><br><a href="history.html" style="color:#0071e3;text-decoration:none;">→ 去个人题库选题</a></div>
+                </div>
+                <div class="exam-bottom-bar no-print" style="height:44px;flex-shrink:0;background:white;border-top:1px solid #e5e5e7;display:flex;align-items:center;padding:0 20px;gap:4px;">
+                    <button class="zoom-btn" onclick="zoomOut()" style="width:28px;height:28px;font-size:14px;">−</button>
+                    <span class="zoom-label" id="zoomLabel" style="font-size:12px;min-width:36px;">100%</span>
+                    <button class="zoom-btn" onclick="zoomIn()" style="width:28px;height:28px;font-size:14px;">+</button>
+                    <button class="zoom-btn" onclick="zoomReset()" style="width:28px;height:28px;font-size:12px;padding:0;">⤒</button>
+                    <span style="width:1px;height:16px;background:#c7c7cc;margin:0 4px;"></span>
+                    <button class="zoom-btn" onclick="exportStudentPDF()" title="打印学生版" style="width:auto;height:28px;font-size:12px;padding:0 10px;display:inline-flex;align-items:center;gap:3px;white-space:nowrap;">🖨 学生版</button>
+                    <button class="zoom-btn" onclick="exportTeacherPDF()" title="打印教师版" style="width:auto;height:28px;font-size:12px;padding:0 10px;display:inline-flex;align-items:center;gap:3px;white-space:nowrap;">🖨 教师版</button>
                 </div>
             </div>
         </div>
@@ -127,6 +129,9 @@
                             id: data.id,
                             content: data.content || '',
                             answer_json: data.answer_json || null,
+                            category: data.category_level1 || '',
+                            difficulty: data.difficulty_level || '',
+                            question_type: data.question_type || '',
                             settings: item.settings || {
                                 blankHeight: 120,
                                 showDifficulty: false,
@@ -155,21 +160,29 @@
             for (var i = 0; i < examState.questions.length; i++) {
                 var q = examState.questions[i];
                 var s = q.settings;
-                var preview = (q.content || '').replace(/\$+/g, '').substring(0, 40);
-                html += '<div class="exam-qitem" data-idx="' + i + '" draggable="true" ondragstart="onDragStart(event)" ondragover="event.preventDefault()" ondrop="onDrop(event)" ondragend="this.classList.remove(\'dragging\')">';
+                // show raw content with KaTeX
+                html += '<div class="exam-qitem" data-idx="' + i + '" draggable="true" ondragstart="onDragStart(event)" ondragover="onDragOver(event)" ondrop="onDrop(event)" ondragend="this.classList.remove(\'dragging\')">';
                 html += '<div class="exam-qitem-header" onclick="toggleQItem(this)">';
                 html += '<span class="exam-qitem-arrow">▶</span>';
                 html += '<span class="exam-qitem-num">' + (i + 1) + '</span>';
-                html += '<span class="exam-qitem-preview">' + escapeHtml(preview) + '</span>';
+                html += '<span class="exam-qitem-preview">' + (q.content || '') + '</span>';
                 html += '<button class="exam-move-btn" onclick="event.stopPropagation();moveQuestion(' + i + ', -1)" title="上移">↑</button>';
                 html += '<button class="exam-move-btn" onclick="event.stopPropagation();moveQuestion(' + i + ', 1)" title="下移">↓</button>';
                 html += '<button class="exam-qitem-remove" onclick="event.stopPropagation();removeQ(' + i + ')" title="移除">✕</button>';
                 html += '</div>';
+                // Metadata tags
+                var tags = [];
+                if (q.question_type) tags.push('<span class="tag tag-type">' + escapeHtml(q.question_type) + '</span>');
+                if (q.difficulty) tags.push('<span class="tag tag-' + (q.difficulty === '容易' ? 'easy' : q.difficulty === '中等' ? 'medium' : q.difficulty === '困难' ? 'hard' : 'extreme') + '">' + escapeHtml(q.difficulty) + '</span>');
+                if (q.category) tags.push('<span class="tag tag-category">' + escapeHtml(q.category) + '</span>');
+                if (tags.length > 0) {
+                    html += '<div class="exam-qitem-meta" style="display:flex;gap:4px;flex-wrap:wrap;padding:2px 14px 6px;">' + tags.join('') + '</div>';
+                }
                 html += '<div class="exam-qitem-settings" style="display:none;">';
                 html += '<div class="setting-row">';
                 html += '<span class="setting-label">空白高度</span>';
                 html += '<input type="range" class="setting-slider" min="10" max="1000" value="' + s.blankHeight + '" onchange="updateSetting(' + i + ',\'blankHeight\',this.value)">';
-                html += '<input type="number" class="setting-input" min="10" max="1000" value="' + s.blankHeight + '" style="width:70px;padding:2px 6px;border:1px solid #c7c7cc;border-radius:6px;font-size:13px;text-align:center;" oninput="var r=this.parentNode;r.querySelector(\'.setting-slider\').value=this.value;r.querySelector(\'.setting-slider-value\').textContent=this.value+\'px\';" onchange="updateSetting(' + i + ',\'blankHeight\',this.value)">';
+                html += '<input type="number" class="setting-input" min="10" max="1000" value="' + s.blankHeight + '" style="width:70px;padding:2px 6px;border:1px solid #c7c7cc;border-radius:6px;font-size:13px;text-align:center;" oninput="var r=this.parentNode;r.querySelector(\'.setting-slider\').value=this.value;" onchange="updateSetting(' + i + ',\'blankHeight\',this.value)">';
                 html += '</div>';
                 html += '<div class="setting-row">';
                 html += '<span class="setting-label">难度标签</span>';
@@ -190,6 +203,7 @@
                 html += '</div></div>';
             }
             container.innerHTML = html;
+            try { renderMathInElement(container, { delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}], ignoredTags: [] }); } catch(e) {}
         }
 
         function toggleQItem(header) {
@@ -574,33 +588,54 @@ function renderPreview() {
         }
 
         // ---- Init ----
-var _dragIdx = -1;
-function onDragStart(e) {
-    _dragIdx = parseInt(e.currentTarget.dataset.idx);
-    e.dataTransfer.effectAllowed = "move";
-    e.currentTarget.classList.add("dragging");
-}
-function onDrop(e) {
-    e.preventDefault();
-    e.currentTarget.classList.remove("dragging");
-    var dstIdx = parseInt(e.currentTarget.dataset.idx);
-    if (_dragIdx < 0 || _dragIdx === dstIdx) { _dragIdx = -1; return; }
-    var tmp = examState.questions[_dragIdx];
-    examState.questions[_dragIdx] = examState.questions[dstIdx];
-    examState.questions[dstIdx] = tmp;
-    var cart = getExamCart();
-    var newCart = [];
-    for (var i = 0; i < examState.questions.length; i++) {
-        var q = examState.questions[i];
-        var found = cart.find(function(c) { return c.id === q.id; });
-        if (found) newCart.push(found);
-    }
-    localStorage.setItem(_examCartKey, JSON.stringify(newCart));
-    _dragIdx = -1;
-    renderQuestionList();
-    renderPreview();
-}
-        function moveQuestion(idx, direction) {
+        var _dragSrcIdx = -1;
+        var _lastHoverIdx = -1;
+        function onDragStart(e) {
+            _dragSrcIdx = parseInt(e.currentTarget.dataset.idx);
+            _lastHoverIdx = _dragSrcIdx;
+            e.dataTransfer.effectAllowed = "move";
+            e.currentTarget.classList.add("dragging");
+        }
+        function onDragOver(e) {
+            e.preventDefault();
+            if (_dragSrcIdx < 0) return;
+            var targetEl = e.currentTarget;
+            var tIdx = parseInt(targetEl.dataset.idx);
+            if (tIdx === _lastHoverIdx) return;
+            _lastHoverIdx = tIdx;
+            var srcEl = document.querySelector(".exam-qitem.dragging");
+            if (!srcEl) return;
+            var sIdx = parseInt(srcEl.dataset.idx);
+            var tmp = examState.questions[sIdx];
+            examState.questions[sIdx] = examState.questions[tIdx];
+            examState.questions[tIdx] = tmp;
+            var parent = srcEl.parentNode;
+            if (tIdx > sIdx) {
+                parent.insertBefore(srcEl, targetEl.nextSibling);
+            } else {
+                parent.insertBefore(srcEl, targetEl);
+            }
+            var items = parent.querySelectorAll(".exam-qitem");
+            for (var ii = 0; ii < items.length; ii++) {
+                items[ii].dataset.idx = ii;
+            }
+            _dragSrcIdx = tIdx;
+        }
+        function onDrop(e) {
+            e.preventDefault();
+            _dragSrcIdx = -1; _lastHoverIdx = -1;
+            document.querySelectorAll(".exam-qitem.dragging").forEach(function(el) { el.classList.remove("dragging"); });
+            var cart = getExamCart();
+            var newCart = [];
+            for (var ci = 0; ci < examState.questions.length; ci++) {
+                var found = cart.find(function(c) { return c.id === examState.questions[ci].id; });
+                if (found) newCart.push(found);
+            }
+            localStorage.setItem(_examCartKey, JSON.stringify(newCart));
+            renderQuestionList();
+            renderPreview();
+            zoomReset();
+        }        function moveQuestion(idx, direction) {
             var newIdx = idx + direction;
             if (newIdx < 0 || newIdx >= examState.questions.length) return;
             var tmp = examState.questions[idx];
@@ -615,7 +650,31 @@ function onDrop(e) {
             localStorage.setItem(_examCartKey, JSON.stringify(newCart));
             renderQuestionList();
             renderPreview();
+            zoomReset();
         }
+        // Resizable divider
+        var _resizing = false;
+        var resizeHandle = document.querySelector('.resize-handle');
+        if (resizeHandle) {
+            resizeHandle.addEventListener('mousedown', function(e) {
+                _resizing = true;
+                e.preventDefault();
+            });
+        }
+        document.addEventListener('mousemove', function(e) {
+            if (!_resizing) return;
+            var sidebar = document.querySelector('.exam-sidebar');
+            var layout = document.querySelector('.exam-layout');
+            var layoutRect = layout.getBoundingClientRect();
+            var newWidth = e.clientX - layoutRect.left - 4;
+            newWidth = Math.max(200, Math.min(800, newWidth));
+            sidebar.style.flex = 'none';
+            sidebar.style.width = newWidth + 'px';
+        });
+        document.addEventListener('mouseup', function() {
+            _resizing = false;
+        });
+window.addEventListener("resize", function() { zoomReset(); });
         document.addEventListener('DOMContentLoaded', function() {
             loadExam();
         });
