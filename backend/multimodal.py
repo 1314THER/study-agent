@@ -67,18 +67,36 @@ _EXTRACTION_PROMPT = """你是一个数学题目提取专家。请仔细阅读�
 对每道题输出：
 1. 题号（按出现顺序，从1开始）
 2. 题目内容（用 LaTeX 格式，$...$ 行内公式，$$...$$ 独立公式）
-3. 难度判断（简单 / 中等 / 困难）
+3. 题型判断（选择题 / 填空题 / 大题）
+4. 难度判断（简单 / 中等 / 困难）
+
+题型判断规则（非常重要，必须严格遵守）：
+- **选择题**：题目有 A、B、C、D 等选项供选择。特征：题干末尾会有"..."或"..."，下方有 A. xxx B. xxx C. xxx D. xxx。只要看到选项，就一定是选择题。
+- **填空题**：题目要求直接填入答案，没有选项。特征：题干末尾会有"___"、空格、或"______"表示填写位置。
+- **大题**：题目需要写出完整解答过程，通常有多步求解。特征：题干较长，有多个小问（如(1)(2)(3)），或包含"证明""求""解"等。
+
+判断方法（按优先级）：
+1. 先看有没有 A. / B. / C. / D. 选项 → 有就是选择题
+2. 再看有没有 ___ 或空格填空 → 有就是填空题
+3. 都不是 → 大题
 
 注意：
 - 选择题、填空题、大题都要提取
-- 不要合并题目，每道题独立输出
-- 保留原题的全部文字和条件
-- 不要自己修改或简化题目内容
+- 每道题独立输出，不要合并题目
+- 保留原题的全部文字和条件，不能有任何省略或截断
+- 通过题号来切分题目：从题号开始，一直输出到下一个题号之前为止
+- 每个题目的内容必须完整，不能在中途停止
+- 如果题目有选项（A. B. C. D.），所有选项都要完整输出，不能省略或写"..."代替
+- 输出到文档末尾才算完成，不要提前结束
+- 不要自己修改、简化或截断题目内容
 
-请仅输出 JSON 数组，不要输出其他文字：
+题型判对非常关键，请仔细区分选择题和填空题。
+
+请仅输出 JSON 数组，不要输出其他文字。
+注意：JSON 中不要使用 \n 表示换行，如果题目有多行用空格连接即可。
 ```json
 [
-  {"index": 1, "latex": "题目 LaTeX 内容", "difficulty": "中等"},
+  {"index": 1, "latex": "题目 LaTeX 内容", "type": "选择题", "difficulty": "中等"},
   ...
 ]
 ```"""
@@ -103,7 +121,7 @@ def _call_qwen_vl(image_base64: Optional[str] = None, text: Optional[str] = None
     body = {
         "model": MODEL,
         "messages": messages,
-        "max_tokens": 8192,
+        "max_tokens": 16384,
     }
     
     try:
@@ -189,11 +207,15 @@ def _post_process(questions: list) -> list:
         if difficulty not in ("简单", "中等", "困难"):
             difficulty = "中等"
         teacher_map = {"简单": "liangliang", "中等": "liangliang", "困难": "taotao"}
+        question_type = q.get("type", q.get("question_type", ""))
+        if question_type not in ("选择题", "填空题", "大题"):
+            question_type = ""
         result.append({
             "index": q.get("index", i + 1),
             "latex": latex.strip(),
             "difficulty": difficulty,
             "recommended_teacher": teacher_map.get(difficulty, "liangliang"),
+            "question_type": question_type,
         })
     return result
 

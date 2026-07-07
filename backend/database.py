@@ -338,6 +338,13 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
             ORDER BY {q_prefix}created_at DESC LIMIT ?""",
         params + [limit]
     ).fetchall()
+    # Pagination: count total before closing connection
+    total_count = None
+    if page_size and page_size != "all":
+        count_sql = f"SELECT COUNT(DISTINCT {q_prefix}id) {from_clause} WHERE {where_sql}"
+        c = conn.execute(count_sql, params).fetchone()
+        total_count = c[0] if c else 0
+
     conn.close()
 
     all_rows = []
@@ -353,10 +360,9 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
         all_rows.append(d)
     
     if page_size and page_size != "all":
-        total = len(all_rows)
         offset = (page - 1) * int(page_size)
         paginated = all_rows[offset:offset + int(page_size)]
-        return {"data": paginated, "total": total, "page": page, "page_size": int(page_size)}
+        return {"data": paginated, "total": total_count, "page": page, "page_size": int(page_size)}
     elif page_size == "all":
         return {"data": all_rows, "total": len(all_rows)}
     else:
