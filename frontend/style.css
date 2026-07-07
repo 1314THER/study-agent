@@ -616,6 +616,69 @@
     padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 500;
 }
 
+/* ======== Go Exam Button ======== */
+.go-exam-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 14px; background: #0071e3; color: white;
+    border: none; border-radius: 10px; font-size: 13px; font-weight: 500;
+    cursor: pointer; text-decoration: none; transition: all 0.15s;
+    position: relative; white-space: nowrap;
+}
+.go-exam-btn:hover { background: #0077ed; }
+.go-exam-badge {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 20px; height: 20px; padding: 0 5px;
+    background: #c62828; color: white; font-size: 11px; font-weight: 700;
+    border-radius: 10px; line-height: 1;
+}
+
+/* ======== Pagination Bar ======== */
+.pagination-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 4px; margin-top: 12px;
+    border-top: 1px solid #e5e5e7;
+}
+.page-size-selector {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 13px; color: #86868b;
+}
+.page-size-selector select {
+    padding: 4px 24px 4px 8px; border: 1px solid #c7c7cc;
+    border-radius: 8px; font-size: 13px; color: #1d1d1f;
+    background: white url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='%2386868b'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E") no-repeat right 6px center;
+    appearance: none; -webkit-appearance: none; cursor: pointer;
+}
+.page-nav { display: flex; align-items: center; gap: 8px; }
+.page-btn {
+    padding: 6px 14px; border: 1px solid #c7c7cc; border-radius: 8px;
+    font-size: 13px; background: white; color: #515154; cursor: pointer;
+    transition: all 0.15s;
+}
+.page-btn:hover { border-color: #0071e3; color: #0071e3; }
+.page-btn:disabled { opacity: 0.4; cursor: default; border-color: #e5e5e7; color: #c7c7cc; }
+.page-info { font-size: 13px; color: #86868b; }
+
+/* ======== Time Display ======== */
+.hc-time-wrapper {
+    position: relative; display: inline-flex; align-items: center; gap: 4px;
+    cursor: pointer; user-select: none;
+}
+.hc-time-main { font-size: 12px; color: #86868b; white-space: nowrap; }
+.hc-time-arrow { font-size: 10px; color: #c7c7cc; transition: transform 0.2s; }
+.hc-time-arrow.open { transform: rotate(180deg); }
+.hc-time-popup {
+    display: none; position: absolute; top: 100%; left: 0; z-index: 50;
+    margin-top: 4px; padding: 8px 12px; background: white;
+    border: 1px solid #e5e5e7; border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1); min-width: 180px;
+}
+.hc-time-popup.show { display: block; }
+.hc-time-popup-item {
+    font-size: 12px; color: #86868b; padding: 3px 0;
+    white-space: nowrap;
+}
+.hc-time-popup-item .ttp-label { color: #515154; font-weight: 500; }
+
 /* ======== Shopping Cart ======== */
 .cart-float {
     position: fixed; bottom: 28px; right: 28px; z-index: 200;

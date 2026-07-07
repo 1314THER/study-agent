@@ -40,6 +40,28 @@
                 <p class="subtitle" id="historyCount">个人题库 · 加载中...</p>
  
                 <!-- Search + Filter Bar -->
+
+                <div class="filter-row-2">
+                    <div class="filter-search" style="flex:2;">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="searchInput" placeholder="搜索关键词（支持空格分隔多个）" oninput="onFilterChange()">
+                    </div>
+                    <select class="filter-select filter-error-select" id="filterErrorType" onchange="onErrorTypeChange()">
+                        <option value="">全部题目</option>
+                        <option value="errors">全部错题</option>
+                        <option value="none">非错题</option>
+                    </select>
+                    <select class="filter-select" id="filterMistakeType" style="display:none" onchange="onFilterChange()">
+                        <option value="">全部错因</option>
+                        <option value="符号错误">符号错误</option>
+                        <option value="计算错误">计算错误</option>
+                        <option value="公式记错">公式记错</option>
+                        <option value="知识性错误">知识性错误</option>
+                        <option value="审题错误">审题错误</option>
+                        <option value="思路错误">思路错误</option>
+                        <option value="其他">其他</option>
+                    </select>
+                </div>
                 <div class="filter-bar">
                     <select class="filter-select" id="filterCategory" onchange="onFilterChange()">
                         <option value="">全部板块</option>
@@ -64,35 +86,19 @@
                     </div>
                     <button class="filter-reset" onclick="resetFilters()">重置</button>
                     <div class="filter-batch">
+                        <a href="exam.html" class="go-exam-btn" id="goExamBtn">
+                            📋 前往组卷
+                            <span class="go-exam-badge" id="goExamBadge">0</span>
+                        </a>
                         <button class="batch-btn" id="batchToggle" onclick="toggleBatch()">✓ 批量组卷</button>
                     </div>
-                </div>
-                <div class="filter-row-2">
-                    <div class="filter-search" style="flex:2;">
-                        <span class="search-icon">🔍</span>
-                        <input type="text" id="searchInput" placeholder="搜索关键词（支持空格分隔多个）" oninput="onFilterChange()">
-                    </div>
-                    <select class="filter-select filter-error-select" id="filterErrorType" onchange="onErrorTypeChange()">
-                        <option value="">全部题目</option>
-                        <option value="errors">全部错题</option>
-                        <option value="none">非错题</option>
-                    </select>
-                    <select class="filter-select" id="filterMistakeType" style="display:none" onchange="onFilterChange()">
-                        <option value="">全部错因</option>
-                        <option value="符号错误">符号错误</option>
-                        <option value="计算错误">计算错误</option>
-                        <option value="公式记错">公式记错</option>
-                        <option value="知识性错误">知识性错误</option>
-                        <option value="审题错误">审题错误</option>
-                        <option value="思路错误">思路错误</option>
-                        <option value="其他">其他</option>
-                    </select>
                 </div>
                 <div class="batch-action-bar" id="batchActionBar">
                     <span class="bar-count" id="batchCount">已选 0 题</span>
                     <button class="bar-btn bar-select-all" onclick="selectAllInView()">全选</button>
                     <button class="bar-btn bar-add-exam" onclick="addBatchToExam()">📋 加入组卷</button>
                 </div>
+
  
                 <!-- List View -->
                 <div id="listView">
@@ -109,6 +115,21 @@
                         <a href="index.html" class="empty-link">去搜题 →</a>
                     </div>
                 </div>
+                <div class="pagination-bar" id="paginationBar">
+                    <div class="page-size-selector">
+                        <span>每页</span>
+                        <select id="pageSizeSelect" onchange="onPageSizeChange()">
+                            <option value="5">5</option>
+                            <option value="10">10</option>
+                            <option value="all">全部</option>
+                        </select>
+                    </div>
+                    <div class="page-nav">
+                        <button class="page-btn" id="prevPageBtn" onclick="goToPage(_currentPage - 1)">上一页</button>
+                        <span class="page-info" id="pageInfo">第 1 页 / 共 1 页</span>
+                        <button class="page-btn" id="nextPageBtn" onclick="goToPage(_currentPage + 1)">下一页</button>
+                    </div>
+                </div>
 
                 <!-- Detail View -->
                 <div id="detailView" style="display:none">
@@ -116,19 +137,7 @@
                     <div id="detailQuestion"></div>
                     <div id="detailResult"></div>
                 </div>
-                <!-- Shopping Cart -->
-                <div class="cart-float exam-cart" id="examCart">
-                    🛒
-                    <span class="cart-badge" id="cartBadge" style="background:#0071e3;color:#fff;font-size:12px;min-width:22px;height:22px;line-height:22px;">0</span>
-                    <div class="cart-popup" id="cartPopup">
-                        <div class="cart-popup-header">
-                            <span>组卷篮子</span>
-                            <button class="cart-popup-clear" onclick="clearExamCart()">清空</button>
-                        </div>
-                        <div id="cartItems"></div>
-                        <a href="javascript:void(0)" class="cart-popup-export" onclick="goToExam()">📥 去组卷编辑 →</a>
-                    </div>
-                </div>
+
             </div>
         </main>
     </div>
@@ -139,6 +148,7 @@
         // ---- State ----
         var allQuestions = [];
         var _deleteTargetId = null;
+        var _currentPage = 1;
         var _detailQuestionId = null;
         var _stepErrors = [];
         var _errorDialogState = { questionId: null, stepNumber: null, chunkId: null };
@@ -192,6 +202,7 @@
             document.getElementById('filterErrorType').value = '';
             document.getElementById('filterMistakeType').value = '';
             document.getElementById('filterMistakeType').style.display = 'none';
+            _currentPage = 1;
             doSearch();
         }
 
@@ -202,6 +213,8 @@
             var diff = document.getElementById('filterDifficulty').value;
             var errorType = document.getElementById('filterErrorType').value;
             var mistakeType = document.getElementById('filterMistakeType').value;
+            var pageSizeSelect = document.getElementById('pageSizeSelect');
+            var pageSize = pageSizeSelect ? pageSizeSelect.value : '5';
 
             var params = [];
             if (q) params.push('q=' + encodeURIComponent(q));
@@ -216,6 +229,8 @@
                 }
             }
             params.push('mode=' + _searchMode);
+            params.push('page=' + _currentPage);
+            if (pageSize !== 'all') params.push('page_size=' + pageSize);
 
             var skeletonEl = document.getElementById('skeletonArea');
             var listEl = document.getElementById('historyCards');
@@ -230,8 +245,17 @@
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     skeletonEl.style.display = 'none';
-                    localStorage.setItem('questions_cache', JSON.stringify(data));
-                    renderList(data);
+                    // Handle paginated vs flat response
+                    var questions, total;
+                    if (data && data.data !== undefined) {
+                        questions = data.data;
+                        total = data.total;
+                    } else {
+                        questions = data;
+                        total = data ? data.length : 0;
+                    }
+                    localStorage.setItem('questions_cache', JSON.stringify(questions));
+                    renderList(questions, total, _currentPage, pageSize);
                 })
                 .catch(function(err) {
                     console.error('Search failed:', err);
@@ -247,6 +271,12 @@
 
         function loadQuestions() {
             initFilters();
+            // Restore saved page size
+            var savedPageSize = localStorage.getItem('history_page_size');
+            if (savedPageSize) {
+                var sel = document.getElementById('pageSizeSelect');
+                if (sel) sel.value = savedPageSize;
+            }
             // Try cache first
             var cached = localStorage.getItem('questions_cache');
             if (cached) {
@@ -261,7 +291,7 @@
         }
 
         // ---- Render ----
-        function renderList(data) {
+        function renderList(data, total, page, pageSize) {
             var listEl = document.getElementById('historyCards');
             var emptyEl = document.getElementById('emptyState');
             var skeletonEl = document.getElementById('skeletonArea');
@@ -278,13 +308,13 @@
             }
 
             emptyEl.style.display = 'none';
-            countEl.textContent = '共 ' + data.length + ' 道题';
+            var displayTotal = total !== undefined ? total : data.length;
+            countEl.textContent = '共 ' + displayTotal + ' 道题';
 
             var html = '';
             for (var i = 0; i < data.length; i++) {
                 var q = data[i];
-                var preview = (q.content || '').substring(0, 60);
-                if ((q.content || '').length > 60) preview += '...';
+                var preview = truncatePreview(q.content || '', 150);
 
                 var diffClass = 'tag-easy';
                 if (q.difficulty_level === '\u4e2d\u7b49') diffClass = 'tag-medium';
@@ -311,18 +341,8 @@
                 // The error count will be visible when user filters by error_type
 
 
-                var dateStr = '';
-                if (q.created_at) {
-                    var d = new Date(q.created_at.replace(' ', 'T') + 'Z');
-                    var offset = 8 * 60;
-                    var local = new Date(d.getTime() + offset * 60000);
-                    var y = local.getUTCFullYear();
-                    var m = String(local.getUTCMonth() + 1).padStart(2, '0');
-                    var day = String(local.getUTCDate()).padStart(2, '0');
-                    var h = String(local.getUTCHours()).padStart(2, '0');
-                    var min = String(local.getUTCMinutes()).padStart(2, '0');
-                    dateStr = y + '-' + m + '-' + day + ' ' + h + ':' + min;
-                }
+                var timeHtml = getTimeDisplay(q);
+                dateStr = timeHtml;
 
                 var score = q.difficulty_score !== null ? '(' + q.difficulty_score + '\u5206)' : '';
 
@@ -386,6 +406,15 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
 
         // ---- Detail View ----
         function showDetail(id) {
+            // Hide search/filter/pagination areas
+            var fb = document.querySelector('.filter-bar');
+            var fr = document.querySelector('.filter-row-2');
+            if (fb) fb.style.display = 'none';
+            if (fr) fr.style.display = 'none';
+            var bab = document.getElementById('batchActionBar');
+            if (bab) bab.style.display = 'none';
+            var pb = document.getElementById('paginationBar');
+            if (pb) pb.style.display = 'none';
             document.getElementById('listView').style.display = 'none';
             document.getElementById('detailView').style.display = 'block';
             document.getElementById('historyCount').style.display = 'none';
@@ -436,6 +465,17 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
             document.getElementById('detailView').style.display = 'none';
             document.getElementById('listView').style.display = 'block';
             document.getElementById('historyCount').style.display = 'block';
+            // Show search/filter/pagination areas (reset to CSS defaults)
+            var fb = document.querySelector('.filter-bar');
+            var fr = document.querySelector('.filter-row-2');
+            if (fb) fb.style.display = '';
+            if (fr) fr.style.display = '';
+            // Restore pagination visibility (updatePagination will correct it)
+            var pb = document.getElementById('paginationBar');
+            if (pb) pb.style.display = '';
+            // Restore batch bar (will be hidden unless batch mode was active)
+            var bab = document.getElementById('batchActionBar');
+            if (bab) bab.style.display = '';
             document.getElementById('detailQuestion').innerHTML = '';
             var oldDel = document.getElementById('detailDeleteBtn');
             if (oldDel) oldDel.remove();
@@ -619,6 +659,31 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
         }
 
         // ---- Utility Functions ----
+        // ---- Preview Truncation ----
+        function truncatePreview(text, maxLen) {
+            if (!text) return '';
+            /* Truncate to max length first (happens most of the time) */
+            var processed = text;
+            var wasTruncated = false;
+            if (processed.length > maxLen) {
+                processed = processed.substring(0, maxLen - 3) + '...';
+                wasTruncated = true;
+            }
+            /* Protect display math markers */
+            processed = processed.replace(/\$\$/g, '<<DL>>');
+            /* Check for unclosed single $: remove it and everything after */
+            var matches = processed.match(/\$/g);
+            var dollarCount = matches ? matches.length : 0;
+            if (dollarCount % 2 !== 0) {
+                var lastDollar = processed.lastIndexOf('$');
+                processed = processed.substring(0, lastDollar);
+                if (wasTruncated) processed += '...';
+            }
+            /* Restore display math */
+            processed = processed.replace(/<<DL>>/g, '$$');
+            return processed;
+        }
+
         function escapeHtml(str) {
             return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
         }
@@ -757,6 +822,78 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
             });
         }
 
+        // ---- Time Display ----
+        function getTimeDisplay(q) {
+            var allTimes = [];
+            if (q.created_at) allTimes.push({label: '加入题库', time: q.created_at, priority: 0});
+            if (q.last_viewed_at) allTimes.push({label: '最近查看', time: q.last_viewed_at, priority: 1});
+            if (q.last_exam_at) allTimes.push({label: '最近组卷', time: q.last_exam_at, priority: 2});
+            if (q.last_edited_at) allTimes.push({label: '最近编辑', time: q.last_edited_at, priority: 3});
+            
+            // Sort by priority desc to find the most recent action
+            allTimes.sort(function(a, b) { return b.priority - a.priority; });
+            var main = allTimes.length > 0 ? allTimes[0] : {label: '加入题库', time: q.created_at || ''};
+            var mainTime = formatUTCDate(main.time);
+            
+            var html = '<span class="hc-time-wrapper" onclick="event.stopPropagation();toggleTimePopup(this)">';
+            html += '<span class="hc-time-main">' + main.label + ' ' + mainTime + '</span>';
+            html += '<span class="hc-time-arrow">\u25be</span>';
+            html += '<div class="hc-time-popup">';
+            for (var ti = 0; ti < allTimes.length; ti++) {
+                var t = allTimes[ti];
+                if (t.time) {
+                    html += '<div class="hc-time-popup-item"><span class="ttp-label">' + t.label + '</span> ' + formatUTCDate(t.time) + '</div>';
+                }
+            }
+            html += '</div></span>';
+            return html;
+        }
+        
+        function formatUTCDate(timeStr) {
+            if (!timeStr) return '';
+            var d = new Date(timeStr.replace(' ', 'T') + 'Z');
+            var offset = 8 * 60;
+            var local = new Date(d.getTime() + offset * 60000);
+            return local.getUTCFullYear() + '-' + 
+                String(local.getUTCMonth() + 1).padStart(2, '0') + '-' +
+                String(local.getUTCDate()).padStart(2, '0') + ' ' +
+                String(local.getUTCHours()).padStart(2, '0') + ':' +
+                String(local.getUTCMinutes()).padStart(2, '0');
+        }
+        
+        function toggleTimePopup(el) {
+            var popup = el.querySelector('.hc-time-popup');
+            if (popup) {
+                var isOpen = popup.classList.toggle('show');
+                el.querySelector('.hc-time-arrow').classList.toggle('open', isOpen);
+            }
+        }
+        
+        // ---- Pagination ----
+        function updatePagination(page, pageSize, total) {
+            if (!page || pageSize === 'all' || !total) {
+                document.getElementById('paginationBar').style.display = 'none';
+                return;
+            }
+            document.getElementById('paginationBar').style.display = 'flex';
+            var totalPages = Math.ceil(total / parseInt(pageSize));
+            document.getElementById('pageInfo').textContent = '第 ' + page + ' 页 / 共 ' + totalPages + ' 页';
+            document.getElementById('prevPageBtn').disabled = page <= 1;
+            document.getElementById('nextPageBtn').disabled = page >= totalPages;
+        }
+        
+        function goToPage(page) {
+            _currentPage = page;
+            doSearch();
+        }
+        
+        function onPageSizeChange() {
+            var sel = document.getElementById('pageSizeSelect');
+            localStorage.setItem('history_page_size', sel.value);
+            _currentPage = 1;
+            doSearch();
+        }
+        
         // ---- Init ----
         document.addEventListener('DOMContentLoaded', loadQuestions);
     
@@ -775,6 +912,9 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
         }
         
         function addToExam(qid) {
+            // Track exam time
+            fetch('http://127.0.0.1:8000/questions/' + qid + '/exam-touch', { method: 'POST' }).catch(function() {});
+            
             var questions = getExamCart();
             if (questions.find(function(q) { return q.id === qid; })) {
                 showToast('该题已在组卷篮子中', 'info');
@@ -814,29 +954,14 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
         
         function updateCartBadge() {
             var items = getExamCart();
-            var badge = document.getElementById('cartBadge');
+            var badge = document.getElementById('goExamBadge');
             if (badge) badge.textContent = items.length;
+            // Also update main page cart badge via localStorage
+            var mainBadge = document.getElementById('cartBadge');
+            if (mainBadge) mainBadge.textContent = items.length;
         }
         
-        function updateCartPopup() {
-            var items = getExamCart();
-            var container = document.getElementById('cartItems');
-            if (!container) return;
-            if (items.length === 0) {
-                container.innerHTML = '<div style="padding:20px;text-align:center;color:#c7c7cc;font-size:13px;">还没有加入题目</div>';
-                return;
-            }
-            var html = '';
-            for (var i = 0; i < items.length; i++) {
-                var q = items[i];
-                html += '<div class="cart-popup-item">';
-                html += '<span class="cp-num">' + (i + 1) + '</span>';
-                html += '<span class="cp-text">' + (q.preview || '题' + q.id) + '</span>';
-                html += '<button class="cp-del" onclick="event.stopPropagation();removeFromCart(' + q.id + ')">✕</button>';
-                html += '</div>';
-            }
-            container.innerHTML = html;
-        }
+
         
         function toggleBatch() {
             var btn = document.getElementById('batchToggle');
@@ -884,7 +1009,6 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
                 added++;
             }
             // popup feedback
-            updateCartPopup();
             updateCartBadge();
         }
 
@@ -905,32 +1029,23 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
             }, 2000);
         }
 
-        // ---- Cart click toggle ----
-        document.addEventListener('DOMContentLoaded', function() {
-            var cart = document.getElementById('examCart');
-            if (cart) {
-                cart.addEventListener('click', function(e) {
-                    if (e.target.closest('.cart-popup') || e.target.closest('.cart-popup-export')) return;
-                    cart.classList.toggle('active');
-                });
-            }
-        });
+
 
         // ---- Go to exam ----
         function goToExam() {
-            var items = getExamCart();
-            if (items.length === 0) {
-                showToast('请先加入题目', 'info');
-                return;
-            }
             window.location.href = 'exam.html';
         }
 
-        // Init cart on load
+        // Init cart + pagination on load
         document.addEventListener('DOMContentLoaded', function() {
+            // Restore saved page size
+            var savedPageSize = localStorage.getItem('history_page_size');
+            if (savedPageSize) {
+                var sel = document.getElementById('pageSizeSelect');
+                if (sel) sel.value = savedPageSize;
+            }
             setTimeout(function() {
                 updateCartBadge();
-                updateCartPopup();
             }, 100);
         });
 </script>

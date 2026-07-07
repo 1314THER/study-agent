@@ -152,11 +152,11 @@ def _compute_overall_difficulty(chunk_results: list) -> dict:
             if isinstance(val, (int, float)) and val > max_dims[k]:
                 max_dims[k] = val
     total = sum(max_dims.values())
-    if total <= 3:
+    if total <= 2:
         level = "容易"
-    elif total <= 7:
+    elif total <= 4:
         level = "中等"
-    elif total <= 11:
+    elif total <= 6:
         level = "困难"
     else:
         level = "极难"
@@ -351,11 +351,11 @@ def _recalc_difficulty(diff: dict) -> dict:
     if isinstance(dims, dict):
         total = sum(v for v in dims.values() if isinstance(v, (int, float)))
         diff["total_score"] = total
-        if total <= 3:
+        if total <= 2:
             diff["level"] = "容易"
-        elif total <= 7:
+        elif total <= 4:
             diff["level"] = "中等"
-        elif total <= 11:
+        elif total <= 6:
             diff["level"] = "困难"
         else:
             diff["level"] = "极难"

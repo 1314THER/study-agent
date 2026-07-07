@@ -79,7 +79,7 @@ def api_save_question(req: SaveQuestionRequest):
     chunk_results = req.answer_json.get("chunk_results", [])
     first = chunk_results[0] if chunk_results else {}
     req.answer_json["category"] = first.get("category")
-    req.answer_json["difficulty"] = first.get("difficulty")
+    req.answer_json["difficulty"] = req.answer_json.get("overall_difficulty") or first.get("difficulty")
     req.answer_json["question_type"] = first.get("chunk_type")
     # 将答案结构化数据写入数据库，返回题目 ID
     from backend.database import save_question as _save_q
@@ -100,7 +100,7 @@ def api_step3(req: Step3Request):
         from backend.database import save_question
         first = chunk_results[0] if chunk_results else {}
         final["category"] = first.get("category")
-        final["difficulty"] = first.get("difficulty")
+        final["difficulty"] = final.get("overall_difficulty") or first.get("difficulty")
         final["question_type"] = first.get("chunk_type")
         try:
             from backend.database import save_question as _save_q3
@@ -130,6 +130,8 @@ def api_search_questions(
     limit: int = 200,
     mode: str = "content",
     error_type: str = "",
+    page: int = 1,
+    page_size: int = 0,
 ):
     """搜索个人题库：关键词（空格分隔为 AND 匹配）+ 板块 + 难度 + 题型筛选
     mode="content": 仅搜索题目原文（默认）
@@ -142,7 +144,8 @@ def api_search_questions(
     difficulties = [d.strip() for d in difficulty.split(",") if d.strip()] if difficulty else None
     types = [t.strip() for t in question_type.split(",") if t.strip()] if question_type else None
     et = error_type if error_type else None
-    return search_questions(keywords, categories, difficulties, types, limit=limit, mode=mode, error_type=et)
+    ps = page_size if page_size > 0 else None
+    return search_questions(keywords, categories, difficulties, types, limit=limit, mode=mode, error_type=et, page=page, page_size=ps)
 
 
 @app.get("/questions/errors")
@@ -152,9 +155,25 @@ def api_questions_with_errors():
     return get_questions_with_errors()
 
 
+@app.post("/questions/{qid}/exam-touch")
+def api_exam_touch(qid: int):
+    """标记题目最近一次组卷时间"""
+    from backend.database import update_question_time
+    try:
+        update_question_time(qid, "last_exam_at")
+        return {"touched": True, "id": qid}
+    except Exception as e:
+        return {"touched": False, "error": str(e)}
+
+
 @app.get("/questions/{qid}")
 def get_question(qid: int):
-    """返回单题完整记录（含 answer_json + step_errors）"""
+    """返回单题完整记录（含 answer_json + step_errors），同时记录查看时间"""
+    from backend.database import update_question_time
+    try:
+        update_question_time(qid, "last_viewed_at")
+    except Exception:
+        pass
     from backend.database import get_question_by_id, get_step_errors
     result = get_question_by_id(qid)
     if result is None:
@@ -166,6 +185,8 @@ def get_question(qid: int):
 @app.post("/questions/{qid}/step-error")
 def api_add_step_error(qid: int, req: StepErrorRequest):
     """记录某题某步的错因"""
+    from backend.database import update_question_time
+    update_question_time(qid, "last_edited_at")
     if req.mistake_type not in _VALID_MISTAKE_TYPES:
         return {"error": "invalid_mistake_type",
                 "valid_types": list(_VALID_MISTAKE_TYPES)}
@@ -186,7 +207,8 @@ def api_add_step_error(qid: int, req: StepErrorRequest):
 @app.delete("/questions/{qid}/step-error/{eid}")
 def api_delete_step_error(qid: int, eid: int):
     """删除一条错因记录"""
-    from backend.database import delete_step_error
+    from backend.database import delete_step_error, update_question_time
+    update_question_time(qid, "last_edited_at")
     ok = delete_step_error(eid, qid)
     if not ok:
         return {"deleted": False, "message": "未找到该错因记录"}

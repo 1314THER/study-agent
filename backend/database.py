@@ -96,6 +96,20 @@ def init_db():
             print(f"[Database] 新增 {col} 列")
         except sqlite3.OperationalError:
             pass
+    # 迁移：新增时间追踪列
+    for col in ("last_viewed_at", "last_edited_at", "last_exam_at"):
+        try:
+            conn.execute(f"ALTER TABLE questions ADD COLUMN {col} TIMESTAMP")
+            conn.commit()
+            print(f"[Database] 新增 {col} 列")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            conn.execute(f"ALTER TABLE questions ADD COLUMN {col} TEXT")
+            conn.commit()
+            print(f"[Database] 新增 {col} 列")
+        except sqlite3.OperationalError:
+            pass
     conn.close()
     print("[Database] 数据库初始化完成")
 
@@ -157,7 +171,7 @@ def save_question(question_text: str, answer_dict: dict):
     category_level1, category_level2 = _sanitize_category(category)
 
     # 处理 difficulty（清洗）
-    difficulty = answer_dict.get("difficulty", {})
+    difficulty = answer_dict.get("overall_difficulty") or answer_dict.get("difficulty", {})
     difficulty_level, difficulty_score, difficulty_dimensions = _sanitize_difficulty(difficulty)
 
     # 处理 knowledge_points（清洗）
@@ -213,7 +227,7 @@ def get_all_questions():
     rows = conn.execute(
         """SELECT id, content, category_level1, category_level2,
                   difficulty_level, difficulty_score, difficulty_dimensions,
-                  knowledge_points, question_type, created_at
+                  knowledge_points, question_type, created_at, last_viewed_at, last_edited_at, last_exam_at
            FROM questions ORDER BY created_at DESC"""
     ).fetchall()
     conn.close()
@@ -252,7 +266,7 @@ def get_question_by_id(qid: int):
     return d
 
 
-def search_questions(keywords=None, categories=None, difficulties=None, types=None, limit=200, mode="content", error_type=None):
+def search_questions(keywords=None, categories=None, difficulties=None, types=None, limit=200, mode="content", error_type=None, page=1, page_size=None):
     """按关键词（AND 多词匹配）+ 板块 + 难度 + 题型筛选
     mode="content": 仅搜索题目原文
     mode="global":  同时搜索板块、知识点、步骤错因"""
@@ -319,14 +333,14 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
     rows = conn.execute(
         f"""SELECT {select_prefix}{q_prefix}id, {q_prefix}content, {q_prefix}category_level1, {q_prefix}category_level2,
                    {q_prefix}difficulty_level, {q_prefix}difficulty_score, {q_prefix}difficulty_dimensions,
-                   {q_prefix}knowledge_points, {q_prefix}question_type, {q_prefix}created_at
+                   {q_prefix}knowledge_points, {q_prefix}question_type, {q_prefix}created_at, {q_prefix}last_viewed_at, {q_prefix}last_edited_at, {q_prefix}last_exam_at
             {from_clause} WHERE {where_sql}
             ORDER BY {q_prefix}created_at DESC LIMIT ?""",
         params + [limit]
     ).fetchall()
     conn.close()
 
-    result = []
+    all_rows = []
     for r in rows:
         d = dict(r)
         for key in ("difficulty_dimensions", "knowledge_points"):
@@ -336,8 +350,17 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
                     d[key] = json.loads(val)
                 except (json.JSONDecodeError, TypeError):
                     pass
-        result.append(d)
-    return result
+        all_rows.append(d)
+    
+    if page_size and page_size != "all":
+        total = len(all_rows)
+        offset = (page - 1) * int(page_size)
+        paginated = all_rows[offset:offset + int(page_size)]
+        return {"data": paginated, "total": total, "page": page, "page_size": int(page_size)}
+    elif page_size == "all":
+        return {"data": all_rows, "total": len(all_rows)}
+    else:
+        return all_rows
 
 
 def delete_question(qid: int) -> bool:
@@ -353,6 +376,17 @@ def delete_question(qid: int) -> bool:
 def ai_search_questions(query: str, limit: int = 20):
     """AI 语义搜索预留接口（当前返回空列表）"""
     return {"query": query, "results": [], "total": 0, "note": "AI 搜索功能开发中"}
+
+# ---------- 时间追踪 ----------
+def update_question_time(question_id: int, field: str):
+    """更新题目的某个时间戳为当前时间"""
+    if field not in ("last_viewed_at", "last_edited_at", "last_exam_at"):
+        raise ValueError(f"Invalid field: {field}")
+    conn = get_connection()
+    conn.execute(f"UPDATE questions SET {field} = CURRENT_TIMESTAMP WHERE id = ?", (question_id,))
+    conn.commit()
+    conn.close()
+
 
 # ---------- 来源类型校验 ----------
 _VALID_SOURCE_TYPES = {"ai_generated", "human", "exam_paper", "web_search", "exam_ocr"}
@@ -405,7 +439,8 @@ def get_questions_with_errors() -> list:
     conn = get_connection()
     rows = conn.execute(
         """SELECT DISTINCT q.id, q.content, q.category_level1, q.category_level2,
-                  q.difficulty_level, q.difficulty_score, q.question_type, q.source_type, q.source_meta, q.created_at
+                  q.difficulty_level, q.difficulty_score, q.question_type, q.source_type, q.source_meta, q.created_at,
+                  q.last_viewed_at, q.last_edited_at, q.last_exam_at
            FROM questions q
            INNER JOIN step_errors e ON e.question_id = q.id
            ORDER BY q.created_at DESC"""
