@@ -75,7 +75,11 @@ def _read_extraction_prompt() -> str:
     return "你是一个数学题目提取专家。提取图片或文本中的所有数学题目，输出为 JSON 数组。"
 
 
-_EXTRACTION_PROMPT = _read_extraction_prompt()调用 Qwen-VL-Plus，返回原始回复文本"""
+_EXTRACTION_PROMPT = _read_extraction_prompt()
+
+
+def _call_qwen_vl(image_base64: Optional[str] = None, text: Optional[str] = None) -> str:
+    """调用 Qwen-VL-Plus，返回原始回复文本"""""
     api_key = _get_api_key()
     messages = [{"role": "user", "content": []}]
     
