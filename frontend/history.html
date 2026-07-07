@@ -908,7 +908,6 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
         function saveExamCart(items) {
             localStorage.setItem(_examCartKey, JSON.stringify(items));
             updateCartBadge();
-            updateCartPopup();
         }
         
         function addToExam(qid) {
@@ -973,12 +972,22 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
             for (var i = 0; i < cards.length; i++) {
                 cards[i].classList.toggle('batch-mode', isActive);
             }
-            if (!isActive) {
+            var cbs = document.querySelectorAll('.hc-checkbox');
+            if (isActive) {
+                // Auto-check questions already in cart
+                var cart = getExamCart();
+                var cartIds = cart.map(function(q) { return q.id; });
+                for (var i = 0; i < cbs.length; i++) {
+                    var qid = parseInt(cbs[i].dataset.id);
+                    if (cartIds.indexOf(qid) >= 0) {
+                        cbs[i].checked = true;
+                    }
+                }
+            } else {
                 // Uncheck all
-                var cbs = document.querySelectorAll('.hc-checkbox');
                 for (var i = 0; i < cbs.length; i++) cbs[i].checked = false;
-                updateBatchCount();
             }
+            updateBatchCount();
         }
         
         function updateBatchCount() {
@@ -1002,14 +1011,22 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
         
         function addBatchToExam() {
             var cbs = document.querySelectorAll('.hc-checkbox:checked');
-            var added = 0;
-            for (var i = 0; i < cbs.length; i++) {
+            var count = cbs.length;
+            if (count === 0) { showToast('请先勾选题目', 'info'); return; }
+            for (var i = 0; i < count; i++) {
                 var qid = parseInt(cbs[i].dataset.id);
                 addToExam(qid);
-                added++;
             }
-            // popup feedback
-            updateCartBadge();
+            // Re-apply cart memory: keep checked for items now in cart
+            var cart = getExamCart();
+            var cartIds = cart.map(function(q) { return q.id; });
+            var allCbs = document.querySelectorAll('.hc-checkbox');
+            for (var i = 0; i < allCbs.length; i++) {
+                var qid = parseInt(allCbs[i].dataset.id);
+                allCbs[i].checked = cartIds.indexOf(qid) >= 0;
+            }
+            updateBatchCount();
+            showToast('✓ 已将 ' + count + ' 道题加入组卷', 'success');
         }
 
         // ---- Toast Notification ----
