@@ -41,6 +41,16 @@ class Step3Request(BaseModel):
     teacher: Optional[str] = Field(None, description="老师（可选）")
     save: bool = False
 
+# ---------- 错因标定 ----------
+_VALID_MISTAKE_TYPES = {"符号错误", "计算错误", "公式记错",
+                        "知识性错误", "审题错误", "思路错误", "其他"}
+
+class StepErrorRequest(BaseModel):
+    step_number: int = Field(..., ge=1, description="步骤编号")
+    chunk_id: int = Field(..., ge=1, description="块编号")
+    mistake_type: str = Field(..., description="错因类型")
+    mistake_detail: str = Field("", description="错因详细说明")
+
 @app.post("/solve/step1")
 def api_step1(req: Step1Request):
     """第1步：解答"""
@@ -71,9 +81,10 @@ def api_save_question(req: SaveQuestionRequest):
     req.answer_json["category"] = first.get("category")
     req.answer_json["difficulty"] = first.get("difficulty")
     req.answer_json["question_type"] = first.get("chunk_type")
-    # 将答案结构化数据写入数据库
-    save_question(req.question, req.answer_json)
-    return {"saved": True, "message": "已加入个人题库"}
+    # 将答案结构化数据写入数据库，返回题目 ID
+    from backend.database import save_question as _save_q
+    qid = _save_q(req.question, req.answer_json)
+    return {"saved": True, "id": qid, "message": "已加入个人题库"}
 
 
 
@@ -92,7 +103,9 @@ def api_step3(req: Step3Request):
         final["difficulty"] = first.get("difficulty")
         final["question_type"] = first.get("chunk_type")
         try:
-            save_question(req.question, final)
+            from backend.database import save_question as _save_q3
+            saved_qid = _save_q3(req.question, final)
+            final["saved_question_id"] = saved_qid
         except Exception as e:
             print(f"[Warn] 保存到数据库失败: {e}")
 
@@ -115,23 +128,70 @@ def api_search_questions(
     difficulty: str = "",
     question_type: str = "",
     limit: int = 200,
+    mode: str = "content",
+    error_type: str = "",
 ):
-    """搜索个人题库：关键词（空格分隔为 AND 匹配）+ 板块 + 难度 + 题型筛选"""
+    """搜索个人题库：关键词（空格分隔为 AND 匹配）+ 板块 + 难度 + 题型筛选
+    mode="content": 仅搜索题目原文（默认）
+    mode="global":  同时搜索板块、知识点、错因
+    error_type: 错因筛选（none=无错因，具体类型=按类型筛选，空=全部）"""
+    if mode not in ("content", "global"):
+        mode = "content"
     keywords = [kw.strip() for kw in q.split() if kw.strip()] if q else None
     categories = [c.strip() for c in category.split(",") if c.strip()] if category else None
     difficulties = [d.strip() for d in difficulty.split(",") if d.strip()] if difficulty else None
     types = [t.strip() for t in question_type.split(",") if t.strip()] if question_type else None
-    return search_questions(keywords, categories, difficulties, types, limit=limit)
+    et = error_type if error_type else None
+    return search_questions(keywords, categories, difficulties, types, limit=limit, mode=mode, error_type=et)
+
+
+@app.get("/questions/errors")
+def api_questions_with_errors():
+    """列出所有有错因标记的题目（摘要信息）"""
+    from backend.database import get_questions_with_errors
+    return get_questions_with_errors()
 
 
 @app.get("/questions/{qid}")
 def get_question(qid: int):
-    """返回单题完整记录（含 answer_json）"""
-    from backend.database import get_question_by_id
+    """返回单题完整记录（含 answer_json + step_errors）"""
+    from backend.database import get_question_by_id, get_step_errors
     result = get_question_by_id(qid)
     if result is None:
         return {"error": "not_found", "id": qid}
+    result["step_errors"] = get_step_errors(qid)
     return result
+
+
+@app.post("/questions/{qid}/step-error")
+def api_add_step_error(qid: int, req: StepErrorRequest):
+    """记录某题某步的错因"""
+    if req.mistake_type not in _VALID_MISTAKE_TYPES:
+        return {"error": "invalid_mistake_type",
+                "valid_types": list(_VALID_MISTAKE_TYPES)}
+    from backend.database import add_step_error
+    try:
+        error_id = add_step_error(
+            question_id=qid,
+            step_number=req.step_number,
+            chunk_id=req.chunk_id,
+            mistake_type=req.mistake_type,
+            mistake_detail=req.mistake_detail
+        )
+        return {"id": error_id, "saved": True}
+    except Exception as e:
+        return {"error": str(e), "saved": False}
+
+
+@app.delete("/questions/{qid}/step-error/{eid}")
+def api_delete_step_error(qid: int, eid: int):
+    """删除一条错因记录"""
+    from backend.database import delete_step_error
+    ok = delete_step_error(eid, qid)
+    if not ok:
+        return {"deleted": False, "message": "未找到该错因记录"}
+    return {"deleted": True, "id": eid}
+
 
 @app.get("/categories")
 def categories():

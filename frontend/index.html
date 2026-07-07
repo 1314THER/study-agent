@@ -100,6 +100,9 @@
     <script>
 var _selectedTeacher = "liangliang";
         var _lastQuestion = '';
+        var _lastQuestionId = null;
+        var _stepErrors = [];
+        var _errorDialogState = { questionId: null, stepNumber: null, chunkId: null };
         var _lastResult = null;
         var teacherNames = { liangliang: '梁梁', taotao: '韬韬', xuefeng: '雪峰', ji: '鸡' };
         function selectTeacher(btn, teacher) {
@@ -137,10 +140,11 @@ var _selectedTeacher = "liangliang";
             }
         }
 
-        function renderSteps(html, steps) {
+        function renderSteps(html, steps, chunkId) {
+            chunkId = chunkId || 1;
             for (var i = 0; i < steps.length; i++) {
                 var step = steps[i];
-                html += '<div class="step">';
+                html += '<div class="step" data-step-number="' + step.step_number + '" data-chunk-id="' + chunkId + '">';
                 html += '<div class="step-header">';
                 html += '<span class="step-number">步骤' + step.step_number + '：' + escapeHtml(step.title || '') + '</span>';
                 if (step.step_difficulty) {
@@ -155,6 +159,8 @@ var _selectedTeacher = "liangliang";
                 if (step.knowledge_point) {
                     html += '<div class="step-kp">' + escapeHtml(step.knowledge_point) + '</div>';
                 }
+                html += '<div class="step-errors"></div>';
+                html += '<button class="step-error-btn" onclick="showErrorDialog(_lastQuestionId,' + step.step_number + ',' + chunkId + ')">添加错因</button>';
                 html += '</div>';
             }
             return html;
@@ -205,7 +211,7 @@ var _selectedTeacher = "liangliang";
                         html += '<div class="chunk-steps">';
                         for (var si = 0; si < cr.steps.length; si++) {
                             var step = cr.steps[si];
-                            html += '<div class="step">';
+                            html += '<div class="step" data-step-number="' + step.step_number + '" data-chunk-id="' + chunkId + '">';
                             html += '<div class="step-header">';
                             html += '<span class="step-number">步骤' + step.step_number + '：' + escapeHtml(step.title || '') + '</span>';
                             if (step.step_difficulty) {
@@ -220,6 +226,8 @@ var _selectedTeacher = "liangliang";
                             if (step.knowledge_point) {
                                 html += '<div class="step-kp">' + escapeHtml(step.knowledge_point) + '</div>';
                             }
+                            html += '<div class="step-errors"></div>';
+                            html += '<button class="step-error-btn" onclick="showErrorDialog(_lastQuestionId,' + step.step_number + ',' + chunkId + ')">添加错因</button>';
                             html += '</div>';
                         }
                         html += '</div>';
@@ -518,7 +526,14 @@ var _selectedTeacher = "liangliang";
                 document.getElementById('saveAfterBtn').disabled = false;
                 document.getElementById('saveAfterBtn').className = 'save-after-btn';
                 displayResult(d3, totalTokens);
+                if (d3.saved_question_id) {
+                    _lastQuestionId = d3.saved_question_id;
+                }
                 localStorage.setItem('solve_result', JSON.stringify({data: d3, totalTokens: totalTokens}));
+                setTimeout(function() {
+                    if (_lastQuestionId) refreshStepErrors();
+                    else initErrorStepButtons();
+                }, 100);
             } catch (err) {
                 stopStepTimer();
                 console.error('请求失败:', err);
@@ -581,9 +596,161 @@ async function saveAfterSolve() {
     }
 });
 
+        // ---- Step Error Functions ----
+        function initErrorStepButtons() {
+            // Show error buttons even without question ID (disabled state)
+            var btns = document.querySelectorAll('#result .step-error-btn');
+            btns.forEach(function(btn) { btn.style.display = 'inline-flex'; });
+        }
+
+        function refreshStepErrors() {
+            if (!_lastQuestionId) return;
+            fetch('http://127.0.0.1:8000/questions/' + _lastQuestionId)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.error) return;
+                    _stepErrors = data.step_errors || [];
+                    renderStepErrors();
+                });
+        }
+
+        function renderStepErrors() {
+            var steps = document.querySelectorAll('#result .step[data-step-number]');
+            steps.forEach(function(stepEl) {
+                var stepNum = parseInt(stepEl.dataset.stepNumber);
+                var chunkId = parseInt(stepEl.dataset.chunkId);
+                var errors = _stepErrors.filter(function(e) {
+                    return e.step_number === stepNum && e.chunk_id === chunkId;
+                });
+                
+                stepEl.classList.toggle('has-error', errors.length > 0);
+                
+                var btn = stepEl.querySelector('.step-error-btn');
+                if (btn) {
+                    btn.textContent = errors.length > 0 ? '编辑错因' : '添加错因';
+                    btn.classList.toggle('has-error', errors.length > 0);
+                    btn.style.display = 'inline-flex';
+                }
+                
+                var errorsList = stepEl.querySelector('.step-errors');
+                if (errorsList) {
+                    if (errors.length > 0) {
+                        var html = '';
+                        for (var ei = 0; ei < errors.length; ei++) {
+                            var err = errors[ei];
+                            var timeStr = '';
+                            if (err.created_at) {
+                                var d = new Date(err.created_at.replace(' ', 'T') + 'Z');
+                                var offset = 8 * 60;
+                                var local = new Date(d.getTime() + offset * 60000);
+                                timeStr = local.getUTCFullYear() + '-' + 
+                                    String(local.getUTCMonth()+1).padStart(2,'0') + '-' +
+                                    String(local.getUTCDate()).padStart(2,'0') + ' ' +
+                                    String(local.getUTCHours()).padStart(2,'0') + ':' +
+                                    String(local.getUTCMinutes()).padStart(2,'0');
+                            }
+                            html += '<div class="step-error-item">';
+                            html += '<span class="error-type-badge">' + escapeHtml(err.mistake_type) + '</span>';
+                            html += '<span class="error-detail">' + escapeHtml(err.mistake_detail || '') + '</span>';
+                            html += '<span class="error-time">' + timeStr + '</span>';
+                            html += '<button class="error-delete-btn" onclick="event.stopPropagation();deleteStepError(' + _lastQuestionId + ',' + err.id + ')">✕</button>';
+                            html += '</div>';
+                        }
+                        errorsList.innerHTML = html;
+                    } else {
+                        errorsList.innerHTML = '';
+                    }
+                }
+            });
+        }
+
+        function showErrorDialog(questionId, stepNumber, chunkId) {
+            if (!questionId) { alert('请先保存题目到个人题库'); return; }
+            _errorDialogState = { questionId: questionId, stepNumber: stepNumber, chunkId: chunkId };
+            document.getElementById('errorDialogType').value = '符号错误';
+            document.getElementById('errorDialogDetail').value = '';
+            document.getElementById('errorDialogOverlay').style.display = 'flex';
+        }
+
+        function closeErrorDialog() {
+            document.getElementById('errorDialogOverlay').style.display = 'none';
+        }
+
+        function confirmAddError() {
+            var state = _errorDialogState;
+            var type = document.getElementById('errorDialogType').value;
+            var detail = document.getElementById('errorDialogDetail').value.trim();
+            if (!type) { alert('请选择一级错因'); return; }
+            
+            fetch('http://127.0.0.1:8000/questions/' + state.questionId + '/step-error', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    step_number: state.stepNumber,
+                    chunk_id: state.chunkId,
+                    mistake_type: type,
+                    mistake_detail: detail
+                })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                closeErrorDialog();
+                refreshStepErrors();
+            })
+            .catch(function(err) {
+                alert('添加失败: ' + err.message);
+            });
+        }
+
+        function deleteStepError(qid, eid) {
+            if (!confirm('确定删除这条错因吗？')) return;
+            fetch('http://127.0.0.1:8000/questions/' + qid + '/step-error/' + eid, {
+                method: 'DELETE'
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.deleted) {
+                    refreshStepErrors();
+                }
+            })
+            .catch(function(err) {
+                alert('删除失败: ' + err.message);
+            });
+        }
+
 document.getElementById('searchBtn').addEventListener('click', function() {
     localStorage.removeItem('solve_result');
 });
     </script>
+
+<!-- Error Dialog -->
+<div class="error-dialog-overlay" id="errorDialogOverlay" style="display:none">
+    <div class="error-dialog">
+        <h3>添加错因</h3>
+        <div class="error-dialog-body">
+            <div class="error-dialog-field">
+                <label>一级错因</label>
+                <select id="errorDialogType">
+                    <option value="符号错误">符号错误</option>
+                    <option value="计算错误">计算错误</option>
+                    <option value="公式记错">公式记错</option>
+                    <option value="知识性错误">知识性错误</option>
+                    <option value="审题错误">审题错误</option>
+                    <option value="思路错误">思路错误</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <div class="error-dialog-field">
+                <label>二级错因（自填）</label>
+                <textarea id="errorDialogDetail" placeholder="描述具体错误..." rows="3"></textarea>
+            </div>
+        </div>
+        <div class="error-dialog-actions">
+            <button class="ed-btn-cancel" onclick="closeErrorDialog()">取消</button>
+            <button class="ed-btn-confirm" onclick="confirmAddError()">确认</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

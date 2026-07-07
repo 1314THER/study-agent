@@ -41,10 +41,6 @@
  
                 <!-- Search + Filter Bar -->
                 <div class="filter-bar">
-                    <div class="filter-search">
-                        <span class="search-icon">🔍</span>
-                        <input type="text" id="searchInput" placeholder="搜索题目… 多个关键词用空格分隔" oninput="onFilterChange()">
-                    </div>
                     <select class="filter-select" id="filterCategory" onchange="onFilterChange()">
                         <option value="">全部板块</option>
                     </select>
@@ -62,10 +58,35 @@
                         <option value="困难">困难</option>
                         <option value="极难">极难</option>
                     </select>
+                    <div class="mode-toggle">
+                        <button class="mode-btn active" data-mode="content" onclick="setSearchMode(this,'content')">题目搜索</button>
+                        <button class="mode-btn" data-mode="global" onclick="setSearchMode(this,'global')">全局搜索</button>
+                    </div>
                     <button class="filter-reset" onclick="resetFilters()">重置</button>
                     <div class="filter-batch">
                         <button class="batch-btn" id="batchToggle" onclick="toggleBatch()">✓ 批量组卷</button>
                     </div>
+                </div>
+                <div class="filter-row-2">
+                    <div class="filter-search" style="flex:2;">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="searchInput" placeholder="搜索关键词（支持空格分隔多个）" oninput="onFilterChange()">
+                    </div>
+                    <select class="filter-select filter-error-select" id="filterErrorType" onchange="onErrorTypeChange()">
+                        <option value="">全部题目</option>
+                        <option value="errors">全部错题</option>
+                        <option value="none">非错题</option>
+                    </select>
+                    <select class="filter-select" id="filterMistakeType" style="display:none" onchange="onFilterChange()">
+                        <option value="">全部错因</option>
+                        <option value="符号错误">符号错误</option>
+                        <option value="计算错误">计算错误</option>
+                        <option value="公式记错">公式记错</option>
+                        <option value="知识性错误">知识性错误</option>
+                        <option value="审题错误">审题错误</option>
+                        <option value="思路错误">思路错误</option>
+                        <option value="其他">其他</option>
+                    </select>
                 </div>
                 <div class="batch-action-bar" id="batchActionBar">
                     <span class="bar-count" id="batchCount">已选 0 题</span>
@@ -118,6 +139,10 @@
         // ---- State ----
         var allQuestions = [];
         var _deleteTargetId = null;
+        var _detailQuestionId = null;
+        var _stepErrors = [];
+        var _errorDialogState = { questionId: null, stepNumber: null, chunkId: null };
+        var _searchMode = 'content';
 
         // ---- Init: load categories into filter ----
         function initFilters() {
@@ -140,11 +165,33 @@
             doSearch();
         }
 
+        function setSearchMode(btn, mode) {
+            document.querySelectorAll('.mode-btn').forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            _searchMode = mode;
+            doSearch();
+        }
+
+        function onErrorTypeChange() {
+            var val = document.getElementById('filterErrorType').value;
+            var mtEl = document.getElementById('filterMistakeType');
+            if (val === 'errors') {
+                mtEl.style.display = 'inline-block';
+            } else {
+                mtEl.style.display = 'none';
+                mtEl.value = '';
+            }
+            doSearch();
+        }
+
         function resetFilters() {
             document.getElementById('searchInput').value = '';
             document.getElementById('filterCategory').value = '';
             document.getElementById('filterType').value = '';
             document.getElementById('filterDifficulty').value = '';
+            document.getElementById('filterErrorType').value = '';
+            document.getElementById('filterMistakeType').value = '';
+            document.getElementById('filterMistakeType').style.display = 'none';
             doSearch();
         }
 
@@ -153,12 +200,22 @@
             var cat = document.getElementById('filterCategory').value;
             var type = document.getElementById('filterType').value;
             var diff = document.getElementById('filterDifficulty').value;
+            var errorType = document.getElementById('filterErrorType').value;
+            var mistakeType = document.getElementById('filterMistakeType').value;
 
             var params = [];
             if (q) params.push('q=' + encodeURIComponent(q));
             if (cat) params.push('category=' + encodeURIComponent(cat));
             if (type) params.push('question_type=' + encodeURIComponent(type));
             if (diff) params.push('difficulty=' + encodeURIComponent(diff));
+            if (errorType) {
+                if (errorType === 'errors' && mistakeType) {
+                    params.push('error_type=' + encodeURIComponent(mistakeType));
+                } else {
+                    params.push('error_type=' + encodeURIComponent(errorType));
+                }
+            }
+            params.push('mode=' + _searchMode);
 
             var skeletonEl = document.getElementById('skeletonArea');
             var listEl = document.getElementById('historyCards');
@@ -179,7 +236,7 @@
                 .catch(function(err) {
                     console.error('Search failed:', err);
                     skeletonEl.style.display = 'none';
-                    if (q || cat || type || diff) {
+                    if (q || cat || type || diff || errorType) {
                         countEl.textContent = '搜索失败';
                     } else {
                         emptyEl.style.display = 'block';
@@ -249,6 +306,10 @@
                 if (q.category_level1) {
                     catTag = '<span class="tag tag-category">' + escapeHtml(q.category_level1) + '</span>';
                 }
+                // Check for error status from display (backend step_errors count would need a separate query)
+                // We'll skip error tags in list for now since the search may not return step_errors
+                // The error count will be visible when user filters by error_type
+
 
                 var dateStr = '';
                 if (q.created_at) {
@@ -360,7 +421,10 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
                         resultEl.innerHTML = '<p style="color:#86868b;text-align:center;padding:40px;">\u8be5\u9898\u6682\u65e0\u89e3\u6790</p>';
                         return;
                     }
+                    _detailQuestionId = data.id;
+                    _stepErrors = data.step_errors || [];
                     displayDetailResult(answerData);
+                    refreshStepErrors();
                 })
                 .catch(function(err) {
                     var msg = err && err.message ? err.message : '\u65e0\u6cd5\u8fde\u63a5\u5230\u670d\u52a1\u5668\uff0c\u8bf7\u786e\u8ba4\u540e\u7aef\u5df2\u542f\u52a8';
@@ -418,7 +482,7 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
                         html += '<div class="chunk-steps">';
                         for (var si = 0; si < cr.steps.length; si++) {
                             var step = cr.steps[si];
-                            html += '<div class="step">';
+                            html += '<div class="step" data-step-number="' + step.step_number + '" data-chunk-id="' + chunkId + '">';
                             html += '<div class="step-header">';
                             html += '<span class="step-number">\u6b65\u9aa4' + step.step_number + '\uff1a' + escapeHtml(step.title || '') + '</span>';
                             if (step.step_difficulty) {
@@ -433,6 +497,8 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
                             if (step.knowledge_point) {
                                 html += '<div class="step-kp">' + escapeHtml(step.knowledge_point) + '</div>';
                             }
+                            html += '<div class="step-errors"></div>';
+                            html += '<button class="step-error-btn" onclick="showErrorDialog(_detailQuestionId,' + step.step_number + ',' + chunkId + ')">\u6dfb\u52a0\u9519\u56e0</button>';
                             html += '</div>';
                         }
                         html += '</div>';
@@ -575,6 +641,120 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
         function levelClass(level) {
             var map = { '\u5bb9\u6613': 'tag-easy', '\u4e2d\u7b49': 'tag-medium', '\u56f0\u96be': 'tag-hard', '\u6781\u96be': 'tag-extreme' };
             return map[level] || 'tag-easy';
+        }
+
+        // ---- Step Error Functions ----
+        function refreshStepErrors() {
+            if (!_detailQuestionId) return;
+            fetch('http://127.0.0.1:8000/questions/' + _detailQuestionId)
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    if (data.error) return;
+                    _stepErrors = data.step_errors || [];
+                    renderStepErrors();
+                });
+        }
+
+        function renderStepErrors() {
+            var steps = document.querySelectorAll('#detailResult .step[data-step-number]');
+            steps.forEach(function(stepEl) {
+                var stepNum = parseInt(stepEl.dataset.stepNumber);
+                var chunkId = parseInt(stepEl.dataset.chunkId);
+                var errors = _stepErrors.filter(function(e) {
+                    return e.step_number === stepNum && e.chunk_id === chunkId;
+                });
+                
+                stepEl.classList.toggle('has-error', errors.length > 0);
+                
+                var btn = stepEl.querySelector('.step-error-btn');
+                if (btn) {
+                    btn.textContent = errors.length > 0 ? '编辑错因' : '添加错因';
+                    btn.classList.toggle('has-error', errors.length > 0);
+                }
+                
+                var errorsList = stepEl.querySelector('.step-errors');
+                if (errorsList) {
+                    if (errors.length > 0) {
+                        var html = '';
+                        for (var ei = 0; ei < errors.length; ei++) {
+                            var err = errors[ei];
+                            var timeStr = '';
+                            if (err.created_at) {
+                                var d = new Date(err.created_at.replace(' ', 'T') + 'Z');
+                                var offset = 8 * 60;
+                                var local = new Date(d.getTime() + offset * 60000);
+                                timeStr = local.getUTCFullYear() + '-' + 
+                                    String(local.getUTCMonth()+1).padStart(2,'0') + '-' +
+                                    String(local.getUTCDate()).padStart(2,'0') + ' ' +
+                                    String(local.getUTCHours()).padStart(2,'0') + ':' +
+                                    String(local.getUTCMinutes()).padStart(2,'0');
+                            }
+                            html += '<div class="step-error-item">';
+                            html += '<span class="error-type-badge">' + escapeHtml(err.mistake_type) + '</span>';
+                            html += '<span class="error-detail">' + escapeHtml(err.mistake_detail || '') + '</span>';
+                            html += '<span class="error-time">' + timeStr + '</span>';
+                            html += '<button class="error-delete-btn" onclick="event.stopPropagation();deleteStepError(' + _detailQuestionId + ',' + err.id + ')">✕</button>';
+                            html += '</div>';
+                        }
+                        errorsList.innerHTML = html;
+                    } else {
+                        errorsList.innerHTML = '';
+                    }
+                }
+            });
+        }
+
+        function showErrorDialog(questionId, stepNumber, chunkId) {
+            _errorDialogState = { questionId: questionId, stepNumber: stepNumber, chunkId: chunkId };
+            document.getElementById('errorDialogType').value = '符号错误';
+            document.getElementById('errorDialogDetail').value = '';
+            document.getElementById('errorDialogOverlay').style.display = 'flex';
+        }
+
+        function closeErrorDialog() {
+            document.getElementById('errorDialogOverlay').style.display = 'none';
+        }
+
+        function confirmAddError() {
+            var state = _errorDialogState;
+            var type = document.getElementById('errorDialogType').value;
+            var detail = document.getElementById('errorDialogDetail').value.trim();
+            if (!type) { alert('请选择一级错因'); return; }
+            
+            fetch('http://127.0.0.1:8000/questions/' + state.questionId + '/step-error', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    step_number: state.stepNumber,
+                    chunk_id: state.chunkId,
+                    mistake_type: type,
+                    mistake_detail: detail
+                })
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                closeErrorDialog();
+                refreshStepErrors();
+            })
+            .catch(function(err) {
+                alert('添加失败: ' + err.message);
+            });
+        }
+
+        function deleteStepError(qid, eid) {
+            if (!confirm('确定删除这条错因吗？')) return;
+            fetch('http://127.0.0.1:8000/questions/' + qid + '/step-error/' + eid, {
+                method: 'DELETE'
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.deleted) {
+                    refreshStepErrors();
+                }
+            })
+            .catch(function(err) {
+                alert('删除失败: ' + err.message);
+            });
         }
 
         // ---- Init ----
@@ -754,5 +934,35 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
             }, 100);
         });
 </script>
+
+<!-- Error Dialog -->
+<div class="error-dialog-overlay" id="errorDialogOverlay" style="display:none">
+    <div class="error-dialog">
+        <h3>添加错因</h3>
+        <div class="error-dialog-body">
+            <div class="error-dialog-field">
+                <label>一级错因</label>
+                <select id="errorDialogType">
+                    <option value="符号错误">符号错误</option>
+                    <option value="计算错误">计算错误</option>
+                    <option value="公式记错">公式记错</option>
+                    <option value="知识性错误">知识性错误</option>
+                    <option value="审题错误">审题错误</option>
+                    <option value="思路错误">思路错误</option>
+                    <option value="其他">其他</option>
+                </select>
+            </div>
+            <div class="error-dialog-field">
+                <label>二级错因（自填）</label>
+                <textarea id="errorDialogDetail" placeholder="描述具体错误..." rows="3"></textarea>
+            </div>
+        </div>
+        <div class="error-dialog-actions">
+            <button class="ed-btn-cancel" onclick="closeErrorDialog()">取消</button>
+            <button class="ed-btn-confirm" onclick="confirmAddError()">确认</button>
+        </div>
+    </div>
+</div>
+
 </body>
 </html>

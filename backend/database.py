@@ -65,6 +65,20 @@ def init_db():
             duration_seconds INTEGER,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
+
+        CREATE TABLE IF NOT EXISTS step_errors (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            question_id INTEGER NOT NULL REFERENCES questions(id),
+            step_number INTEGER NOT NULL,
+            chunk_id INTEGER NOT NULL,
+            mistake_type TEXT NOT NULL,
+            mistake_detail TEXT DEFAULT '',
+            student_input TEXT DEFAULT '',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE INDEX IF NOT EXISTS idx_step_errors_qid ON step_errors(question_id);
+        CREATE INDEX IF NOT EXISTS idx_step_errors_type ON step_errors(mistake_type);
     """)
     conn.commit()
     # 迁移：新增 question_type 列（首次创建时一并添加，已存在则跳过）
@@ -74,6 +88,14 @@ def init_db():
         print("[Database] 新增 question_type 列")
     except sqlite3.OperationalError:
         pass  # 列已存在
+    # 迁移：新增 source_type / source_meta 列
+    for col in ("source_type", "source_meta"):
+        try:
+            conn.execute(f"ALTER TABLE questions ADD COLUMN {col} TEXT")
+            conn.commit()
+            print(f"[Database] 新增 {col} 列")
+        except sqlite3.OperationalError:
+            pass
     conn.close()
     print("[Database] 数据库初始化完成")
 
@@ -176,10 +198,14 @@ def save_question(question_text: str, answer_dict: dict):
         )
     )
     conn.commit()
+    # 获取新增/更新的题目 ID
+    row = conn.execute("SELECT id FROM questions WHERE content = ?", (question_text.strip(),)).fetchone()
+    question_id = row["id"] if row else None
     conn.close()
-    print(f"[Database] 题目已保存（{category_level1} → {category_level2}，难度 {difficulty_level}）")
+    print(f"[Database] 题目已保存（ID={question_id}, {category_level1} → {category_level2}，难度 {difficulty_level}）")
     if raw_kps != clean_kps:
         print(f"  [Sanitize] 知识点被清理: {raw_kps} → {clean_kps}")
+    return question_id
 
 
 def get_all_questions():
@@ -226,17 +252,36 @@ def get_question_by_id(qid: int):
     return d
 
 
-def search_questions(keywords=None, categories=None, difficulties=None, types=None, limit=200):
-    """按关键词（AND 多词匹配）+ 板块 + 难度 + 题型筛选"""
+def search_questions(keywords=None, categories=None, difficulties=None, types=None, limit=200, mode="content", error_type=None):
+    """按关键词（AND 多词匹配）+ 板块 + 难度 + 题型筛选
+    mode="content": 仅搜索题目原文
+    mode="global":  同时搜索板块、知识点、步骤错因"""
     conn = get_connection()
+    is_global = (mode == "global")
     where_clauses = []
     params = []
 
     if keywords:
         for kw in keywords:
-            if kw.strip():
+            kw_s = kw.strip()
+            if not kw_s:
+                continue
+            if is_global:
+                # 全局搜索：搜题目原文 + 板块 + 知识点 + 错因
+                kw_pat = f"%{kw_s}%"
+                global_conds = [
+                    "q.content LIKE ?",
+                    "q.category_level1 LIKE ?",
+                    "q.category_level2 LIKE ?",
+                    "q.knowledge_points LIKE ?",
+                    "e.mistake_type LIKE ?",
+                    "e.mistake_detail LIKE ?"
+                ]
+                where_clauses.append(f"({' OR '.join(global_conds)})")
+                params.extend([kw_pat] * 6)
+            else:
                 where_clauses.append("content LIKE ?")
-                params.append(f"%{kw.strip()}%")
+                params.append(f"%{kw_s}%")
 
     if categories:
         placeholders = ",".join("?" for _ in categories)
@@ -253,13 +298,30 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
         where_clauses.append(f"question_type IN ({placeholders})")
         params.extend(types)
 
+    if error_type:
+        q_id = "q.id" if is_global else "questions.id"
+        if error_type == "none":
+            where_clauses.append(f"NOT EXISTS (SELECT 1 FROM step_errors e2 WHERE e2.question_id = {q_id})")
+        elif error_type == "errors":
+            where_clauses.append(f"EXISTS (SELECT 1 FROM step_errors e2 WHERE e2.question_id = {q_id})")
+        else:
+            where_clauses.append(f"EXISTS (SELECT 1 FROM step_errors e2 WHERE e2.question_id = {q_id} AND e2.mistake_type = ?)")
+            params.append(error_type)
+
+    from_clause = "FROM questions"
+    select_prefix = ""
+    q_prefix = ""
+    if is_global:
+        from_clause = "FROM questions q LEFT JOIN step_errors e ON e.question_id = q.id"
+        select_prefix = "DISTINCT "
+        q_prefix = "q."
     where_sql = " AND ".join(where_clauses) if where_clauses else "1"
     rows = conn.execute(
-        f"""SELECT id, content, category_level1, category_level2,
-                   difficulty_level, difficulty_score, difficulty_dimensions,
-                   knowledge_points, question_type, created_at
-            FROM questions WHERE {where_sql}
-            ORDER BY created_at DESC LIMIT ?""",
+        f"""SELECT {select_prefix}{q_prefix}id, {q_prefix}content, {q_prefix}category_level1, {q_prefix}category_level2,
+                   {q_prefix}difficulty_level, {q_prefix}difficulty_score, {q_prefix}difficulty_dimensions,
+                   {q_prefix}knowledge_points, {q_prefix}question_type, {q_prefix}created_at
+            {from_clause} WHERE {where_sql}
+            ORDER BY {q_prefix}created_at DESC LIMIT ?""",
         params + [limit]
     ).fetchall()
     conn.close()
@@ -291,3 +353,62 @@ def delete_question(qid: int) -> bool:
 def ai_search_questions(query: str, limit: int = 20):
     """AI 语义搜索预留接口（当前返回空列表）"""
     return {"query": query, "results": [], "total": 0, "note": "AI 搜索功能开发中"}
+
+# ---------- 来源类型校验 ----------
+_VALID_SOURCE_TYPES = {"ai_generated", "human", "exam_paper", "web_search", "exam_ocr"}
+
+
+def add_step_error(question_id: int, step_number: int, chunk_id: int,
+                   mistake_type: str, mistake_detail: str = "") -> int:
+    """写入一条错因记录，返回 id"""
+    conn = get_connection()
+    cur = conn.execute(
+        """INSERT INTO step_errors
+           (question_id, step_number, chunk_id, mistake_type, mistake_detail)
+           VALUES (?, ?, ?, ?, ?)""",
+        (question_id, step_number, chunk_id, mistake_type, mistake_detail)
+    )
+    conn.commit()
+    eid = cur.lastrowid
+    conn.close()
+    return eid
+
+
+def get_step_errors(question_id: int) -> list:
+    """返回某题的所有错因记录（按步骤排序）"""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT id, step_number, chunk_id, mistake_type, mistake_detail, created_at
+           FROM step_errors WHERE question_id = ?
+           ORDER BY chunk_id, step_number""",
+        (question_id,)
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
+
+
+def delete_step_error(error_id: int, question_id: int) -> bool:
+    """删除一条错因记录"""
+    conn = get_connection()
+    cur = conn.execute(
+        "DELETE FROM step_errors WHERE id = ? AND question_id = ?",
+        (error_id, question_id)
+    )
+    deleted = cur.rowcount > 0
+    conn.commit()
+    conn.close()
+    return deleted
+
+
+def get_questions_with_errors() -> list:
+    """返回至少有一条错因记录的题目列表"""
+    conn = get_connection()
+    rows = conn.execute(
+        """SELECT DISTINCT q.id, q.content, q.category_level1, q.category_level2,
+                  q.difficulty_level, q.difficulty_score, q.question_type, q.source_type, q.source_meta, q.created_at
+           FROM questions q
+           INNER JOIN step_errors e ON e.question_id = q.id
+           ORDER BY q.created_at DESC"""
+    ).fetchall()
+    conn.close()
+    return [dict(r) for r in rows]
