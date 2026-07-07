@@ -1,4 +1,4 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, UploadFile
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 
@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
 from backend.solver import step_solver_only, step_verify_all, step_final_check, _xuebile, _extract_solver_status
+from backend.multimodal import parse_file, get_supported_extensions
 from backend.database import init_db, get_all_questions, search_questions, delete_question
 from backend.categories import get_all_categories
 
@@ -251,6 +252,29 @@ class AiAssembleRequest(BaseModel):
 def api_ai_assemble(req: AiAssembleRequest):
     """AI 一键组卷（预留）"""
     return {"query": req.query, "results": [], "total": 0, "note": "AI 组卷功能开发中"}
+
+
+@app.post("/multimodal/parse")
+async def api_multimodal_parse(file: UploadFile):
+    """上传文件，解析为 LaTeX 题目列表"""
+    import tempfile, os, shutil
+    
+    ext = os.path.splitext(file.filename or "upload")[1].lower()
+    if ext not in get_supported_extensions():
+        return {"error": f"不支持的文件格式: {ext}", "supported": get_supported_extensions()}
+    
+    # 保存到临时文件
+    tmp_dir = tempfile.mkdtemp()
+    tmp_path = os.path.join(tmp_dir, file.filename or f"upload{ext}")
+    try:
+        with open(tmp_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+        questions = parse_file(tmp_path, file.filename or "")
+        return {"questions": questions, "total": len(questions)}
+    except Exception as e:
+        return {"error": str(e)}
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 # ---- Static files: serve frontend (must be last) ----

@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>多模态解答 - 数学最强大脑</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <style>
+        .mm-container { display: flex; gap: 16px; min-height: calc(100vh - 120px); }
+        .mm-left { width: 340px; flex-shrink: 0; overflow-y: auto; max-height: calc(100vh - 120px); padding-right: 8px; }
+        .mm-right { flex: 1; overflow-y: auto; max-height: calc(100vh - 120px); padding-left: 8px; border-left: 1px solid #e5e5e7; }
+        .mm-upload-zone {
+            border: 2px dashed #c7c7cc; border-radius: 16px; padding: 60px 20px;
+            text-align: center; cursor: pointer; transition: all 0.2s; margin-bottom: 20px;
+        }
+        .mm-upload-zone:hover { border-color: #0071e3; background: #f8f9ff; }
+        .mm-upload-zone.dragover { border-color: #0071e3; background: #e8f0fe; }
+        .mm-upload-icon { font-size: 48px; margin-bottom: 12px; }
+        .mm-upload-text { font-size: 16px; color: #1d1d1f; margin-bottom: 8px; }
+        .mm-upload-hint { font-size: 13px; color: #86868b; }
+        .mm-loading { text-align: center; padding: 40px; color: #86868b; }
+        .mm-spinner { width: 32px; height: 32px; border: 3px solid #e5e5e7; border-top-color: #0071e3; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
+        .mm-qcard {
+            background: white; border: 1px solid #e0e0e0; border-radius: 10px;
+            padding: 12px 14px; margin-bottom: 8px; cursor: pointer;
+            transition: all 0.15s; position: relative;
+        }
+        .mm-qcard:hover { border-color: #0071e3; }
+        .mm-qcard.active { border-color: #0071e3; background: #f0f7ff; }
+        .mm-qcard-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .mm-qcard .hc-checkbox { width: 16px; height: 16px; accent-color: #0071e3; cursor: pointer; }
+        .mm-qnum { font-weight: 600; font-size: 13px; color: #515154; min-width: 30px; }
+        .mm-qdiff { font-size: 11px; padding: 1px 6px; border-radius: 4px; }
+        .mm-qteacher { font-size: 11px; padding: 2px 6px; border: 1px solid #c7c7cc; border-radius: 4px; background: white; cursor: pointer; }
+        .mm-qpreview { font-size: 13px; color: #1d1d1f; line-height: 1.5; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin-bottom: 6px; }
+        .mm-qactions { display: flex; gap: 6px; flex-wrap: wrap; }
+        .mm-qbtn { padding: 4px 10px; border-radius: 6px; font-size: 12px; cursor: pointer; border: 1px solid #c7c7cc; background: white; transition: all 0.15s; color: #515154; }
+        .mm-qbtn:hover { border-color: #0071e3; color: #0071e3; }
+        .mm-qbtn.solve { background: #0071e3; color: white; border-color: #0071e3; }
+        .mm-qbtn.solve:hover { background: #0077ed; }
+        .mm-qedit-area { display: none; margin: 6px 0; }
+        .mm-qedit-area textarea { width: 100%; padding: 8px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 13px; font-family: monospace; min-height: 60px; resize: vertical; }
+        .mm-preview-render { display: none; padding: 8px; background: #fafafa; border-radius: 8px; margin: 4px 0; font-size: 14px; line-height: 1.6; }
+        .mm-batch-bar { display: flex; gap: 8px; align-items: center; padding: 12px 0; border-top: 1px solid #e5e5e7; margin-top: 8px; }
+        .mm-batch-bar .batch-count { font-size: 13px; color: #86868b; }
+        .mm-batch-btn { padding: 8px 20px; background: #0071e3; color: white; border: none; border-radius: 10px; font-size: 14px; cursor: pointer; transition: background 0.2s; }
+        .mm-batch-btn:hover { background: #0077ed; }
+        .mm-batch-btn:disabled { background: #a0c4ff; cursor: not-allowed; }
+        
+        /* Session */
+        .mm-session {
+            background: white; border: 1px solid #e0e0e0; border-radius: 12px;
+            margin-bottom: 16px; overflow: hidden;
+        }
+        .mm-session-header {
+            display: flex; align-items: center; gap: 8px; padding: 10px 16px;
+            background: #f8f9fa; border-bottom: 1px solid #e0e0e0;
+            font-size: 14px; font-weight: 500;
+        }
+        .mm-session-body { padding: 16px; }
+        .mm-session-status {
+            display: flex; align-items: center; gap: 8px;
+            padding: 20px; color: #86868b; font-size: 14px;
+        }
+        .mm-session-status .mm-spinner { width: 20px; height: 20px; margin: 0; }
+        .mm-session-error { color: #c62828; padding: 16px; }
+        
+        .mm-solved-tag { font-size: 12px; color: #2e7d32; background: #e8f5e9; padding: 2px 8px; border-radius: 4px; margin-left: auto; }
+        .mm-empty { text-align: center; padding: 80px 20px; color: #86868b; font-size: 15px; }
+        .mm-empty-icon { font-size: 48px; margin-bottom: 12px; }
+        
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="app-layout">
+        <aside class="sidebar">
+            <a href="/" class="sidebar-logo">成为<br>数学高手</a>
+            <nav>
+                <a href="index.html" class="nav-item" data-page="solve">
+                    <span class="nav-icon">🔍</span>
+                    <span class="nav-label">单题解答</span>
+                </a>
+                <a href="teach.html" class="nav-item" data-page="teach">
+                    <span class="nav-icon">📖</span>
+                    <span class="nav-label">老师手把手<br>教你做题</span>
+                    <span class="nav-badge">预留</span>
+                </a>
+                <a href="exam.html" class="nav-item" data-page="exam">
+                    <span class="nav-icon">📝</span>
+                    <span class="nav-label">组卷</span>
+                </a>
+                <a href="history.html" class="nav-item" data-page="history">
+                    <span class="nav-icon">📋</span>
+                    <span class="nav-label">个人题库</span>
+                </a>
+                <a href="multimodal.html" class="nav-item active" data-page="multimodal">
+                    <span class="nav-icon">📎</span>
+                    <span class="nav-label">多模态解答</span>
+                </a>
+            </nav>
+        </aside>
+        <main class="main-content">
+            <div class="container" style="max-width:1200px;">
+                <h1>多模态解答</h1>
+                <p class="subtitle" id="mmSubtitle">上传试卷 / 图片 / 文档，自动切题后勾选批量解答</p>
+
+                <!-- Upload Area -->
+                <div id="mmUploadArea">
+                    <div class="mm-upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                        <div class="mm-upload-icon">📄</div>
+                        <div class="mm-upload-text">拖拽文件到此处，或点击上传</div>
+                        <div class="mm-upload-hint">支持 PDF / JPG / PNG / Word(.docx) / 文本(.txt)</div>
+                    </div>
+                    <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.docx,.txt" style="display:none" onchange="onFileSelect(event)">
+                    <div id="mmLoading" class="mm-loading" style="display:none;">
+                        <div class="mm-spinner"></div>
+                        <div>正在解析题目，请稍候...</div>
+                    </div>
+                </div>
+
+                <!-- Solve Area (after parsing) -->
+                <div id="mmSolveArea" style="display:none;">
+                    <div class="mm-container">
+                        <div class="mm-left" id="mmLeftPanel">
+                            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                                <span style="font-weight:600;font-size:15px;color:#1d1d1f;">题目列表</span>
+                                <button class="mm-qbtn" onclick="uploadAnother()">🔄 重新上传</button>
+                            </div>
+                            <div id="mmQuestionList"></div>
+                            <div class="mm-batch-bar" id="mmBatchBar">
+                                <span class="batch-count" id="mmBatchCount">已选 0 道</span>
+                                <button class="mm-batch-btn" id="mmBatchSolveBtn" onclick="batchSolve()">批量解题</button>
+                            </div>
+                        </div>
+                        <div class="mm-right" id="mmRightPanel">
+                            <div id="mmSessions">
+                                <div class="mm-empty">
+                                    <div class="mm-empty-icon">📎</div>
+                                    <p>点击左侧题目的 ▶解题 按钮开始解答</p>
+                                    <p style="font-size:13px;margin-top:8px;">或勾选多题后点击"批量解题"</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+<script>
+var _questions = [];
+var _sessions = {};
+var MAX_CONCURRENT = 7;
+
+// ---- Upload ----
+var dropZone = document.getElementById('dropZone');
+dropZone.addEventListener('dragover', function(e) { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', function() { dropZone.classList.remove('dragover'); });
+dropZone.addEventListener('drop', function(e) {
+    e.preventDefault(); dropZone.classList.remove('dragover');
+    if (e.dataTransfer.files.length > 0) uploadFile(e.dataTransfer.files[0]);
+});
+
+function onFileSelect(e) {
+    if (e.target.files.length > 0) uploadFile(e.target.files[0]);
+}
+
+function uploadFile(file) {
+    var formData = new FormData();
+    formData.append('file', file);
+    document.getElementById('mmLoading').style.display = 'block';
+    document.querySelector('.mm-upload-zone').style.display = 'none';
+    
+    fetch('http://127.0.0.1:8000/multimodal/parse', {
+        method: 'POST',
+        body: formData
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        document.getElementById('mmLoading').style.display = 'none';
+        if (data.error) { alert('解析失败: ' + data.error); resetUpload(); return; }
+        _questions = data.questions || [];
+        if (_questions.length === 0) { alert('未识别到题目'); resetUpload(); return; }
+        document.getElementById('mmUploadArea').style.display = 'none';
+        document.getElementById('mmSolveArea').style.display = 'block';
+        document.getElementById('mmSubtitle').textContent = '共识别 ' + _questions.length + ' 道题';
+        renderQuestionList();
+    })
+    .catch(function(err) {
+        document.getElementById('mmLoading').style.display = 'none';
+        alert('上传失败: ' + err.message);
+        resetUpload();
+    });
+}
+
+function resetUpload() {
+    document.getElementById('mmUploadArea').style.display = 'block';
+    document.querySelector('.mm-upload-zone').style.display = 'block';
+    document.getElementById('mmSolveArea').style.display = 'none';
+    document.getElementById('mmSubtitle').textContent = '上传试卷 / 图片 / 文档，自动切题后勾选批量解答';
+}
+
+function uploadAnother() {
+    _questions = []; _sessions = {};
+    document.getElementById('mmQuestionList').innerHTML = '';
+    document.getElementById('mmSessions').innerHTML = '';
+    resetUpload();
+}
+
+// ---- Render Left Panel ----
+function renderQuestionList() {
+    var container = document.getElementById('mmQuestionList');
+    var html = '';
+    for (var i = 0; i < _questions.length; i++) {
+        var q = _questions[i];
+        var diffClass = q.difficulty === '\u7b80\u5355' ? 'tag-easy' : q.difficulty === '\u4e2d\u7b49' ? 'tag-medium' : 'tag-hard';
+        html += '<div class="mm-qcard" data-idx="' + i + '" onclick="focusSession(' + i + ')">';
+        html += '<div class="mm-qcard-header">';
+        html += '<input type="checkbox" class="hc-checkbox" data-idx="' + i + '" onchange="updateBatchCount()" onclick="event.stopPropagation()">';
+        html += '<span class="mm-qnum">\u9898' + (i + 1) + '</span>';
+        html += '<span class="tag ' + diffClass + ' mm-qdiff">' + escapeHtml(q.difficulty) + '</span>';
+        html += '<select class="mm-qteacher" onchange="changeTeacher(' + i + ',this.value)" onclick="event.stopPropagation()">';
+        var teachers = ['liangliang', 'taotao', 'xuefeng', 'ji'];
+        var tNames = {liangliang:'\u6881\u6881', taotao:'\u97ec\u97ec', xuefeng:'\u96ea\u5cf0', ji:'\u9e21'};
+        for (var ti = 0; ti < teachers.length; ti++) {
+            var sel = teachers[ti] === q.recommended_teacher ? ' selected' : '';
+            html += '<option value="' + teachers[ti] + '"' + sel + '>' + tNames[teachers[ti]] + '</option>';
+        }
+        html += '</select>';
+        if (_sessions[i] && _sessions[i].done) {
+            html += '<span class="mm-solved-tag">\u2713 \u5df2\u89e3\u7b54</span>';
+        }
+        html += '</div>';
+        html += '<div class="mm-qpreview" id="qpreview_' + i + '">' + escapeHtml(q.latex.substring(0, 80)) + '</div>';
+        html += '<div class="mm-qactions">';
+        html += '<button class="mm-qbtn" onclick="event.stopPropagation();toggleEdit(' + i + ')">\u270f \u7f16\u8f91</button>';
+        html += '<button class="mm-qbtn" onclick="event.stopPropagation();previewLatex(' + i + ')">\u25b6 \u9884\u89c8</button>';
+        var solveLabel = _sessions[i] && _sessions[i].solving ? '\u23f3 \u89e3\u9898\u4e2d' : '\u25b6 \u89e3\u9898';
+        html += '<button class="mm-qbtn solve" onclick="event.stopPropagation();startSingleSolve(' + i + ')">' + solveLabel + '</button>';
+        html += '</div>';
+        html += '<div class="mm-qedit-area" id="qedit_' + i + '">';
+        html += '<textarea id="qtextarea_' + i + '" oninput="updatePreview(' + i + ')">' + escapeHtml(q.latex) + '</textarea>';
+        html += '</div>';
+        html += '<div class="mm-preview-render" id="qpreview_render_' + i + '"></div>';
+        html += '</div>';
+    }
+    container.innerHTML = html;
+    updateBatchCount();
+    try { renderMathInElement(container, { delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], ignoredTags:[] }); } catch(e) {}
+}
+
+function escapeHtml(str) { return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+
+function changeTeacher(idx, val) {
+    if (_questions[idx]) _questions[idx].recommended_teacher = val;
+}
+
+function toggleEdit(idx) {
+    var area = document.getElementById('qedit_' + idx);
+    area.style.display = area.style.display === 'block' ? 'none' : 'block';
+}
+
+function previewLatex(idx) {
+    var renderEl = document.getElementById('qpreview_render_' + idx);
+    var textarea = document.getElementById('qtextarea_' + idx);
+    if (!textarea) return;
+    renderEl.style.display = 'block';
+    renderEl.innerHTML = textarea.value;
+    try { renderMathInElement(renderEl, { delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}], ignoredTags:[] }); } catch(e) {}
+}
+
+function updatePreview(idx) {
+    var textarea = document.getElementById('qtextarea_' + idx);
+    if (_questions[idx]) _questions[idx].latex = textarea.value;
+}
+
+function updateBatchCount() {
+    var cbs = document.querySelectorAll('#mmQuestionList .hc-checkbox:checked');
+    document.getElementById('mmBatchCount').textContent = '\u5df2\u9009 ' + cbs.length + ' \u9053';
+}
+
+// ---- Focus Session (click left card → scroll right) ----
+function focusSession(idx) {
+    var el = document.getElementById('session_' + idx);
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ---- Session Management ----
+function createSession(idx) {
+    if (_sessions[idx]) return;
+    _sessions[idx] = { solving: false, done: false, data: null };
+    var q = _questions[idx];
+    var sessionsEl = document.getElementById('mmSessions');
+    // Remove empty state
+    var empty = sessionsEl.querySelector('.mm-empty');
+    if (empty) empty.style.display = 'none';
+    
+    var div = document.createElement('div');
+    div.className = 'mm-session';
+    div.id = 'session_' + idx;
+    div.innerHTML = '<div class="mm-session-header"><span>\u9898' + (idx + 1) + '</span><span style="color:#86868b;font-weight:400;font-size:13px;">' + escapeHtml(q.latex.substring(0, 40)) + '</span></div>' +
+        '<div class="mm-session-body" id="session_body_' + idx + '">' +
+        '<div class="mm-session-status"><div class="mm-spinner"></div>\u7b49\u5f85\u4e2d...</div></div>';
+    sessionsEl.appendChild(div);
+}
+
+function updateSessionBody(idx, html) {
+    var body = document.getElementById('session_body_' + idx);
+    if (body) body.innerHTML = html;
+    try { renderMathInElement(body, { delimiters: [{left:'$$',right:'$$',display:true},{left:'\\(',right:'\\)',display:false},{left:'$',right:'$',display:false}], ignoredTags:[] }); } catch(e) {}
+    // Re-render step content
+    body.querySelectorAll('.step-content, .detail-content').forEach(function(el) {
+        try { renderMathInElement(el, { delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false}], ignoredTags:[] }); } catch(e) {}
+    });
+}
+
+// ---- Solve Pipeline ----
+async function startSingleSolve(idx) {
+    if (!_questions[idx]) return;
+    createSession(idx);
+    _sessions[idx].solving = true;
+    _sessions[idx].done = false;
+    updateSessionBody(idx, '<div class="mm-session-status"><div class="mm-spinner"></div>\u6b63\u5728\u89e3\u9898...</div>');
+    // Update card
+    var card = document.querySelector('.mm-qcard[data-idx="' + idx + '"]');
+    var btn = card ? card.querySelector('.mm-qbtn.solve') : null;
+    if (btn) btn.textContent = '\u23f3 \u89e3\u9898\u4e2d';
+    
+    try {
+        await solveSingle(idx);
+        _sessions[idx].done = true;
+        _sessions[idx].solving = false;
+        // Update card tag
+        var header = card ? card.querySelector('.mm-qcard-header') : null;
+        var existing = header ? header.querySelector('.mm-solved-tag') : null;
+        if (!existing && header) {
+            var tag = document.createElement('span');
+            tag.className = 'mm-solved-tag';
+            tag.textContent = '\u2713 \u5df2\u89e3\u7b54';
+            header.appendChild(tag);
+        }
+        if (btn) btn.textContent = '\u25b6 \u89e3\u9898';
+    } catch (err) {
+        _sessions[idx].solving = false;
+        updateSessionBody(idx, '<div class="mm-session-error">\u89e3\u9898\u5931\u8d25: ' + escapeHtml(err.message || '\u672a\u77e5\u9519\u8bef') + '</div>');
+        if (btn) btn.textContent = '\u25b6 \u89e3\u9898';
+    }
+}
+
+async function solveSingle(idx) {
+    var q = _questions[idx];
+    if (!q) return;
+    var teacher = q.recommended_teacher || 'liangliang';
+    var question = q.latex;
+    
+    // Step 1: Solver
+    updateSessionBody(idx, '<div class="mm-session-status"><div class="mm-spinner"></div>\u6b65\u9aa4 1/3: \u6b63\u5728\u601d\u8003...</div>');
+    var r1 = await fetch('http://127.0.0.1:8000/solve/step1', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({question: question, question_type: null, teacher: teacher})
+    });
+    var d1 = await r1.json();
+    if (d1.error) throw new Error(d1.detail || d1.status || '\u65e0\u6cd5\u89e3\u7b54');
+    
+    // Step 2: Verifier
+    updateSessionBody(idx, '<div class="mm-session-status"><div class="mm-spinner"></div>\u6b65\u9aa4 2/3: \u6b63\u5728\u5206\u7c7b\u77e5\u8bc6\u70b9...</div>');
+    var r2 = await fetch('http://127.0.0.1:8000/solve/step2', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({question: question, content: d1.content, category: d1.category || null, question_type: null, teacher: teacher})
+    });
+    var d2 = await r2.json();
+    if (d2.error) throw new Error(d2.detail || '\u65e0\u6cd5\u5206\u7c7b');
+    
+    // Step 3: Formatter
+    updateSessionBody(idx, '<div class="mm-session-status"><div class="mm-spinner"></div>\u6b65\u9aa4 3/3: \u6b63\u5728\u68c0\u67e5...</div>');
+    var r3 = await fetch('http://127.0.0.1:8000/solve/step3', {
+        method: 'POST', headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({question: question, chunk_results: JSON.stringify(d2.chunk_results), teacher: teacher, save: true})
+    });
+    var d3 = await r3.json();
+    if (d3.error) throw new Error(d3.detail || '\u65e0\u6cd5\u5b8c\u6210');
+    
+    // Render result (same as index.html)
+    _sessions[idx].data = d3;
+    renderSessionResult(idx, d3);
+    
+    // Save to personal question bank
+    try {
+        await fetch('http://127.0.0.1:8000/questions/save', {
+            method: 'POST', headers: {'Content-Type':'application/json'},
+            body: JSON.stringify({question: question, answer_json: d3})
+        });
+    } catch(e) { console.log('Save failed:', e); }
+}
+
+// ---- Render Result (same display logic as index.html) ----
+function renderSessionResult(idx, data) {
+    var html = '<div class="meta-bar">';
+    if (data.knowledge_points && data.knowledge_points.length > 0) {
+        html += '<span class="tag tag-category">' + data.knowledge_points.slice(0,3).join(' / ') + '</span>';
+    }
+    var od = data.overall_difficulty;
+    if (od && od.total_score !== undefined) {
+        html += '<span class="tag" style="background:#e8f0fe;color:#1565c0;">\u96ea\u5cf0\u96be\u5ea6\u7cfb\u6570\uff1a' + od.total_score + '/15</span>';
+    }
+    if (data.step_difficulty_sum !== undefined) {
+        html += '<span class="tag" style="background:#fce4ec;color:#c62828;">\u6b66\u4eae\u96be\u5ea6\u7cfb\u6570\uff1a' + data.step_difficulty_sum + '</span>';
+    }
+    html += '</div>';
+    
+    html += '<div id="radar_' + idx + '" style="display:flex;justify-content:center;margin-bottom:16px;"></div>';
+    
+    if (data.chunk_results && data.chunk_results.length > 0) {
+        for (var ci = 0; ci < data.chunk_results.length; ci++) {
+            var cr = data.chunk_results[ci];
+            var chunkId = cr.chunk_id || (ci + 1);
+            var cat = cr.category || {};
+            html += '<div class="chunk-card">';
+            html += '<div class="chunk-header">';
+            html += '<span class="chunk-label">\u5757' + chunkId + '</span>';
+            if (cr.chunk_type) html += '<span class="tag tag-type">' + escapeHtml(cr.chunk_type) + '</span>';
+            if (cat.level1) html += '<span class="chunk-cat">' + escapeHtml(cat.level1) + '</span>';
+            var diff = cr.difficulty || {};
+            if (diff.level) html += '<span class="chunk-diff tag-' + (diff.level === '\u5bb9\u6613' ? 'easy' : diff.level === '\u4e2d\u7b49' ? 'medium' : diff.level === '\u56f0\u96be' ? 'hard' : 'extreme') + '">' + escapeHtml(diff.level) + '</span>';
+            html += '</div>';
+            
+            if (cr.steps && cr.steps.length > 0) {
+                html += '<div class="chunk-steps">';
+                for (var si = 0; si < cr.steps.length; si++) {
+                    var step = cr.steps[si];
+                    html += '<div class="step" data-step-number="' + step.step_number + '" data-chunk-id="' + chunkId + '">';
+                    html += '<div class="step-header">';
+                    html += '<span class="step-number">\u6b65\u9aa4' + step.step_number + '\uff1a' + escapeHtml(step.title || '') + '</span>';
+                    if (step.step_difficulty) html += '<span class="step-diff-tag">' + escapeHtml(step.step_difficulty.level) + ' (' + step.step_difficulty.score + '\u5206)</span>';
+                    html += '</div>';
+                    html += '<div class="step-content">' + escapeHtml(step.standard_writing || '') + '</div>';
+                    if (step.detailed_writing) {
+                        html += '<div class="detail-toggle" onclick="toggleDetail(this)">\u5c55\u5f00\u8be6\u7ec6\u8fc7\u7a0b \u25b8</div>';
+                        html += '<div class="detail-content">' + escapeHtml(step.detailed_writing) + '</div>';
+                    }
+                    if (step.knowledge_point) html += '<div class="step-kp">' + escapeHtml(step.knowledge_point) + '</div>';
+                    html += '</div>';
+                }
+                html += '</div>';
+            }
+            if (cr.final_answer) html += '<div class="final-answer">\u7b54\u6848\uff1a' + cr.final_answer + '</div>';
+            html += '</div>';
+        }
+    }
+    
+    html += '<div style="text-align:center;margin-top:16px;display:flex;gap:8px;justify-content:center;">';
+    html += '<button class="mm-qbtn solve" onclick="startSingleSolve(' + idx + ')">\u25b6 \u91cd\u65b0\u89e3\u7b54</button>';
+    html += '</div>';
+    
+    updateSessionBody(idx, html);
+    drawRadar(idx, od && od.dimensions);
+}
+
+function toggleDetail(el) {
+    var content = el.nextElementSibling;
+    var isOpen = !content.classList.contains('show');
+    content.classList.toggle('show');
+    el.textContent = isOpen ? '\u6536\u8d77\u8be6\u7ec6\u8fc7\u7a0b \u25be' : '\u5c55\u5f00\u8be6\u7ec6\u8fc7\u7a0b \u25b8';
+    if (isOpen && window.renderMathInElement) {
+        try { renderMathInElement(content, { delimiters: [{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false}], ignoredTags:[] }); } catch(e) {}
+    }
+}
+
+function drawRadar(idx, dims) {
+    if (!dims || Object.keys(dims).length < 5) return;
+    var container = document.getElementById('radar_' + idx);
+    if (!container) return;
+    var dpr = window.devicePixelRatio || 1;
+    var canvas = document.createElement('canvas');
+    var cssW = 320, cssH = 290;
+    canvas.width = cssW * dpr; canvas.height = cssH * dpr;
+    canvas.style.width = cssW + 'px'; canvas.style.height = cssH + 'px';
+    canvas.style.maxWidth = '100%';
+    container.innerHTML = '';
+    container.appendChild(canvas);
+    var ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    var cx = 160, cy = 150, radius = 80;
+    var labels = Object.keys(dims);
+    var values = labels.map(function(k) { return dims[k]; });
+    var n = labels.length;
+    var gridColors = ['#f0f0f0', '#e5e5e7', '#d8d8dc'];
+    for (var ri = 1; ri <= 3; ri++) {
+        var r = radius * ri / 3;
+        ctx.beginPath();
+        for (var i = 0; i <= n; i++) {
+            var angle = (i % n) * 2 * Math.PI / n - Math.PI / 2;
+            var x = cx + r * Math.cos(angle), y = cy + r * Math.sin(angle);
+            if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        }
+        ctx.closePath(); ctx.strokeStyle = gridColors[ri - 1]; ctx.lineWidth = 1; ctx.stroke();
+    }
+    for (var i = 0; i < n; i++) {
+        var angle = i * 2 * Math.PI / n - Math.PI / 2;
+        ctx.beginPath(); ctx.moveTo(cx, cy); ctx.lineTo(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
+        ctx.strokeStyle = '#ececee'; ctx.lineWidth = 1; ctx.stroke();
+        ctx.font = '11px -apple-system, sans-serif'; ctx.fillStyle = '#1d1d1f';
+        var lr = radius + 12;
+        var nx = cx + lr * Math.cos(angle), ny = cy + lr * Math.sin(angle);
+        ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+        ctx.fillText(labels[i], nx, ny);
+    }
+    ctx.beginPath();
+    for (var i = 0; i <= n; i++) {
+        var angle = (i % n) * 2 * Math.PI / n - Math.PI / 2;
+        var val = Math.min(values[i % n] / 3, 1);
+        var x = cx + radius * val * Math.cos(angle), y = cy + radius * val * Math.sin(angle);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.closePath();
+    var grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+    grad.addColorStop(0, 'rgba(0, 113, 227, 0.25)'); grad.addColorStop(1, 'rgba(0, 113, 227, 0.06)');
+    ctx.fillStyle = grad; ctx.fill();
+    ctx.strokeStyle = '#0071e3'; ctx.lineWidth = 2; ctx.stroke();
+    for (var i = 0; i < n; i++) {
+        var angle = i * 2 * Math.PI / n - Math.PI / 2;
+        var val = Math.min(values[i] / 3, 1);
+        var x = cx + radius * val * Math.cos(angle), y = cy + radius * val * Math.sin(angle);
+        ctx.beginPath(); ctx.arc(x, y, 3.5, 0, 2 * Math.PI);
+        ctx.fillStyle = '#0071e3'; ctx.fill();
+    }
+}
+
+// ---- Batch Solve ----
+async function batchSolve() {
+    var cbs = document.querySelectorAll('#mmQuestionList .hc-checkbox:checked');
+    var indices = [];
+    for (var i = 0; i < cbs.length; i++) indices.push(parseInt(cbs[i].dataset.idx));
+    indices.sort(function(a,b) { return a - b; });
+    if (indices.length === 0) { alert('\u8bf7\u5148\u52fe\u9009\u9898\u76ee'); return; }
+    
+    document.getElementById('mmBatchSolveBtn').disabled = true;
+    document.getElementById('mmBatchSolveBtn').textContent = '\u89e3\u9898\u4e2d ' + indices.length + ' \u9053...';
+    
+    // Create sessions first
+    for (var i = 0; i < indices.length; i++) createSession(indices[i]);
+    
+    // Concurrent queue: 7 at a time
+    var queue = indices.slice();
+    var workers = [];
+    for (var i = 0; i < Math.min(MAX_CONCURRENT, indices.length); i++) {
+        workers.push((async function() {
+            while (queue.length > 0) {
+                var qid = queue.shift();
+                await startSingleSolve(qid);
+            }
+        })());
+    }
+    await Promise.all(workers);
+    
+    document.getElementById('mmBatchSolveBtn').disabled = false;
+    document.getElementById('mmBatchSolveBtn').textContent = '\u6279\u91cf\u89e3\u9898';
+}
+
+// ---- Init ----
+document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('fileInput').value = '';
+});
+</script>
+</body>
+</html>
