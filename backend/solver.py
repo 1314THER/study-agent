@@ -38,6 +38,7 @@ BLOCK_DIFFICULTY_PATTERN = re.compile(r'^块难度[：:]\s*(.+)$')
 BLOCK_FINAL_ANSWER_PATTERN = re.compile(r'^块最终答案[：:]\s*(.+)$')
 BLOCK_KP_PATTERN = re.compile(r'^块知识点[：:]\s*(.+)$')
 STEP_DIFFICULTY_PATTERN = re.compile(r'^步骤难度[：:]\s*(.+)$')
+STEP_LEVEL1_PATTERN = re.compile(r'^二级步骤[：:]\s*(.+)$')
 
 
 # ---------- 读取 prompt ----------
@@ -268,6 +269,7 @@ def _parse_steps(text: str) -> list:
             current_step = {
                 "step_number": int(m.group(1)),
                 "title": (m.group(2) or "").strip(),
+                "step_level1": None,
                 "standard_writing": "",
                 "detailed_writing": "",
                 "knowledge_point": "",
@@ -276,6 +278,10 @@ def _parse_steps(text: str) -> list:
             in_step = True
             continue
         if not in_step or current_step is None:
+            continue
+        slm = STEP_LEVEL1_PATTERN.match(stripped)
+        if slm:
+            current_step["step_level1"] = slm.group(1).strip()
             continue
         km = KNOWLEDGE_POINT_PATTERN.match(stripped)
         if km:
@@ -327,17 +333,29 @@ def _split_chunks(text: str) -> tuple:
 
 
 # ---------- Verifier 路由 ----------
+# 映射：categories.py 的板块名 → prompt 文件名（与 steps.yaml 题型名一致）
+_CATEGORY_TO_PROMPT_FILE = {
+    # 有大题对应 prompt 的板块
+    "函数与导数": "函数与导数大题",
+    "三角函数": "解三角形大题",
+    "概率统计": "简单的概率统计大题",
+    "立体几何": "立体几何大题",
+    "解析几何": "解析几何大题",
+    "数列": "数列大题",
+}
+
+
 def _load_verifier_prompt(category: str) -> str:
     """加载对应板块的 Verifier prompt"""
-    path = os.path.join(PROMPTS_DIR, "verifiers", f"{category}.md")
+    file_name = _CATEGORY_TO_PROMPT_FILE.get(category, category)
+    path = os.path.join(PROMPTS_DIR, "verifiers", f"{file_name}.md")
     if not os.path.exists(path):
-        # 尝试从内容自动匹配第一个存在的板块
-        for known in CATEGORIES:
-            test_path = os.path.join(PROMPTS_DIR, "verifiers", f"{known}.md")
-            if os.path.exists(test_path):
-                with open(test_path, encoding="utf-8") as f:
-                    return f.read().strip()
-        raise FileNotFoundError(f"找不到板块对应的 verifier: {category}")
+        # 没有专用 prompt 的小板块，用通用模版兜底
+        fallback = os.path.join(PROMPTS_DIR, "verifiers", "简单的非标准题目.md")
+        if os.path.exists(fallback):
+            with open(fallback, encoding="utf-8") as f:
+                return f.read().strip()
+        raise FileNotFoundError(f"找不到板块对应的 verifier: {category}, 且无兜底模版")
     with open(path, encoding="utf-8") as f:
         return f.read().strip()
 
@@ -425,7 +443,6 @@ def step_verify_all(content: str, question: str, category: str = None, question_
     # 解析 Verifier 输出（可能含多个 ### 块N）
     header, raw_chunks = _split_chunks(verified_out)
 
-    # 非常规压轴题使用标准管线
 
     chunk_results = []
     for pc in raw_chunks:

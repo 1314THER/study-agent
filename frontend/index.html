@@ -221,6 +221,9 @@ var _selectedTeacher = "liangliang";
                             html += '<div class="step" data-step-number="' + step.step_number + '" data-chunk-id="' + chunkId + '">';
                             html += '<div class="step-header">';
                             html += '<span class="step-number">步骤' + step.step_number + '：' + escapeHtml(step.title || '') + '</span>';
+                            if (step.step_level1) {
+                                html += '<span class="step-level1-tag">' + escapeHtml(step.step_level1) + '</span>';
+                            }
                             if (step.step_difficulty) {
                                 html += '<span class="step-diff-tag">' + step.step_difficulty.level + ' (' + step.step_difficulty.score + '分)</span>';
                             }

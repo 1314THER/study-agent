@@ -9,6 +9,7 @@ from backend.solver import step_solver_only, step_verify_all, step_final_check, 
 from backend.multimodal import parse_file, get_supported_extensions
 from backend.database import init_db, get_all_questions, search_questions, delete_question
 from backend.categories import get_all_categories
+from backend.steps import get_step_structure, get_all_question_types
 
 app = FastAPI(title="你好，我是张雪峰老师")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -277,7 +278,24 @@ async def api_multimodal_parse(file: UploadFile):
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
+
+@app.get("/steps")
+def api_steps():
+    """返回 steps.yaml 中所有题型的两级步骤结构"""
+    return {
+        "types": [
+            {
+                "name": qtype,
+                "has_predefined": bool(get_step_structure(qtype)),
+                "steps": get_step_structure(qtype),
+            }
+            for qtype in get_all_question_types()
+        ]
+    }
+
+
 # ---- Static files: serve frontend (must be last) ----
+
 import os
 _frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 if os.path.isdir(_frontend_path):

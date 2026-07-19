@@ -8,6 +8,7 @@ import sqlite3
 import json
 import os
 from backend.categories import CATEGORIES
+from backend.steps import _load_steps
 
 # 结构化字段的合法值（写死，不依赖模型输出）
 _VALID_CATEGORIES = set(CATEGORIES.keys())
@@ -110,8 +111,45 @@ def init_db():
             print(f"[Database] 新增 {col} 列")
         except sqlite3.OperationalError:
             pass
+    # 迁移：新增 steps_structure 列
+    try:
+        conn.execute("ALTER TABLE questions ADD COLUMN steps_structure TEXT")
+        conn.commit()
+        print("[Database] 新增 steps_structure 列")
+    except sqlite3.OperationalError:
+        pass
     conn.close()
     print("[Database] 数据库初始化完成")
+
+
+
+def _build_steps_structure(chunk_results: list) -> str:
+    """
+    从 chunk_results 中提取步骤索引，返回 JSON 字符串
+    [
+        {"chunk_id":1, "step_number":1, "step_level1":"...", "step_level2":"...", "difficulty_score":1},
+        ...
+    ]
+    """
+    if not chunk_results:
+        return "[]"
+    index = []
+    for cr in chunk_results:
+        chunk_id = cr.get("chunk_id", 1)
+        for step in cr.get("steps", []):
+            score = None
+            sd = step.get("step_difficulty")
+            if isinstance(sd, dict):
+                score = sd.get("score")
+            entry = {
+                "chunk_id": chunk_id,
+                "step_number": step.get("step_number"),
+                "step_level1": step.get("step_level1"),
+                "step_level2": step.get("title", ""),
+                "difficulty_score": score,
+            }
+            index.append(entry)
+    return json.dumps(index, ensure_ascii=False)
 
 
 def find_question(question_text: str):
@@ -156,11 +194,13 @@ def _sanitize_difficulty(diff) -> tuple:
 
 
 def _sanitize_knowledge_points(level1: str, points: list) -> list:
-    """确保知识点来自对应板块的列表"""
-    if not level1 or level1 not in CATEGORIES:
+    """知识点不按板块限制，所有板块的子板块名均有效"""
+    if not points:
         return []
-    valid = set(CATEGORIES[level1])
-    return [p for p in points if p in valid]
+    all_valid = set()
+    for subs in CATEGORIES.values():
+        all_valid.update(subs)
+    return [p for p in points if p in all_valid]
 
 
 def save_question(question_text: str, answer_dict: dict):
@@ -188,16 +228,20 @@ def save_question(question_text: str, answer_dict: dict):
             first = chunk_results[0]
             if isinstance(first, dict):
                 question_type = first.get("chunk_type")
-    if question_type not in ("选择题", "填空题", "大题", "非常规压轴题"):
-        question_type = None
+    if question_type not in ("选择题", "填空题"):
+        question_type = "大题"
+
+    # 构建 steps_structure（从 chunk_results 提取步骤索引）
+    chunk_results = answer_dict.get("chunk_results", [])
+    steps_structure = _build_steps_structure(chunk_results)
 
     conn = get_connection()
     conn.execute(
         """INSERT OR REPLACE INTO questions
            (content, answer_json, category_level1, category_level2,
             difficulty_level, difficulty_score, difficulty_dimensions,
-            common_mistakes, knowledge_points, question_type)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            common_mistakes, knowledge_points, question_type, steps_structure)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             question_text.strip(),
             json.dumps(answer_dict, ensure_ascii=False),
@@ -209,6 +253,7 @@ def save_question(question_text: str, answer_dict: dict):
             json.dumps(answer_dict.get("common_mistakes", []), ensure_ascii=False),
             json.dumps(clean_kps, ensure_ascii=False),
             question_type,
+            steps_structure,
         )
     )
     conn.commit()
@@ -227,7 +272,8 @@ def get_all_questions():
     rows = conn.execute(
         """SELECT id, content, category_level1, category_level2,
                   difficulty_level, difficulty_score, difficulty_dimensions,
-                  knowledge_points, question_type, created_at, last_viewed_at, last_edited_at, last_exam_at
+                  knowledge_points, question_type, steps_structure,
+                  created_at, last_viewed_at, last_edited_at, last_exam_at
            FROM questions ORDER BY created_at DESC"""
     ).fetchall()
     conn.close()
@@ -236,6 +282,13 @@ def get_all_questions():
     for r in rows:
         d = dict(r)
         # JSON 字段解析
+        for key in ("difficulty_dimensions", "knowledge_points", "steps_structure"):
+            val = d.get(key)
+            if val:
+                try:
+                    d[key] = json.loads(val)
+                except (json.JSONDecodeError, TypeError):
+                    pass
         for key in ("difficulty_dimensions", "knowledge_points"):
             val = d.get(key)
             if val:
@@ -256,7 +309,7 @@ def get_question_by_id(qid: int):
     if not row:
         return None
     d = dict(row)
-    for key in ("answer_json", "difficulty_dimensions", "knowledge_points", "common_mistakes"):
+    for key in ("answer_json", "difficulty_dimensions", "knowledge_points", "common_mistakes", "steps_structure"):
         val = d.get(key)
         if val:
             try:
@@ -333,7 +386,8 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
     rows = conn.execute(
         f"""SELECT {select_prefix}{q_prefix}id, {q_prefix}content, {q_prefix}category_level1, {q_prefix}category_level2,
                    {q_prefix}difficulty_level, {q_prefix}difficulty_score, {q_prefix}difficulty_dimensions,
-                   {q_prefix}knowledge_points, {q_prefix}question_type, {q_prefix}created_at, {q_prefix}last_viewed_at, {q_prefix}last_edited_at, {q_prefix}last_exam_at
+                   {q_prefix}knowledge_points, {q_prefix}question_type, {q_prefix}steps_structure,
+                   {q_prefix}created_at, {q_prefix}last_viewed_at, {q_prefix}last_edited_at, {q_prefix}last_exam_at
             {from_clause} WHERE {where_sql}
             ORDER BY {q_prefix}created_at DESC LIMIT ?""",
         params + [limit]
@@ -350,7 +404,14 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
     all_rows = []
     for r in rows:
         d = dict(r)
-        for key in ("difficulty_dimensions", "knowledge_points"):
+        for key in ("difficulty_dimensions", "knowledge_points", "steps_structure"):
+            val = d.get(key)
+            if val:
+                try:
+                    d[key] = json.loads(val)
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        for key in ("difficulty_dimensions", "knowledge_points", "steps_structure"):
             val = d.get(key)
             if val:
                 try:

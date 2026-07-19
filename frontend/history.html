@@ -533,6 +533,9 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
                             html += '<div class="step" data-step-number="' + step.step_number + '" data-chunk-id="' + chunkId + '">';
                             html += '<div class="step-header">';
                             html += '<span class="step-number">\u6b65\u9aa4' + step.step_number + '\uff1a' + escapeHtml(step.title || '') + '</span>';
+                            if (step.step_level1) {
+                                html += '<span class="step-level1-tag">' + escapeHtml(step.step_level1) + '</span>';
+                            }
                             if (step.step_difficulty) {
                                 html += '<span class="step-diff-tag">' + escapeHtml(step.step_difficulty.level) + ' (' + step.step_difficulty.score + '\u5206)</span>';
                             }

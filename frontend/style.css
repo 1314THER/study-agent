@@ -236,6 +236,7 @@
         }
         .step-number { font-weight: 600; font-size: 15px; color: #1d1d1f; }
         .step-diff-tag { font-size: 12px; color: #86868b; margin-left: auto; background: #f5f5f7; padding: 2px 8px; border-radius: 4px; }
+        .step-level1-tag { font-size: 11px; color: #1a73e8; margin-left: 8px; background: #e8f0fe; padding: 2px 8px; border-radius: 4px; font-weight: 500; }
 
         .step-content { margin-left: 0; padding: 8px 0 8px 12px; font-size: 15px; color: #1d1d1f; line-height: 1.7; border-left: 1px solid #e5e5e7; }
         .step-kp { margin-left: 0; padding: 2px 0 6px 12px; font-size: 13px; color: #2e7d32; border-left: 1px solid #e5e5e7; }
