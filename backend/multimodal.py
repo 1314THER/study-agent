@@ -12,7 +12,7 @@ from typing import Optional
 
 # ---------- API ----------
 DASHSCOPE_BASE = "https://ws-1b3ikgt2q6ybkzos.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
-MODEL = "qwen2.5-vl-72b"
+MODEL = "qwen-vl-max"
 
 
 def _get_api_key() -> str:

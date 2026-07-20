@@ -345,8 +345,24 @@ _CATEGORY_TO_PROMPT_FILE = {
 }
 
 
+def _make_kp_list() -> str:
+    """生成所有板块的子板块名清单，拼到 verifier prompt 末尾"""
+    lines = [
+        "",
+        "## 知识点分类",
+        "",
+        "知识点 **只能** 从以下列表中选取，不要自己创造：",
+    ]
+    for l1, l2s in CATEGORIES.items():
+        items = "、".join(l2s)
+        lines.append(f"  {l1}：{items}")
+    lines.append("")
+    lines.append("每个步骤标注 **1-3 个** 最相关的知识点即可。")
+    return "\n".join(lines)
+
+
 def _load_verifier_prompt(category: str) -> str:
-    """加载对应板块的 Verifier prompt"""
+    """加载对应板块的 Verifier prompt，并附加知识点清单"""
     file_name = _CATEGORY_TO_PROMPT_FILE.get(category, category)
     path = os.path.join(PROMPTS_DIR, "verifiers", f"{file_name}.md")
     if not os.path.exists(path):
@@ -354,10 +370,22 @@ def _load_verifier_prompt(category: str) -> str:
         fallback = os.path.join(PROMPTS_DIR, "verifiers", "简单的非标准题目.md")
         if os.path.exists(fallback):
             with open(fallback, encoding="utf-8") as f:
-                return f.read().strip()
+                return f.read().strip() + "\n\n" + _make_kp_list()
         raise FileNotFoundError(f"找不到板块对应的 verifier: {category}, 且无兜底模版")
     with open(path, encoding="utf-8") as f:
-        return f.read().strip()
+        prompt = f.read().strip()
+    # 替换或追加知识点列表
+    if "## 知识点分类" in prompt:
+        # 去掉旧的 KPs section（从 ## 知识点分类 到下一个 ## 或结尾）
+        idx = prompt.find("## 知识点分类")
+        rest = prompt[idx + len("## 知识点分类"):]
+        next_sec = rest.find("\n## ")
+        if next_sec >= 0:
+            prompt = prompt[:idx] + rest[next_sec:]
+        else:
+            prompt = prompt[:idx].rstrip()
+    prompt += "\n\n" + _make_kp_list()
+    return prompt
 
 
 # ---------- 雪碧了 ----------
@@ -465,6 +493,12 @@ def step_verify_all(content: str, question: str, category: str = None, question_
             "final_answer": meta.get("final_answer", ""),
             "knowledge_points": unique_kps,
         })
+    # 知识点过滤：只保留 CATEGORIES 中存在的子板块名
+    _all_valid_kps = set()
+    for subs in CATEGORIES.values():
+        _all_valid_kps.update(subs)
+    for cr in chunk_results:
+        cr["knowledge_points"] = [kp for kp in cr.get("knowledge_points", []) if kp in _all_valid_kps]
     overall_diff = _compute_overall_difficulty(chunk_results)
     return {"chunk_results": chunk_results, "token_usage": v_usage, "overall_difficulty": overall_diff}
 

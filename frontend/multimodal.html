@@ -397,7 +397,10 @@ function uploadFile(file){
     .then(function(data){
         document.getElementById('mmLoading').style.display='none';
         if(data.error){alert('解析失败: '+data.error);resetUpload();return;}
-        _questions=data.questions||[];
+        _questions=(data.questions||[]).map(function(q){
+        if(typeof q.latex !== 'string') q.latex = '';
+        return q;
+    });
         if(_questions.length===0){alert('未识别到题目');resetUpload();return;}
         _sessions={}; _selectedIdx=-1;
         document.getElementById('mmUploadArea').style.display='none';
@@ -524,7 +527,10 @@ function renderPreview(idx){
     try{renderMathInElement(document.getElementById('preview_'+idx),{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],ignoredTags:[]});}catch(e){}
 }
 
-function escapedLatex(s){return s||'';}
+function escapedLatex(s){
+    if(typeof s !== 'string') return '';
+    return escapeHtml(s);
+}
 
 function onEditLatex(idx){
     var ta=document.getElementById('edit_'+idx);if(!ta)return;
@@ -551,7 +557,6 @@ async function startSingleSolve(idx){
     _sessions[idx].solving=true;_sessions[idx].done=false;_sessions[idx].data=null;saveState();
     renderProgress(idx,0,'准备中...');
     var teacher=q.recommended_teacher||'liangliang';
-    var qtype=document.getElementById('type_'+idx)?.value||null;
     var autoSave=document.getElementById('autoSave_'+idx)?.checked!==false;
     var question=q.latex;
 
@@ -559,13 +564,13 @@ async function startSingleSolve(idx){
         _sessions[idx].saved=false;startTimer(idx);
         // Step 1
         renderProgress(idx,13,'\u6b65\u9aa4 1/3: \u6b63\u5728\u601d\u8003...',0);
-        var r1=await fetch('http://127.0.0.1:8000/solve/step1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,question_type:qtype,teacher})});
+        var r1=await fetch('http://127.0.0.1:8000/solve/step1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,question_type:'',teacher})});
         var d1=await r1.json();
         if(d1.error)throw new Error(d1.detail||d1.status||'无法解答');
 
         // Step 2
         renderProgress(idx,78,'\u6b65\u9aa4 2/3: \u6b63\u5728\u5206\u7c7b\u77e5\u8bc6\u70b9...',d1.token_usage?.total_tokens);
-        var r2=await fetch('http://127.0.0.1:8000/solve/step2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,content:d1.content,category:d1.category||null,question_type:qtype,teacher})});
+        var r2=await fetch('http://127.0.0.1:8000/solve/step2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,content:d1.content,category:d1.category||null,question_type:'',teacher})});
         var d2=await r2.json();
         if(d2.error)throw new Error('无法分类');
 
@@ -585,10 +590,11 @@ async function startSingleSolve(idx){
             if(overrideData.chunk_results&&overrideData.chunk_results[0])overrideData.chunk_results[0].chunk_type=userType;
             try{await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:_questions[idx].latex,answer_json:overrideData})});}catch(e){}
         }
-        // Extract question_type from solve result
-        var resultType=d3.question_type||(d3.chunk_results&&d3.chunk_results[0]&&d3.chunk_results[0].chunk_type);
+        // 维持第一次的题型判断，不覆盖
         var userType=document.getElementById('type_'+idx)?.value;
-        _questions[idx].question_type=userType||resultType||_questions[idx].question_type||'';
+        if (!_questions[idx].question_type && userType) {
+            _questions[idx].question_type = userType;
+        }
         saveState();
         renderSessionResult(idx,d3,autoSave);
         renderQuestionList();
