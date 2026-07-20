@@ -210,8 +210,9 @@
         }
 
         function toggleQItem(header) {
-            var settings = header.nextElementSibling;
-            if (!settings || !settings.classList.contains('exam-qitem-settings')) return;
+            var parent = header.parentElement;
+            var settings = parent.querySelector('.exam-qitem-settings');
+            if (!settings) return;
             var isOpen = settings.style.display !== 'none';
             settings.style.display = isOpen ? 'none' : 'block';
             var arrow = header.querySelector('.exam-qitem-arrow');
@@ -298,6 +299,14 @@ function renderPreview() {
             var opt = examState.optimizeBreaks;
             
             var el = document.getElementById('examPreview');
+            el.className = 'exam-preview mode-' + (mode || 'student');
+            if (opt) {
+                el.classList.add('frequent-breaks');
+                el.classList.remove('no-breaks');
+            } else {
+                el.classList.remove('frequent-breaks');
+                el.classList.add('no-breaks');
+            }
             el.classList.add('paginated');
             el.innerHTML = '';
             
@@ -434,7 +443,7 @@ function renderPreview() {
                         var pR = curPage.getBoundingClientRect();
                         var lR = lastCh.getBoundingClientRect();
                         var remain = (pR.top + PH) - lR.bottom;
-                        if (remain < 150) {
+                        if (remain < 300) {
                             curPage = newPage();
                         }
                     }

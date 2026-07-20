@@ -72,13 +72,17 @@
                 <div class="filter-bar">
                     <select class="filter-select" id="filterCategory" onchange="onFilterChange()">
                         <option value="">全部板块</option>
+                        
                     </select>
                     <select class="filter-select" id="filterType" onchange="onFilterChange()">
                         <option value="">全部题型</option>
                         <option value="选择题">选择题</option>
                         <option value="填空题">填空题</option>
                         <option value="大题">大题</option>
-                        <option value="非常规压轴题">非常规压轴题</option>
+                        
+                    </select>
+                    <select class="filter-select" id="filterBigType" onchange="onBigTypeChange()" style="display:none">
+                        <option value="">大题细分</option>
                     </select>
                     <select class="filter-select" id="filterDifficulty" onchange="onFilterChange()">
                         <option value="">全部难度</option>
@@ -87,10 +91,7 @@
                         <option value="困难">困难</option>
                         <option value="极难">极难</option>
                     </select>
-                    <div class="mode-toggle">
-                        <button class="mode-btn active" data-mode="content" onclick="setSearchMode(this,'content')">题目搜索</button>
-                        <button class="mode-btn" data-mode="global" onclick="setSearchMode(this,'global')">全局搜索</button>
-                    </div>
+
                     <button class="filter-reset" onclick="resetFilters()">重置</button>
                     <div class="filter-batch">
                         <a href="exam.html" class="go-exam-btn" id="goExamBtn">
@@ -159,7 +160,7 @@
         var _detailQuestionId = null;
         var _stepErrors = [];
         var _errorDialogState = { questionId: null, stepNumber: null, chunkId: null };
-        var _searchMode = 'content';
+        // var _searchMode = 'content';
 
         // ---- Init: load categories into filter ----
         function initFilters() {
@@ -179,16 +180,32 @@
 
         // ---- Search + Filter ----
         function onFilterChange() {
+            // Show big type filter only when 大题 is selected
+            var typeVal = document.getElementById('filterType').value;
+            var bigTypeEl = document.getElementById('filterBigType');
+            if (bigTypeEl) {
+                bigTypeEl.style.display = typeVal === '大题' ? 'inline-block' : 'none';
+                if (typeVal !== '大题') bigTypeEl.value = '';
+            }
             doSearch();
         }
 
-        function setSearchMode(btn, mode) {
-            document.querySelectorAll('.mode-btn').forEach(function(b) { b.classList.remove('active'); });
-            btn.classList.add('active');
-            _searchMode = mode;
-            doSearch();
+        function loadBigTypes() {
+            fetch('/steps').then(function(r){return r.json()}).then(function(data){
+                var sel = document.getElementById('filterBigType');
+                sel.innerHTML = '<option value="">大题细分</option>';
+                data.types.filter(function(t){return t.has_predefined;}).forEach(function(t){
+                    var opt = document.createElement('option');
+                    opt.value = t.name;
+                    opt.textContent = t.name;
+                    sel.appendChild(opt);
+                });
+            });
         }
 
+        // Search mode removed - search always covers all fields
+
+        function onBigTypeChange() { onFilterChange(); }
         function onErrorTypeChange() {
             var val = document.getElementById('filterErrorType').value;
             var mtEl = document.getElementById('filterMistakeType');
@@ -205,6 +222,8 @@
             document.getElementById('searchInput').value = '';
             document.getElementById('filterCategory').value = '';
             document.getElementById('filterType').value = '';
+            document.getElementById('filterBigType').value = '';
+            document.getElementById('filterBigType').style.display = 'none';
             document.getElementById('filterDifficulty').value = '';
             document.getElementById('filterErrorType').value = '';
             document.getElementById('filterMistakeType').value = '';
@@ -216,6 +235,14 @@
         function doSearch() {
             var q = document.getElementById('searchInput').value.trim();
             var cat = document.getElementById('filterCategory').value;
+            // If big type is selected, use its mapped category
+            var bigType = document.getElementById('filterBigType').value;
+            if (bigType) {
+                var bigMap = {'立体几何大题':'立体几何','解析几何大题':'解析几何','解三角形大题':'三角函数',
+                              '数列大题':'数列','函数与导数大题':'函数与导数','简单的概率统计大题':'概率统计',
+                              '困难的概率大题':'概率统计'};
+                cat = bigMap[bigType] || '';
+            }
             var type = document.getElementById('filterType').value;
             var diff = document.getElementById('filterDifficulty').value;
             var errorType = document.getElementById('filterErrorType').value;
@@ -235,7 +262,7 @@
                     params.push('error_type=' + encodeURIComponent(errorType));
                 }
             }
-            params.push('mode=' + _searchMode);
+            // params.push('mode=' + _searchMode);
             params.push('page=' + _currentPage);
             if (pageSize !== 'all') params.push('page_size=' + pageSize);
 
@@ -277,7 +304,7 @@
         }
 
         function loadQuestions() {
-            initFilters();
+            initFilters(); loadBigTypes();
             // Restore saved page size
             var savedPageSize = localStorage.getItem('history_page_size');
             if (savedPageSize) {
@@ -494,7 +521,7 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
             var result = document.getElementById('detailResult');
             var html = '<div class="meta-bar">';
             if (data.knowledge_points && data.knowledge_points.length > 0) {
-                html += '<span class="tag tag-category">' + data.knowledge_points.slice(0,3).join(' / ') + '</span>';
+                html += '<span class="tag tag-category">' + data.knowledge_points.join(' / ') + '</span>';
             }
             var od = data.overall_difficulty;
             if (od && od.total_score !== undefined) {

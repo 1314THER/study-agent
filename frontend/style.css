@@ -1075,6 +1075,18 @@ body.theme-taotao .cart-float.exam-cart { background: linear-gradient(135deg, #d
     margin: 0; border: none;
 }
 
+/* ---- Teacher mode: page padding for header/footer ---- */
+.exam-preview.mode-teacher .preview-page {
+    padding: 20px 20px 40px;
+    box-sizing: border-box;
+}
+
+/* ---- Frequent page breaks mode ---- */
+.exam-preview.frequent-breaks .preview-page {
+    page-break-inside: auto !important;
+    break-inside: auto !important;
+}
+
 /* ---- Remove old page-break-indicator visual ---- */
 .page-break-indicator { page-break-before: always; }
 /* No visual on screen - only page break for PDF */
@@ -1088,3 +1100,5 @@ body.theme-taotao .cart-float.exam-cart { background: linear-gradient(135deg, #d
 
 /* ---- Drag and Drop ---- */
 .exam-qitem.dragging { opacity: 0.5; }
+
+

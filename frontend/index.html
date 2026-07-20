@@ -207,7 +207,6 @@ var _selectedTeacher = "liangliang";
                     if (cr.chunk_type) {
                         var tc = 'tag-type';
                         if (cr.chunk_type === '选择题' || cr.chunk_type === '填空题') tc += ' tag-type-simple';
-                        else if (cr.chunk_type === '非常规压轴题') tc += ' tag-type-special';
                         html += '<span class="tag ' + tc + '">' + cr.chunk_type + '</span>';
                     }
                     if (cat.level1) html += '<span class="chunk-cat">' + cat.level1 + '</span>';

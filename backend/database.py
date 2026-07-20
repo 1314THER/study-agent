@@ -234,6 +234,34 @@ def save_question(question_text: str, answer_dict: dict):
     # 构建 steps_structure（从 chunk_results 提取步骤索引）
     chunk_results = answer_dict.get("chunk_results", [])
     steps_structure = _build_steps_structure(chunk_results)
+    # 追加预定义步骤名（方便按步骤名搜索）
+    if category_level1 and steps_structure != "[]":
+        try:
+            from backend.steps import _load_steps
+            all_steps = _load_steps()
+            # 映射 category_level1 → steps.yaml 题型名
+            cat_to_type = {
+                "立体几何": "立体几何大题", "解析几何": "解析几何大题",
+                "三角函数": "解三角形大题", "数列": "数列大题",
+                "函数与导数": "函数与导数大题", "概率统计": "简单的概率统计大题",
+            }
+            step_type = cat_to_type.get(category_level1)
+            if step_type and step_type in all_steps:
+                extra = []
+                for l1, l2_list in all_steps[step_type].items():
+                    for l2 in l2_list:
+                        extra.append({"step_level1": l1, "step_level2": l2})
+                if extra:
+                    import json
+                    existing = json.loads(steps_structure)
+                    # 去重：已有的 step_level2 不重复加
+                    existing_l2s = {s.get("step_level2","") for s in existing}
+                    new_entries = [e for e in extra if e["step_level2"] not in existing_l2s]
+                    if new_entries:
+                        existing.extend(new_entries)
+                        steps_structure = json.dumps(existing, ensure_ascii=False)
+        except Exception:
+            pass
 
     conn = get_connection()
     conn.execute(
@@ -320,11 +348,11 @@ def get_question_by_id(qid: int):
 
 
 def search_questions(keywords=None, categories=None, difficulties=None, types=None, limit=200, mode="content", error_type=None, page=1, page_size=None):
-    """按关键词（AND 多词匹配）+ 板块 + 难度 + 题型筛选
-    mode="content": 仅搜索题目原文
-    mode="global":  同时搜索板块、知识点、步骤错因"""
+    """按关键词 + 板块 + 难度 + 题型筛选
+    关键词同时搜索题目原文、板块、知识点、错因字段（OR），多个关键词之间取 AND。"""
     conn = get_connection()
-    is_global = (mode == "global")
+    # 统一走全局模式：搜全字段
+    is_global = True
     where_clauses = []
     params = []
 
@@ -333,22 +361,19 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
             kw_s = kw.strip()
             if not kw_s:
                 continue
-            if is_global:
-                # 全局搜索：搜题目原文 + 板块 + 知识点 + 错因
-                kw_pat = f"%{kw_s}%"
-                global_conds = [
-                    "q.content LIKE ?",
-                    "q.category_level1 LIKE ?",
-                    "q.category_level2 LIKE ?",
-                    "q.knowledge_points LIKE ?",
-                    "e.mistake_type LIKE ?",
-                    "e.mistake_detail LIKE ?"
-                ]
-                where_clauses.append(f"({' OR '.join(global_conds)})")
-                params.extend([kw_pat] * 6)
-            else:
-                where_clauses.append("content LIKE ?")
-                params.append(f"%{kw_s}%")
+            kw_pat = f"%{kw_s}%"
+            search_conds = [
+                "q.content LIKE ?",
+                "q.category_level1 LIKE ?",
+                "q.category_level2 LIKE ?",
+                "q.knowledge_points LIKE ?",
+                "q.steps_structure LIKE ?",
+                "q.difficulty_level LIKE ?",
+                "e.mistake_type LIKE ?",
+                "e.mistake_detail LIKE ?"
+            ]
+            where_clauses.append(f"({' OR '.join(search_conds)})")
+            params.extend([kw_pat] * 8)
 
     if categories:
         placeholders = ",".join("?" for _ in categories)
