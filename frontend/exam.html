@@ -6,9 +6,24 @@
     <title>组卷 - 数学最强大脑</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js">
+function safeParseKps(kps){
+    if(Array.isArray(kps)) return kps;
+    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
+}
+</script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js">
+function safeParseKps(kps){
+    if(Array.isArray(kps)) return kps;
+    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
+}
+</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js">
+function safeParseKps(kps){
+    if(Array.isArray(kps)) return kps;
+    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
+}
+</script>
 </head>
 <body class="theme-liangliang exam-page">
     <div class="app-layout">
@@ -690,6 +705,11 @@ window.addEventListener("resize", function() { zoomReset(); });
         document.addEventListener('DOMContentLoaded', function() {
             loadExam();
         });
-    </script>
+    
+function safeParseKps(kps){
+    if(Array.isArray(kps)) return kps;
+    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
+}
+</script>
 </body>
 </html>

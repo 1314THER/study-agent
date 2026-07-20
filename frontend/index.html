@@ -6,8 +6,18 @@
     <title>数学最强大脑</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js">
+function safeParseKps(kps){
+    if(Array.isArray(kps)) return kps;
+    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
+}
+</script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js">
+function safeParseKps(kps){
+    if(Array.isArray(kps)) return kps;
+    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
+}
+</script>
 </head>
 <body class="theme-liangliang">
     <div class="app-layout">
@@ -178,7 +188,7 @@ var _selectedTeacher = "liangliang";
             var html = '<div class="meta-bar">';
             // 知识点标签（仅大题有）
             if (data.knowledge_points && data.knowledge_points.length > 0) {
-                html += '<span class="tag tag-category">' + data.knowledge_points.slice(0,3).join(' / ') + '</span>';
+                html += '<span class="tag tag-category">' + safeParseKps(data.knowledge_points).slice(0,3).join(' / ') + '</span>';
             }
             // 整体难度（从各块难度取每维最大值计算）
             var od = data.overall_difficulty;
@@ -730,7 +740,12 @@ async function saveAfterSolve() {
 document.getElementById('searchBtn').addEventListener('click', function() {
     localStorage.removeItem('solve_result');
 });
-    </script>
+    
+function safeParseKps(kps){
+    if(Array.isArray(kps)) return kps;
+    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
+}
+</script>
 
 <!-- Error Dialog -->
 <div class="error-dialog-overlay" id="errorDialogOverlay" style="display:none">

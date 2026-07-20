@@ -345,46 +345,21 @@ _CATEGORY_TO_PROMPT_FILE = {
 }
 
 
-def _make_kp_list() -> str:
-    """生成所有板块的子板块名清单，拼到 verifier prompt 末尾"""
-    lines = [
-        "",
-        "## 知识点分类",
-        "",
-        "知识点 **只能** 从以下列表中选取，不要自己创造：",
-    ]
-    for l1, l2s in CATEGORIES.items():
-        items = "、".join(l2s)
-        lines.append(f"  {l1}：{items}")
-    lines.append("")
-    lines.append("每个步骤标注 **1-3 个** 最相关的知识点即可。")
-    return "\n".join(lines)
-
-
 def _load_verifier_prompt(category: str) -> str:
-    """加载对应板块的 Verifier prompt，并附加知识点清单"""
+    """加载对应板块的 Verifier prompt（知识点列表已硬编码在 .md 文件中）"""
     file_name = _CATEGORY_TO_PROMPT_FILE.get(category, category)
     path = os.path.join(PROMPTS_DIR, "verifiers", f"{file_name}.md")
     if not os.path.exists(path):
-        # 没有专用 prompt 的小板块，用通用模版兜底
         fallback = os.path.join(PROMPTS_DIR, "verifiers", "简单的非标准题目.md")
         if os.path.exists(fallback):
             with open(fallback, encoding="utf-8") as f:
-                return f.read().strip() + "\n\n" + _make_kp_list()
-        raise FileNotFoundError(f"找不到板块对应的 verifier: {category}, 且无兜底模版")
+                return f.read().strip()
+        raise FileNotFoundError(f"找不到板块对应的 verifier: {category}")
     with open(path, encoding="utf-8") as f:
         prompt = f.read().strip()
-    # 替换或追加知识点列表
-    if "## 知识点分类" in prompt:
-        # 去掉旧的 KPs section（从 ## 知识点分类 到下一个 ## 或结尾）
-        idx = prompt.find("## 知识点分类")
-        rest = prompt[idx + len("## 知识点分类"):]
-        next_sec = rest.find("\n## ")
-        if next_sec >= 0:
-            prompt = prompt[:idx] + rest[next_sec:]
-        else:
-            prompt = prompt[:idx].rstrip()
-    prompt += "\n\n" + _make_kp_list()
+    if "## 知识点分类" not in prompt:
+        # 极少数兜底情况，追加简短提示
+        prompt += "\n\n## 知识点分类\n\n知识点可以选自任意板块。"
     return prompt
 
 

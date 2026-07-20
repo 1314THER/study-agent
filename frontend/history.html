@@ -6,8 +6,18 @@
     <title>个人题库 - 数学最强大脑</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js">
+function safeParseKps(kps){
+    if(Array.isArray(kps)) return kps;
+    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
+}
+</script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js">
+function safeParseKps(kps){
+    if(Array.isArray(kps)) return kps;
+    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
+}
+</script>
 </head>
 <body>
     <div class="app-layout">
@@ -521,7 +531,7 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
             var result = document.getElementById('detailResult');
             var html = '<div class="meta-bar">';
             if (data.knowledge_points && data.knowledge_points.length > 0) {
-                html += '<span class="tag tag-category">' + data.knowledge_points.join(' / ') + '</span>';
+                html += '<span class="tag tag-category">' + safeParseKps(data.knowledge_points).join(' / ') + '</span>';
             }
             var od = data.overall_difficulty;
             if (od && od.total_score !== undefined) {
@@ -1103,6 +1113,11 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
                 updateCartBadge();
             }, 100);
         });
+
+function safeParseKps(kps){
+    if(Array.isArray(kps)) return kps;
+    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
+}
 </script>
 
 <!-- Error Dialog -->

@@ -6,8 +6,18 @@
     <title>多模态解答 - 数学最强大脑</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js">
+function safeParseKps(kps){
+    if(Array.isArray(kps)) return kps;
+    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
+}
+</script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js">
+function safeParseKps(kps){
+    if(Array.isArray(kps)) return kps;
+    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
+}
+</script>
     <style>
         .mm-container { display: flex; gap: 16px; height: calc(100vh - 210px); overflow: hidden; }
         .mm-left { width: 300px; flex-shrink: 0; overflow-y: auto; max-height: calc(100vh - 120px); padding-right: 8px; }
@@ -217,7 +227,7 @@ function toggleSessionCollapse(idx){
                     meta+='<span class="tag '+lc+'">'+od.level+'</span>';
                 }
                 if(s.data.knowledge_points&&s.data.knowledge_points.length>0){
-                    meta+=' <span class="tag tag-category">'+s.data.knowledge_points.slice(0,3).join(' / ')+'</span>';
+                    meta+=' <span class="tag tag-category">'+s.safeParseKps(data.knowledge_points).slice(0,3).join(' / ')+'</span>';
                 }
                 if(meta)compact.innerHTML+='<div style="margin-top:6px;display:flex;gap:4px;flex-wrap:wrap;">'+meta+'</div>';
                 compact.innerHTML+='<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;">';
@@ -627,7 +637,7 @@ function renderSessionResult(idx,data,autoSave){
     var q=_questions[idx];
     var html='<div class="mm-preview-rendered" style="margin-bottom:12px;background:#fff;border:1px solid #e0e0e0;border-radius:10px;">'+escapedLatex(q?q.latex:'')+'</div>';
     html+='<div class="meta-bar">';
-    if(data.knowledge_points&&data.knowledge_points.length>0)html+='<span class="tag tag-category">'+data.knowledge_points.slice(0,3).join(' / ')+'</span>';
+    if(data.knowledge_points&&data.knowledge_points.length>0)html+='<span class="tag tag-category">'+safeParseKps(data.knowledge_points).slice(0,3).join(' / ')+'</span>';
     var od=data.overall_difficulty;
     if(od&&od.total_score!==undefined)html+='<span class="tag" style="background:#e8f0fe;color:#1565c0;">雪峰难度系数：'+od.total_score+'/15</span>';
     if(data.step_difficulty_sum!==undefined)html+='<span class="tag" style="background:#fce4ec;color:#c62828;">武亮难度系数：'+data.step_difficulty_sum+'</span>';
@@ -781,6 +791,11 @@ async function batchSolve(){
 document.addEventListener('DOMContentLoaded',function(){
     if(!restoreState()){document.getElementById('fileInput').value='';}
 });
+
+function safeParseKps(kps){
+    if(Array.isArray(kps)) return kps;
+    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
+}
 </script>
 </body>
 </html>
