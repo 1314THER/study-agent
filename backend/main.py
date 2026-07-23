@@ -6,6 +6,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
 from backend.solver import step_solver_only, step_verify_all, step_final_check, _xuebile, _extract_solver_status
+from backend.teach import teach_start, teach_check, teach_find_or_format
 from backend.multimodal import parse_file, get_supported_extensions
 from backend.database import init_db, get_all_questions, search_questions, delete_question
 from backend.categories import get_all_categories
@@ -72,21 +73,18 @@ class SaveQuestionRequest(BaseModel):
 
 @app.post("/questions/save")
 def api_save_question(req: SaveQuestionRequest):
-    """保存题目到个人题库（如已存在则提示）"""
-    from backend.database import find_question, save_question
-    existing = find_question(req.question)
-    if existing:
-        return {"saved": False, "reason": "already_exists", "message": "该题已在个人题库中"}
-    # 从 chunk_results 提取分类和难度（兼容前端未传的情况）
+    """保存题目到个人题库（已存在时也返回 ID）"""
+    from backend.database import save_question as _save_q
+    # 无论是否存在都写入（INSERT OR REPLACE 处理重复）
     chunk_results = req.answer_json.get("chunk_results", [])
     first = chunk_results[0] if chunk_results else {}
     req.answer_json["category"] = first.get("category")
     req.answer_json["difficulty"] = req.answer_json.get("overall_difficulty") or first.get("difficulty")
     req.answer_json["question_type"] = first.get("chunk_type")
-    # 将答案结构化数据写入数据库，返回题目 ID
-    from backend.database import save_question as _save_q
     qid = _save_q(req.question, req.answer_json)
-    return {"saved": True, "id": qid, "message": "已加入个人题库"}
+    if qid:
+        return {"saved": True, "id": qid, "message": "已加入个人题库"}
+    return {"saved": False, "message": "保存失败"}
 
 
 
@@ -293,6 +291,83 @@ def api_steps():
         ]
     }
 
+
+
+# ---------- 教学系统 ----------
+class TeachStartRequest(BaseModel):
+    question: str
+    teacher: Optional[str] = Field(None, description="老师（可选）")
+
+class TeachCheckRequest(BaseModel):
+    question: str
+    step_prompt: str
+    step_answer: str
+    user_answer: str
+    teacher: Optional[str] = Field(None, description="老师（可选）")
+
+
+@app.post("/teach/find")
+def api_teach_find(req: TeachStartRequest):
+    """查找题目是否已在题库中，有教学步骤直接返回，有标准步骤转换后返回"""
+    from backend.database import find_question
+    result = find_question(req.question)
+    if result and result.get("chunk_results"):
+        chunk_results = result["chunk_results"]
+        all_steps = []
+        for cr in chunk_results:
+            chunk_type = cr.get("chunk_type", "整体")
+            category_name = cr.get("category", {}).get("level1", "")
+            final_answer = cr.get("final_answer", "")
+            for step in cr.get("steps", []):
+                all_steps.append({
+                    "chunk_id": cr.get("chunk_id", 1),
+                    "chunk_type": chunk_type,
+                    "category": category_name,
+                    "step_number": step.get("step_number", 0),
+                    "title": step.get("title", ""),
+                    "step_level1": step.get("step_level1", ""),
+                    "standard_writing": step.get("standard_writing", ""),
+                    "detailed_writing": step.get("detailed_writing", ""),
+                    "knowledge_point": step.get("knowledge_point", ""),
+                })
+            if final_answer:
+                all_steps.append({
+                    "chunk_id": cr.get("chunk_id", 1),
+                    "chunk_type": chunk_type,
+                    "category": category_name,
+                    "step_number": 999,
+                    "title": "最终答案",
+                    "step_level1": "",
+                    "standard_writing": final_answer,
+                    "detailed_writing": "",
+                    "knowledge_point": "",
+                })
+        first_cr = chunk_results[0] if chunk_results else {}
+        return {
+            "found": True,
+            "question": req.question,
+            "category": category_name,
+            "steps": all_steps,
+            "total_steps": len(all_steps),
+            "chunk_results": chunk_results,
+            "overall_difficulty": result.get("overall_difficulty"),
+            "from_db": True,
+        }
+    return {"found": False}
+
+
+@app.post("/teach/start")
+def api_teach_start(req: TeachStartRequest):
+    """开启教学会话：解题并返回所有步骤"""
+    result = teach_start(req.question, teacher=req.teacher)
+    return result
+
+
+@app.post("/teach/check")
+def api_teach_check(req: TeachCheckRequest):
+    """检查学生当前步骤的作答"""
+    result = teach_check(req.question, req.step_prompt, req.step_answer, req.user_answer, teacher=req.teacher)
+    return result
 
 # ---- Static files: serve frontend (must be last) ----
 

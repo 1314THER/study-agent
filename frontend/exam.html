@@ -1,10 +1,13 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" style="overflow:hidden;height:100%;overscroll-behavior:none;">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>组卷 - 数学最强大脑</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20260721">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js">
 function safeParseKps(kps){
@@ -54,7 +57,7 @@ function safeParseKps(kps){
             </nav>
         </aside>
         <div class="exam-layout">
-            <div class="exam-sidebar no-print">
+            <div class="exam-sidebar no-print" style="width:400px;flex:none;">
                 <div class="exam-sidebar-inner">
                     <input class="exam-title-input" id="examTitle" placeholder="试卷名称" value="试卷" oninput="onSettingsChange()">
                     <input class="exam-subtitle-input" id="examSubtitle" placeholder="副标题（考试时间、总分等，选填）" oninput="onSettingsChange()">
@@ -76,7 +79,7 @@ function safeParseKps(kps){
                     </div>
                 </div>
             </div>
-            <div class="resize-handle" style="width:4px;cursor:col-resize;background:#e5e5e7;flex-shrink:0;"></div>
+
             <div class="exam-main">
 
                 <div class="exam-preview" id="examPreview">
@@ -325,6 +328,11 @@ function renderPreview() {
             el.classList.add('paginated');
             el.innerHTML = '';
             
+            // Inner wrapper so zoom scale does not shrink the scroll viewport
+            var innerWrapper = document.createElement('div');
+            innerWrapper.id = 'examPreviewInner';
+            el.appendChild(innerWrapper);
+            
             // ---- Page management ----
             var curPage = null;
             var nextMustNewPage = false;
@@ -334,7 +342,7 @@ function renderPreview() {
                 var p = document.createElement('div');
                 p.className = 'a4-page';
                 p.style.overflow = 'visible';
-                el.appendChild(p);
+                innerWrapper.appendChild(p);
                 return p;
             }
             curPage = newPage();
@@ -475,6 +483,8 @@ function renderPreview() {
             
             // KaTeX rendering
             try { renderMathInElement(el, { delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}], ignoredTags: [] }); } catch(e) {}
+            // Re-apply zoom to fit current width
+            zoomReset();
         } catch(e) {
             console.error("[exam] renderPreview error:", e);
         }
@@ -592,20 +602,18 @@ function renderPreview() {
         function zoomIn() { _zoomLevel = Math.min(_zoomLevel + 0.1, 2.0); applyZoom(); }
         function zoomOut() { _zoomLevel = Math.max(_zoomLevel - 0.1, 0.3); applyZoom(); }
         function zoomReset() { 
-            var el = document.querySelector('.exam-preview');
-            if (!el) return;
-            var pw = el.scrollWidth;
-            var mw = document.querySelector('.exam-main').clientWidth;
+            var mw = document.querySelector('.exam-main')?.clientWidth;
+            if (!mw) return;
             var aw = mw - 80;
-            _zoomLevel = Math.min(aw / pw, 1.0);
+            _zoomLevel = Math.min(aw / 794, 2.0);
             applyZoom();
         }
         function applyZoom() {
-            var el = document.querySelector('.exam-preview');
-            if (!el) return;
-            el.style.transform = 'scale(' + _zoomLevel + ')';
-            el.style.transformOrigin = 'top center';
             var label = document.getElementById('zoomLabel');
+            var el = document.getElementById('examPreviewInner');
+            if (!el) return;
+            el.style.transformOrigin = 'top center';
+            el.style.transform = 'scale(' + _zoomLevel + ')';
             if (label) label.textContent = Math.round(_zoomLevel * 100) + '%';
         }
 
@@ -679,30 +687,12 @@ function renderPreview() {
             renderPreview();
             zoomReset();
         }
-        // Resizable divider
-        var _resizing = false;
-        var resizeHandle = document.querySelector('.resize-handle');
-        if (resizeHandle) {
-            resizeHandle.addEventListener('mousedown', function(e) {
-                _resizing = true;
-                e.preventDefault();
-            });
-        }
-        document.addEventListener('mousemove', function(e) {
-            if (!_resizing) return;
-            var sidebar = document.querySelector('.exam-sidebar');
-            var layout = document.querySelector('.exam-layout');
-            var layoutRect = layout.getBoundingClientRect();
-            var newWidth = e.clientX - layoutRect.left - 4;
-            newWidth = Math.max(200, Math.min(800, newWidth));
-            sidebar.style.flex = 'none';
-            sidebar.style.width = newWidth + 'px';
-        });
-        document.addEventListener('mouseup', function() {
-            _resizing = false;
-        });
+
 window.addEventListener("resize", function() { zoomReset(); });
         document.addEventListener('DOMContentLoaded', function() {
+            // Safari: prevent page-level scrolling by targeting the root element
+            document.documentElement.style.overflow = 'hidden';
+            document.documentElement.style.height = '100%';
             loadExam();
         });
     

@@ -780,13 +780,18 @@
 .bar-select-all:hover { background: #d0e2fb; }
 
 /* ======== Exam Page ======== */
-body.exam-page { background: #f5f5f7; }
+body.exam-page { background: #f5f5f7; overflow: hidden; width: 100%; height: 100%; }
+html:has(body.exam-page) { overflow: hidden; height: 100%; }
+body.exam-page .app-layout { overflow: hidden; position: relative; }
 .exam-layout {
-    margin-left: 72px; display: flex; min-height: 100vh;
+    margin-left: 72px; display: flex;
+    height: 100vh; overflow: hidden;
 }
 .exam-sidebar {
-    flex: 2; min-width: 300px; background: white; border-right: 1px solid #e5e5e7;
-    height: 100vh; overflow-y: auto; overflow-x: hidden; flex-shrink: 0;
+    flex: 0 0 400px;
+    background: white; border-right: 1px solid #e5e5e7;
+    height: 100vh; overflow-y: auto; overflow-x: hidden;
+    overscroll-behavior: contain;
     display: flex; flex-direction: column;
 }
 .exam-sidebar-inner { padding: 20px 16px; }
@@ -884,13 +889,16 @@ body.exam-page { background: #f5f5f7; }
 
 /* ---- Preview ---- */
 .exam-main {
-    flex: 3; height: 100vh;
+    flex: 1;
+    min-width: 0;
+    height: 100vh; overflow-x: hidden;
     display: flex; flex-direction: column;
     background: #e8e8ec;
 }
 .exam-preview {
-    flex: 1; overflow-y: auto; align-self: center;
-    width: 794px; min-height: 0; box-sizing: border-box;
+    flex: 1; overflow-y: auto;
+    min-height: 0; box-sizing: border-box;
+    overscroll-behavior: contain;
     padding: 50px 75px 50px;
     background: white;
     border: 1px solid #c7c7cc;
@@ -1034,7 +1042,11 @@ body.theme-taotao .cart-float.exam-cart { background: linear-gradient(135deg, #d
 /* Override old exam-preview when paginated */
 .exam-preview.paginated {
     background: transparent; padding: 0; margin: 0;
-    width: auto; min-height: 0; box-shadow: none;
+    width: 100%; min-height: 0; box-shadow: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
 }
 /* ---- Zoom Controls ---- */
 .zoom-bar {

@@ -1,116 +1,491 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>手把手教学 - 数学最强大脑</title>
-    <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>手把手教学 - 数学最强大脑</title>
+<link rel="stylesheet" href="style.css?v=20260723">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+.teach-container { max-width: 860px; margin: 0 auto; }
+.teach-input-area { margin-bottom: 24px; }
+.teach-input-area textarea { width:100%; padding:14px 18px; border:1px solid #c7c7cc; border-radius:12px; font-size:15px; font-family:inherit; resize:vertical; min-height:60px; outline:none; box-sizing:border-box; line-height:1.6; }
+.teach-input-area textarea:focus { border-color:#0071e3; }
+.teach-input-actions { display:flex; gap:12px; align-items:center; margin-top:12px; }
+.teach-btn { padding:12px 32px; border:none; border-radius:12px; font-size:15px; font-weight:600; cursor:pointer; transition:all 0.15s; color:white; }
+.teach-btn:disabled { opacity:0.5; cursor:not-allowed; }
+.teach-sm-btn { padding:6px 16px; border:1px solid #c7c7cc; border-radius:8px; font-size:13px; cursor:pointer; background:white; color:#515154; transition:all 0.15s; }
+.teach-sm-btn:hover { border-color:#0071e3; color:#0071e3; }
+.teach-loading { display:inline-flex; align-items:center; gap:8px; font-size:14px; color:#86868b; }
+.teach-spinner { width:18px; height:18px; border:2px solid #e5e5e7; border-top-color:#0071e3; border-radius:50%; animation:spin 0.8s linear infinite; display:inline-block; }
+.teach-progress { margin-bottom:24px; }
+.teach-progress-nav { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+.teach-progress-bar { height:4px; background:#e5e5e7; border-radius:2px; overflow:hidden; margin-bottom:8px; }
+.teach-progress-fill { height:100%; background:linear-gradient(90deg,#0071e3,#00a2ff); border-radius:2px; transition:width 0.3s ease; }
+.teach-progress-text { font-size:13px; color:#86868b; text-align:center; }
+.teach-card { background:white; border:1px solid #e5e5e7; border-radius:16px; overflow:hidden; margin-bottom:20px; }
+.teach-card-header { padding:16px 20px 12px; border-bottom:1px solid #f0f0f0; }
+.teach-card-title { font-size:16px; font-weight:600; color:#1d1d1f; }
+.teach-card-body { padding:20px; }
+.teach-prompt { font-size:15px; line-height:1.8; color:#1d1d1f; margin-bottom:16px; padding:16px; background:#fafafa; border-radius:12px; border-left:3px solid #ca8a04; }
+.teach-standard { font-size:15px; line-height:1.8; color:#1d1d1f; margin-bottom:16px; padding:16px; background:#f0fdf4; border-radius:12px; border-left:3px solid #2e7d32; display:none; }
+.teach-kp { font-size:13px; color:#2e7d32; padding:8px 16px; background:#f0fdf4; border-radius:8px; margin-bottom:16px; display:inline-block; }
+.teach-answer-area { margin-bottom:12px; }
+.teach-answer-label { font-size:13px; font-weight:500; color:#515154; margin-bottom:6px; }
+.teach-answer-input { width:100%; padding:12px 16px; border:2px solid #c7c7cc; border-radius:12px; font-size:15px; font-family:inherit; outline:none; box-sizing:border-box; line-height:1.5; transition:border-color 0.2s; }
+.teach-answer-input:focus { border-color:#0071e3; }
+.teach-answer-input.correct { border-color:#2e7d32; background:#f0fdf4; }
+.teach-answer-input.wrong { border-color:#c62828; background:#fff5f5; }
+.teach-actions { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:12px; }
+.teach-feedback { padding:16px 20px; border-radius:12px; margin-bottom:16px; font-size:14px; line-height:1.6; display:none; }
+.teach-feedback.show { display:block; }
+.teach-feedback.correct { background:#f0fdf4; border:1px solid #bbf7d0; color:#166534; }
+.teach-feedback.wrong { background:#fff5f5; border:1px solid #ffcdd2; color:#991b1b; }
+.teach-feedback.partial { background:#fefce8; border:1px solid #fef08a; color:#854d0e; }
+.teach-error-type { display:inline-block; padding:2px 10px; background:#c62828; color:white; border-radius:4px; font-size:12px; font-weight:500; margin-right:6px; }
+.teach-summary { display:none; }
+.teach-summary.show { display:block; }
+.teach-summary-card { background:white; border:1px solid #e5e5e7; border-radius:16px; padding:32px; text-align:center; }
+.teach-summary-icon { font-size:48px; margin-bottom:12px; }
+.teach-summary-title { font-size:22px; font-weight:700; color:#1d1d1f; margin-bottom:8px; }
+.teach-summary-sub { font-size:14px; color:#86868b; margin-bottom:24px; }
+.teach-summary-stats { display:flex; gap:16px; justify-content:center; flex-wrap:wrap; margin-bottom:24px; }
+.teach-stat { padding:16px 24px; background:#f5f5f7; border-radius:12px; min-width:100px; }
+.teach-stat-num { font-size:28px; font-weight:700; color:#1d1d1f; }
+.teach-stat-label { font-size:12px; color:#86868b; margin-top:2px; }
+@keyframes spin { to { transform:rotate(360deg); } }
+</style>
 </head>
 <body class="theme-liangliang">
-    <div class="app-layout">
-        <aside class="sidebar">
-            <a href="/" class="sidebar-logo">成为<br>数学高手</a>
-            <nav>
-                <a href="index.html" class="nav-item" data-page="solve">
-                    <span class="nav-icon">🔍</span>
-                    <span class="nav-label">单题解答</span>
-                </a>
-                <a href="teach.html" class="nav-item active" data-page="teach">
-                    <span class="nav-icon">📖</span>
-                    <span class="nav-label">老师手把手<br>教你做题</span>
-                    <span class="nav-badge">预留</span>
-                </a>
-                                <a href="exam.html" class="nav-item" data-page="exam">
-                    <span class="nav-icon">📝</span>
-                    <span class="nav-label">组卷</span>
-                    
-                </a>
-                <a href="history.html" class="nav-item" data-page="history">
-                    <span class="nav-icon">📋</span>
-                    <span class="nav-label">个人题库</span>
-                </a>
-                <a href="multimodal.html" class="nav-item" data-page="multimodal">
-                    <span class="nav-icon">📎</span>
-                    <span class="nav-label">多模态解答</span>
-                </a>
-            </nav>
-        </aside>
-        <main class="main-content">
-            <div class="container">
-                <h1>手把手教学</h1>
-                <p class="subtitle">功能开发中，敬请期待</p>
+<div class="app-layout">
+<aside class="sidebar">
+<a href="/" class="sidebar-logo">成为<br>数学高手</a>
+<nav>
+<a href="index.html" class="nav-item" data-page="solve"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
+<a href="teach.html" class="nav-item active" data-page="teach"><span class="nav-icon">📖</span><span class="nav-label">老师手把手<br>教你做题</span></a>
+<a href="exam.html" class="nav-item" data-page="exam"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
+<a href="history.html" class="nav-item" data-page="history"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+<a href="multimodal.html" class="nav-item" data-page="multimodal"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
+</nav>
+</aside>
+<main class="main-content">
+<div class="container teach-container">
+<div style="text-align:center;margin-bottom:24px;">
+<h1 style="margin-bottom:4px;">手把手教学</h1>
+<p class="subtitle" style="margin-bottom:0;">输入题目，AI 老师带你一步步解题</p>
+</div>
+<div class="teacher-selector" id="teacherSelector" style="margin-bottom:24px;">
+<button class="teacher-btn active" data-teacher="liangliang" onclick="selectTeacher(this,'liangliang')"><span class="t-icon">🫅</span><span class="t-name">梁梁</span><span class="t-desc">快速，但是可能出错</span></button>
+<button class="teacher-btn" data-teacher="taotao" onclick="selectTeacher(this,'taotao')"><span class="t-icon">🎩</span><span class="t-name">韬韬</span><span class="t-desc">更慢但更聪明</span></button>
+<button class="teacher-btn" data-teacher="xuefeng" onclick="selectTeacher(this,'xuefeng')"><span class="t-icon">🏃</span><span class="t-name">雪峰</span><span class="t-desc">嘴唇有点紫的老师</span></button>
+<button class="teacher-btn" data-teacher="ji" onclick="selectTeacher(this,'ji')"><span class="t-icon">🐔</span><span class="t-name">鸡</span><span class="t-desc">每一步都要考虑半天</span></button>
+</div>
+<div class="teach-input-area" id="teachInput">
+<textarea id="teachQuestionInput" placeholder="输入题目，支持 LaTeX 语法" rows="3"></textarea>
+<div class="teach-input-actions">
+<button class="teach-btn" id="teachStartBtn" onclick="startTeaching()" style="background:#0071e3;">开始教学</button>
+<div class="teach-loading" id="teachLoading" style="display:none;"><span class="teach-spinner"></span><span>AI 老师正在准备课程...</span></div>
+</div>
+</div>
+<div id="teachError" style="display:none;padding:16px 20px;background:#fff5f5;border:1px solid #ffcdd2;border-radius:12px;color:#991b1b;font-size:14px;margin-bottom:20px;"></div>
+<div id="teachSession" style="display:none;">
+<div class="teach-progress" id="teachProgressArea">
+<div class="teach-progress-nav">
+<button class="teach-sm-btn" id="teachPrevBtn" onclick="prevStep()">← 上一步</button>
+<button class="teach-sm-btn" id="teachSkipBtn" onclick="skipStep()">跳过此步骤 →</button>
+</div>
+<div class="teach-progress-bar"><div class="teach-progress-fill" id="teachProgressFill" style="width:0%"></div></div>
+<div class="teach-progress-text" id="teachProgressText">第 0 / 0 步</div>
+</div>
+<div class="teach-card" id="teachStepCard">
+<div class="teach-card-header">
+<div class="teach-card-title" id="teachStepTitle">步骤 1</div>
+</div>
+<div class="teach-card-body" id="teachCardBody">
+<div class="teach-prompt" id="teachPrompt"></div>
+<div class="teach-standard" id="teachStandard"></div>
+<div class="teach-kp" id="teachKp" style="display:none;"></div>
+<div class="teach-feedback" id="teachFeedback"></div>
+<div class="teach-answer-area">
+<div class="teach-answer-label">你的答案</div>
+<textarea class="teach-answer-input" id="teachAnswerInput" rows="2" placeholder="输入你的答案..." style="margin-bottom:12px;"></textarea>
+<div class="teach-actions" id="teachActions">
+<button class="teach-btn" id="teachSubmitBtn" onclick="submitAnswer()" style="background:#0071e3;">提交答案</button>
+<button class="teach-btn" id="teachNextBtn" onclick="nextStep()" style="display:none;background:#2e7d32;">看懂了，下一步 →</button>
+<button class="teach-btn" id="teachRevealBtn" onclick="revealAnswer()" style="background:#515154;">这题我不会，看答案</button>
+<button class="teach-btn" id="teachRetryBtn" onclick="retryAnswer()" style="display:none;background:#ca8a04;">重新作答</button>
+<span class="teach-loading" id="teachCheckLoading" style="display:none;"><span class="teach-spinner"></span><span>AI 正在批改...</span></span>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="teach-summary" id="teachSummary">
+<div class="teach-summary-card">
+<div class="teach-summary-icon">🎉</div>
+<div class="teach-summary-title">完成！</div>
+<div class="teach-summary-sub">你已经完成了所有步骤的练习</div>
+<div class="teach-summary-stats">
+<div class="teach-stat"><div class="teach-stat-num" id="summaryCorrect">0</div><div class="teach-stat-label">答对</div></div>
+<div class="teach-stat"><div class="teach-stat-num" id="summaryWrong">0</div><div class="teach-stat-label">答错</div></div>
+<div class="teach-stat"><div class="teach-stat-num" id="summarySkipped">0</div><div class="teach-stat-label">跳过</div></div>
+</div>
+<div id="teachSavedStatus" style="font-size:13px;color:#2e7d32;margin-bottom:12px;display:none;">✅ 已加入个人题库</div>
+</div>
+<div style="margin-top:24px;">
+<h3 style="font-size:16px;color:#1d1d1f;margin-bottom:12px;">完整解析</h3>
+<div id="teachFullSolution"></div>
+</div>
+<div style="margin-top:24px;">
+<h3 style="font-size:16px;color:#1d1d1f;margin-bottom:12px;">作答记录</h3>
+<div id="teachResultList"></div>
+</div>
+<div style="text-align:center;margin-top:20px;">
+<button class="teach-btn" onclick="resetAll()" style="background:#515154;padding:10px 28px;">再做一道</button>
+</div>
+</div>
+</div>
+</main>
+</div>
+<script>
+var _selectedTeacher = localStorage.getItem('teacher') || 'liangliang';
+var teacherNames = { liangliang:'梁梁', taotao:'韬韬', xuefeng:'雪峰', ji:'鸡' };
+var _session = null;
+var _stats = { correct:0, wrong:0, skipped:0 };
+var _stepState = { attempts:[], showedAnswer:false };
+var SAVE_KEY = '_teach_session';
 
-                <div class="teacher-selector">
-                    <button class="teacher-btn active" data-teacher="liangliang" onclick="selectTeacher(this,'liangliang')">
-                        <span class="t-icon">🫅</span>
-                        <span class="t-name">梁梁</span>
-                        <span class="t-desc">快速，但是可能出错</span>
-                    </button>
-                    <button class="teacher-btn" data-teacher="taotao" onclick="selectTeacher(this,'taotao')">
-                        <span class="t-icon">🎩</span>
-                        <span class="t-name">韬韬</span>
-                        <span class="t-desc">更慢但更聪明</span>
-                    </button>
-                    <button class="teacher-btn" data-teacher="xuefeng" onclick="selectTeacher(this,'xuefeng')">
-                        <span class="t-icon">🏃</span>
-                        <span class="t-name">雪峰</span>
-                        <span class="t-desc">嘴唇有点紫<br>的老师</span>
-                    </button>
-                    <button class="teacher-btn" data-teacher="ji" onclick="selectTeacher(this,'ji')">
-                        <span class="t-icon">🐔</span>
-                        <span class="t-name">鸡</span>
-                        <span class="t-desc">每一步都要<br>考虑半天</span>
-                    </button>
-                </div>
-
-                <div class="placeholder-card">
-                    <div class="placeholder-icon">📖</div>
-                    <h2>即将上线</h2>
-                    <p>将支持分步骤互动教学，每一步让你选择答案，AI 即时判断对错并给出错因分析</p>
-                    <div class="placeholder-features">
-                        <div class="pf-item">✓ 选择题模式，点击即反馈</div>
-                        <div class="pf-item">✓ "我不是这么做的" 自由输入</div>
-                        <div class="pf-item">✓ 错因分类与沉淀</div>
-                    </div>
-                </div>
-            </div>
-        </main>
-    </div>
-
-    <script>
-        var _selectedTeacher = "liangliang";
-        var teacherNames = { liangliang: '梁梁', taotao: '韬韬', xuefeng: '雪峰', ji: '鸡' };
-
-        function selectTeacher(btn, teacher) {
-            document.querySelectorAll(".teacher-btn").forEach(function(b) { b.classList.remove("active"); });
-            btn.classList.add("active");
-            _selectedTeacher = teacher;
-            document.body.classList.remove('theme-xuefeng', 'theme-liangliang', 'theme-taotao', 'theme-ji');
-            if (teacher === 'xuefeng') {
-                document.body.classList.add('theme-xuefeng');
-            } else if (teacher === 'liangliang') {
-                document.body.classList.add('theme-liangliang');
-            } else if (teacher === 'taotao') {
-                document.body.classList.add('theme-taotao');
-            } else if (teacher === 'ji') {
-                document.body.classList.add('theme-ji');
-            }
-            localStorage.setItem('teacher', teacher);
-        }
-
-        // Restore teacher on load
-        document.addEventListener('DOMContentLoaded', function() {
-            var savedTeacher = localStorage.getItem('teacher');
-            if (savedTeacher) {
-                var btn = document.querySelector('[data-teacher="'+savedTeacher+'"]');
-                if (btn) selectTeacher(btn, savedTeacher);
-            }
-        });
-    
-function safeParseKps(kps){
-    if(Array.isArray(kps)) return kps;
-    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
+function selectTeacher(btn, teacher) {
+  document.querySelectorAll('.teacher-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  _selectedTeacher = teacher;
+  document.body.className = document.body.className.replace(/theme-\w+/g,'');
+  var tm = { xuefeng:'theme-xuefeng', liangliang:'theme-liangliang', taotao:'theme-taotao', ji:'theme-ji' };
+  if (tm[teacher]) document.body.classList.add(tm[teacher]);
+  localStorage.setItem('teacher', teacher);
 }
+
+function saveSession() {
+  try {
+    var data = { session: _session, stats: _stats, question: document.getElementById('teachQuestionInput').value };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+  } catch(e) {}
+}
+function clearSavedSession() { localStorage.removeItem(SAVE_KEY); }
+
+document.addEventListener('DOMContentLoaded', function() {
+  var st = localStorage.getItem('teacher');
+  if (st) { var btn = document.querySelector('[data-teacher="'+st+'"]'); if (btn) selectTeacher(btn, st); }
+  var q = localStorage.getItem('_teach_question');
+  if (q) {
+    localStorage.removeItem('_teach_question');
+    document.getElementById('teachQuestionInput').value = q;
+    setTimeout(function(){ startTeaching(); }, 300);
+    return;
+  }
+  try {
+    var saved = localStorage.getItem(SAVE_KEY);
+    if (saved) {
+      var data = JSON.parse(saved);
+      if (data && data.session && data.session.steps && data.session.steps.length > 0) {
+        _session = data.session; _stats = data.stats || { correct:0, wrong:0, skipped:0 };
+        document.getElementById('teachQuestionInput').value = data.question || '';
+        document.getElementById('teachSession').style.display = 'block';
+        document.getElementById('teachInput').style.display = 'none';
+        document.getElementById('teacherSelector').style.display = 'none';
+        document.getElementById('teachError').style.display = 'none';
+        if (_session.currentStep >= _session.steps.length) { showSummary(); }
+        else { showStep(_session.currentStep); }
+      }
+    }
+  } catch(e) {}
+});
+
+function escapeHtml(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function renderMath(el) { if (window.renderMathInElement) { try { renderMathInElement(el,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}],ignoredTags:[]}); } catch(e){} } }
+
+async function startTeaching() {
+  var q = document.getElementById('teachQuestionInput').value.trim();
+  if (!q) { showError('请输入题目'); return; }
+  document.getElementById('teachStartBtn').disabled = true;
+  document.getElementById('teachLoading').style.display = 'inline-flex';
+  document.getElementById('teachError').style.display = 'none';
+  document.getElementById('teachSummary').classList.remove('show');
+  document.getElementById('teachSession').style.display = 'none';
+  clearSavedSession();
+  try {
+    var fr = await fetch('http://127.0.0.1:8000/teach/find', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:q, teacher:_selectedTeacher}) });
+    var fd = await fr.json();
+    var data;
+    if (fd.found) { data = fd; }
+    else {
+      var r = await fetch('http://127.0.0.1:8000/teach/start', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:q, teacher:_selectedTeacher}) });
+      data = await r.json();
+    }
+    if (data.error) { showError(data.detail||data.status||'无法解答'); document.getElementById('teachStartBtn').disabled = false; document.getElementById('teachLoading').style.display = 'none'; return; }
+    if (!data.steps || data.steps.length === 0) { showError('未能生成教学步骤'); document.getElementById('teachStartBtn').disabled = false; document.getElementById('teachLoading').style.display = 'none'; return; }
+    _session = { steps: data.steps, chunk_results: data.chunk_results || [], currentStep: 0, results: [] };
+    _stats = { correct:0, wrong:0, skipped:0 };
+    document.getElementById('teachSession').style.display = 'block';
+    document.getElementById('teachInput').style.display = 'none';
+    document.getElementById('teacherSelector').style.display = 'none';
+    document.getElementById('teachStartBtn').disabled = false;
+    document.getElementById('teachLoading').style.display = 'none';
+    showStep(0);
+    saveSession();
+  } catch(e) { showError('网络错误，请确认后端已启动'); document.getElementById('teachStartBtn').disabled = false; document.getElementById('teachLoading').style.display = 'none'; }
+}
+
+function resetStepUI() {
+  var ai = document.getElementById('teachAnswerInput');
+  ai.value = ''; ai.className = 'teach-answer-input'; ai.disabled = false;
+  document.getElementById('teachFeedback').className = 'teach-feedback'; document.getElementById('teachFeedback').style.display = 'none';
+  document.getElementById('teachSubmitBtn').style.display = 'inline-flex'; document.getElementById('teachSubmitBtn').disabled = false;
+  document.getElementById('teachNextBtn').style.display = 'none';
+  document.getElementById('teachRevealBtn').style.display = 'none';
+  document.getElementById('teachRetryBtn').style.display = 'none';
+  document.getElementById('teachCheckLoading').style.display = 'none';
+  document.getElementById('teachStandard').style.display = 'none';
+  document.getElementById('teachStandard').innerHTML = '';
+}
+
+function toggleDetail(el) {
+  var d = el.nextElementSibling;
+  if (!d) return;
+  if (d.style.display === 'none' || d.style.display === '') {
+    d.style.display = 'block';
+    el.textContent = '收起详细过程 ▾';
+    if (window.renderMathInElement) {
+      try { renderMathInElement(d,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],ignoredTags:[]}); } catch(e) {}
+    }
+  } else {
+    d.style.display = 'none';
+    el.textContent = '展开详细过程 ▸';
+  }
+}
+
+function showStandardWriting(step) {
+  var el = document.getElementById('teachStandard');
+  var std = step.standard_writing || '';
+  var det = step.detailed_writing || '';
+  var txt = '<strong>标准过程：</strong><br>' + escapeHtml(std);
+  if (det && det !== std) {
+    txt += '<br><br><div class="detail-toggle" onclick="toggleDetail(this)" style="cursor:pointer;color:#0071e3;font-size:13px;user-select:none;padding:4px 0;">展开详细过程 ▸</div>';
+    txt += '<div class="detail-content" style="display:none;font-size:14px;line-height:1.7;padding:12px;background:#fafafa;border-radius:8px;margin-top:8px;">' + escapeHtml(det) + '</div>';
+  }
+  el.innerHTML = txt;
+  el.style.display = 'block';
+  renderMath(el);
+}
+
+function showStep(idx) {
+  if (!_session || idx >= _session.steps.length) { showSummary(); return; }
+  _session.currentStep = idx;
+  var step = _session.steps[idx];
+  var total = _session.steps.length;
+  var pct = (idx / total) * 100;
+  document.getElementById('teachProgressFill').style.width = pct + '%';
+  document.getElementById('teachProgressText').textContent = '第 '+(idx+1)+' / '+total+' 步';
+  document.getElementById('teachPrevBtn').style.display = (idx > 0) ? 'inline-block' : 'none';
+  document.getElementById('teachSkipBtn').textContent = '跳过此步骤 →';
+  var titleText = '步骤 '+(idx+1);
+  if (step.title && step.title !== '最终答案') titleText += '：'+step.title;
+  else if (step.title === '最终答案') titleText = '最终答案';
+  document.getElementById('teachStepTitle').textContent = titleText;
+  var promptEl = document.getElementById('teachPrompt');
+  promptEl.innerHTML = escapeHtml(step.step_prompt || '请完成这一步');
+  renderMath(promptEl);
+  var kpEl = document.getElementById('teachKp');
+  if (step.knowledge_point) { kpEl.textContent = '知识点：'+step.knowledge_point; kpEl.style.display = 'inline-block'; }
+  else { kpEl.style.display = 'none'; }
+  resetStepUI();
+  document.getElementById('teachRevealBtn').style.display = 'inline-flex';
+  _stepState = { attempts: [], showedAnswer: false, everWrong: false, errorType: null, errorDetail: null };
+  document.getElementById('teachStepCard').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+function skipStep() {
+  if (!_session) return;
+  var step = _session.steps[_session.currentStep];
+  _stats.skipped++;
+  _session.results.push({ step_index:_session.currentStep, user_attempts:['(跳过)'], final_is_correct:true, ever_wrong:false, showed_answer:false, error_type:null, error_detail:null, feedback:'已跳过' });
+  saveSession();
+  showStep(_session.currentStep + 1);
+}
+
+function prevStep() {
+  if (!_session || _session.currentStep <= 0) return;
+  showStep(_session.currentStep - 1);
+}
+
+async function submitAnswer() {
+  var ai = document.getElementById('teachAnswerInput');
+  var ua = ai.value.trim();
+  if (!ua) return;
+  if (!_session) return;
+  var step = _session.steps[_session.currentStep];
+  document.getElementById('teachSubmitBtn').disabled = true;
+  document.getElementById('teachCheckLoading').style.display = 'inline-flex';
+  try {
+    var r = await fetch('http://127.0.0.1:8000/teach/check', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question:document.getElementById('teachQuestionInput').value.trim(),step_prompt:step.step_prompt||'',step_answer:step.step_answer||'',user_answer:ua,teacher:_selectedTeacher})});
+    var data = await r.json();
+    document.getElementById('teachCheckLoading').style.display = 'none';
+    var fb = document.getElementById('teachFeedback');
+    _stepState.attempts.push(ua);
+    if (data.is_correct) {
+      fb.className = 'teach-feedback show correct';
+      fb.innerHTML = '✅ '+escapeHtml(data.feedback||'完全正确！');
+      ai.className = 'teach-answer-input correct'; ai.disabled = true;
+      showStandardWriting(step);
+      document.getElementById('teachSubmitBtn').style.display = 'none';
+      document.getElementById('teachRevealBtn').style.display = 'none';
+      document.getElementById('teachNextBtn').style.display = 'inline-flex';
+      if (!_stepState.everWrong) _stats.correct++; else _stats.wrong++;
+    } else if (data.is_partial) {
+      _stepState.everWrong = true;
+      if (!_stepState.errorType) _stepState.errorType = data.error_type;
+      if (!_stepState.errorDetail) _stepState.errorDetail = data.error_detail;
+      fb.className = 'teach-feedback show partial';
+      fb.innerHTML = '⚠️ '+escapeHtml(data.feedback||'部分正确');
+      document.getElementById('teachSubmitBtn').disabled = false; document.getElementById('teachSubmitBtn').style.display = 'inline-flex';
+      document.getElementById('teachRevealBtn').style.display = 'inline-flex';
+      _stats.wrong++;
+    } else {
+      _stepState.everWrong = true;
+      _stepState.errorType = data.error_type;
+      _stepState.errorDetail = data.error_detail;
+      var et = data.error_type ? '<span class="teach-error-type">'+escapeHtml(data.error_type)+'</span>' : '';
+      fb.className = 'teach-feedback show wrong';
+      fb.innerHTML = '❌ '+et+escapeHtml(data.feedback||'再想想');
+      ai.className = 'teach-answer-input wrong';
+      document.getElementById('teachSubmitBtn').disabled = false; document.getElementById('teachSubmitBtn').style.display = 'inline-flex';
+      document.getElementById('teachRevealBtn').style.display = 'inline-flex';
+      _stats.wrong++;
+    }
+    _session.results.push({ step_index:_session.currentStep, user_attempts:[ua], final_is_correct:data.is_correct, ever_wrong:_stepState.everWrong, showed_answer:false, error_type:_stepState.errorType, error_detail:_stepState.errorDetail, feedback:data.feedback });
+    saveSession();
+  } catch(e) { document.getElementById('teachCheckLoading').style.display = 'none'; document.getElementById('teachSubmitBtn').disabled = false; showError('检查失败，请重试'); }
+}
+
+function revealAnswer() {
+  if (!_session) return;
+  var step = _session.steps[_session.currentStep];
+  _stepState.showedAnswer = true; _stepState.everWrong = true;
+  var ai = document.getElementById('teachAnswerInput');
+  ai.value = ''; ai.className = 'teach-answer-input correct'; ai.disabled = true;
+  var fb = document.getElementById('teachFeedback');
+  showStandardWriting(step);
+  fb.className = 'teach-feedback show correct';
+  fb.innerHTML = '📖 正确答案已展示。仔细阅读，看懂后点击下方按钮收起重新做。';
+  document.getElementById('teachSubmitBtn').style.display = 'none';
+  document.getElementById('teachRevealBtn').style.display = 'none';
+  document.getElementById('teachNextBtn').style.display = 'none';
+  document.getElementById('teachRetryBtn').style.display = 'inline-flex';
+  document.getElementById('teachRetryBtn').textContent = '看懂了，我要重新做';
+  _stats.skipped++;
+  _session.results.push({ step_index:_session.currentStep, user_attempts:['(跳过)'], final_is_correct:false, ever_wrong:true, showed_answer:true, error_type:_stepState.errorType, error_detail:_stepState.errorDetail, feedback:'看过答案' });
+  saveSession();
+}
+
+function retryAnswer() {
+  var ai = document.getElementById('teachAnswerInput');
+  ai.value = ''; ai.className = 'teach-answer-input'; ai.disabled = false;
+  ai.placeholder = '重新做一遍，试试你能做对吗';
+  document.getElementById('teachFeedback').className = 'teach-feedback'; document.getElementById('teachFeedback').style.display = 'none';
+  document.getElementById('teachStandard').style.display = 'none';
+  document.getElementById('teachSubmitBtn').style.display = 'inline-flex'; document.getElementById('teachSubmitBtn').disabled = false;
+  document.getElementById('teachRevealBtn').style.display = 'none';
+  document.getElementById('teachNextBtn').style.display = 'none';
+  document.getElementById('teachRetryBtn').style.display = 'none';
+  saveSession();
+}
+
+function nextStep() { if (!_session) return; showStep(_session.currentStep+1); saveSession(); }
+
+function showSummary() {
+  document.getElementById('teachSession').style.display = 'none';
+  document.getElementById('teachSummary').classList.add('show');
+  document.getElementById('summaryCorrect').textContent = _stats.correct;
+  document.getElementById('summaryWrong').textContent = _stats.wrong;
+  document.getElementById('summarySkipped').textContent = _stats.skipped;
+  renderFullSolution(); renderResultList(); autoSaveToBank(); saveSession();
+}
+
+function renderFullSolution() {
+  if (!_session||!_session.chunk_results) return;
+  var c = document.getElementById('teachFullSolution'); var h = '';
+  for (var ci=0; ci<_session.chunk_results.length; ci++) {
+    var cr = _session.chunk_results[ci];
+    if (cr.steps) {
+      for (var si=0; si<cr.steps.length; si++) {
+        var st = cr.steps[si];
+        h += '<div class="teach-card" style="margin-bottom:12px;"><div class="teach-card-body" style="padding:16px 20px;">';
+        h += '<div style="font-size:13px;color:#86868b;margin-bottom:6px;">步骤 '+st.step_number+'：'+escapeHtml(st.title||"")+'</div>';
+        h += '<div style="font-size:15px;line-height:1.7;padding:12px;background:#fafafa;border-radius:8px;border-left:3px solid #0071e3;">'+escapeHtml(st.standard_writing||st.detailed_writing||"")+'</div>';
+        if (st.knowledge_point) h += '<div style="font-size:13px;color:#2e7d32;margin-top:8px;">知识点：'+escapeHtml(st.knowledge_point)+'</div>';
+        h += '</div></div>';
+      }
+    }
+    if (cr.final_answer) {
+      h += '<div class="teach-card" style="margin-bottom:12px;border-left:3px solid #2e7d32;"><div class="teach-card-body" style="padding:16px 20px;">';
+      h += '<div style="font-size:13px;color:#2e7d32;font-weight:600;margin-bottom:4px;">最终答案</div>';
+      h += '<div style="font-size:15px;line-height:1.7;">'+escapeHtml(cr.final_answer)+'</div></div></div>';
+    }
+  }
+  c.innerHTML = h; renderMath(c);
+}
+
+function renderResultList() {
+  if (!_session||!_session.results) return;
+  var c = document.getElementById('teachResultList'); var h = '';
+  for (var ri=0; ri<_session.results.length; ri++) {
+    var res = _session.results[ri]; var step = _session.steps[res.step_index];
+    if (!step) continue;
+    var icon = res.final_is_correct ? '✅' : (res.showed_answer?'📖':'❌');
+    var label = res.final_is_correct ? '答对' : (res.showed_answer?'看答案':'答错');
+    h += '<div class="teach-card" style="margin-bottom:10px;"><div class="teach-card-body" style="padding:12px 16px;">';
+    h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;"><span>'+icon+'</span><span style="font-size:13px;font-weight:500;">步骤 '+(res.step_index+1)+'：'+escapeHtml(step.title||"")+'</span><span style="font-size:11px;color:#86868b;">['+label+']</span>';
+    if (res.error_type&&!res.final_is_correct&&!res.showed_answer) h += '<span class="teach-error-type" style="font-size:11px;">'+escapeHtml(res.error_type)+'</span>';
+    h += '</div>';
+    if (res.user_attempts&&res.user_attempts[0]!=='(跳过)') h += '<div style="font-size:14px;color:#515154;">你的答案：'+escapeHtml(String(res.user_attempts[0]||"").substring(0,200))+'</div>';
+    h += '</div></div>';
+  }
+  c.innerHTML = h;
+}
+
+function autoSaveToBank() {
+  var q = document.getElementById('teachQuestionInput').value.trim();
+  if (!q||!_session) return;
+  var aj = { chunk_results:_session.chunk_results||[], overall_difficulty:_session.overall_difficulty||{}, knowledge_points:[], final_answer:'' };
+  for (var ci=0; ci<_session.chunk_results.length; ci++) {
+    var cr = _session.chunk_results[ci];
+    if (cr.final_answer) aj.final_answer += (aj.final_answer?' | ':'')+cr.final_answer;
+    (cr.knowledge_points||[]).forEach(function(kp){if(aj.knowledge_points.indexOf(kp)<0)aj.knowledge_points.push(kp);});
+  }
+  fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q,answer_json:aj})})
+  .then(function(r){return r.json()})
+  .then(function(data){
+    if(!data.id)return;
+    document.getElementById('teachSavedStatus').style.display='block';
+    (_session.results||[]).forEach(function(res){
+      if(res.ever_wrong&&res.error_type&&res.error_type!=='null'&&res.showed_answer!==true&&res.final_is_correct!==true&&res.user_attempts[0]!=='(跳过)'){
+        var step=_session.steps[res.step_index];
+        if(step){fetch('http://127.0.0.1:8000/questions/'+data.id+'/step-error',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step_number:step.step_number||(res.step_index+1),chunk_id:step.chunk_id||1,mistake_type:res.error_type||'其他',mistake_detail:res.error_detail||''})}).catch(function(){});}
+      }
+    });
+  }).catch(function(){});
+}
+
+function resetAll() {
+  _session=null; _stats={correct:0,wrong:0,skipped:0}; clearSavedSession();
+  document.getElementById('teachInput').style.display='block'; document.getElementById('teacherSelector').style.display='';
+  document.getElementById('teachSession').style.display='none'; document.getElementById('teachSummary').classList.remove('show');
+  document.getElementById('teachError').style.display='none'; document.getElementById('teachQuestionInput').value='';
+}
+
+function showError(msg){var el=document.getElementById('teachError');el.textContent=msg;el.style.display='block';}
 </script>
 </body>
 </html>

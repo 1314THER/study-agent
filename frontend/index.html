@@ -7,6 +7,10 @@
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js">
+function teachOpen(btn) {
+    var q = btn.getAttribute('data-question');
+    if (q) { localStorage.setItem('_teach_question', q); window.open('teach.html', '_blank'); }
+}
 function safeParseKps(kps){
     if(Array.isArray(kps)) return kps;
     try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
@@ -200,6 +204,10 @@ var _selectedTeacher = "liangliang";
                 html += '<span class="tag" style="background:#fce4ec;color:#c62828;">武亮难度系数：' + data.step_difficulty_sum + '</span>';
             }
             html += '</div>';
+
+            // Teach button
+            html += '<div style="text-align:center;margin-bottom:16px;">';
+            html += '<button onclick="localStorage.setItem('_teach_question',document.getElementById('questionInput').value||'');window.open('teach.html','_blank');" style="padding:8px 20px;background:#ca8a04;color:white;border:none;border-radius:10px;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">📖 手把手教学</button></div>';
 
             // 雷达图容器
             html += '<div id="radarChart" style="display:flex;justify-content:center;margin-bottom:16px;"></div>';

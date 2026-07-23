@@ -345,21 +345,60 @@ _CATEGORY_TO_PROMPT_FILE = {
 }
 
 
+def _make_kp_list() -> str:
+    """生成所有三级知识点的平铺列表"""
+    import yaml
+    kp_path = os.path.join(os.path.dirname(__file__), "categories.yaml")
+    try:
+        with open(kp_path, encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+    except:
+        return ""
+    all_l3 = []
+    for l1, l2_dict in data.items():
+        for l2_name, l3_list in l2_dict.items():
+            all_l3.extend(l3_list)
+    lines = []
+    group = []
+    for item in all_l3:
+        group.append(item)
+        if len(group) >= 6:
+            lines.append("\u3001".join(group))
+            group = []
+    if group:
+        lines.append("\u3001".join(group))
+    kp_text = "\n".join(lines)
+    return (
+        "\n\n## \u77e5\u8bc6\u70b9\u5206\u7c7b\n\n"
+        "\u77e5\u8bc6\u70b9 **\u53ea\u80fd** \u4ece\u4ee5\u4e0b\u5217\u8868\u4e2d\u9009\u53d6\uff0c\u4e0d\u8981\u81ea\u5df1\u521b\u9020\uff1a\n\n"
+        + kp_text
+        + "\n\n\u6bcf\u4e2a\u6b65\u9aa4\u6807\u6ce8 **1-3 \u4e2a** \u6700\u76f8\u5173\u7684\u77e5\u8bc6\u70b9\u5373\u53ef\u3002"
+    )
+
+
+
 def _load_verifier_prompt(category: str) -> str:
-    """加载对应板块的 Verifier prompt（知识点列表已硬编码在 .md 文件中）"""
+    """加载对应板块的 Verifier prompt，动态追加三级知识点列表"""
     file_name = _CATEGORY_TO_PROMPT_FILE.get(category, category)
     path = os.path.join(PROMPTS_DIR, "verifiers", f"{file_name}.md")
     if not os.path.exists(path):
         fallback = os.path.join(PROMPTS_DIR, "verifiers", "简单的非标准题目.md")
         if os.path.exists(fallback):
             with open(fallback, encoding="utf-8") as f:
-                return f.read().strip()
+                return f.read().strip() + "\n\n" + _make_kp_list()
         raise FileNotFoundError(f"找不到板块对应的 verifier: {category}")
     with open(path, encoding="utf-8") as f:
         prompt = f.read().strip()
-    if "## 知识点分类" not in prompt:
-        # 极少数兜底情况，追加简短提示
-        prompt += "\n\n## 知识点分类\n\n知识点可以选自任意板块。"
+    # 去掉硬编码的旧知识点段落
+    while "## 知识点分类" in prompt:
+        idx = prompt.find("## 知识点分类")
+        rest = prompt[idx + len("## 知识点分类"):]
+        next_sec = rest.find("\n## ")
+        if next_sec >= 0:
+            prompt = prompt[:idx] + rest[next_sec:]
+        else:
+            prompt = prompt[:idx].rstrip()
+    prompt += "\n\n" + _make_kp_list()
     return prompt
 
 

@@ -193,14 +193,41 @@ def _sanitize_difficulty(diff) -> tuple:
     return level, score, json.dumps(dims, ensure_ascii=False)
 
 
+def _build_l3_to_l2_map() -> dict:
+    """构建三级→二级知识点映射"""
+    import yaml
+    path = os.path.join(os.path.dirname(__file__), "categories.yaml")
+    result = {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+        for l1, l2_dict in data.items():
+            for l2_name, l3_list in l2_dict.items():
+                for l3 in l3_list:
+                    result[l3] = l2_name
+    except:
+        pass
+    return result
+
+
 def _sanitize_knowledge_points(level1: str, points: list) -> list:
-    """知识点不按板块限制，所有板块的子板块名均有效"""
+    """AI 输出的三级知识点 -> 映射为二级知识点"""
     if not points:
         return []
+    l3_map = _build_l3_to_l2_map()
     all_valid = set()
     for subs in CATEGORIES.values():
         all_valid.update(subs)
-    return [p for p in points if p in all_valid]
+    result = []
+    for p in points:
+        if p in l3_map:
+            l2 = l3_map[p]
+            if l2 not in result:
+                result.append(l2)
+        elif p in all_valid:
+            if p not in result:
+                result.append(p)
+    return result
 
 
 def save_question(question_text: str, answer_dict: dict):

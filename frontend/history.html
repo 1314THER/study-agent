@@ -6,13 +6,13 @@
     <title>个人题库 - 数学最强大脑</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js">
-function safeParseKps(kps){
-    if(Array.isArray(kps)) return kps;
-    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
-}
-</script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js">
+function teachOpen(btn) {
+    var q = btn.getAttribute('data-question');
+    if (q) { localStorage.setItem('_teach_question', q); window.open('teach.html', '_blank'); }
+}
+function teachOpenBtn(q) { if (q) { localStorage.setItem('_teach_question', q); window.open('teach.html', '_blank'); } }
 function safeParseKps(kps){
     if(Array.isArray(kps)) return kps;
     try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
@@ -402,6 +402,7 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
                 html += '<span class="hc-date">' + dateStr + '</span>';
                 html += '<button class="delete-btn" onclick="event.stopPropagation();confirmDelete(' + q.id + ')" title="\u5220\u9664\u6b64\u9898">\ud83d\uddd1</button>';
                 html += '<button class="exam-add-btn" onclick="event.stopPropagation();addToExam(' + q.id + ')" title="\u52a0\u5165\u7ec4\u5377">\ud83d\udccb</button>';
+                html += '<button class="exam-add-btn" onclick="event.stopPropagation();teachOpenBtn(\'' + escapeHtml(q.content||'').replace(/'/g,"\\'") + '\')" title="\u624b\u628a\u624b\u6559\u5b66">\ud83d\udcd6</button>';
                 html += '</div></div>';
             }
             listEl.innerHTML = html;
@@ -541,6 +542,14 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
                 html += '<span class="tag" style="background:#fce4ec;color:#c62828;">\u6b66\u4eae\u96be\u5ea6\u7cfb\u6570\uff1a' + data.step_difficulty_sum + '</span>';
             }
             html += '</div>';
+
+            // Add teach button
+            var qText = data.content || '';
+            if (qText) {
+                html += '<div style="text-align:center;margin-bottom:16px;">';
+                html += '<button class="teach-open-btn" onclick="teachOpen(this)" data-question="' + escapeHtml(qText).replace(/"/g, '&quot;') + '" style="padding:8px 20px;background:#ca8a04;color:white;border:none;border-radius:10px;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">';
+                html += '📖 手把手教学</button></div>';
+            }
 
             html += '<div id="detailRadarChart" style="display:flex;justify-content:center;margin-bottom:16px;"></div>';
 
@@ -1114,6 +1123,12 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
             }, 100);
         });
 
+function teachOpen(btn) {
+    var q = btn.getAttribute('data-question');
+    if (q) { localStorage.setItem('_teach_question', q); window.open('teach.html', '_blank'); }
+}
+
+function teachOpenBtn(q) { if (q) { localStorage.setItem('_teach_question', q); window.open('teach.html', '_blank'); } }
 function safeParseKps(kps){
     if(Array.isArray(kps)) return kps;
     try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
