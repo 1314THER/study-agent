@@ -21,7 +21,13 @@
 .teach-sm-btn { padding:6px 16px; border:1px solid #c7c7cc; border-radius:8px; font-size:13px; cursor:pointer; background:white; color:#515154; transition:all 0.15s; }
 .teach-sm-btn:hover { border-color:#0071e3; color:#0071e3; }
 .teach-loading { display:inline-flex; align-items:center; gap:8px; font-size:14px; color:#86868b; }
-.teach-spinner { width:18px; height:18px; border:2px solid #e5e5e7; border-top-color:#0071e3; border-radius:50%; animation:spin 0.8s linear infinite; display:inline-block; }
+.teach-spinner { display: none; }
+.typing-dots { display: inline-flex; align-items: center; gap: 4px; }
+.typing-dots span { width: 8px; height: 8px; background: #86868b; border-radius: 50%; animation: typingBounce 1.4s ease-in-out infinite; }
+.typing-dots span:nth-child(1) { animation-delay: 0s; }
+.typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+.typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes typingBounce { 0%,60%,100% { transform: translateY(0); background: #c7c7cc; } 30% { transform: translateY(-6px); background: #86868b; } }
 .teach-error { display:none; padding:12px 16px; background:#fff5f5; border:1px solid #ffcdd2; border-radius:12px; color:#991b1b; font-size:14px; margin-bottom:12px; }
 .teach-progress { margin-bottom: 12px; flex-shrink: 0; }
 .teach-progress-text { font-size: 13px; color: #86868b; text-align: center; margin-bottom: 4px; }
@@ -39,6 +45,20 @@
 .chat-bubble { padding: 12px 16px; border-radius: 16px; font-size: 15px; line-height: 1.7; word-break: break-word; }
 .chat-msg.teacher .chat-bubble { background: #f5f5f7; border-bottom-left-radius: 4px; color: #1d1d1f; }
 .chat-msg.student .chat-bubble { background: #0071e3; border-bottom-right-radius: 4px; color: white; }
+.chat-bubble.typing-bubble { background: #f5f5f7; padding: 14px 20px; min-height: 20px; min-width: 30px; display: flex; align-items: center; justify-content: center; }
+.chat-msg { display: flex; gap: 10px; max-width: 85%; animation: fadeIn 0.25s ease; margin-bottom: 2px; }
+.chat-msg.teacher { align-self: flex-start; }
+.chat-msg.student { align-self: flex-end; flex-direction: row-reverse; }
+.chat-avatar { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; background: #e8f0fe; margin-top: 4px; }
+.chat-msg.student .chat-avatar { background: #f0f4f8; }
+.chat-bubble { padding: 10px 16px; border-radius: 18px; font-size: 15px; line-height: 1.6; word-break: break-word; box-shadow: 0 1px 2px rgba(0,0,0,0.06); }
+.chat-msg.teacher .chat-bubble { background: #f0f0f0; border-bottom-left-radius: 4px; color: #1d1d1f; }
+.chat-msg.student .chat-bubble { background: #0071e3; border-bottom-right-radius: 4px; color: white; }
+.chat-msg.teacher:first-child .chat-bubble { border-bottom-left-radius: 18px; }
+.chat-msg.teacher:last-child .chat-bubble { border-bottom-left-radius: 4px; }
+.chat-msg.system .chat-avatar { background: #f0f0f0; }
+.chat-msg.system .chat-bubble { background: transparent; color: #86868b; font-size: 12px; font-style: italic; box-shadow: none; padding: 4px 0; }
+.chat-bubble .error-tag { display: inline-block; padding: 1px 8px; background: #c62828; color: white; border-radius: 4px; font-size: 12px; font-weight: 500; margin-right: 6px; }
 .chat-bubble .error-tag { display: inline-block; padding: 1px 8px; background: #c62828; color: white; border-radius: 4px; font-size: 12px; font-weight: 500; margin-right: 6px; }
 .teach-bottom { flex-shrink: 0; border-top: 1px solid #e5e5e7; padding-top: 12px; padding-bottom: 8px; }
 .teach-bottom-inner { display: flex; gap: 10px; align-items: flex-end; }
@@ -88,7 +108,6 @@
 .chat-msg.system .chat-avatar { background: #f0f0f0; }
 .chat-msg.system .chat-bubble { background: #f0f0f0; border-bottom-left-radius: 4px; color: #86868b; font-size: 13px; font-style: italic; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-@keyframes spin { to { transform:rotate(360deg); } }
 </style>
 </head>
 <body class="theme-liangliang">
@@ -119,7 +138,7 @@
 <textarea id="teachQuestionInput" placeholder="输入题目，支持 LaTeX 语法" rows="3"></textarea>
 <div class="teach-input-actions">
 <button class="teach-btn" id="teachStartBtn" onclick="startTeaching()" style="background:#0071e3;">开始教学</button>
-      <div class="teach-loading" id="teachLoading" style="display:none;"><span class="teach-spinner"></span><span>AI 老师正在准备课程...</span></div>
+      <div class="teach-loading" id="teachLoading" style="display:none;"><span class="typing-dots"><span></span><span></span><span></span></span><span>AI 老师正在准备课程...</span></div>
       </div>
     </div>
     <div class="teach-error" id="teachError" style="display:none;padding:12px 16px;background:#fff5f5;border:1px solid #ffcdd2;border-radius:12px;color:#991b1b;font-size:14px;margin-bottom:12px;"></div>
@@ -242,7 +261,7 @@ function addChatMessage(role,content,meta){
   var tx=document.createElement("span");tx.innerHTML=escapeHtml(content).replace(/\n/g,"<br>");b.appendChild(tx);
   div.appendChild(av);div.appendChild(b);chat.appendChild(div);renderMath(b);scrollChat();
 }
-function addLoadingMessage(){var c=document.getElementById("teachChat");var d=document.createElement("div");d.className="chat-msg teacher";d.id="chatLoading";d.innerHTML='<div class="chat-avatar">\uD83D\uDC69</div><div class="chat-bubble"><span class="teach-spinner"></span> \u8001\u5E08\u6B63\u5728\u601D\u8003...</div>';c.appendChild(d);scrollChat();}
+function addLoadingMessage(){var c=document.getElementById("teachChat");var d=document.createElement("div");d.className="chat-msg teacher";d.id="chatLoading";d.innerHTML='<div class="chat-avatar">\uD83D\uDC69</div><div class="chat-bubble"><span class="typing-dots"><span></span><span></span><span></span></span></div>';c.appendChild(d);scrollChat();}
 function removeLoadingMessage(){var e=document.getElementById("chatLoading");if(e)e.remove();}
 function setInputEnabled(e){var i=document.getElementById("teachChatInput");var b=document.getElementById("teachSendBtn");i.disabled=!e;b.disabled=!e;document.getElementById("skipBtn").disabled=!e;if(e)i.focus();}
 function updateProgress(){var p=_totalSteps>0?(_currentStepIndex/_totalSteps)*100:0;document.getElementById("teachProgressFill").style.width=p+"%";document.getElementById("teachProgressText").textContent="\u7B2C "+Math.min(_currentStepIndex+1,_totalSteps)+" / "+_totalSteps+" \u6B65";}
@@ -260,12 +279,12 @@ function updateInfoPanel(){
   if(!_sessionSteps||!_sessionSteps.length){sl.innerHTML="";return;}
   var h="";
   for(var i=0;i<_sessionSteps.length;i++){
-    var s=_sessionSteps[i];var isF=s.step_number===999;var com=i<_currentStepIndex;var cur=i===_currentStepIndex;var pen=i>_currentStepIndex;
+    var s=_sessionSteps[i];var isF=s.step_number===999;var com=i<_currentStepIndex;var cur=i===_currentStepIndex;var pen=i>_currentStepIndex;if(pen)continue;
     var ic=isF?"\u2B50":(com?"\u2705":(cur?"\u23F3":"\u2B55"));var cls=pen?"info-step-card step-pending":"info-step-card";
     var dl=(s.step_difficulty&&s.step_difficulty.level)||"";
     var dh=dl?"<span class=\"info-step-diff diff-"+(dl==="\u56F0\u96BE"?"hard":(dl==="\u4E2D\u7B49"?"medium":"easy"))+"\">"+dl+"</span>":"";
     h+="<div class=\u0022"+cls+"\u0022><div class=\u0022info-step-header\u0022><span class=\u0022info-step-icon\u0022>"+ic+"</span><span class=\u0022info-step-title\u0022>"+escapeHtml(isF?"\u6700\u7EC8\u7B54\u6848":(s.title||"\u6B65\u9AA4 "+(i+1)))+"</span>"+dh+"</div>";
-    if(!pen){
+    if(com){
       h+="<div class=\u0022info-step-body\u0022>";
       h+="<div style=\u0022font-size:13px;color:#515154;margin-bottom:4px;\u0022>"+escapeHtml(s.standard_writing||"")+"</div>";
       if(s.detailed_writing&&s.detailed_writing!==s.standard_writing){
@@ -277,7 +296,15 @@ function updateInfoPanel(){
       if(_stepErrorData[ek]&&_stepErrorData[ek].error_type){h+="<div class=\u0022info-error\u0022>\u9519\u56E0\uFF1A"+escapeHtml(_stepErrorData[ek].error_type)+"</div>";}
       if(!isF){h+="<div><button class=\u0022step-error-btn\u0022 onclick=\u0022showErrorDialog("+s.chunk_id+","+s.step_number+",\u0027"+escapeHtml(s.title||"")+"\u0027)\u0022>\u7F16\u8F91\u9519\u56E0</button></div>";}
       h+="</div>";
-    }else{h+="<div class=\u0022info-step-body\u0022 style=\u0022color:#c7c7cc;font-size:13px;\u0022>\u7B49\u5F85\u5B8C\u6210...</div>";}
+    }else if(cur){
+      h+="<div class=\u0022info-step-body\u0022>";
+      h+="<div style=\u0022font-size:13px;color:#0071e3;\u0022>\u6B63\u5728\u8FDB\u884C\u8FD9\u4E00\u6B65...</div>";
+      if(s.knowledge_point){h+="<div class=\u0022info-kp\u0022>"+escapeHtml(s.knowledge_point)+"</div>";}
+      var ek=s.chunk_id+"-"+s.step_number;
+      if(_stepErrorData[ek]&&_stepErrorData[ek].error_type){h+="<div class=\u0022info-error\u0022>\u9519\u56E0\uFF1A"+escapeHtml(_stepErrorData[ek].error_type)+"</div>";}
+      if(!isF){h+="<div><button class=\u0022step-error-btn\u0022 onclick=\u0022showErrorDialog("+s.chunk_id+","+s.step_number+",\u0027"+escapeHtml(s.title||"")+"\u0027)\u0022>\u7F16\u8F91\u9519\u56E0</button></div>";}
+      h+="</div>";
+    }
     h+="</div>";
   }
   sl.innerHTML=h;
@@ -285,9 +312,11 @@ function updateInfoPanel(){
   }catch(e){console.error("updateInfoPanel error:",e);}
 }
 
-function showErrorDialog(c,s,t){document.getElementById("errorStepDisplay").textContent=t||"\u6B65\u9AA4 "+s;document.getElementById("errorTypeSelect").value="\u601D\u8DEF\u9519\u8BEF";document.getElementById("errorDetailInput").value="";document.getElementById("errorDialogOverlay").style.display="block";}
+var _currentErrorChunkId=1;
+var _currentErrorStepNumber=1;
+function showErrorDialog(c,s,t){_currentErrorChunkId=c;_currentErrorStepNumber=s;document.getElementById("errorStepDisplay").textContent=t||"\u6B65\u9AA4 "+s;document.getElementById("errorTypeSelect").value="\u601D\u8DEF\u9519\u8BEF";document.getElementById("errorDetailInput").value="";document.getElementById("errorDialogOverlay").style.display="block";}
 function closeErrorDialog(){document.getElementById("errorDialogOverlay").style.display="none";}
-function saveStepError(){var et=document.getElementById("errorTypeSelect").value;var ed=document.getElementById("errorDetailInput").value.trim();_stepErrorData["1-"+(document.getElementById("errorStepDisplay").textContent.match(/\d+/)||[1])[0]]={error_type:et,error_detail:ed};updateInfoPanel();closeErrorDialog();}
+function saveStepError(){var et=document.getElementById("errorTypeSelect").value;var ed=document.getElementById("errorDetailInput").value.trim();_stepErrorData[_currentErrorChunkId+"-"+_currentErrorStepNumber]={error_type:et,error_detail:ed};updateInfoPanel();closeErrorDialog();}
 
 function saveSession(){
   try{var d={session_id:_sessionId,question:document.getElementById("teachQuestionInput").value,teacher:_selectedTeacher,messages:[],stats:_stats,current_step:_currentStepIndex,total_steps:_totalSteps,steps:_sessionSteps,chunk_results:_sessionChunkResults,step_errors:_stepErrorData};var c=document.getElementById("teachChat");if(c){c.querySelectorAll(".chat-msg").forEach(function(m){var r=m.classList.contains("teacher")?"teacher":"student";var b=m.querySelector(".chat-bubble");d.messages.push({role:r,content:b?b.textContent:""})})}localStorage.setItem(SAVE_KEY,JSON.stringify(d))}catch(e){}
@@ -320,12 +349,12 @@ async function startTeaching(){
     var txt=await r.text();var data;try{data=JSON.parse(txt)}catch(e){document.getElementById("teachError").textContent="\u670D\u52A1\u5668\u8FD4\u56DE\u9519\u8BEF";document.getElementById("teachError").style.display="block";resetStartBtn();return;}
     if(data.error){document.getElementById("teachError").textContent=data.detail||data.message||"\u65E0\u6CD5\u89E3\u7B54";document.getElementById("teachError").style.display="block";resetStartBtn();return;}
     _sessionId=data.session_id;_totalSteps=data.total_steps||0;_currentStepIndex=0;_stats={correct:0,wrong:0,skipped:0};
-    _sessionChunkResults=data.chunk_results||[];_sessionSteps=data.steps||[];_stepErrorData={};saveSession();
+    _sessionChunkResults=data.chunk_results||[];_sessionSteps=data.steps||[];_stepErrorData={};
     document.getElementById("teachInput").style.display="none";document.getElementById("teacherSelector").style.display="none";
     document.getElementById("teachSession").style.display="flex";document.getElementById("teachChat").innerHTML="";
     document.getElementById("teachSummary").classList.remove("show");updateProgress();
     var qd=document.getElementById("teachQuestionDisplay");if(qd&&q){qd.innerHTML=escapeHtml(q).replace(/\n/g,"<br>");renderMath(qd);}
-    updateInfoPanel();if(data.message)addChatMessage("teacher",data.message);setInputEnabled(true);
+    updateInfoPanel();if(data.message)addChatMessage("teacher",data.message);setInputEnabled(true);saveSession();
   }catch(e){document.getElementById("teachError").textContent="\u7F51\u7EDC\u9519\u8BEF\uFF0C\u8BF7\u786E\u8BA4\u540E\u7AEF\u5DF2\u542F\u52A8";document.getElementById("teachError").style.display="block";resetStartBtn();}
 }
 function resetStartBtn(){document.getElementById("teachStartBtn").disabled=false;document.getElementById("teachLoading").style.display="none";}
@@ -336,41 +365,41 @@ async function sendMessage(){
   try{
     var r=await fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:m})});
     var d=await r.json();removeLoadingMessage();
-    if(d.error){addChatMessage("teacher","\u62B1\u6B49\uFF0C\u51FA\u4E86\u70B9\u95EE\u9898\uFF0C\u8BF7\u518D\u8BD5\u4E00\u6B21\u3002");_isWaiting=false;setInputEnabled(true);return;}
-    saveSession();var a=d.action||"guide";
+    if(d.error){addChatMessage("teacher","\u62B1\u6B49\uFF0C\u51FA\u4E86\u70B9\u95EE\u9898\uFF0C\u8BF7\u518D\u8BD5\u4E00\u6B21\u3002");_isWaiting=false;setInputEnabled(true);saveSession();return;}
+    var a=d.action||"guide";
     if(a==="advance"){
       if(d.message)addChatMessage("teacher",d.message,{});updateInfoPanel();
-      if(d.next_step_message){_currentStepIndex=(d.current_step||1)-1;updateProgress();addChatMessage("teacher",d.next_step_message);_currentStepIndex=d.current_step||1;updateProgress();}
-      else{_currentStepIndex=d.current_step||(_currentStepIndex+1);updateProgress();}
-      _isWaiting=false;setInputEnabled(true);
+      if(d.next_step_message){_currentStepIndex=(d.current_step||1)-1;updateProgress();addChatMessage("teacher",d.next_step_message);updateProgress();}
+      else{_currentStepIndex=(d.current_step||1)-1;updateProgress();}
+      updateInfoPanel();_isWaiting=false;setInputEnabled(true);
     }else if(a==="complete"){if(d.message)addChatMessage("teacher",d.message);_isWaiting=false;setInputEnabled(false);showSummary(d);}
     else{
       addChatMessage("teacher",d.message,d);
       if(d.is_correct===false&&d.error_type){var st=_sessionSteps[_currentStepIndex];if(st){_stepErrorData[(st.chunk_id||1)+"-"+(st.step_number||(_currentStepIndex+1))]={error_type:d.error_type,error_detail:d.error_detail||""}}}
-      _currentStepIndex=d.current_step||(_currentStepIndex+1);updateProgress();updateInfoPanel();_isWaiting=false;setInputEnabled(true);
+      _currentStepIndex=d.current_step?d.current_step-1:_currentStepIndex;updateProgress();updateInfoPanel();_isWaiting=false;setInputEnabled(true);
       if(m.match(/\u4E0D\u4F1A|\u4E0D\u61C2|\u4E0D\u77E5\u9053|\u770B\u4E0D\u61C2|\u600E\u4E48|help|\u63D0\u793A/)){
         var sugDiv=document.createElement("div");sugDiv.style.cssText="align-self:flex-start;margin-top:-4px;";sugDiv.id="suggestionBar";
         ["\u7ED9\u70B9\u63D0\u793A","\u6211\u770B\u4E00\u4E0B\u7B54\u6848"].forEach(function(l){var b=document.createElement("button");b.className="suggestion-btn";b.textContent=l;b.onclick=function(){var bar=document.getElementById("suggestionBar");if(bar)bar.remove();document.getElementById("teachChatInput").value=l;sendMessage();};sugDiv.appendChild(b);});
         document.getElementById("teachChat").appendChild(sugDiv);scrollChat();
       }
     }
+    saveSession();
   }catch(e){removeLoadingMessage();addChatMessage("teacher","\u7F51\u7EDC\u9519\u8BEF\uFF0C\u8BF7\u91CD\u8BD5\u3002");_isWaiting=false;setInputEnabled(true);}
 }
 
 function skipStep(){
   if(!_sessionId||_isWaiting)return;
-  _stats.skipped++;
-  var stepIdx = _currentStepIndex;
-  _currentStepIndex = Math.min(_currentStepIndex + 1, _totalSteps);
+  _stats.skipped=(_stats.skipped||0)+1;
+  var stepIdx=_currentStepIndex;
+  _currentStepIndex=Math.min(_currentStepIndex+1,_totalSteps-1);
   addChatMessage("system","\u5DF2\u8DF3\u8FC7\u6B65\u9AA4 "+(stepIdx+1));
   updateProgress();updateInfoPanel();setInputEnabled(true);saveSession();
-  // Try to advance the backend session too
-  fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:"\u8BF7\u8DF3\u8FC7\u5F53\u524D\u6B65\u9AA4\uFF0C\u8FDB\u5165\u4E0B\u4E00\u6B65.\u4E0D\u8981\u518D\u5C1D\u8BD5\u6559\u5B66\uFF0C\u76F4\u63A5\u8FDB\u5165\u4E0B\u4E00\u6B65\u7684\u5F15\u5BFC\u3002"})})
-  .then(function(r){return r.json()}).then(function(d){
-    if(d.next_step_message||(d.message&&d.action==="guide")){
-      addChatMessage("teacher",d.next_step_message||d.message);
-    }
-  }).catch(function(){});
+  // Show next step pre-generated step_prompt (no AI call)
+  var nextStep=_sessionSteps[_currentStepIndex];
+  if(nextStep){
+    var nextMsg=nextStep.step_prompt||("\u8BF7\u5B8C\u6210\u7B2C "+(_currentStepIndex+1)+" \u6B65\uFF1A"+(nextStep.title||""));
+    addChatMessage("teacher",nextMsg);saveSession();
+  }
 }
 
 function cancelTeaching(){if(!_sessionId)return;clearSavedSession();_sessionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("teacherSelector").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachStartBtn").disabled=false;}

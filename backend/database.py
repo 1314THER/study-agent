@@ -150,17 +150,36 @@ def _build_steps_structure(chunk_results: list) -> str:
             }
             index.append(entry)
     return json.dumps(index, ensure_ascii=False)
+def _normalize_question(q: str) -> str:
+    """归一化题目文本：去掉所有空白字符，使相同题目的不同格式能匹配"""
+    import re
+    return re.sub(r'\s+', '', q)
+
+
 
 
 def find_question(question_text: str):
     conn = get_connection()
+    q = question_text.strip()
+    
+    # 1. 精确匹配（快速路径）
     row = conn.execute(
         "SELECT answer_json FROM questions WHERE content = ?",
-        (question_text.strip(),)
+        (q,)
     ).fetchone()
+    
+    if not row:
+        # 2. 模糊匹配：去除所有空白后比较（处理格式差异）
+        norm_q = _normalize_question(q)
+        rows = conn.execute("SELECT content, answer_json FROM questions").fetchall()
+        for content, aj in rows:
+            if _normalize_question(content) == norm_q:
+                row = (aj,)
+                break
+    
     conn.close()
     if row:
-        return json.loads(row["answer_json"])
+        return json.loads(row[0])
     return None
 
 

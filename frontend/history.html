@@ -403,7 +403,7 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
                 html += '<span class="hc-date">' + dateStr + '</span>';
                 html += '<button class="delete-btn" onclick="event.stopPropagation();confirmDelete(' + q.id + ')" title="\u5220\u9664\u6b64\u9898">\ud83d\uddd1</button>';
                 html += '<button class="exam-add-btn" onclick="event.stopPropagation();addToExam(' + q.id + ')" title="\u52a0\u5165\u7ec4\u5377">\ud83d\udccb</button>';
-                html += '<button class="exam-add-btn" onclick="event.stopPropagation();teachOpenBtn(\'' + escapeHtml(q.content||'').replace(/'/g,"\\'") + '\')" title="\u624b\u628a\u624b\u6559\u5b66">\ud83d\udcd6</button>';
+                html += '<button class="exam-add-btn" onclick="event.stopPropagation();teachOpenBtn(\'' + escapeHtml(q.content||'').replace(/\\/g,"\\\\").replace(/'/g,"\\'") + '\')" title="\u624b\u628a\u624b\u6559\u5b66">\ud83d\udcd6</button>';
                 html += '</div></div>';
             }
             listEl.innerHTML = html;
