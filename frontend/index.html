@@ -6,7 +6,8 @@
     <title>数学最强大脑</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script>
 function teachOpen(btn) {
     var q = btn.getAttribute('data-question');
     if (q) { localStorage.setItem('_teach_question', q); window.open('teach.html', '_blank'); }
@@ -16,12 +17,7 @@ function safeParseKps(kps){
     try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
 }
 </script>
-    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js">
-function safeParseKps(kps){
-    if(Array.isArray(kps)) return kps;
-    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
-}
-</script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 </head>
 <body class="theme-liangliang">
     <div class="app-layout">
@@ -207,7 +203,7 @@ var _selectedTeacher = "liangliang";
 
             // Teach button
             html += '<div style="text-align:center;margin-bottom:16px;">';
-            html += '<button onclick="localStorage.setItem('_teach_question',document.getElementById('questionInput').value||'');window.open('teach.html','_blank');" style="padding:8px 20px;background:#ca8a04;color:white;border:none;border-radius:10px;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">📖 手把手教学</button></div>';
+            html += '<button onclick="localStorage.setItem(\'_teach_question\',document.getElementById(\'questionInput\').value||\'\');window.open(\'teach.html\',\'_blank\');" style="padding:8px 20px;background:#ca8a04;color:white;border:none;border-radius:10px;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">📖 手把手教学</button></div>';
 
             // 雷达图容器
             html += '<div id="radarChart" style="display:flex;justify-content:center;margin-bottom:16px;"></div>';

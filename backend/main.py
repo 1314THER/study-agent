@@ -6,7 +6,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from fastapi.middleware.cors import CORSMiddleware
 from backend.solver import step_solver_only, step_verify_all, step_final_check, _xuebile, _extract_solver_status
-from backend.teach import teach_start, teach_check, teach_find_or_format
+from backend.teach import teach_start, teach_check, teach_find_or_format, teach_session_start, teach_session_chat, teach_get_session
 from backend.multimodal import parse_file, get_supported_extensions
 from backend.database import init_db, get_all_questions, search_questions, delete_question
 from backend.categories import get_all_categories
@@ -14,6 +14,16 @@ from backend.steps import get_step_structure, get_all_question_types
 
 app = FastAPI(title="你好，我是张雪峰老师")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request, exc):
+    from fastapi.responses import JSONResponse
+    from starlette import status
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"error": "server_error", "detail": str(exc)[:200]},
+    )
 
 @app.on_event("startup")
 def startup():
@@ -368,6 +378,42 @@ def api_teach_check(req: TeachCheckRequest):
     """检查学生当前步骤的作答"""
     result = teach_check(req.question, req.step_prompt, req.step_answer, req.user_answer, teacher=req.teacher)
     return result
+
+
+# ---------- 对话式教学会话 ----------
+class TeachSessionStartRequest(BaseModel):
+    question: str
+    teacher: Optional[str] = Field(None, description="老师（可选）")
+
+
+class TeachSessionChatRequest(BaseModel):
+    message: str
+
+
+@app.post("/teach/session/start")
+def api_teach_session_start(req: TeachSessionStartRequest):
+    """创建新的对话式教学会话"""
+    result = teach_session_start(req.question, teacher=req.teacher)
+    return result
+
+
+@app.post("/teach/session/{session_id}/chat")
+def api_teach_session_chat(session_id: str, req: TeachSessionChatRequest):
+    """在现有会话中发送学生消息"""
+    if not teach_get_session(session_id):
+        return {"error": "session_not_found", "detail": "会话不存在"}
+    result = teach_session_chat(session_id, req.message)
+    return result
+
+
+@app.get("/teach/session/{session_id}")
+def api_teach_get_session(session_id: str):
+    """获取会话完整信息"""
+    result = teach_get_session(session_id)
+    if not result:
+        return {"error": "session_not_found", "detail": "会话不存在"}
+    return result
+
 
 # ---- Static files: serve frontend (must be last) ----
 
