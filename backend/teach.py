@@ -350,6 +350,24 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
                     "step_results": sess["step_results"],
                 }
 
+        # 处理"不会"、"提示"、"答案"等请求（不调 AI）
+        if any(kw in student_message for kw in ["提示", "hint", "不会", "不懂", "不知道", "看不懂"]):
+            hint_len = min(60 + sess["attempt_count"] * 40, len(step.get("step_answer", "")))
+            partial = step.get("step_answer", "")[:hint_len]
+            if partial:
+                partial = partial[:partial.rfind(" ")] if " " in partial else partial
+            if len(step.get("step_answer", "")) > hint_len:
+                partial += "..."
+            feedback = f"给你一点提示：{partial}\n\n再想想看？"
+            _session_manager.add_message(session_id, "teacher", feedback, metadata={"action": "guide"})
+            return {"action": "guide", "message": feedback, "current_step": sess["current_step"] + 1, "total_steps": sess["total_steps"], "session_id": session_id}
+        
+        if any(kw in student_message for kw in ["答案", "answer", "看一下答案"]):
+            answer = step.get("step_answer", step.get("standard_writing", ""))
+            feedback = f"这一步的关键答案是：{answer}\n\n理解了之后，请继续完成下一步。"
+            _session_manager.add_message(session_id, "teacher", feedback, metadata={"action": "show_answer"})
+            return {"action": "guide", "message": feedback, "current_step": sess["current_step"] + 1, "total_steps": sess["total_steps"], "session_id": session_id}
+        
         up = f"原题：{sess['question']}\n当前步骤引导问题：{step.get('step_prompt', '')}\n参考答案：{step.get('step_answer', step.get('standard_writing', ''))}\n学生回答：{student_message}"
         cfg = TEACHER_CONFIG.get(sess["teacher"], TEACHER_CONFIG["liangliang"])
 
