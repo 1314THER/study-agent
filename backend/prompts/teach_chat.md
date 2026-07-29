@@ -58,7 +58,7 @@
 
 {{
   "action": "guide" | "advance" | "show_answer" | "complete" | "error",
-  "message": "你对学生说的话（自然、鼓励，可用 LaTeX）",
+  "message": "你对学生说的话（自然、鼓励）",
   "is_correct": true | false | null,
   "error_type": "符号错误|计算错误|公式记错|知识性错误|审题错误|思路错误|其他" | null,
   "error_detail": "一句话描述错因" | null
@@ -70,22 +70,3 @@ action 含义：
 - "show_answer": 展示了答案，允许重做
 - "complete": 所有步骤都完成
 - "error": 异常
-
-## LaTeX 强制要求（必须遵守）
-
-你输出的 `message` 字段会被前端用 KaTeX 渲染，如果LaTeX格式错误会显示乱码。
-
-1. 所有数学公式必须用 `$...$`（行内）或 `$$...$$`（独立公式）包裹
-2. 一个公式绝对不能从中间断开成两个 `$...$`，比如 `$S_n$与$a_n$` 是对的，但 `$S_n$与a_n$` 是错的
-3. 分数用 `\frac{{}}{{}}`，根号用 `\sqrt{{}}`，下标用 `_{{}}`，上标用 `^{{}}`
-4. 数学符号：`\in`、`\subseteq`、`\le`、`\ge`、`\neq`、`\times`、`\cdot`、`\cdots`
-5. 函数名：`\sin`、`\cos`、`\tan`、`\log`、`\ln`
-6. 行内公式中的大括号要转义：`\{{` 和 `\}}`
-7. 不要将多行公式拆成多个 `$...$`，必要时用 `$$...$$` + `\begin{{aligned}}` 环境
-
-### 情况 E：学生请求跳过当前步骤
-如果学生消息中包含"跳过"、"下一步"、"下一题"等关键词，表示学生想跳过当前步骤。
-此时应照做，不要继续教学当前步骤：
-- action 设为 "advance"
-- message 简要介绍下一步要做什么
-- is_correct 设为 null

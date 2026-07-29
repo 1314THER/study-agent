@@ -9,7 +9,8 @@
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 <style>
-.teach-container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; height: calc(100vh - 48px); }
+html, body { overflow: hidden; height: 100%; }
+.teach-container { max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; height: calc(100vh - 48px); }
 .teach-header { text-align: center; padding-bottom: 12px; flex-shrink: 0; }
 .teach-input-area { flex-shrink: 0; margin-bottom: 12px; }
 .teach-input-area textarea { width:100%; padding:14px 18px; border:1px solid #c7c7cc; border-radius:12px; font-size:15px; font-family:inherit; resize:vertical; min-height:60px; outline:none; box-sizing:border-box; line-height:1.6; }
@@ -33,7 +34,7 @@
 .teach-progress-bar { height: 4px; background: #e5e5e7; border-radius: 2px; overflow: hidden; }
 .teach-progress-fill { height:100%; background:linear-gradient(90deg,#0071e3,#00a2ff); border-radius:2px; transition:width 0.3s ease; }
 .teach-two-col { display: flex; flex: 1; gap: 16px; min-height: 0; }
-.teach-info-panel { width: 340px; flex-shrink: 0; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 12px; }
+.teach-info-panel { min-width: 280px; max-width: 380px; flex: 0 0 auto; overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 12px; }
 .teach-chat-panel { flex: 1; display: flex; flex-direction: column; min-width: 0; }
 .teach-chat { flex: 1; overflow-y: auto; padding: 8px 4px; display: flex; flex-direction: column; gap: 12px; min-height: 0; }
 .chat-msg { display: flex; gap: 10px; max-width: 85%; animation: fadeIn 0.25s ease; }
@@ -250,7 +251,7 @@ function selectTeacher(btn, teacher) {
 }
 
 function escapeHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
-function renderMath(el){if(window.renderMathInElement){try{renderMathInElement(el,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}],ignoredTags:[]})}catch(e){}}}
+function renderMath(el){if(window.renderMathInElement){try{renderMathInElement(el,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}],ignoredTags:["script","style"]})}catch(e){}}else{setTimeout(function(){renderMath(el)},500);}}
 function scrollChat(){var c=document.getElementById("teachChat");if(c)c.scrollTop=c.scrollHeight;}
 
 function addChatMessage(role,content,meta){
@@ -333,6 +334,8 @@ function restoreSession(){
     document.getElementById("teachInput").style.display="none";document.getElementById("teacherSelector").style.display="none";
     document.getElementById("teachSession").style.display="flex";document.getElementById("teachSummary").classList.remove("show");
     document.getElementById("teachChat").innerHTML="";if(d.messages)d.messages.forEach(function(m){addChatMessage(m.role,m.content)});
+    // Delayed KaTeX re-render for restored messages
+    setTimeout(function(){var cc=document.getElementById("teachChat");if(cc&&window.renderMathInElement){try{renderMathInElement(cc,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}],ignoredTags:["script","style"]})}catch(e){}}},300);
     updateProgress();updateInfoPanel();setInputEnabled(true);saveSession();
     // Try to get fresh session data from backend
     fetch("http://127.0.0.1:8000/teach/session/"+_sessionId).then(function(r){return r.json()}).then(function(sd){
@@ -392,18 +395,22 @@ async function sendMessage(){
 function skipStep(){
   if(!_sessionId||_isWaiting)return;
   _stats.skipped=(_stats.skipped||0)+1;
+  if(_currentStepIndex>=_totalSteps-1){
+    addChatMessage("system","已完成所有步骤");
+    saveSession();showSummary({stats:_stats});
+    fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:"跳过"})}).catch(function(){});
+    return;
+  }
   var stepIdx=_currentStepIndex;
   _currentStepIndex=Math.min(_currentStepIndex+1,_totalSteps-1);
-  addChatMessage("system","\u5DF2\u8DF3\u8FC7\u6B65\u9AA4 "+(stepIdx+1));
+  addChatMessage("system","已跳过步骤 "+(stepIdx+1));
   updateProgress();updateInfoPanel();setInputEnabled(true);saveSession();
-  // Show next step pre-generated step_prompt (no AI call)
   var nextStep=_sessionSteps[_currentStepIndex];
   if(nextStep){
-    var nextMsg=nextStep.step_prompt||("\u8BF7\u5B8C\u6210\u7B2C "+(_currentStepIndex+1)+" \u6B65\uFF1A"+(nextStep.title||""));
+    var nextMsg=nextStep.step_prompt||("请完成第 "+(_currentStepIndex+1)+" 步："+(nextStep.title||""));
     addChatMessage("teacher",nextMsg);saveSession();
   }
-  // Backend sync (skip keyword handled by backend without AI)
-  fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:"\u8DF3\u8FC7"})}).catch(function(){});
+  fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:"跳过"})}).catch(function(){});
 }
 
 function showAnswer(){
@@ -427,22 +434,71 @@ function understoodStep(){
   if(!_sessionId)return;
   _stats.skipped=(_stats.skipped||0)+1;
   var stepIdx=_currentStepIndex;
-  _currentStepIndex=Math.min(_currentStepIndex+1,_totalSteps-1);
+  // Record error for this step
+  var curStep=_sessionSteps[stepIdx];
+  if(curStep){
+    _stepErrorData[curStep.chunk_id+"-"+curStep.step_number]={error_type:"其他",error_detail:"完全不会"};
+  }
+  // Last step → show summary
+  if(stepIdx>=_totalSteps-1){
+    saveSession();showSummary({stats:_stats});
+    fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:"跳过"})}).catch(function(){});
+    document.getElementById("skipBtn").style.display="";
+    document.getElementById("showAnswerBtn").style.display="";
+    document.getElementById("understandBtn").style.display="none";
+    return;
+  }
+  _currentStepIndex=Math.min(stepIdx+1,_totalSteps-1);
   var nextStep=_sessionSteps[_currentStepIndex];
   if(nextStep){
-    var nextMsg=nextStep.step_prompt||("\u8BF7\u5B8C\u6210\u7B2C "+(_currentStepIndex+1)+" \u6B65\uFF1A"+(nextStep.title||""));
+    var nextMsg=nextStep.step_prompt||("请完成第 "+(_currentStepIndex+1)+" 步："+(nextStep.title||""));
     addChatMessage("teacher",nextMsg);
   }
   updateProgress();updateInfoPanel();setInputEnabled(true);saveSession();
   document.getElementById("skipBtn").style.display="";
   document.getElementById("showAnswerBtn").style.display="";
   document.getElementById("understandBtn").style.display="none";
-  fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:"\u8DF3\u8FC7"})}).catch(function(){});
+  fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:"跳过"})}).catch(function(){});
 }
 
 function cancelTeaching(){if(!_sessionId)return;clearSavedSession();_sessionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("teacherSelector").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachStartBtn").disabled=false;}
 
-function showSummary(d){document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.add("show");var st=d.stats||_stats;document.getElementById("summaryCorrect").textContent=st.correct||0;document.getElementById("summaryWrong").textContent=st.wrong||0;document.getElementById("summarySkipped").textContent=(st.skipped||0)+(st.viewed_answer||0);document.getElementById("teachSavedStatus").style.display="block";}
+async function saveTeachingResults(){
+  try{
+    var q=document.getElementById("teachQuestionInput").value.trim();
+    if(!q||!_sessionChunkResults||!_sessionChunkResults.length)return null;
+    var aj={chunk_results:_sessionChunkResults};
+    if(_sessionChunkResults.length>0){
+      var first_cr=_sessionChunkResults[0];
+      if(first_cr.difficulty)aj.overall_difficulty=first_cr.difficulty;
+    }
+    var r=await fetch("http://127.0.0.1:8000/questions/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,answer_json:aj})});
+    var data=await r.json();
+    if(data.saved&&data.id){
+      var qid=data.id;
+      // Save step errors
+      var errKeys=Object.keys(_stepErrorData);
+      for(var i=0;i<errKeys.length;i++){
+        var parts=errKeys[i].split("-");
+        var chunkId=parseInt(parts[0]),stepNum=parseInt(parts[1]);
+        var err=_stepErrorData[errKeys[i]];
+        if(err&&err.error_type){
+          try{
+            await fetch("http://127.0.0.1:8000/questions/"+qid+"/step-error",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({step_number:stepNum,chunk_id:chunkId,mistake_type:err.error_type,mistake_detail:err.error_detail||""})});
+          }catch(e){console.error("Save step error failed:",e);}
+        }
+      }
+      document.getElementById("teachSavedStatus").textContent="✅ 已加入个人题库";
+    }else{
+      document.getElementById("teachSavedStatus").textContent="ℹ️ 保存失败";
+    }
+  }catch(e){
+    console.error("Save failed:",e);
+    document.getElementById("teachSavedStatus").textContent="ℹ️ 保存失败";
+  }
+  document.getElementById("teachSavedStatus").style.display="block";
+}
+function showSummary(d){document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.add("show");var st=d.stats||_stats;document.getElementById("summaryCorrect").textContent=st.correct||0;document.getElementById("summaryWrong").textContent=st.wrong||0;document.getElementById("summarySkipped").textContent=(st.skipped||0)+(st.viewed_answer||0);saveTeachingResults();}
 
 function resetAll(){clearSavedSession();_sessionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("teacherSelector").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachQuestionInput").value="";document.getElementById("teachStartBtn").disabled=false;document.getElementById("teachLoading").style.display="none";}
 

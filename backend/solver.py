@@ -8,7 +8,7 @@ Formatter（1 次调用）：全局校验 + 聚合入库
 
 import os
 import json
-import re
+import re, sys
 import httpx
 from typing import Dict, Any, List, Optional
 
@@ -45,6 +45,8 @@ STEP_LEVEL1_PATTERN = re.compile(r'^二级步骤[：:]\s*(.+)$')
 def _read_prompt(name: str) -> str:
     with open(os.path.join(PROMPTS_DIR, f"{name}.md"), encoding="utf-8") as f:
         return f.read().strip()
+
+_LATEX_RULES = _read_prompt("latex_rules")
 
 
 TEACHER_CONFIG = {
@@ -92,10 +94,12 @@ def get_api_key() -> str:
 # ---------- 调用 DeepSeek ----------
 def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3, model: str = "deepseek-chat", reasoning_effort: str = None):
     api_key = get_api_key()
+    # 自动注入全局 LaTeX 格式要求
+    full_system = system_prompt + "\n\n" + _LATEX_RULES if _LATEX_RULES else system_prompt
     body = {
         "model": model,
         "messages": [
-            {"role": "system", "content": system_prompt},
+            {"role": "system", "content": full_system},
             {"role": "user", "content": user_prompt},
         ],
         "temperature": temperature,
@@ -465,6 +469,32 @@ def step_solver_only(question: str, question_type: str = None, teacher: str = No
 
 
 # ---------- Verifier 步（一次调用，切全部）----------
+
+def _validate_step_names(verifier_cat: str, steps: list) -> list:
+    """验证步骤名是否来自 steps.yaml 的预定义列表。非法步骤名将被重置并记录警告。"""
+    try:
+        from backend.steps import get_all_level1_names, get_all_level2_names
+    except ImportError:
+        return steps
+    prompt_file = _CATEGORY_TO_PROMPT_FILE.get(verifier_cat)
+    if not prompt_file:
+        return steps
+    valid_l1 = set(get_all_level1_names(prompt_file))
+    valid_l2 = set(get_all_level2_names(prompt_file))
+    if not valid_l1 and not valid_l2:
+        return steps
+    for step in steps:
+        title = step.get("title", "")
+        step_level1 = step.get("step_level1")
+        if title and valid_l2 and title not in valid_l2:
+            print(f"[Warn] 步骤{step.get(chr(115)+chr(116)+chr(101)+chr(112)+chr(95)+chr(110)+chr(117)+chr(109)+chr(98)+chr(101)+chr(114))}: 一体步骤名 '{title}' 不在预定义列表中，已重置", file=sys.stderr)
+            step["title"] = ""
+        if step_level1 and valid_l1 and step_level1 not in valid_l1:
+            print(f"[Warn] 步骤{step.get(chr(115)+chr(116)+chr(101)+chr(112)+chr(95)+chr(110)+chr(117)+chr(109)+chr(98)+chr(101)+chr(114))}: 二级步骤名 '{step_level1}' 不在预定义列表中，已重置", file=sys.stderr)
+            step["step_level1"] = None
+    return steps
+
+
 def step_verify_all(content: str, question: str, category: str = None, question_type: str = None, teacher: str = None) -> dict:
     """一次 Verifier：将完整解答切成大块/小块 + 归类知识点 + 打分"""
     config = TEACHER_CONFIG.get(teacher or "liangliang", TEACHER_CONFIG["liangliang"])
@@ -490,6 +520,7 @@ def step_verify_all(content: str, question: str, category: str = None, question_
     for pc in raw_chunks:
         meta = _parse_chunk_meta(pc["content"])
         steps = _parse_steps(pc["content"])
+        steps = _validate_step_names(verifier_cat, steps)
 
         seen = set()
         unique_kps = []

@@ -29,6 +29,7 @@ def _ej(t):
 
 def _bs(crr):
     r, ht = [], False
+    fa_list = []
     for cr in crr:
         ct = cr.get("chunk_type", "整体")
         cn = cr.get("category", {}).get("level1", "")
@@ -48,11 +49,12 @@ def _bs(crr):
                 ht = True
             r.append(st)
         if fa:
-            r.append({"chunk_id": cr.get("chunk_id", 1), "chunk_type": ct,
+            fa_list.append({"chunk_id": cr.get("chunk_id", 1), "chunk_type": ct,
                       "category": cn, "step_number": 999, "title": "\u6700\u7ec8\u7b54\u6848",
                       "step_prompt": "\u8bf7\u5199\u51fa\u8fd9\u9053\u9898\u7684\u6700\u7ec8\u7b54\u6848",
                       "step_answer": fa, "standard_writing": fa,
                       "detailed_writing": "", "knowledge_point": ""})
+    r.extend(fa_list)
     return r, ht
 
 def _fs(steps, teacher=None):
@@ -61,13 +63,14 @@ def _fs(steps, teacher=None):
         return steps
     inp = [{"title": s["title"], "standard_writing": s["standard_writing"]} for s in tg]
     cfg = TEACHER_CONFIG.get(teacher or "liangliang", TEACHER_CONFIG["liangliang"])
-    c, _ = call_deepseek(TF, json.dumps(inp, ensure_ascii=False, indent=2),
-                         temperature=0.3,
-                         model=cfg.get("verifier", {}).get("model", "deepseek-v4-flash"))
     try:
+        c, _ = call_deepseek(TF, json.dumps(inp, ensure_ascii=False, indent=2),
+                             temperature=0.3,
+                             model=cfg.get("verifier", {}).get("model", "deepseek-v4-flash"))
         rl = json.loads(_ej(c))
-    except Exception:
-        rl = []
+    except Exception as e:
+        print(f"[Warn] _fs AI call or parse failed: {e}")
+        rl = None
     ns = []
     idx = 0
     for s in steps:
@@ -76,10 +79,15 @@ def _fs(steps, teacher=None):
             ss["step_prompt"] = "\u8bf7\u5199\u51fa\u8fd9\u9053\u9898\u7684\u6700\u7ec8\u7b54\u6848"
             ss["step_answer"] = ss["standard_writing"]
         else:
-            if idx < len(rl):
+            if rl and idx < len(rl):
                 m = rl[idx]
                 ss["step_prompt"] = m.get("step_prompt", ss.get("step_prompt", ""))
                 ss["step_answer"] = m.get("step_answer", ss.get("step_answer", ""))
+            # Fallback: use title as prompt
+            if not ss.get("step_prompt"):
+                ss["step_prompt"] = f"\u8bf7\u5b8c\u6210\u8fd9\u4e00\u6b65\uff1a{ss.get('title', '')}"
+            if not ss.get("step_answer"):
+                ss["step_answer"] = ss.get("standard_writing", "")
             idx += 1
         ns.append(ss)
     return ns
@@ -206,6 +214,7 @@ class TeachSessionManager:
 
         # 从 chunk_results 构建步骤列表（不含最终答案步骤）
         steps = []
+        final_answers = []
         for cr_ in cr:
             ct = cr_.get("chunk_type", "整体")
             cn = cr_.get("category", {}).get("level1", "")
@@ -221,9 +230,10 @@ class TeachSessionManager:
                     "detailed_writing": s.get("detailed_writing", ""),
                     "knowledge_point": s.get("knowledge_point", ""),
                     "step_answer": s.get("step_answer", s.get("standard_writing", "")),
+                    "step_prompt": s.get("step_prompt", ""),
                 })
             if fa:
-                steps.append({
+                final_answers.append({
                     "chunk_id": cr_.get("chunk_id", 1),
                     "chunk_type": ct,
                     "category": cn,
@@ -233,16 +243,48 @@ class TeachSessionManager:
                     "detailed_writing": "",
                     "knowledge_point": "",
                     "step_answer": fa,
+                    "step_prompt": "请写出这道题的最终答案",
                 })
+        # 最终答案统一放在所有步骤最后
+        # steps.extend(final_answers)
+        # 先入库基本数据（无论是否有 prompts）
+        save_aj = dict(r) if r else {}
+        save_aj["chunk_results"] = cr
+        if not save_aj.get("overall_difficulty") and 'aj' in dir():
+            save_aj["overall_difficulty"] = aj.get("overall_difficulty")
+        if not save_aj.get("knowledge_points") and 'aj' in dir():
+            save_aj["knowledge_points"] = aj.get("knowledge_points", [])
+        if not save_aj.get("final_answer") and 'aj' in dir():
+            save_aj["final_answer"] = aj.get("final_answer", "")
+        try:
+            saved_qid_first = db_save_question(question, save_aj)
+        except Exception as e:
+            saved_qid_first = None
+            print(f"[Warn] first save_question failed: {e}")
 
         # 预生成每步的引导语和期望回答（仅当缺失时）
         has_all_prompts = all(s.get("step_prompt") for s in steps if s.get("title") != "最终答案")
         if not has_all_prompts:
-            steps = _fs(steps, teacher)
-
+            try:
+                steps = _fs(steps, teacher)
+                # 合并回 chunk_results
+                si = 0
+                for cr_ in cr:
+                    for s in cr_.get("steps", []):
+                        if si < len(steps):
+                            s["step_prompt"] = steps[si].get("step_prompt", "")
+                            s["step_answer"] = steps[si].get("step_answer", "")
+                            si += 1
+                # 更新入库（带 prompts）
+                save_aj["chunk_results"] = cr
+                saved_qid = db_save_question(question, save_aj)
+            except Exception as e:
+                saved_qid = None
+                print(f"[Warn] _fs or second save_question failed: {e}")
         session_id = str(_uuid.uuid4())
         self._sessions[session_id] = {
             "session_id": session_id,
+            "question_id": (saved_qid if 'saved_qid' in dir() and saved_qid is not None else saved_qid_first if 'saved_qid_first' in dir() else None),
             "question": question,
             "teacher": teacher or "liangliang",
             "steps": steps,
@@ -299,22 +341,7 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
     if sess["current_step"] >= sess["total_steps"]:
         return {"action": "complete", "message": "所有步骤已完成！", "session_id": session_id}
 
-    step = sess["steps"][sess["current_step"]]
-
-    # 情况 A：当前步骤尚未展示引导 → 返回预生成的 step_prompt（无需 AI 调用）
-    if not sess["step_introduced"]:
-        sess["step_introduced"] = True
-        msg = step.get("step_prompt") or f"请尝试完成第 {sess['current_step']+1} 步：{step.get('title', '')}"
-        _session_manager.add_message(session_id, "teacher", msg, metadata={"action": "guide"})
-        return {
-            "action": "guide",
-            "message": msg,
-            "current_step": sess["current_step"] + 1,
-            "total_steps": sess["total_steps"],
-            "session_id": session_id,
-        }
-
-    # 情况 B：学生发了消息 → 用 teach_check 做比对
+    # 情况 B：学生发了消息 → 先处理, 再决定是否展示引导（必须放在 step_introduced 之前）
     if student_message:
         _session_manager.add_message(session_id, "student", student_message)
         sess["attempt_count"] += 1
@@ -323,16 +350,18 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
         if any(kw in student_message for kw in ["跳过", "skip", "跳過", "下一步", "下一题"]):
             sess["step_results"].append({
                 "step_index": sess["current_step"],
-                "correct": False,
+                "correct": True,
                 "attempts": sess["attempt_count"],
-                "viewed_answer": True,
+                "viewed_answer": False,
             })
             sess["stats"]["skipped"] = sess["stats"].get("skipped", 0) + 1
             _session_manager.add_message(session_id, "system", f"已跳过步骤 {sess['current_step']+1}")
             _session_manager.advance_step(session_id)
             if sess["current_step"] < sess["total_steps"]:
+                sess["step_introduced"] = True
+            if sess["current_step"] < sess["total_steps"]:
                 next_step = sess["steps"][sess["current_step"]]
-                next_msg = f"已跳过上一步。好的，让我们进入下一步——{next_step.get('title', '')}。\n\n{next_step.get('step_prompt', '')}"
+                next_msg = f"已跳过上一步。好的，让我们进入下一步——{next_step.get('title', '')}。请尝试解答。"
                 return {
                     "action": "advance",
                     "message": f"已跳过步骤 {sess['current_step']}。",
@@ -346,6 +375,7 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
                     "action": "complete",
                     "message": "🎉 所有步骤已完成！",
                     "session_id": session_id,
+                    "question_id": sess.get("question_id"),
                     "stats": sess["stats"],
                     "step_results": sess["step_results"],
                 }
@@ -367,7 +397,24 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
             feedback = f"这一步的关键答案是：{answer}\n\n理解了之后，请继续完成下一步。"
             _session_manager.add_message(session_id, "teacher", feedback, metadata={"action": "show_answer"})
             return {"action": "guide", "message": feedback, "current_step": sess["current_step"] + 1, "total_steps": sess["total_steps"], "session_id": session_id}
-        
+
+    step = sess["steps"][sess["current_step"]]
+
+    # 情况 A：当前步骤尚未展示引导 → 用 title 做引导（此刻 step_introduced 在 student_message 之后）
+    if not sess["step_introduced"]:
+        sess["step_introduced"] = True
+        msg = f"请完成第 {sess['current_step']+1} 步：{step.get('title', '')}"
+        _session_manager.add_message(session_id, "teacher", msg, metadata={"action": "guide"})
+        return {
+            "action": "guide",
+            "message": msg,
+            "current_step": sess["current_step"] + 1,
+            "total_steps": sess["total_steps"],
+            "session_id": session_id,
+        }
+
+    # 情况 C：有学生消息且未被跳过/提示/答案拦截 → 用 teach_check 做比对
+    if student_message:
         up = f"原题：{sess['question']}\n当前步骤引导问题：{step.get('step_prompt', '')}\n参考答案：{step.get('step_answer', step.get('standard_writing', ''))}\n学生回答：{student_message}"
         cfg = TEACHER_CONFIG.get(sess["teacher"], TEACHER_CONFIG["liangliang"])
 
@@ -401,8 +448,9 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
             _session_manager.advance_step(session_id)
 
             if sess["current_step"] < sess["total_steps"]:
+                sess["step_introduced"] = True
                 next_step = sess["steps"][sess["current_step"]]
-                next_msg = f"好的，让我们进入下一步——{next_step.get('title', '步骤 ' + str(sess['current_step'] + 1))}。\n\n{next_step.get('step_prompt', '请尝试解答。')}"
+                next_msg = f"好的，让我们进入下一步——{next_step.get('title', '步骤 ' + str(sess['current_step'] + 1))}。请尝试解答。"
                 return {
                     "action": "advance",
                     "message": feedback,
@@ -416,6 +464,7 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
                     "action": "complete",
                     "message": feedback + "\n\n🎉 你完成了所有步骤！",
                     "session_id": session_id,
+                                        "question_id": sess.get("question_id"),
                     "stats": sess["stats"],
                     "step_results": sess["step_results"],
                 }
@@ -437,7 +486,7 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
             }
 
     # 备选（不应走到这里）
-    msg = step.get("step_prompt") or f"请尝试完成第 {sess['current_step']+1} 步。"
+    msg = f"请尝试完成第 {sess['current_step']+1} 步。"
     return {"action": "guide", "message": msg, "session_id": session_id}
 
 def teach_session_start(question: str, teacher: str = None) -> dict:
@@ -458,6 +507,7 @@ def teach_session_start(question: str, teacher: str = None) -> dict:
 
     return {
         "session_id": result["session_id"],
+        "question_id": sess.get("question_id"),
         "action": "guide",
         "message": first_msg,
         "steps": sess["steps"],
@@ -481,6 +531,7 @@ def teach_get_session(session_id: str) -> Optional[dict]:
         return None
     return {
         "session_id": sess["session_id"],
+        "question_id": sess.get("question_id"),
         "question": sess["question"],
         "teacher": sess["teacher"],
         "steps": sess["steps"],
