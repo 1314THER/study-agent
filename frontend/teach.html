@@ -9,7 +9,81 @@
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 <style>
+/* Quote area */
+.quote-area { text-align: center; padding: 8px 0 28px; max-width: 640px; margin: 0 auto; }
+.quote-text { font-size: 14px; color: #86868b; line-height: 1.7; transition: opacity 0.5s ease; min-height: 22px; font-weight: 400; letter-spacing: 0.3px; }
+
+/* 3-stage progress bar */
+.teach-progress { margin-bottom: 12px; flex-shrink:0; max-width:640px; margin-left:auto; margin-right:auto; width:100%; }
+.teach-progress-stages { display:flex; align-items:center; margin-bottom:12px; position:relative; justify-content:space-between; padding:0 8px; }
+.teach-stage { display:flex; align-items:center; gap:8px; flex:1; position:relative; }
+
+.teach-stage-dot { width:12px; height:12px; border-radius:50%; flex-shrink:0; background:#e0e0e0; transition:all 0.4s ease; position:relative; z-index:1; }
+.teach-stage.active .teach-stage-dot { background:#0071e3; box-shadow:0 0 0 3px rgba(0,113,227,0.2); }
+.teach-stage.completed .teach-stage-dot { background:#34c759; }
+.teach-stage-label { font-size:12px; color:#86868b; transition:color 0.3s; white-space:nowrap; }
+.teach-stage.active .teach-stage-label { color:#0071e3; font-weight:500; }
+.teach-stage.completed .teach-stage-label { color:#34c759; font-weight:500; }
+
+.teach-progress-pct { text-align:center; font-size:20px; font-weight:700; color:#0071e3; margin-top:6px; }
+.teach-progress-timer { text-align:center; font-size:13px; color:#0071e3; margin-top:2px; font-weight:600; display:none; }
+.teach-progress-text { text-align:center; font-size:14px; color:#86868b; margin-top:2px; }
+
+/* Teacher selection modal */
+.teacher-modal-overlay { display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.35); z-index:1000; align-items:center; justify-content:center; backdrop-filter:blur(4px); }
+.teacher-modal-box { background:white; border-radius:20px; padding:28px 28px 24px; width:380px; max-width:92vw; box-shadow:0 20px 60px rgba(0,0,0,0.18); text-align:center; }
+.teacher-modal-title { font-size:17px; font-weight:600; color:#1d1d1f; margin-bottom:18px; }
+.teacher-modal-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:20px; }
+.teacher-modal-btn { display:flex; flex-direction:column; align-items:center; gap:2px; padding:18px 8px 14px; border:1.5px solid #e5e5e7; border-radius:14px; background:white; cursor:pointer; transition:all 0.2s ease; user-select:none; }
+.teacher-modal-btn:hover { border-color:#0071e3; background:#f5faff; transform:translateY(-1px); }
+.teacher-modal-btn.selected { border-color:#0071e3; background:#e8f4ff; box-shadow:0 0 0 2px rgba(0,113,227,0.15); }
+.teacher-modal-btn .t-icon { font-size:32px; margin-bottom:2px; }
+.teacher-modal-btn .t-name { font-size:14px; font-weight:600; color:#1d1d1f; }
+.teacher-modal-btn .t-desc { font-size:11px; color:#86868b; line-height:1.3; }
+.teacher-modal-confirm { padding:12px 32px; border:none; border-radius:12px; background:#0071e3; color:white; font-size:15px; font-weight:600; cursor:pointer; transition:all 0.15s; width:100%; }
+.teacher-modal-confirm:hover { background:#005bbf; }
+.teacher-modal-confirm:disabled { opacity:0.4; cursor:not-allowed; }
+
 html, body { overflow: hidden; height: 100%; }
+.teach-search-box { display:flex; gap:10px; margin-bottom:0; width:100%; max-width:640px; margin-left:auto; margin-right:auto; }
+.teach-search-box textarea { flex:1; padding:14px 18px; border:1px solid #c7c7cc; border-radius:12px; font-size:16px; outline:none; transition:border-color 0.2s; resize:none; overflow:hidden; font-family:inherit; line-height:1.5; min-height:52px; box-sizing:border-box; }
+.teach-search-box textarea:focus { border-color:#0071e3; }
+.teach-search-box textarea::placeholder { color:#b0b0b5; }
+.teach-search-btn { padding:14px 24px; background:#0071e3; color:white; border:none; border-radius:12px; font-size:16px; cursor:pointer; transition:background 0.2s; white-space:nowrap; flex-shrink:0; font-weight:600; }
+.teach-search-btn:hover { background:#005bbf; }
+.teach-search-btn:disabled { background:#a0c4ff; cursor:not-allowed; }
+body.theme-xuefeng .teach-search-btn { background:#7c3aed; }
+body.theme-xuefeng .teach-search-btn:hover { background:#6d28d9; }
+body.theme-xuefeng .teach-search-btn:disabled { background:#c4b5fd; }
+body.theme-xuefeng .teach-progress-stages .teach-stage.active .teach-stage-dot { background:#7c3aed; box-shadow:0 0 0 3px rgba(124,58,237,0.2); }
+ { color:#7c3aed; }
+body.theme-xuefeng .teach-progress-pct { color:#7c3aed; }
+body.theme-xuefeng .teach-progress-timer { color:#7c3aed; } }
+ }
+body.theme-liangliang .teach-search-btn { background:#ca8a04; }
+body.theme-liangliang .teach-search-btn:hover { background:#a16207; }
+body.theme-liangliang .teach-search-btn:disabled { background:#fde68a; }
+body.theme-liangliang .teach-progress-stages .teach-stage.active .teach-stage-dot { background:#ca8a04; box-shadow:0 0 0 3px rgba(202,138,4,0.2); }
+ { color:#ca8a04; }
+body.theme-liangliang .teach-progress-pct { color:#ca8a04; }
+body.theme-liangliang .teach-progress-timer { color:#ca8a04; } }
+ }
+body.theme-taotao .teach-search-btn { background:#db2777; }
+body.theme-taotao .teach-search-btn:hover { background:#be185d; }
+body.theme-taotao .teach-search-btn:disabled { background:#f9a8d4; }
+body.theme-taotao .teach-progress-stages .teach-stage.active .teach-stage-dot { background:#db2777; box-shadow:0 0 0 3px rgba(219,39,119,0.2); }
+ { color:#db2777; }
+body.theme-taotao .teach-progress-pct { color:#db2777; }
+body.theme-taotao .teach-progress-timer { color:#db2777; } }
+ }
+body.theme-ji .teach-search-btn { background:#16a34a; }
+body.theme-ji .teach-search-btn:hover { background:#15803d; }
+body.theme-ji .teach-search-btn:disabled { background:#86efac; }
+body.theme-ji .teach-progress-stages .teach-stage.active .teach-stage-dot { background:#16a34a; box-shadow:0 0 0 3px rgba(22,163,74,0.2); }
+ { color:#16a34a; }
+body.theme-ji .teach-progress-pct { color:#16a34a; }
+body.theme-ji .teach-progress-timer { color:#16a34a; } }
+ }
 .teach-container { max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; height: calc(100vh - 48px); }
 .teach-header { text-align: center; padding-bottom: 12px; flex-shrink: 0; }
 .teach-input-area { flex-shrink: 0; margin-bottom: 12px; }
@@ -128,25 +202,58 @@ html, body { overflow: hidden; height: 100%; }
 <h1 style="margin-bottom:4px;">手把手教学</h1>
 <p class="subtitle" style="margin-bottom:0;">输入题目，AI 老师带你一步步解题</p>
 </div>
-<div class="teacher-selector" id="teacherSelector" style="margin-bottom:24px;">
-<button class="teacher-btn active" data-teacher="liangliang" onclick="selectTeacher(this,'liangliang')"><span class="t-icon">👛</span><span class="t-name">梁梁</span><span class="t-desc">快速，但是可能出错</span></button>
-<button class="teacher-btn" data-teacher="taotao" onclick="selectTeacher(this,'taotao')"><span class="t-icon">🎩</span><span class="t-name">韬韬</span><span class="t-desc">更慢但更聪明</span></button>
-<button class="teacher-btn" data-teacher="xuefeng" onclick="selectTeacher(this,'xuefeng')"><span class="t-icon">🏃</span><span class="t-name">雪峰</span><span class="t-desc">嘴唇有点紫的老师</span></button>
-<button class="teacher-btn" data-teacher="ji" onclick="selectTeacher(this,'ji')"><span class="t-icon">🐔</span><span class="t-name">鸡</span><span class="t-desc">每一步都要考虑半天</span></button>
+<div class="quote-area" id="quoteArea">
+  <div class="quote-text" id="quoteText">输入一道数学题，AI 老师带你一步步解题</div>
 </div>
-<div class="teach-input-area" id="teachInput">
-<textarea id="teachQuestionInput" placeholder="输入题目，支持 LaTeX 语法" rows="3"></textarea>
-<div class="teach-input-actions">
-<button class="teach-btn" id="teachStartBtn" onclick="startTeaching()" style="background:#0071e3;">开始教学</button>
-      <div class="teach-loading" id="teachLoading" style="display:none;"><span class="typing-dots"><span></span><span></span><span></span></span><span>AI 老师正在准备课程...</span></div>
-      </div>
-    </div>
-    <div class="teach-error" id="teachError" style="display:none;padding:12px 16px;background:#fff5f5;border:1px solid #ffcdd2;border-radius:12px;color:#991b1b;font-size:14px;margin-bottom:12px;"></div>
 
-<div class="teach-progress">
-        <div class="teach-progress-text" id="teachProgressText">准备中...</div>
-        <div class="teach-progress-bar"><div class="teach-progress-fill" id="teachProgressFill" style="width:0%"></div></div>
-      </div>
+<div class="teacher-modal-overlay" id="teacherModal">
+  <div class="teacher-modal-box">
+    <div class="teacher-modal-title">选择一位老师来解这道题</div>
+    <div class="teacher-modal-grid">
+      <button class="teacher-modal-btn selected" data-teacher="liangliang" onclick="selectModalTeacher(this,'liangliang')">
+        <span class="t-icon">👛</span><span class="t-name">梁梁</span>
+        <span class="t-desc">快速，但可能出错</span>
+      </button>
+      <button class="teacher-modal-btn" data-teacher="taotao" onclick="selectModalTeacher(this,'taotao')">
+        <span class="t-icon">🎩</span><span class="t-name">韬韬</span>
+        <span class="t-desc">更慢但更聪明</span>
+      </button>
+      <button class="teacher-modal-btn" data-teacher="xuefeng" onclick="selectModalTeacher(this,'xuefeng')">
+        <span class="t-icon">🏃</span><span class="t-name">雪峰</span>
+        <span class="t-desc">嘴唇有点紫的老师</span>
+      </button>
+      <button class="teacher-modal-btn" data-teacher="ji" onclick="selectModalTeacher(this,'ji')">
+        <span class="t-icon">🐔</span><span class="t-name">鸡</span>
+        <span class="t-desc">每一步考虑半天</span>
+      </button>
+    </div>
+    <button class="teacher-modal-confirm" id="teacherModalConfirm" onclick="confirmTeacher()">确定，开始解题</button>
+  </div>
+</div>
+
+<div class="teach-input-area" id="teachInput">
+  <div class="teach-search-box">
+    <textarea id="teachQuestionInput" placeholder="输入题目，支持 LaTeX 语法…" rows="1" oninput="autoResize(this)"></textarea>
+    <button class="teach-search-btn" id="teachStartBtn" onclick="startTeaching()">开始教学</button>
+  </div>
+  <div class="teach-loading" id="teachLoading" style="display:none;text-align:center;margin-top:12px;">
+    <span class="typing-dots"><span></span><span></span><span></span></span>
+  </div>
+</div>
+<div class="teach-error" id="teachError" style="display:none;padding:12px 16px;background:#fff5f5;border:1px solid #ffcdd2;border-radius:12px;color:#991b1b;font-size:14px;margin-bottom:12px;"></div>
+
+<div class="teach-progress" id="teachProgressArea" style="display:none;">
+  <div class="teach-progress-stages">
+    <div class="teach-stage" id="stage1"><div class="teach-stage-dot"></div><div class="teach-stage-label">AI 解题</div></div>
+    <div class="teach-stage" id="stage2"><div class="teach-stage-dot"></div><div class="teach-stage-label">检查步骤</div></div>
+    <div class="teach-stage" id="stage3"><div class="teach-stage-dot"></div><div class="teach-stage-label">优化引导</div></div>
+  </div>
+  
+  <div class="teach-progress-pct" id="teachProgressPct">0%</div>
+  <div class="teach-progress-timer" id="teachProgressTimer" style="display:none;"></div>
+  <div class="teach-progress-text" id="teachProgressText"></div>
+</div>
+
 
       <div id="teachSession" style="display:none;flex:1;min-height:0;">
         <div class="teach-two-col">
@@ -229,6 +336,15 @@ html, body { overflow: hidden; height: 100%; }
 </div>
 <script>
 var _selectedTeacher = localStorage.getItem("teacher") || "liangliang";
+var _teachQuotes = [
+  "输入一道数学题，AI 老师带你一步步解题",
+  "遇到不会的题？试试手把手教学",
+  "每一步都有老师引导，学数学更轻松",
+  "从不会到会，只需要一个输入框",
+  "解析每一步，理解每一个知识点",
+  "让 AI 老师陪你攻克数学难题"
+];
+var _quoteIndex = Math.floor(Math.random() * _teachQuotes.length);
 var _sessionId = null;
 var _stats = { correct: 0, wrong: 0, skipped: 0 };
 var _isWaiting = false;
@@ -238,16 +354,32 @@ var _sessionChunkResults = [];
 var _sessionSteps = [];
 var _stepErrorData = {};
 var SAVE_KEY = "_teach_session_v2";
+var _pendingResolve = null;
 
-function selectTeacher(btn, teacher) {
-  document.querySelectorAll(".teacher-btn").forEach(function(b){b.classList.remove("active");});
-  btn.classList.add("active"); _selectedTeacher = teacher;
-  document.body.classList.remove("theme-xuefeng","theme-liangliang","theme-taotao","theme-ji");
-  if (teacher==="xuefeng") document.body.classList.add("theme-xuefeng");
-  else if (teacher==="liangliang") document.body.classList.add("theme-liangliang");
-  else if (teacher==="taotao") document.body.classList.add("theme-taotao");
-  else if (teacher==="ji") document.body.classList.add("theme-ji");
-  localStorage.setItem("teacher",teacher);
+function selectModalTeacher(btn, teacher){
+  document.querySelectorAll(".teacher-modal-btn").forEach(function(b){b.classList.remove("selected");});
+  btn.classList.add("selected");_selectedTeacher=teacher;
+}
+function confirmTeacher(){
+  var modal=document.getElementById("teacherModal");
+  if(modal)modal.style.display="none";
+  if(_pendingResolve){_pendingResolve();_pendingResolve=null;}
+}
+function rotateQuote(){
+  var el=document.getElementById("quoteText");
+  if(!el)return;
+  _quoteIndex=(_quoteIndex+1)%_teachQuotes.length;
+  el.style.opacity="0";
+  setTimeout(function(){
+    el.textContent=_teachQuotes[_quoteIndex];
+    el.style.opacity="1";
+  },300);
+}
+
+function autoResize(el){
+  el.style.height="auto";
+  var newH=Math.max(52, el.scrollHeight);
+  el.style.height=newH+"px";
 }
 
 function escapeHtml(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
@@ -266,7 +398,7 @@ function addChatMessage(role,content,meta){
 function addLoadingMessage(){var c=document.getElementById("teachChat");var d=document.createElement("div");d.className="chat-msg teacher";d.id="chatLoading";d.innerHTML='<div class="chat-avatar">\uD83D\uDC69</div><div class="chat-bubble"><span class="typing-dots"><span></span><span></span><span></span></span></div>';c.appendChild(d);scrollChat();}
 function removeLoadingMessage(){var e=document.getElementById("chatLoading");if(e)e.remove();}
 function setInputEnabled(e){var i=document.getElementById("teachChatInput");var b=document.getElementById("teachSendBtn");i.disabled=!e;b.disabled=!e;document.getElementById("skipBtn").disabled=!e;var sab=document.getElementById("showAnswerBtn");if(sab)sab.disabled=!e;if(e)i.focus();}
-function updateProgress(){var p=_totalSteps>0?(_currentStepIndex/_totalSteps)*100:0;document.getElementById("teachProgressFill").style.width=p+"%";document.getElementById("teachProgressText").textContent="\u7B2C "+Math.min(_currentStepIndex+1,_totalSteps)+" / "+_totalSteps+" \u6B65";}
+function updateProgress(){var p=_totalSteps>0?Math.round((_currentStepIndex/_totalSteps)*100):0;var pctEl=document.getElementById("teachProgressPct");if(pctEl)pctEl.textContent=p+"%";var tEl=document.getElementById("teachProgressText");if(tEl)tEl.textContent="第 "+Math.min(_currentStepIndex+1,_totalSteps)+" / "+_totalSteps+" 步";}
 
 function toggleDetail(el){
   var d=el.nextElementSibling;if(!d)return;
@@ -331,7 +463,7 @@ function restoreSession(){
     if(d.teacher){_selectedTeacher=d.teacher;document.body.className=document.body.className.replace(/theme-\w+/g,"").trim()||"theme-liangliang";document.body.classList.add("theme-"+_selectedTeacher);}
     if(!_sessionSteps||!_sessionSteps.length){clearSavedSession();return false;}
     if(d.question){document.getElementById("teachQuestionInput").value=d.question;var qd=document.getElementById("teachQuestionDisplay");if(qd){qd.innerHTML=escapeHtml(d.question).replace(/\n/g,"<br>");renderMath(qd);}}
-    document.getElementById("teachInput").style.display="none";document.getElementById("teacherSelector").style.display="none";
+    document.getElementById("teachInput").style.display="none";document.getElementById("quoteArea").style.display="none";
     document.getElementById("teachSession").style.display="flex";document.getElementById("teachSummary").classList.remove("show");
     document.getElementById("teachChat").innerHTML="";if(d.messages)d.messages.forEach(function(m){addChatMessage(m.role,m.content)});
     // Delayed KaTeX re-render for restored messages
@@ -345,25 +477,109 @@ function restoreSession(){
   }catch(e){clearSavedSession();return false;}
 }
 
-async function startTeaching(){
-  saveSession();var q=document.getElementById("teachQuestionInput").value.trim();
-  if(!q){document.getElementById("teachError").textContent="\u8BF7\u8F93\u5165\u9898\u76EE";document.getElementById("teachError").style.display="block";return;}
-  document.getElementById("teachStartBtn").disabled=true;document.getElementById("teachLoading").style.display="inline-flex";document.getElementById("teachError").style.display="none";
-  try{
-    var r=await fetch("http://127.0.0.1:8000/teach/session/start",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,teacher:_selectedTeacher})});
-    var txt=await r.text();var data;try{data=JSON.parse(txt)}catch(e){document.getElementById("teachError").textContent="\u670D\u52A1\u5668\u8FD4\u56DE\u9519\u8BEF";document.getElementById("teachError").style.display="block";resetStartBtn();return;}
-    if(data.error){document.getElementById("teachError").textContent=data.detail||data.message||"\u65E0\u6CD5\u89E3\u7B54";document.getElementById("teachError").style.display="block";resetStartBtn();return;}
-    _sessionId=data.session_id;_totalSteps=data.total_steps||0;_currentStepIndex=0;_stats={correct:0,wrong:0,skipped:0};
-    _sessionChunkResults=data.chunk_results||[];_sessionSteps=data.steps||[];_stepErrorData={};
-    document.getElementById("teachInput").style.display="none";document.getElementById("teacherSelector").style.display="none";
-    document.getElementById("teachSession").style.display="flex";document.getElementById("teachChat").innerHTML="";
-    document.getElementById("teachSummary").classList.remove("show");updateProgress();
-    var qd=document.getElementById("teachQuestionDisplay");if(qd&&q){qd.innerHTML=escapeHtml(q).replace(/\n/g,"<br>");renderMath(qd);}
-    updateInfoPanel();if(data.message)addChatMessage("teacher",data.message);setInputEnabled(true);saveSession();
-  }catch(e){document.getElementById("teachError").textContent="\u7F51\u7EDC\u9519\u8BEF\uFF0C\u8BF7\u786E\u8BA4\u540E\u7AEF\u5DF2\u542F\u52A8";document.getElementById("teachError").style.display="block";resetStartBtn();}
+
+var _stepTimer=null;
+function startStepTimer(){
+  var startTime=Date.now();
+  var timerEl=document.getElementById("teachProgressTimer");
+  if(!timerEl)return;
+  timerEl.style.display="block";
+  var timeoutAdded=false;
+  if(_stepTimer)clearInterval(_stepTimer);
+  _stepTimer=setInterval(function(){
+    var elapsed=Math.floor((Date.now()-startTime)/1000);
+    if(elapsed>180){
+      timerEl.textContent="\u5DF2\u601D\u8003 "+elapsed+"s";
+      if(!timeoutAdded){
+        timeoutAdded=true;
+        var tEl=document.getElementById("teachProgressText");
+        if(tEl)tEl.innerHTML+="<br>\u4F60\u505A\u4E0D\u8FC7\u6211\u4F60\u4FE1\u5417";
+      }
+    }else{
+      timerEl.textContent="\u5DF2\u601D\u8003 "+elapsed+"s/180s";
+    }
+  },1000);
 }
+function stopStepTimer(){
+  if(_stepTimer){clearInterval(_stepTimer);_stepTimer=null;}
+}
+function setProgressStage(stage, text){
+  var pct=stage===1?13:stage===2?78:91;
+  var pctEl=document.getElementById("teachProgressPct");
+  if(pctEl)pctEl.textContent=pct+"%";
+  var teacherNames={liangliang:"\u6881\u6881",taotao:"\u97EC\u97EC",xuefeng:"\u96EA\u5CF0",ji:"\u9E21"};
+  var tn=teacherNames[_selectedTeacher]||"AI";
+  var msg=text?tn+" "+text:tn+" \u6B63\u5728\u89E3\u9898";
+  var tEl=document.getElementById("teachProgressText");
+  if(tEl)tEl.textContent=msg;
+  for(var i=1;i<=3;i++){
+    var el=document.getElementById("stage"+i);
+    if(!el)continue;
+    el.classList.remove("active","completed");
+    if(i<stage)el.classList.add("completed");
+    if(i===stage)el.classList.add("active");
+  }
+}
+
+async function startTeaching(){
+  var q=document.getElementById("teachQuestionInput").value.trim();
+  if(!q){showError("请输入题目");return;}
+  saveSession();document.getElementById("teachError").style.display="none";
+  document.getElementById("teachStartBtn").disabled=true;
+  document.getElementById("teachProgressArea").style.display="block";
+  try{
+    var r=await fetch("http://127.0.0.1:8000/teach/find",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,teacher:_selectedTeacher})});
+    var findRes=await r.json();
+    if(findRes.found&&findRes.chunk_results&&findRes.chunk_results.length){
+      // Question already in DB - go directly to stage 2
+      startStepTimer();
+      setProgressStage(2,"\u6B63\u5728\u4F18\u5316\u6559\u5B66\u5F15\u5BFC");
+      await startTeachSession(q);
+    }else{
+      // New question - show teacher modal
+      document.getElementById("teacherModal").style.display="flex";
+      await new Promise(function(resolve){_pendingResolve=resolve;});
+      startStepTimer();
+      setProgressStage(1,"\u6B63\u5728\u89E3\u9898");
+      var s1=await fetch("http://127.0.0.1:8000/solve/step1",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,teacher:_selectedTeacher})});
+      var d1=await s1.json();
+      if(d1.error){showError(d1.detail||"无法解答");resetStartBtn();return;}
+      setProgressStage(2,"正在检查步骤…");
+      var s2=await fetch("http://127.0.0.1:8000/solve/step2",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,content:d1.content,category:d1.category||null,teacher:_selectedTeacher})});
+      var d2=await s2.json();
+      if(d2.error){showError(d2.detail||"步骤检查失败");resetStartBtn();return;}
+      var s3=await fetch("http://127.0.0.1:8000/solve/step3",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,chunk_results:JSON.stringify(d2.chunk_results),teacher:_selectedTeacher,save:true})});
+      await s3.json();
+      stopStepTimer();
+      setProgressStage(3,"\u6B63\u5728\u4F18\u5316\u6559\u5B66\u5F15\u5BFC");
+      await startTeachSession(q);
+    }
+  }catch(e){console.error(e);showError("网络错误，请确认后端已启动");resetStartBtn();}
+}
+function resetStartBtn(){document.getElementById("teachStartBtn").disabled=false;document.getElementById("teachLoading").style.display="none";document.getElementById("teachProgressArea").style.display="none";}
+function showError(m){var e=document.getElementById("teachError");e.textContent=m;e.style.display="block";}
 function resetStartBtn(){document.getElementById("teachStartBtn").disabled=false;document.getElementById("teachLoading").style.display="none";}
 
+async function startTeachSession(q){
+  try{
+    var r=await fetch("http://127.0.0.1:8000/teach/session/start",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,teacher:_selectedTeacher})});
+    var data=await r.json();
+    if(data.error){showError(data.detail||"无法创建教学会话");resetStartBtn();return;}
+    _sessionId=data.session_id;_totalSteps=data.total_steps||0;_currentStepIndex=0;
+    _stats={correct:0,wrong:0,skipped:0};
+    _sessionChunkResults=data.chunk_results||[];_sessionSteps=data.steps||[];_stepErrorData={};
+    document.getElementById("teachInput").style.display="none";
+    document.getElementById("quoteArea").style.display="none";
+    document.getElementById("teachProgressArea").style.display="none";
+    document.getElementById("teachSession").style.display="flex";
+    document.getElementById("teachChat").innerHTML="";
+    document.getElementById("teachSummary").classList.remove("show");
+    updateProgress();
+    var qd=document.getElementById("teachQuestionDisplay");if(qd&&q){qd.innerHTML=escapeHtml(q).replace(/\n/g,"<br>");renderMath(qd);}
+    updateInfoPanel();if(data.message)addChatMessage("teacher",data.message);
+    setInputEnabled(true);saveSession();
+  }catch(e){console.error(e);showError("网络错误");resetStartBtn();}
+}
 async function sendMessage(){
   if(_isWaiting)return;var i=document.getElementById("teachChatInput");var m=i.value.trim();if(!m||!_sessionId)return;
   i.value="";i.style.height="auto";addChatMessage("student",m);_isWaiting=true;setInputEnabled(false);addLoadingMessage();
@@ -461,7 +677,7 @@ function understoodStep(){
   fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:"跳过"})}).catch(function(){});
 }
 
-function cancelTeaching(){if(!_sessionId)return;clearSavedSession();_sessionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("teacherSelector").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachStartBtn").disabled=false;}
+function cancelTeaching(){if(!_sessionId)return;clearSavedSession();_sessionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("quoteArea").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachStartBtn").disabled=false;}
 
 async function saveTeachingResults(){
   try{
@@ -500,14 +716,39 @@ async function saveTeachingResults(){
 }
 function showSummary(d){document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.add("show");var st=d.stats||_stats;document.getElementById("summaryCorrect").textContent=st.correct||0;document.getElementById("summaryWrong").textContent=st.wrong||0;document.getElementById("summarySkipped").textContent=(st.skipped||0)+(st.viewed_answer||0);saveTeachingResults();}
 
-function resetAll(){clearSavedSession();_sessionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("teacherSelector").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachQuestionInput").value="";document.getElementById("teachStartBtn").disabled=false;document.getElementById("teachLoading").style.display="none";}
+function resetAll(){clearSavedSession();_sessionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("quoteArea").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachQuestionInput").value="";document.getElementById("teachStartBtn").disabled=false;document.getElementById("teachLoading").style.display="none";}
 
-function showError(m){document.getElementById("teachError").textContent=m;document.getElementById("teachError").style.display="block";}
 
 document.addEventListener("DOMContentLoaded",function(){
-  if(!restoreSession()){var st=localStorage.getItem("teacher");if(st){var btn=document.querySelector('[data-teacher="'+st+'"]');if(btn)selectTeacher(btn,st);}
-    var q=localStorage.getItem("_teach_question");if(q){localStorage.removeItem("_teach_question");document.getElementById("teachQuestionInput").value=q;setTimeout(function(){startTeaching()},300);}}
+  // Initial random quote after DOM is ready
+  setTimeout(function(){
+    var qe=document.getElementById("quoteText");
+    if(qe){var ri=Math.floor(Math.random()*_teachQuotes.length);_quoteIndex=ri;qe.textContent=_teachQuotes[ri];}
+  },100);
+  setInterval(rotateQuote, 8000);
+  // Re-render KaTeX when tab becomes visible
+  document.addEventListener("visibilitychange",function(){
+    if(!document.hidden){
+      setTimeout(function(){
+        var cc=document.getElementById("teachChat");
+        if(cc&&window.renderMathInElement){
+          try{renderMathInElement(cc,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}],ignoredTags:["script","style"]})}catch(e){}
+        }
+        var si=document.getElementById("teachStepList");
+        if(si&&window.renderMathInElement){
+          try{renderMathInElement(si,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}],ignoredTags:["script","style"]})}catch(e){}
+        }
+        var qd=document.getElementById("teachQuestionDisplay");
+        if(qd&&window.renderMathInElement){
+          try{renderMathInElement(qd,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}],ignoredTags:["script","style"]})}catch(e){}
+        }
+      },200);
+    }
+  });
+  if(!restoreSession()){var q=localStorage.getItem("_teach_question");if(q){localStorage.removeItem("_teach_question");document.getElementById("teachQuestionInput").value=q;if(document.getElementById("teachQuestionInput")){autoResize(document.getElementById("teachQuestionInput"));}}}
   var inp=document.getElementById("teachChatInput");inp.addEventListener("input",function(){this.style.height="auto";this.style.height=Math.min(this.scrollHeight,120)+"px"});
+  // Auto resize for question input
+  var qi=document.getElementById("teachQuestionInput");if(qi)qi.addEventListener("input",function(){autoResize(this)});
 });
 </script>
 </body>
