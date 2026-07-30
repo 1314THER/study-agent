@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile
+from fastapi import FastAPI, UploadFile, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 
@@ -8,7 +8,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from backend.solver import step_solver_only, step_verify_all, step_final_check, _xuebile, _extract_solver_status
 from backend.teach import teach_start, teach_check, teach_find_or_format, teach_session_start, teach_session_chat, teach_get_session
 from backend.multimodal import parse_file, get_supported_extensions
-from backend.database import init_db, get_all_questions, search_questions, delete_question
+from backend.database import (
+    init_db, get_all_questions, search_questions, delete_question,
+    get_question_lists, create_question_list, delete_question_list,
+    rename_question_list, add_question_to_lists, remove_question_from_list,
+    get_list_questions, get_wrong_questions, update_question_source_type,
+)
 from backend.categories import get_all_categories
 from backend.steps import get_step_structure, get_all_question_types
 
@@ -142,8 +147,9 @@ def api_search_questions(
     error_type: str = "",
     page: int = 1,
     page_size: int = 0,
+    source_type: str = "",
 ):
-    """搜索个人题库：关键词（空格分隔为 AND 匹配）+ 板块 + 难度 + 题型筛选
+    """搜索个人题库：关键词（空格分隔为 AND 匹配）+ 板块 + 难度 + 题型 + 来源筛选
     mode="content": 仅搜索题目原文（默认）
     mode="global":  同时搜索板块、知识点、错因
     error_type: 错因筛选（none=无错因，具体类型=按类型筛选，空=全部）"""
@@ -155,7 +161,8 @@ def api_search_questions(
     types = [t.strip() for t in question_type.split(",") if t.strip()] if question_type else None
     et = error_type if error_type else None
     ps = page_size if page_size > 0 else None
-    return search_questions(keywords, categories, difficulties, types, limit=limit, mode=mode, error_type=et, page=page, page_size=ps)
+    st = source_type if source_type else None
+    return search_questions(keywords, categories, difficulties, types, limit=limit, mode=mode, error_type=et, page=page, page_size=ps, source_type=st)
 
 
 @app.get("/questions/errors")
@@ -414,6 +421,129 @@ def api_teach_get_session(session_id: str):
         return {"error": "session_not_found", "detail": "会话不存在"}
     return result
 
+
+
+# ---------- 题单管理 ----------
+
+@app.get("/question-lists")
+def api_get_question_lists():
+    """获取所有题单（含错题动态题单）"""
+    return get_question_lists()
+
+
+class CreateListRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=50, description="题单名")
+
+
+@app.post("/question-lists")
+def api_create_question_list(req: CreateListRequest):
+    """创建新的用户题单"""
+    lid = create_question_list(req.name)
+    return {"id": lid, "name": req.name, "list_type": "user", "created": True}
+
+
+class RenameListRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=50, description="新题单名")
+
+
+@app.put("/question-lists/{list_id}")
+def api_rename_question_list(list_id: int, req: RenameListRequest):
+    """重命名题单（系统题单不可改名）"""
+    ok = rename_question_list(list_id, req.name)
+    if not ok:
+        return {"error": "rename_failed", "message": "题单不存在或为系统题单"}
+    return {"ok": True, "name": req.name}
+
+
+@app.delete("/question-lists/{list_id}")
+def api_delete_question_list(list_id: int):
+    """删除用户题单（系统题单不可删除）"""
+    ok = delete_question_list(list_id)
+    if not ok:
+        return {"error": "delete_failed", "message": "题单不存在或为系统题单"}
+    return {"ok": True, "deleted_id": list_id}
+
+
+@app.get("/question-lists/{target}/questions")
+def api_get_list_questions(
+    target: str,
+    q: str = "",
+    category: str = "",
+    difficulty: str = "",
+    question_type: str = "",
+    error_type: str = "",
+    page: int = Query(1, ge=1),
+    page_size: int = Query(0, ge=0),
+):
+    """获取指定题单下的题目（支持筛选和分页）
+    target 可以是:
+      - "all" 代表全部题单
+      - "wrong" 代表错题（动态查询）
+      - 数字 id 代表具体题单
+    """
+    keywords = [kw.strip() for kw in q.split() if kw.strip()] if q else None
+    categories = [c.strip() for c in category.split(",") if c.strip()] if category else None
+    difficulties = [d.strip() for d in difficulty.split(",") if d.strip()] if difficulty else None
+    types = [t.strip() for t in question_type.split(",") if t.strip()] if question_type else None
+    et = error_type if error_type else None
+    ps = page_size if page_size > 0 else None
+
+    if target == "wrong":
+        return get_wrong_questions(keywords, categories, difficulties, types, et, page, ps)
+    try:
+        list_id = int(target)
+    except ValueError:
+        return {"error": "invalid_target", "message": "target 必须是 all、wrong 或数字 ID"}
+    return get_list_questions(list_id, keywords, categories, difficulties, types, et, page, ps)
+
+
+class AddToListRequest(BaseModel):
+    list_ids: List[int] = Field(..., description="要加入的题单 ID 列表")
+
+
+@app.post("/questions/{qid}/lists")
+def api_add_question_to_lists(qid: int, req: AddToListRequest):
+    """将题目加入指定题单"""
+    if not req.list_ids:
+        return {"added": 0, "skipped": 0}
+    result = add_question_to_lists(qid, req.list_ids)
+    from backend.database import update_question_time
+    try:
+        update_question_time(qid, "last_edited_at")
+    except Exception:
+        pass
+    return result
+
+
+@app.delete("/questions/{qid}/lists/{list_id}")
+def api_remove_question_from_list(qid: int, list_id: int):
+    """从题单中移除题目（软删除）"""
+    ok = remove_question_from_list(qid, list_id)
+    if not ok:
+        return {"error": "remove_failed", "message": "系统题单不可移除或关联不存在"}
+    return {"ok": True, "removed": True}
+
+
+@app.get("/questions/{qid}/lists")
+def api_get_question_lists(qid: int):
+    """获取题目所在的所有题单 ID"""
+    from backend.database import get_question_list_ids
+    return {"list_ids": get_question_list_ids(qid)}
+
+
+class SourceTypeRequest(BaseModel):
+    source_type: str = Field(..., description="来源类型：ai生成/高考题/模拟题/精选母题")
+
+
+@app.put("/questions/{qid}/source-type")
+def api_update_source_type(qid: int, req: SourceTypeRequest):
+    """更新题目的来源类型标签"""
+    if req.source_type not in ("ai\u751f\u6210", "\u9ad8\u8003\u9898", "\u6a21\u62df\u9898", "\u7cbe\u9009\u6bcd\u9898"):
+        return {"error": "invalid_source_type", "valid_types": ["ai\u751f\u6210", "\u9ad8\u8003\u9898", "\u6a21\u62df\u9898", "\u7cbe\u9009\u6bcd\u9898"]}
+    ok = update_question_source_type(qid, req.source_type)
+    if not ok:
+        return {"error": "update_failed"}
+    return {"ok": True, "source_type": req.source_type}
 
 # ---- Static files: serve frontend (must be last) ----
 

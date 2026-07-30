@@ -560,15 +560,15 @@ async function saveAfterSolve() {
                     body: JSON.stringify({question: _lastQuestion, answer_json: _lastResult})
                 });
                 const result = await resp.json();
-                const btn = document.getElementById('saveAfterBtn');
-                var msg = result.message || (result.saved ? '已加入个人题库' : '已在个人题库中');
-                var icon = result.saved ? '✅' : '📋';
-                btn.innerHTML = '<span class="btn-icon">' + icon + '</span><span>' + msg + '</span>';
-                btn.disabled = true;
-                btn.className = 'save-after-btn saved';
+                if (result && result.id) {
+                    showSaveDialog(result.id, _lastQuestion, '');
+                } else {
+                    alert('\u4fdd\u5b58\u5931\u8d25');
+                }
             } catch(e) {
                 console.error('\u4fdd\u5b58\u5931\u8d25:', e);
             }
+        }
         }
         
         document.addEventListener('DOMContentLoaded' , function() {
@@ -730,6 +730,172 @@ function safeParseKps(kps){
     if(Array.isArray(kps)) return kps;
     try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
 }
+
+        // ========== Save to Lists Dialog (shared) ==========
+        var _saveDialogCallback = null;
+        var _selectedSourceType = '';
+        
+        function showSaveDialog(questionId, questionText, sourceType) {
+            fetch('http://127.0.0.1:8000/question-lists')
+                .then(function(r) { return r.json(); })
+                .then(function(lists) {
+                    fetch('http://127.0.0.1:8000/questions/' + questionId + '/lists')
+                        .then(function(r) { return r.json(); })
+                        .then(function(memberData) {
+                            var memberIds = memberData.list_ids || [];
+                            renderSaveDialog(questionId, lists, memberIds, sourceType);
+                        })
+                        .catch(function() {
+                            renderSaveDialog(questionId, lists, [], sourceType);
+                        });
+                })
+                .catch(function(err) {
+                    console.error('Load lists for dialog failed:', err);
+                    alert('加载题单失败');
+                });
+        }
+        
+        function renderSaveDialog(questionId, lists, memberIds, currentSourceType) {
+            var existing = document.querySelector('.save-dialog-overlay');
+            if (existing) existing.remove();
+            
+            var overlay = document.createElement('div');
+            overlay.className = 'save-dialog-overlay';
+            
+            var html = '<div class="save-dialog">';
+            html += '<h3>加入题库</h3>';
+            html += '<div class="save-dialog-lists">';
+            
+            for (var i = 0; i < lists.length; i++) {
+                var li = lists[i];
+                if (li.is_dynamic) continue;
+                var checked = (memberIds.indexOf(li.id) >= 0 || li.name === '全部') ? 'checked' : '';
+                if (li.name === '全部') checked = 'checked disabled';
+                html += '<label class="save-dialog-list-item">';
+                html += '<input type="checkbox" class="sdl-checkbox" data-list-id="' + li.id + '" ' + checked + '>';
+                html += '<span class="sdl-name">' + escapeHtml(li.name) + ' (' + (li.count || 0) + ')</span>';
+                if (li.name === '全部') html += '<span class="sdl-checked">默认</span>';
+                html += '</label>';
+            }
+            html += '</div>';
+            
+            html += '<div class="source-type-row">';
+            html += '<label>来源标签</label>';
+            var srcTypes = ['ai生成', '高考题', '模拟题', '精选母题'];
+            for (var si = 0; si < srcTypes.length; si++) {
+                var active = (currentSourceType === srcTypes[si]) ? ' active' : '';
+                html += '<span class="source-type-option' + active + '" onclick="selectSourceType(this)" data-value="' + srcTypes[si] + '">' + srcTypes[si] + '</span>';
+            }
+            html += '</div>';
+            
+            html += '<div class="save-dialog-create">';
+            html += '<input type="text" id="saveDialogNewList" placeholder="新建题单..." maxlength="50">';
+            html += '<button onclick="createListFromDialog()">创建</button>';
+            html += '</div>';
+            
+            html += '<div class="save-dialog-actions">';
+            html += '<button class="sd-btn-cancel" onclick="closeSaveDialog()">取消</button>';
+            html += '<button class="sd-btn-confirm" onclick="confirmSaveDialog(' + questionId + ')">保存</button>';
+            html += '</div></div>';
+            
+            overlay.innerHTML = html;
+            document.body.appendChild(overlay);
+            
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) closeSaveDialog();
+            });
+        }
+        
+        function selectSourceType(el) {
+            document.querySelectorAll('.source-type-option').forEach(function(s) { s.classList.remove('active'); });
+            el.classList.add('active');
+            _selectedSourceType = el.dataset.value;
+        }
+        
+        function closeSaveDialog() {
+            var overlay = document.querySelector('.save-dialog-overlay');
+            if (overlay) overlay.remove();
+        }
+        
+        function createListFromDialog() {
+            var inp = document.getElementById('saveDialogNewList');
+            var name = inp.value.trim();
+            if (!name) return;
+            fetch('http://127.0.0.1:8000/question-lists', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({name: name})
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                inp.value = '';
+                var overlay = document.querySelector('.save-dialog-overlay');
+                if (overlay) {
+                    var qid = overlay.querySelector('.sd-btn-confirm') ? 
+                              parseInt(overlay.querySelector('.sd-btn-confirm').getAttribute('onclick').match(/\d+/)[0]) : null;
+                    if (qid) {
+                        fetch('http://127.0.0.1:8000/questions/' + qid + '/lists')
+                            .then(function(r) { return r.json(); })
+                            .then(function(md) {
+                                showSaveDialog(qid, '', _selectedSourceType);
+                            });
+                    }
+                }
+            });
+        }
+        
+        function confirmSaveDialog(questionId) {
+            var cbs = document.querySelectorAll('.sdl-checkbox:checked:not([disabled])');
+            var listIds = [];
+            // Also add "全部" if it's among the disabled ones
+            var allCbs = document.querySelectorAll('.sdl-checkbox');
+            for (var i = 0; i < allCbs.length; i++) {
+                if (allCbs[i].checked) {
+                    listIds.push(parseInt(allCbs[i].dataset.listId));
+                }
+            }
+            
+            if (_selectedSourceType) {
+                fetch('http://127.0.0.1:8000/questions/' + questionId + '/source-type', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({source_type: _selectedSourceType})
+                }).catch(function() {});
+            }
+            
+            if (listIds.length > 0) {
+                fetch('http://127.0.0.1:8000/questions/' + questionId + '/lists', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({list_ids: listIds})
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    closeSaveDialog();
+                    var btn = document.getElementById('saveAfterBtn');
+                    if (btn) {
+                        btn.innerHTML = '<span class="btn-icon">✅</span><span>已加入个人题库</span>';
+                        btn.disabled = true;
+                        btn.className = 'save-after-btn saved';
+                    }
+                })
+                .catch(function(err) {
+                    closeSaveDialog();
+                    alert('保存失败: ' + err.message);
+                });
+            } else {
+                closeSaveDialog();
+                var btn = document.getElementById('saveAfterBtn');
+                if (btn) {
+                    btn.innerHTML = '<span class="btn-icon">✅</span><span>已加入个人题库</span>';
+                    btn.disabled = true;
+                    btn.className = 'save-after-btn saved';
+                }
+            }
+        }
+        
+        // Make saveAfterSolve available globally for inline onclick
+        window.saveAfterSolve = saveAfterSolve;
 </script>
 
 <!-- Error Dialog -->

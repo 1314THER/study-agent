@@ -14,6 +14,7 @@ from backend.steps import _load_steps
 _VALID_CATEGORIES = set(CATEGORIES.keys())
 _VALID_DIFFICULTY_LEVELS = {"容易", "中等", "困难", "极难"}
 _VALID_DIMENSION_KEYS = {"非常规程度", "计算量", "理解难度", "分类讨论", "知识点密度"}
+_VALID_SOURCE_TYPES = {"ai生成", "高考题", "模拟题", "精选母题"}
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "study_agent.db")
 
@@ -23,6 +24,18 @@ def get_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+# 系统题单 ID 缓存（init_db 时填充）
+_SYSTEM_LIST_IDS = {}
+
+def _ensure_system_lists(conn):
+    for name in ("全部", "母题", "高考题"):
+        row = conn.execute("SELECT id FROM question_lists WHERE name = ? AND list_type = 'system'", (name,)).fetchone()
+        if not row:
+            cur = conn.execute("INSERT INTO question_lists (name, list_type) VALUES (?, 'system')", (name,))
+            _SYSTEM_LIST_IDS[name] = cur.lastrowid
+        else:
+            _SYSTEM_LIST_IDS[name] = row["id"]
+    conn.commit()
 
 def init_db():
     conn = get_connection()
@@ -80,8 +93,39 @@ def init_db():
 
         CREATE INDEX IF NOT EXISTS idx_step_errors_qid ON step_errors(question_id);
         CREATE INDEX IF NOT EXISTS idx_step_errors_type ON step_errors(mistake_type);
+
+        CREATE TABLE IF NOT EXISTS question_lists (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT NOT NULL,
+            list_type TEXT NOT NULL DEFAULT 'user',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        );
+
+        CREATE TABLE IF NOT EXISTS question_list_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            list_id INTEGER NOT NULL REFERENCES question_lists(id),
+            question_id INTEGER NOT NULL REFERENCES questions(id),
+            is_removed INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(list_id, question_id)
+        );
     """)
     conn.commit()
+    _ensure_system_lists(conn)
+    # 回填：将已有题目加入 "全部" 题单（仅在新装时执行一次）
+    all_id = _SYSTEM_LIST_IDS.get("全部")
+    if all_id:
+        missing = conn.execute(
+            "SELECT COUNT(*) FROM questions q WHERE NOT EXISTS (SELECT 1 FROM question_list_members m WHERE m.list_id = ? AND m.question_id = q.id)",
+            (all_id,)
+        ).fetchone()[0]
+        if missing > 0:
+            conn.execute(
+                "INSERT OR IGNORE INTO question_list_members (list_id, question_id) SELECT ?, id FROM questions",
+                (all_id,)
+            )
+            conn.commit()
+            print(f"[Database] 已回填 {missing} 道题到「全部」题单")
     # 迁移：新增 question_type 列（首次创建时一并添加，已存在则跳过）
     try:
         conn.execute("ALTER TABLE questions ADD COLUMN question_type TEXT")
@@ -118,6 +162,14 @@ def init_db():
         print("[Database] 新增 steps_structure 列")
     except sqlite3.OperationalError:
         pass
+    # 迁移：新建题单表（兼容已有库）
+    try:
+        conn.execute("CREATE TABLE IF NOT EXISTS question_lists (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, list_type TEXT NOT NULL DEFAULT 'user', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
+        conn.execute("CREATE TABLE IF NOT EXISTS question_list_members (id INTEGER PRIMARY KEY AUTOINCREMENT, list_id INTEGER NOT NULL REFERENCES question_lists(id), question_id INTEGER NOT NULL REFERENCES questions(id), is_removed INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(list_id, question_id))")
+        print("[Database] 题单表已就绪")
+    except sqlite3.OperationalError as e:
+        print(f"[Database] 题单表初始化跳过: {e}")
+    _ensure_system_lists(conn)
     conn.close()
     print("[Database] 数据库初始化完成")
 
@@ -334,6 +386,20 @@ def save_question(question_text: str, answer_dict: dict):
     row = conn.execute("SELECT id FROM questions WHERE content = ?", (question_text.strip(),)).fetchone()
     question_id = row["id"] if row else None
     conn.close()
+    # 自动加入 "全部" 题单
+    if question_id is not None:
+        _all_conn = get_connection()
+        try:
+            _r = _all_conn.execute("SELECT id FROM question_lists WHERE name = '\u5168\u90e8' AND list_type = 'system'").fetchone()
+            if _r:
+                _all_conn.execute(
+                    "INSERT OR IGNORE INTO question_list_members (list_id, question_id) VALUES (?, ?)",
+                    (_r["id"], question_id)
+                )
+                _all_conn.commit()
+        except Exception:
+            pass
+        _all_conn.close()
     print(f"[Database] 题目已保存（ID={question_id}, {category_level1} → {category_level2}，难度 {difficulty_level}）")
     if raw_kps != clean_kps:
         print(f"  [Sanitize] 知识点被清理: {raw_kps} → {clean_kps}")
@@ -392,7 +458,7 @@ def get_question_by_id(qid: int):
     return d
 
 
-def search_questions(keywords=None, categories=None, difficulties=None, types=None, limit=200, mode="content", error_type=None, page=1, page_size=None):
+def search_questions(keywords=None, categories=None, difficulties=None, types=None, limit=200, mode="content", error_type=None, page=1, page_size=None, source_type=None):
     """按关键词 + 板块 + 难度 + 题型筛选
     关键词同时搜索题目原文、板块、知识点、错因字段（OR），多个关键词之间取 AND。"""
     conn = get_connection()
@@ -434,6 +500,10 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
         placeholders = ",".join("?" for _ in types)
         where_clauses.append(f"question_type IN ({placeholders})")
         params.extend(types)
+
+    if source_type:
+        where_clauses.append("q.source_type = ?")
+        params.append(source_type)
 
     if error_type:
         q_id = "q.id" if is_global else "questions.id"
@@ -526,7 +596,6 @@ def update_question_time(question_id: int, field: str):
 
 
 # ---------- 来源类型校验 ----------
-_VALID_SOURCE_TYPES = {"ai_generated", "human", "exam_paper", "web_search", "exam_ocr"}
 
 
 def add_step_error(question_id: int, step_number: int, chunk_id: int,
@@ -584,3 +653,281 @@ def get_questions_with_errors() -> list:
     ).fetchall()
     conn.close()
     return [dict(r) for r in rows]
+
+
+# ========== question list management ==========
+
+def get_question_lists():
+    conn = get_connection()
+    rows = conn.execute("SELECT id, name, list_type FROM question_lists ORDER BY list_type DESC, id ASC").fetchall()
+    result = []
+    for r in rows:
+        d = dict(r)
+        cnt = conn.execute(
+            "SELECT COUNT(*) FROM question_list_members WHERE list_id = ? AND is_removed = 0",
+            (d["id"],)
+        ).fetchone()[0]
+        d["count"] = cnt
+        result.append(d)
+    error_cnt = conn.execute(
+        "SELECT COUNT(DISTINCT question_id) FROM step_errors"
+    ).fetchone()[0]
+    result.append({
+        "id": None,
+        "name": "\u9519\u9898",
+        "list_type": "system",
+        "is_dynamic": True,
+        "count": error_cnt
+    })
+    conn.close()
+    return result
+
+
+def create_question_list(name):
+    conn = get_connection()
+    cur = conn.execute("INSERT INTO question_lists (name, list_type) VALUES (?, 'user')", (name.strip(),))
+    conn.commit()
+    lid = cur.lastrowid
+    conn.close()
+    return lid
+
+
+def delete_question_list(list_id):
+    conn = get_connection()
+    row = conn.execute("SELECT list_type FROM question_lists WHERE id = ?", (list_id,)).fetchone()
+    if not row or row["list_type"] == "system":
+        conn.close()
+        return False
+    conn.execute("DELETE FROM question_list_members WHERE list_id = ?", (list_id,))
+    conn.execute("DELETE FROM question_lists WHERE id = ?", (list_id,))
+    conn.commit()
+    conn.close()
+    return True
+
+
+def rename_question_list(list_id, name):
+    conn = get_connection()
+    cur = conn.execute("UPDATE question_lists SET name = ? WHERE id = ?", (name.strip(), list_id))
+    ok = cur.rowcount > 0
+    conn.commit()
+    conn.close()
+    return ok
+
+
+def add_question_to_lists(question_id, list_ids):
+    conn = get_connection()
+    added = 0
+    skipped = 0
+    for lid in list_ids:
+        try:
+            cur = conn.execute(
+                "INSERT OR IGNORE INTO question_list_members (list_id, question_id) VALUES (?, ?)",
+                (lid, question_id)
+            )
+            if cur.rowcount > 0:
+                added += 1
+            else:
+                skipped += 1
+        except Exception:
+            skipped += 1
+    conn.commit()
+    conn.close()
+    return {"added": added, "skipped": skipped}
+
+
+def remove_question_from_list(question_id, list_id):
+    conn = get_connection()
+    row = conn.execute("SELECT list_type FROM question_lists WHERE id = ?", (list_id,)).fetchone()
+    if row and row["list_type"] == "system":
+        conn.close()
+        return False
+    cur = conn.execute(
+        "UPDATE question_list_members SET is_removed = 1 WHERE list_id = ? AND question_id = ? AND is_removed = 0",
+        (list_id, question_id)
+    )
+    ok = cur.rowcount > 0
+    conn.commit()
+    conn.close()
+    return ok
+
+
+def restore_question_to_list(question_id, list_id):
+    conn = get_connection()
+    cur = conn.execute(
+        "UPDATE question_list_members SET is_removed = 0 WHERE list_id = ? AND question_id = ? AND is_removed = 1",
+        (list_id, question_id)
+    )
+    ok = cur.rowcount > 0
+    conn.commit()
+    conn.close()
+    return ok
+
+
+def get_question_list_ids(question_id):
+    conn = get_connection()
+    rows = conn.execute(
+        "SELECT list_id FROM question_list_members WHERE question_id = ? AND is_removed = 0",
+        (question_id,)
+    ).fetchall()
+    conn.close()
+    return [r["list_id"] for r in rows]
+
+
+def get_list_questions(list_id, keywords=None, categories=None, difficulties=None, types=None, error_type=None, page=1, page_size=None):
+    conn = get_connection()
+    where_clauses = []
+    params = []
+    if keywords:
+        for kw in keywords:
+            kw_s = kw.strip()
+            if not kw_s:
+                continue
+            kw_pat = "%%%s%%" % kw_s
+            search_conds = [
+                "q.content LIKE ?",
+                "q.category_level1 LIKE ?",
+                "q.category_level2 LIKE ?",
+                "q.knowledge_points LIKE ?",
+                "q.steps_structure LIKE ?",
+                "q.difficulty_level LIKE ?",
+                "e.mistake_type LIKE ?",
+                "e.mistake_detail LIKE ?"
+            ]
+            where_clauses.append("(" + " OR ".join(search_conds) + ")")
+            params.extend([kw_pat] * 8)
+    if categories:
+        placeholders = ",".join("?" for _ in categories)
+        where_clauses.append("q.category_level1 IN (" + placeholders + ")")
+        params.extend(categories)
+    if difficulties:
+        placeholders = ",".join("?" for _ in difficulties)
+        where_clauses.append("q.difficulty_level IN (" + placeholders + ")")
+        params.extend(difficulties)
+    if types:
+        placeholders = ",".join("?" for _ in types)
+        where_clauses.append("q.question_type IN (" + placeholders + ")")
+        params.extend(types)
+    if error_type:
+        if error_type == "none":
+            where_clauses.append("NOT EXISTS (SELECT 1 FROM step_errors e2 WHERE e2.question_id = q.id)")
+        elif error_type == "errors":
+            where_clauses.append("EXISTS (SELECT 1 FROM step_errors e2 WHERE e2.question_id = q.id)")
+        else:
+            where_clauses.append("EXISTS (SELECT 1 FROM step_errors e2 WHERE e2.question_id = q.id AND e2.mistake_type = ?)")
+            params.append(error_type)
+    where_clauses.append("m.list_id = ?")
+    params.append(list_id)
+    where_clauses.append("m.is_removed = 0")
+    where_sql = " AND ".join(where_clauses)
+    from_clause = "FROM questions q INNER JOIN question_list_members m ON m.question_id = q.id LEFT JOIN step_errors e ON e.question_id = q.id"
+    count_sql = "SELECT COUNT(DISTINCT q.id) " + from_clause + " WHERE " + where_sql
+    total = conn.execute(count_sql, params).fetchone()[0]
+    limit_sql = ""
+    if page_size and page_size != "all":
+        offset = (page - 1) * int(page_size)
+        limit_sql = " LIMIT " + str(int(page_size)) + " OFFSET " + str(offset)
+    rows = conn.execute(
+        "SELECT DISTINCT q.id, q.content, q.category_level1, q.category_level2, "
+        "q.difficulty_level, q.difficulty_score, q.difficulty_dimensions, "
+        "q.knowledge_points, q.question_type, q.source_type, "
+        "q.steps_structure, q.created_at, q.last_viewed_at, q.last_edited_at, q.last_exam_at "
+        + from_clause + " WHERE " + where_sql + " ORDER BY m.id DESC" + limit_sql,
+        params
+    ).fetchall()
+    conn.close()
+    all_rows = []
+    for r in rows:
+        d = dict(r)
+        for key in ("difficulty_dimensions", "knowledge_points", "steps_structure"):
+            val = d.get(key)
+            if val:
+                try:
+                    d[key] = json.loads(val)
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        all_rows.append(d)
+    if page_size and page_size != "all":
+        return {"data": all_rows, "total": total, "page": page, "page_size": int(page_size)}
+    return {"data": all_rows, "total": total}
+
+
+def get_wrong_questions(keywords=None, categories=None, difficulties=None, types=None, error_type=None, page=1, page_size=None):
+    conn = get_connection()
+    where_clauses = ["EXISTS (SELECT 1 FROM step_errors e2 WHERE e2.question_id = q.id)"]
+    params = []
+    if keywords:
+        for kw in keywords:
+            kw_s = kw.strip()
+            if not kw_s:
+                continue
+            kw_pat = "%%%s%%" % kw_s
+            search_conds = [
+                "q.content LIKE ?",
+                "q.category_level1 LIKE ?",
+                "q.category_level2 LIKE ?",
+                "q.knowledge_points LIKE ?",
+                "q.steps_structure LIKE ?",
+                "q.difficulty_level LIKE ?",
+                "e.mistake_type LIKE ?",
+                "e.mistake_detail LIKE ?"
+            ]
+            where_clauses.append("(" + " OR ".join(search_conds) + ")")
+            params.extend([kw_pat] * 8)
+    if categories:
+        placeholders = ",".join("?" for _ in categories)
+        where_clauses.append("q.category_level1 IN (" + placeholders + ")")
+        params.extend(categories)
+    if difficulties:
+        placeholders = ",".join("?" for _ in difficulties)
+        where_clauses.append("q.difficulty_level IN (" + placeholders + ")")
+        params.extend(difficulties)
+    if types:
+        placeholders = ",".join("?" for _ in types)
+        where_clauses.append("q.question_type IN (" + placeholders + ")")
+        params.extend(types)
+    if error_type and error_type != "errors":
+        if error_type != "none":
+            where_clauses.append("EXISTS (SELECT 1 FROM step_errors e2 WHERE e2.question_id = q.id AND e2.mistake_type = ?)")
+            params.append(error_type)
+    where_sql = " AND ".join(where_clauses)
+    from_clause = "FROM questions q LEFT JOIN step_errors e ON e.question_id = q.id"
+    count_sql = "SELECT COUNT(DISTINCT q.id) " + from_clause + " WHERE " + where_sql
+    total = conn.execute(count_sql, params).fetchone()[0]
+    limit_sql = ""
+    if page_size and page_size != "all":
+        offset = (page - 1) * int(page_size)
+        limit_sql = " LIMIT " + str(int(page_size)) + " OFFSET " + str(offset)
+    rows = conn.execute(
+        "SELECT DISTINCT q.id, q.content, q.category_level1, q.category_level2, "
+        "q.difficulty_level, q.difficulty_score, q.difficulty_dimensions, "
+        "q.knowledge_points, q.question_type, q.source_type, "
+        "q.steps_structure, q.created_at, q.last_viewed_at, q.last_edited_at, q.last_exam_at "
+        + from_clause + " WHERE " + where_sql + " ORDER BY q.created_at DESC" + limit_sql,
+        params
+    ).fetchall()
+    conn.close()
+    all_rows = []
+    for r in rows:
+        d = dict(r)
+        for key in ("difficulty_dimensions", "knowledge_points", "steps_structure"):
+            val = d.get(key)
+            if val:
+                try:
+                    d[key] = json.loads(val)
+                except (json.JSONDecodeError, TypeError):
+                    pass
+        all_rows.append(d)
+    if page_size and page_size != "all":
+        return {"data": all_rows, "total": total, "page": page, "page_size": int(page_size)}
+    return {"data": all_rows, "total": total}
+
+
+def update_question_source_type(question_id, source_type):
+    if source_type not in _VALID_SOURCE_TYPES:
+        return False
+    conn = get_connection()
+    cur = conn.execute("UPDATE questions SET source_type = ? WHERE id = ?", (source_type, question_id))
+    ok = cur.rowcount > 0
+    conn.commit()
+    conn.close()
+    return ok

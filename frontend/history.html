@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>个人题库 - 数学最强大脑</title>
-    <link rel="stylesheet" href="style.css?v=20260729">
+    <link rel="stylesheet" href="style.css?v=20260730">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
@@ -13,7 +13,6 @@ function teachOpen(btn) {
     var q = btn.getAttribute('data-question');
     if (q) { localStorage.setItem('_teach_question', q); window.open('teach.html', '_blank'); }
 }
-function teachOpenBtn(q) { if (q) { localStorage.setItem('_teach_question', q); window.open('teach.html', '_blank'); } }
 function safeParseKps(kps){
     if(Array.isArray(kps)) return kps;
     try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
@@ -33,16 +32,28 @@ function safeParseKps(kps){
 </nav>
         </aside>
         <main class="main-content">
-            <div class="container">
+            <div class="container history-header">
                 <h1>个人题库</h1>
                 <p class="subtitle" id="historyCount">个人题库 · 加载中...</p>
+            </div>
  
-                <!-- Search + Filter Bar -->
+            <div class="history-layout">
 
+                <!-- Main Content -->
+                <div class="history-main-area">
+
+                <!-- Search + Filter Bar -->
                 <div class="filter-row-2">
                     <div class="filter-search" style="flex:2;">
                         <span class="search-icon">🔍</span>
                         <input type="text" id="searchInput" placeholder="搜索关键词（支持空格分隔多个）" oninput="onFilterChange()">
+                    </div>
+                    <div class="filter-pills" id="sourceTypeFilter">
+                        <span class="filter-pill active" data-value="" onclick="selectSourceFilter(this)">全部来源</span>
+                        <span class="filter-pill" data-value="ai生成" onclick="selectSourceFilter(this)">AI生成</span>
+                        <span class="filter-pill" data-value="高考题" onclick="selectSourceFilter(this)">高考题</span>
+                        <span class="filter-pill" data-value="模拟题" onclick="selectSourceFilter(this)">模拟题</span>
+                        <span class="filter-pill" data-value="精选母题" onclick="selectSourceFilter(this)">精选母题</span>
                     </div>
                     <select class="filter-select filter-error-select" id="filterErrorType" onchange="onErrorTypeChange()">
                         <option value="">全部题目</option>
@@ -137,12 +148,45 @@ function safeParseKps(kps){
                     <div id="detailResult"></div>
                 </div>
 
+                </div><!-- /history-main-area -->
+            </div><!-- /history-layout -->
+
+            <!-- Floating ball for question lists -->
+            <div class="ql-float-ball" id="qlFloatBall" onclick="toggleQuestionList()">
+                <span class="ql-ball-icon">📂</span>
+                <span class="ql-ball-dot"></span>
+            </div>
+
+            <!-- Question list panel (floating on right) -->
+            <div class="ql-panel" id="qlPanel">
+                <div class="ql-panel-header">
+                    <span><span class="hlh-icon">📂</span>题单</span>
+                    <span class="ql-panel-actions">
+                        <button onclick="loadLists()" class="ql-icon-btn" title="刷新">
+                            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M12 7a5 5 0 11-1.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M12 2v3.5H8.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                        <button onclick="toggleQuestionList()" class="ql-icon-btn" title="关闭">
+                            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
+                        </button>
+                    </span>
+                </div>
+                <div class="ql-panel-body" id="historyListItems">
+                    <div style="padding:24px 16px;color:#86868b;font-size:13px;text-align:center;">加载中...</div>
+                </div>
+                <div class="ql-panel-footer">
+                    <button class="ql-add-btn" onclick="showNewListDialog()">
+                        <svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+                        <span>新建题单</span>
+                    </button>
+                </div>
             </div>
         </main>
     </div>
 
         <script>
         var _selectedTeacher = localStorage.getItem('teacher') || 'liangliang';
+        var _selectedListId = null;
+        var _selectedListType = 'all';  // null=all, '__wrong__'=wrong, number=user_list
 
         // ---- State ----
         var allQuestions = [];
@@ -170,6 +214,13 @@ function safeParseKps(kps){
         }
 
         // ---- Search + Filter ----
+        var _selectedSourceFilter = '';
+        function selectSourceFilter(el) {
+            document.querySelectorAll('#sourceTypeFilter .filter-pill').forEach(function(p) { p.classList.remove('active'); });
+            el.classList.add('active');
+            _selectedSourceFilter = el.dataset.value;
+            onFilterChange();
+        }
         function onFilterChange() {
             // Show big type filter only when 大题 is selected
             var typeVal = document.getElementById('filterType').value;
@@ -242,6 +293,8 @@ function safeParseKps(kps){
             var pageSize = pageSizeSelect ? pageSizeSelect.value : '5';
 
             var params = [];
+            var srcFilter = _selectedSourceFilter || '';
+            if (srcFilter) params.push('source_type=' + encodeURIComponent(srcFilter));
             if (q) params.push('q=' + encodeURIComponent(q));
             if (cat) params.push('category=' + encodeURIComponent(cat));
             if (type) params.push('question_type=' + encodeURIComponent(type));
@@ -265,7 +318,18 @@ function safeParseKps(kps){
             skeletonEl.style.display = 'block';
             listEl.innerHTML = '';
 
-            var url = 'http://127.0.0.1:8000/questions/search' + (params.length ? '?' + params.join('&') : '');
+            var listTarget = null;
+            if (_selectedListId === '__wrong__') {
+                listTarget = 'wrong';
+            } else if (_selectedListId !== null) {
+                listTarget = _selectedListId;
+            }
+            var url;
+            if (listTarget !== null) {
+                url = 'http://127.0.0.1:8000/question-lists/' + listTarget + '/questions' + (params.length ? '?' + params.join('&') : '');
+            } else {
+                url = 'http://127.0.0.1:8000/questions/search' + (params.length ? '?' + params.join('&') : '');
+            }
             fetch(url)
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
@@ -296,6 +360,8 @@ function safeParseKps(kps){
 
         function loadQuestions() {
             initFilters(); loadBigTypes();
+            loadLists();
+            initPanelAutoDetect();
             // Restore saved page size
             var savedPageSize = localStorage.getItem('history_page_size');
             if (savedPageSize) {
@@ -334,7 +400,7 @@ function safeParseKps(kps){
 
             emptyEl.style.display = 'none';
             var displayTotal = total !== undefined ? total : data.length;
-            countEl.textContent = '共 ' + displayTotal + ' 道题';
+            countEl.textContent = '共 ' + displayTotal + ' 道题'; updateListCounts();
 
             var html = '';
             for (var i = 0; i < data.length; i++) {
@@ -346,6 +412,16 @@ function safeParseKps(kps){
                 else if (q.difficulty_level === '\u56f0\u96be') diffClass = 'tag-hard';
                 else if (q.difficulty_level === '\u6781\u96be') diffClass = 'tag-extreme';
 
+                // Source type tag
+                var srcTag = '';
+                if (q.source_type) {
+                    var srcClass = 'tag-source';
+                    if (q.source_type === 'ai生成') srcClass += ' tag-source-ai';
+                    else if (q.source_type === '高考题') srcClass += ' tag-source-gaokao';
+                    else if (q.source_type === '模拟题') srcClass += ' tag-source-monikao';
+                    else if (q.source_type === '精选母题') srcClass += ' tag-source-muti';
+                    srcTag = '<span class="' + srcClass + '">' + escapeHtml(q.source_type) + '</span>';
+                }
                 // Question type tag
                 var typeTag = '';
                 if (q.question_type) {
@@ -373,7 +449,7 @@ function safeParseKps(kps){
 
                 html += '<div class="history-card" data-id="' + q.id + '">';
                 html += '<input type="checkbox" class="hc-checkbox" data-id="' + q.id + '" onchange="updateBatchCount()">';
-html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHtml(preview) + '</div>';
+                html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHtml(preview) + '</div>';
                 html += '<div class="hc-meta">';
                 html += typeTag;
                 html += catTag;
@@ -383,7 +459,7 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
                 html += '<span class="hc-date">' + dateStr + '</span>';
                 html += '<button class="delete-btn" onclick="event.stopPropagation();confirmDelete(' + q.id + ')" title="\u5220\u9664\u6b64\u9898">\ud83d\uddd1</button>';
                 html += '<button class="exam-add-btn" onclick="event.stopPropagation();addToExam(' + q.id + ')" title="\u52a0\u5165\u7ec4\u5377">\ud83d\udccb</button>';
-                html += '<button class="exam-add-btn" onclick="event.stopPropagation();teachOpenBtn(\'' + escapeHtml(q.content||'').replace(/\\/g,"\\\\").replace(/'/g,"\\'") + '\')" title="\u624b\u628a\u624b\u6559\u5b66">\ud83d\udcd6</button>';
+                html += '<button class=\"exam-add-btn\" onclick=\"event.stopPropagation();teachOpen(this)\" data-question=\"' + escapeHtml(q.content||'').replace(/\"/g,'&quot;').replace(/\\n/g,' ') + '\" title=\"手把手教学\">📖</button>';
                 html += '</div></div>';
             }
             listEl.innerHTML = html;
@@ -480,6 +556,16 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
                     _detailQuestionId = data.id;
                     _stepErrors = data.step_errors || [];
                     displayDetailResult(answerData);
+                    // Add teach and save buttons (data from fetch scope)
+                    var _btnText = data.content || '';
+                    var _escapedBtnText = _btnText.replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/\n/g,'\\n');
+                    var _escapedBtnSrc = (data.source_type || '').replace(/'/g,"\\'");
+                    if (_btnText) {
+                        var _btnDiv = document.getElementById('detailResult');
+                        _btnDiv.innerHTML += '<div style="text-align:center;margin-top:20px;display:flex;gap:10px;justify-content:center;">';
+                        _btnDiv.innerHTML += '<button class="teach-open-btn" onclick="teachOpen(this)" data-question="' + escapeHtml(_btnText).replace(/"/g, '&quot;') + '" style="padding:10px 24px;background:#ca8a04;color:white;border:none;border-radius:10px;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:500;">📖 手把手教学</button>';
+                        _btnDiv.innerHTML += '<button onclick="showSaveDialog(' + data.id + ', \'' + _escapedBtnText + '\', \'' + _escapedBtnSrc + '\')" style="padding:10px 24px;background:#0071e3;color:white;border:none;border-radius:10px;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;font-weight:500;">📋 加入题单</button></div>';
+                    }
                     refreshStepErrors();
                 })
                 .catch(function(err) {
@@ -523,14 +609,6 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
                 html += '<span class="tag" style="background:#fce4ec;color:#c62828;">\u6b66\u4eae\u96be\u5ea6\u7cfb\u6570\uff1a' + data.step_difficulty_sum + '</span>';
             }
             html += '</div>';
-
-            // Add teach button
-            var qText = data.content || '';
-            if (qText) {
-                html += '<div style="text-align:center;margin-bottom:16px;">';
-                html += '<button class="teach-open-btn" onclick="teachOpen(this)" data-question="' + escapeHtml(qText).replace(/"/g, '&quot;') + '" style="padding:8px 20px;background:#ca8a04;color:white;border:none;border-radius:10px;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">';
-                html += '📖 手把手教学</button></div>';
-            }
 
             html += '<div id="detailRadarChart" style="display:flex;justify-content:center;margin-bottom:16px;"></div>';
 
@@ -604,7 +682,7 @@ html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHt
 
             // Radar chart
             var dims = od && od.dimensions;
-            if (dims && Object.keys(dims).length >= 5) {
+            if (dims && typeof dims === 'object' && Object.keys(dims).length >= 3) {
                 var dpr = window.devicePixelRatio || 1;
                 var canvas = document.createElement('canvas');
                 var cssW = 400, cssH = 360;
@@ -1109,11 +1187,386 @@ function teachOpen(btn) {
     if (q) { localStorage.setItem('_teach_question', q); window.open('teach.html', '_blank'); }
 }
 
-function teachOpenBtn(q) { if (q) { localStorage.setItem('_teach_question', q); window.open('teach.html', '_blank'); } }
 function safeParseKps(kps){
     if(Array.isArray(kps)) return kps;
     try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
 }
+        // ========== Question List Management ==========
+        var _listData = [];
+        
+        function loadLists() {
+            fetch('http://127.0.0.1:8000/question-lists')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    _listData = data || [];
+                    renderLists();
+                })
+                .catch(function(err) {
+                    console.error('Load lists failed:', err);
+                });
+        }
+        
+                function renderLists() {
+            var el = document.getElementById('historyListItems');
+            if (!el) return;
+            var html = '';
+            var hasSystem = false;
+            var hasUser = false;
+            for (var i = 0; i < _listData.length; i++) {
+                if (_listData[i].list_type === 'system') hasSystem = true;
+                if (_listData[i].list_type === 'user') hasUser = true;
+            }
+            var systemShown = false;
+            var userShown = false;
+            for (var i = 0; i < _listData.length; i++) {
+                var li = _listData[i];
+                var icon = '📋';
+                if (li.name === '全部') icon = '📋';
+                else if (li.name === '错题') icon = '❌';
+                else if (li.name === '母题') icon = '⭐';
+                else icon = '📂';
+                
+                if (li.list_type === 'system' && !systemShown && hasUser) {
+                    html += '<div class="history-list-section-title">系统题单</div>';
+                    systemShown = true;
+                }
+                if (li.list_type === 'user' && !userShown) {
+                    if (hasSystem) html += '<div class="history-list-divider"></div>';
+                    html += '<div class="history-list-section-title">我的题单</div>';
+                    userShown = true;
+                }
+                
+                var isActive = false;
+                if (li.is_dynamic) {
+                    isActive = (_selectedListId === '__wrong__');
+                } else {
+                    isActive = (_selectedListId === li.id);
+                }
+                var activeClass = isActive ? ' active' : '';
+                var countDisplay = li.count !== undefined ? '<span class="list-count">' + li.count + '</span>' : '';
+                
+                html += '<div class="history-list-item' + activeClass + '" onclick="selectList(' + (li.is_dynamic ? 'null' : li.id) + ', \'' + (li.list_type || 'system') + '\', ' + (li.is_dynamic ? 'true' : 'false') + ')" data-list-id="' + (li.is_dynamic ? '' : li.id) + '">';
+                html += '<span class="list-icon">' + icon + '</span>';
+                html += '<span class="list-name">' + escapeHtml(li.name) + '</span>';
+                html += countDisplay;
+                if (li.list_type === 'user') {
+                    html += '<span class="list-actions">';
+                    html += '<button class="list-action-btn rename" onclick="event.stopPropagation();showRenameList(' + li.id + ', \'' + escapeHtml(li.name).replace(/'/g,"\\'") + '\')">✏️</button>';
+                    html += '<button class="list-action-btn delete" onclick="event.stopPropagation();confirmDeleteList(' + li.id + ', \'' + escapeHtml(li.name).replace(/'/g,"\\'") + '\')">🗑</button>';
+                    html += '</span>';
+                }
+                html += '</div>';
+            }
+            el.innerHTML = html;
+        }
+        
+        function selectList(id, type, isDynamic) {
+            // Go back to list view when selecting a list
+            var dv = document.getElementById('detailView');
+            if (dv && dv.style.display !== 'none') {
+                backToList();
+            }
+            if (isDynamic && isDynamic !== false) {
+                _selectedListId = '__wrong__';
+                _selectedListType = 'system';
+            } else {
+                _selectedListId = id;
+                _selectedListType = type || 'user';
+            }
+            _currentPage = 1;
+            renderLists();
+            doSearch();
+        }
+        
+        function showNewListDialog() {
+            var panelBody = document.querySelector('.ql-panel-body');
+            var existing = document.querySelector('.history-list-add-input');
+            if (existing) { existing.focus(); return; }
+            var addBtn = document.querySelector('.ql-add-btn');
+            var input = document.createElement('div');
+            input.style.cssText = 'display:flex;gap:6px;padding:8px 12px;border-top:1px solid #f0f0f0;';
+            input.innerHTML = '<input type="text" class="history-list-add-input" placeholder="题单名" maxlength="50">' +
+                '<button class="history-list-add-confirm" onclick="confirmCreateList(this)">确定</button>';
+            addBtn.parentNode.insertBefore(input, addBtn);
+            var inp = input.querySelector('input');
+            inp.focus();
+            inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') confirmCreateList(input); });
+            inp.addEventListener('blur', function() { if (!inp.value.trim()) input.remove(); });
+        }
+        
+        function confirmCreateList(el) {
+            var container = el.tagName === 'BUTTON' ? el.parentNode : el;
+            var inp = container.querySelector ? container.querySelector('input') : null;
+            if (!inp) inp = el;
+            var name = inp.value.trim();
+            if (!name) { inp.focus(); return; }
+            fetch('http://127.0.0.1:8000/question-lists', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({name: name})
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                container.remove();
+                loadLists();
+            })
+            .catch(function(err) {
+                alert('创建失败: ' + err.message);
+            });
+        }
+        
+        function showRenameList(id, currentName) {
+            var item = document.querySelector('.history-list-item[data-list-id="' + id + '"] .list-name');
+            if (!item) return;
+            var oldHtml = item.innerHTML;
+            var inp = document.createElement('input');
+            inp.type = 'text';
+            inp.value = currentName;
+            inp.style.cssText = 'width:80px;padding:2px 6px;border:1px solid #c7c7cc;border-radius:4px;font-size:13px;outline:none;';
+            item.innerHTML = '';
+            item.appendChild(inp);
+            inp.focus();
+            inp.select();
+            function save() {
+                var newName = inp.value.trim();
+                if (newName && newName !== currentName) {
+                    fetch('http://127.0.0.1:8000/question-lists/' + id, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({name: newName})
+                    })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        loadLists();
+                    });
+                } else {
+                    item.innerHTML = oldHtml;
+                }
+            }
+            inp.addEventListener('keydown', function(e) { if (e.key === 'Enter') { inp.blur(); } });
+            inp.addEventListener('blur', save);
+        }
+        
+        function confirmDeleteList(id, name) {
+            if (!confirm('确定删除题单 "' + name + '" 吗？题单中的题目不会被删除。')) return;
+            fetch('http://127.0.0.1:8000/question-lists/' + id, { method: 'DELETE' })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                if (data.ok) {
+                    if (_selectedListId === id) {
+                        _selectedListId = null;
+                        _selectedListType = null;
+                    }
+                    loadLists();
+                    doSearch();
+                } else {
+                    alert(data.message || '删除失败');
+                }
+            });
+        }
+        
+
+        function toggleQuestionList() {
+            var panel = document.getElementById('qlPanel');
+            if (!panel) return;
+            panel.classList.toggle('open');
+        }
+        
+        function checkPanelWidth() {
+            var panel = document.getElementById('qlPanel');
+            var ball = document.getElementById('qlFloatBall');
+            if (!panel || !ball) return;
+            var w = window.innerWidth;
+            if (w >= 1400) {
+                panel.classList.add('open');
+                ball.style.display = 'none';
+            } else {
+                if (!panel.classList.contains('open')) {
+                    ball.style.display = 'flex';
+                }
+            }
+        }
+        
+        function initPanelAutoDetect() {
+            checkPanelWidth();
+            var timer;
+            window.addEventListener('resize', function() {
+                clearTimeout(timer);
+                timer = setTimeout(checkPanelWidth, 150);
+            });
+        }
+        function updateListCounts() {
+            loadLists();
+        }
+
+        // ========== Save to Lists Dialog (used from other pages too via window) ==========
+        var _saveDialogCallback = null;
+        
+        function showSaveDialog(questionId, questionText, sourceType) {
+            // Fetch available lists
+            fetch('http://127.0.0.1:8000/question-lists')
+                .then(function(r) { return r.json(); })
+                .then(function(lists) {
+                    // Also fetch current list membership
+                    fetch('http://127.0.0.1:8000/questions/' + questionId + '/lists')
+                        .then(function(r) { return r.json(); })
+                        .then(function(memberData) {
+                            var memberIds = memberData.list_ids || [];
+                            renderSaveDialog(questionId, lists, memberIds, sourceType);
+                        })
+                        .catch(function() {
+                            renderSaveDialog(questionId, lists, [], sourceType);
+                        });
+                })
+                .catch(function(err) {
+                    console.error('Load lists for dialog failed:', err);
+                    showToast('加载题单失败', 'error');
+                });
+        }
+        
+        function renderSaveDialog(questionId, lists, memberIds, currentSourceType) {
+            // Remove existing dialog
+            var existing = document.querySelector('.save-dialog-overlay');
+            if (existing) existing.remove();
+            
+            var overlay = document.createElement('div');
+            overlay.className = 'save-dialog-overlay';
+            
+            var html = '<div class="save-dialog">';
+            html += '<h3>加入题库</h3>';
+            html += '<div class="save-dialog-lists">';
+            
+            var hasAll = false;
+            for (var i = 0; i < lists.length; i++) {
+                var li = lists[i];
+                if (li.is_dynamic) continue; // Skip dynamic lists (错题)
+                var checked = memberIds.indexOf(li.id) >= 0 || li.name === '全部' ? 'checked' : '';
+                if (li.name === '全部') { hasAll = true; checked = 'checked disabled'; }
+                html += '<label class="save-dialog-list-item">';
+                html += '<input type="checkbox" class="sdl-checkbox" data-list-id="' + li.id + '" ' + checked + '>';
+                html += '<span class="sdl-name">' + escapeHtml(li.name) + ' (' + (li.count || 0) + ')</span>';
+                if (li.name === '全部') html += '<span class="sdl-checked">默认</span>';
+                html += '</label>';
+            }
+            html += '</div>';
+            
+            // Source type selection
+            html += '<div class="source-type-row">';
+            html += '<label>来源标签</label>';
+            var srcTypes = ['ai生成', '高考题', '模拟题', '精选母题'];
+            for (var si = 0; si < srcTypes.length; si++) {
+                var active = (currentSourceType === srcTypes[si]) ? ' active' : '';
+                html += '<span class="source-type-option' + active + '" onclick="selectSourceType(this)" data-value="' + srcTypes[si] + '">' + srcTypes[si] + '</span>';
+            }
+            html += '</div>';
+            
+            // Create new list inline
+            html += '<div class="save-dialog-create">';
+            html += '<input type="text" id="saveDialogNewList" placeholder="新建题单..." maxlength="50">';
+            html += '<button onclick="createListFromDialog()">创建</button>';
+            html += '</div>';
+            
+            html += '<div class="save-dialog-actions">';
+            html += '<button class="sd-btn-cancel" onclick="closeSaveDialog()">取消</button>';
+            html += '<button class="sd-btn-confirm" onclick="confirmSaveDialog(' + questionId + ')">保存</button>';
+            html += '</div>';
+            html += '</div>';
+            
+            overlay.innerHTML = html;
+            document.body.appendChild(overlay);
+            
+            overlay.addEventListener('click', function(e) {
+                if (e.target === overlay) closeSaveDialog();
+            });
+        }
+        
+        var _selectedSourceType = '';
+        function selectSourceType(el) {
+            document.querySelectorAll('.source-type-option').forEach(function(s) { s.classList.remove('active'); });
+            el.classList.add('active');
+            _selectedSourceType = el.dataset.value;
+        }
+        
+        function closeSaveDialog() {
+            var overlay = document.querySelector('.save-dialog-overlay');
+            if (overlay) overlay.remove();
+        }
+        
+        function createListFromDialog() {
+            var inp = document.getElementById('saveDialogNewList');
+            var name = inp.value.trim();
+            if (!name) return;
+            fetch('http://127.0.0.1:8000/question-lists', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({name: name})
+            })
+            .then(function(r) { return r.json(); })
+            .then(function(data) {
+                inp.value = '';
+                // Refresh the dialog
+                // Get current dialog state
+                var overlay = document.querySelector('.save-dialog-overlay');
+                if (overlay) {
+                    var qid = overlay.querySelector('.sd-btn-confirm') ? 
+                              overlay.querySelector('.sd-btn-confirm').getAttribute('onclick').match(/\d+/)[0] : null;
+                    if (qid) {
+                        var currentSrc = '';
+                        var activeEl = overlay.querySelector('.source-type-option.active');
+                        if (activeEl) currentSrc = activeEl.dataset.value;
+                        // Re-fetch and re-render
+                        fetch('http://127.0.0.1:8000/questions/' + qid + '/lists')
+                            .then(function(r) { return r.json(); })
+                            .then(function(md) {
+                                showSaveDialog(parseInt(qid), '', currentSrc);
+                            });
+                    }
+                }
+            });
+        }
+        
+        function confirmSaveDialog(questionId) {
+            // Collect checked list IDs
+            var cbs = document.querySelectorAll('.sdl-checkbox:checked');
+            var listIds = [];
+            for (var i = 0; i < cbs.length; i++) {
+                listIds.push(parseInt(cbs[i].dataset.listId));
+            }
+            
+            // First save source type if selected
+            if (_selectedSourceType) {
+                fetch('http://127.0.0.1:8000/questions/' + questionId + '/source-type', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({source_type: _selectedSourceType})
+                }).catch(function() {});
+            }
+            
+            // Then add to lists
+            if (listIds.length > 0) {
+                fetch('http://127.0.0.1:8000/questions/' + questionId + '/lists', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({list_ids: listIds})
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    closeSaveDialog();
+                    showToast('✓ 已保存到 ' + data.added + ' 个题单', 'success');
+                })
+                .catch(function(err) {
+                    closeSaveDialog();
+                    showToast('保存失败: ' + err.message, 'error');
+                });
+            } else {
+                closeSaveDialog();
+                showToast('已保存', 'success');
+            }
+            
+            // Refresh list counts
+            setTimeout(loadLists, 500);
+        }
+
 </script>
 
 <!-- Error Dialog -->
@@ -1144,6 +1597,8 @@ function safeParseKps(kps){
         </div>
     </div>
 </div>
+
+<!-- Save to Lists Dialog (generated dynamically by JS) -->
 
 </body>
 </html>
