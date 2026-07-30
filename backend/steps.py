@@ -77,16 +77,16 @@ def format_step_prompt_snippet(qtype: str) -> str:
         "一级步骤（二级步骤名）与具体步骤名的对应关系如下：",
         "",
     ]
+    lines.append("# 二级步骤名（从下方列表中选择具体的步骤名称）")
+    lines.append("")
     for level1, level2_list in structure.items():
-        if level2_list:
-            items = " / ".join(level2_list)
-            lines.append(f"- {level1}：{items}")
-        else:
-            lines.append(f"- {level1}")
+        for l2 in level2_list:
+            lines.append(f"- {l2}")
     lines.append("")
-    lines.append("每个步骤必须同时输出所属的一级步骤名（二级步骤）：")
     lines.append("")
-    lines.append("步骤N：<一体步骤名>")
+    lines.append("# 步骤输出格式")
+    lines.append("")
+    lines.append("步骤N：<一级步骤名>")
     lines.append("标准过程：...")
     lines.append("详细过程：...")
     lines.append("二级步骤：<二级步骤名>")

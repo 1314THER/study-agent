@@ -298,7 +298,6 @@ def save_question(question_text: str, answer_dict: dict):
                     for l2 in l2_list:
                         extra.append({"step_level1": l1, "step_level2": l2})
                 if extra:
-                    import json
                     existing = json.loads(steps_structure)
                     # 去重：已有的 step_level2 不重复加
                     existing_l2s = {s.get("step_level2","") for s in existing}

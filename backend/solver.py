@@ -29,6 +29,9 @@ CHUNK_PATTERN = re.compile(r'###\s*块(\d+)\s*')
 # Verifier 输出中的块级字段
 BLOCK_TYPE_PATTERN = re.compile(r'^块类型[：:]\s*(.+)$')
 BLOCK_CATEGORY_PATTERN = re.compile(r'^板块[：:]\s*(.+)$')
+# Solver 输出中的校验模板字段
+VERIFIER_TEMPLATE_PATTERN = re.compile(r'^所需校验模板[：:]\s*(.+)$')
+
 # Solver 结构化状态字段
 IS_MATH_PATTERN = re.compile(r'^是否数学题[：:]\s*(.+)$')
 IS_MISTAKE_PATTERN = re.compile(r'^是否错题[：:]\s*(.+)$')
@@ -52,23 +55,23 @@ _LATEX_RULES = _read_prompt("latex_rules")
 TEACHER_CONFIG = {
     "liangliang": {
         "solver": {"model": "deepseek-v4-flash", "reasoning_effort": None},
-        "verifier": {"model": "deepseek-v4-flash"},
-        "formatter": {"model": "deepseek-v4-flash"},
+        "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
+        "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
     },
     "taotao": {
         "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "low"},
-        "verifier": {"model": "deepseek-v4-flash"},
-        "formatter": {"model": "deepseek-v4-flash"},
+        "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
+        "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
     },
     "xuefeng": {
         "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
-        "verifier": {"model": "deepseek-v4-flash"},
-        "formatter": {"model": "deepseek-v4-flash"},
+        "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
+        "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
     },
     "ji": {
         "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
-        "verifier": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
-        "formatter": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
+        "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "high"},
+        "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "high"},
     },
 }
 
@@ -213,15 +216,29 @@ def _check_solver_viable(content: str) -> Optional[str]:
 
 
 def _extract_category(text: str) -> Optional[str]:
-    """从 Solver 输出中提取板块（精确匹配 Solver 写死的板块名）"""
+    """从 Solver 输出中提取板块（去掉括号内的子分类再匹配）"""
     for line in text.split("\n"):
         stripped = line.strip()
         m = BLOCK_CATEGORY_PATTERN.match(stripped)
         if m:
             val = m.group(1).strip()
-            # Solver 输出可能带括号如 [解析几何]，去掉外层括号
             val = val.strip('[]')
+            base = re.sub(r'\s*[（(][^）)]*[）)]\s*$', '', val).strip()
+            if base in CATEGORIES:
+                return base
             if val in CATEGORIES:
+                return val
+    return None
+
+
+def _extract_verifier_template(text: str) -> Optional[str]:
+    """从 Solver 输出中提取所需校验模板名"""
+    for line in text.split("\n"):
+        stripped = line.strip()
+        m = VERIFIER_TEMPLATE_PATTERN.match(stripped)
+        if m:
+            val = m.group(1).strip()
+            if val:
                 return val
     return None
 
@@ -313,7 +330,12 @@ def _parse_steps(text: str) -> list:
             except (json.JSONDecodeError, ValueError):
                 current_step["step_difficulty"] = {"level": "未知", "score": 0}
             continue
-        if current_step and current_step["detailed_writing"] and stripped:
+        # 遇到块级元数据或空白行，不追加到 detailed_writing
+        if not stripped:
+            continue
+        if stripped.startswith("块") and any(stripped.startswith(p) for p in ("块类型", "板块", "块难度", "块最终答案", "块知识点")):
+            continue
+        if current_step and current_step["detailed_writing"]:
             current_step["detailed_writing"] += "\n" + stripped
             continue
     if current_step is not None:
@@ -471,27 +493,33 @@ def step_solver_only(question: str, question_type: str = None, teacher: str = No
 # ---------- Verifier 步（一次调用，切全部）----------
 
 def _validate_step_names(verifier_cat: str, steps: list) -> list:
-    """验证步骤名是否来自 steps.yaml 的预定义列表。非法步骤名将被重置并记录警告。"""
+    """验证步骤名是否来自 steps.yaml 的预定义列表。
+       新版 Verifier prompt 格式：
+         步骤N：<一级步骤名>    → title = 一级步骤名（对应 steps.yaml keys）
+         二级步骤：<二级步骤名> → step_level1 = 二级步骤名（对应 steps.yaml values，带括号后缀）
+       非法步骤名将被重置并记录警告。"""
     try:
         from backend.steps import get_all_level1_names, get_all_level2_names
     except ImportError:
         return steps
-    prompt_file = _CATEGORY_TO_PROMPT_FILE.get(verifier_cat)
-    if not prompt_file:
-        return steps
-    valid_l1 = set(get_all_level1_names(prompt_file))
-    valid_l2 = set(get_all_level2_names(prompt_file))
+    prompt_file = _CATEGORY_TO_PROMPT_FILE.get(verifier_cat) or verifier_cat
+    valid_l1 = set(get_all_level1_names(prompt_file))  # steps.yaml keys = 一级步骤名
+    valid_l2 = set(get_all_level2_names(prompt_file))  # steps.yaml values = 具体步骤名（无括号后缀）
     if not valid_l1 and not valid_l2:
         return steps
     for step in steps:
         title = step.get("title", "")
         step_level1 = step.get("step_level1")
-        if title and valid_l2 and title not in valid_l2:
-            print(f"[Warn] 步骤{step.get(chr(115)+chr(116)+chr(101)+chr(112)+chr(95)+chr(110)+chr(117)+chr(109)+chr(98)+chr(101)+chr(114))}: 一体步骤名 '{title}' 不在预定义列表中，已重置", file=sys.stderr)
+        # title（一级步骤名）校验：对 steps.yaml keys
+        if title and valid_l1 and title not in valid_l1:
+            print(f"[Warn] 步骤 {step.get('step_number')}: 一级步骤名 '{title}' 不在预定义列表中，已重置", file=sys.stderr)
             step["title"] = ""
-        if step_level1 and valid_l1 and step_level1 not in valid_l1:
-            print(f"[Warn] 步骤{step.get(chr(115)+chr(116)+chr(101)+chr(112)+chr(95)+chr(110)+chr(117)+chr(109)+chr(98)+chr(101)+chr(114))}: 二级步骤名 '{step_level1}' 不在预定义列表中，已重置", file=sys.stderr)
-            step["step_level1"] = None
+        # step_level1（二级步骤名）校验：去掉括号后缀后对 steps.yaml values
+        if step_level1 and valid_l2:
+            cleaned = re.sub(r'\s*[（(][^）)]*[）)]\s*$', '', step_level1).strip()
+            if cleaned not in valid_l2:
+                print(f"[Warn] 步骤 {step.get('step_number')}: 二级步骤名 '{step_level1}'（清理后 '{cleaned}'）不在预定义列表中，已重置", file=sys.stderr)
+                step["step_level1"] = None
     return steps
 
 
@@ -501,11 +529,16 @@ def step_verify_all(content: str, question: str, category: str = None, question_
     if question_type in ("选择题", "填空题"):
         verifier_cat = question_type
     else:
-        verifier_cat = category
-        if not verifier_cat:
-            verifier_cat = _extract_category(content)
-        if not verifier_cat:
-            verifier_cat = "函数与导数"  # 最后兜底
+        # 优先使用 Solver 输出的校验模板
+        verifier_template = _extract_verifier_template(content)
+        if verifier_template:
+            verifier_cat = verifier_template
+        else:
+            verifier_cat = category
+            if not verifier_cat:
+                verifier_cat = _extract_category(content)
+            if not verifier_cat:
+                verifier_cat = "函数与导数"  # 最后兜底
 
     verifier_prompt = _load_verifier_prompt(verifier_cat)
     user_prompt = f"原题：{question}\n\n解答内容：\n{content}"

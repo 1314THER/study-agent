@@ -66,7 +66,8 @@ def _fs(steps, teacher=None):
     try:
         c, _ = call_deepseek(TF, json.dumps(inp, ensure_ascii=False, indent=2),
                              temperature=0.3,
-                             model=cfg.get("verifier", {}).get("model", "deepseek-v4-flash"))
+                             model=cfg.get("verifier", {}).get("model", "deepseek-v4-flash"),
+                             reasoning_effort=cfg.get("verifier", {}).get("reasoning_effort"))
         rl = json.loads(_ej(c))
     except Exception as e:
         print(f"[Warn] _fs AI call or parse failed: {e}")
@@ -160,7 +161,8 @@ def teach_check(question, step_prompt, step_answer, user_answer, teacher=None):
     up = f"原题：{question}\n当前步骤引导问题：{step_prompt}\n参考答案：{step_answer}\n学生回答：{user_answer}"
     cfg = TEACHER_CONFIG.get(teacher or "liangliang", TEACHER_CONFIG["liangliang"])
     c, _ = call_deepseek(TC, up, temperature=0.2,
-                         model=cfg.get("verifier", {}).get("model", "deepseek-v4-flash"))
+                         model=cfg.get("verifier", {}).get("model", "deepseek-v4-flash"),
+                         reasoning_effort=cfg.get("verifier", {}).get("reasoning_effort"))
     try:
         return json.loads(_ej(c))
     except Exception:

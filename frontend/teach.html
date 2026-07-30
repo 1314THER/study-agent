@@ -56,34 +56,30 @@ body.theme-xuefeng .teach-search-btn { background:#7c3aed; }
 body.theme-xuefeng .teach-search-btn:hover { background:#6d28d9; }
 body.theme-xuefeng .teach-search-btn:disabled { background:#c4b5fd; }
 body.theme-xuefeng .teach-progress-stages .teach-stage.active .teach-stage-dot { background:#7c3aed; box-shadow:0 0 0 3px rgba(124,58,237,0.2); }
- { color:#7c3aed; }
+body.theme-xuefeng .teach-stage.active .teach-stage-label { color:#7c3aed; }
 body.theme-xuefeng .teach-progress-pct { color:#7c3aed; }
-body.theme-xuefeng .teach-progress-timer { color:#7c3aed; } }
- }
+body.theme-xuefeng .teach-progress-timer { color:#7c3aed; }
 body.theme-liangliang .teach-search-btn { background:#ca8a04; }
 body.theme-liangliang .teach-search-btn:hover { background:#a16207; }
 body.theme-liangliang .teach-search-btn:disabled { background:#fde68a; }
 body.theme-liangliang .teach-progress-stages .teach-stage.active .teach-stage-dot { background:#ca8a04; box-shadow:0 0 0 3px rgba(202,138,4,0.2); }
- { color:#ca8a04; }
+body.theme-liangliang .teach-stage.active .teach-stage-label { color:#ca8a04; }
 body.theme-liangliang .teach-progress-pct { color:#ca8a04; }
-body.theme-liangliang .teach-progress-timer { color:#ca8a04; } }
- }
+body.theme-liangliang .teach-progress-timer { color:#ca8a04; }
 body.theme-taotao .teach-search-btn { background:#db2777; }
 body.theme-taotao .teach-search-btn:hover { background:#be185d; }
 body.theme-taotao .teach-search-btn:disabled { background:#f9a8d4; }
 body.theme-taotao .teach-progress-stages .teach-stage.active .teach-stage-dot { background:#db2777; box-shadow:0 0 0 3px rgba(219,39,119,0.2); }
- { color:#db2777; }
+body.theme-taotao .teach-stage.active .teach-stage-label { color:#db2777; }
 body.theme-taotao .teach-progress-pct { color:#db2777; }
-body.theme-taotao .teach-progress-timer { color:#db2777; } }
- }
+body.theme-taotao .teach-progress-timer { color:#db2777; }
 body.theme-ji .teach-search-btn { background:#16a34a; }
 body.theme-ji .teach-search-btn:hover { background:#15803d; }
 body.theme-ji .teach-search-btn:disabled { background:#86efac; }
 body.theme-ji .teach-progress-stages .teach-stage.active .teach-stage-dot { background:#16a34a; box-shadow:0 0 0 3px rgba(22,163,74,0.2); }
- { color:#16a34a; }
+body.theme-ji .teach-stage.active .teach-stage-label { color:#16a34a; }
 body.theme-ji .teach-progress-pct { color:#16a34a; }
-body.theme-ji .teach-progress-timer { color:#16a34a; } }
- }
+body.theme-ji .teach-progress-timer { color:#16a34a; }
 .teach-container { max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; height: calc(100vh - 48px); }
 .teach-header { text-align: center; padding-bottom: 12px; flex-shrink: 0; }
 .teach-input-area { flex-shrink: 0; margin-bottom: 12px; }
@@ -187,13 +183,13 @@ body.theme-ji .teach-progress-timer { color:#16a34a; } }
 <body class="theme-liangliang">
 <div class="app-layout">
 <aside class="sidebar">
-<a href="/" class="sidebar-logo">成为<br>数学高手</a>
+<a href="/" class="sidebar-logo">成为数学高手</a>
 <nav>
-<a href="index.html" class="nav-item" data-page="solve"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
-<a href="teach.html" class="nav-item active" data-page="teach"><span class="nav-icon">📖</span><span class="nav-label">老师手把手<br>教你做题</span></a>
+<a href="multimodal.html" class="nav-item" data-page="multimodal"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
+<a href="teach.html" class="nav-item active" data-page="teach"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
 <a href="exam.html" class="nav-item" data-page="exam"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
 <a href="history.html" class="nav-item" data-page="history"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
-<a href="multimodal.html" class="nav-item" data-page="multimodal"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
+<a href="index.html" class="nav-item" data-page="solve"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
 </nav>
 </aside>
 <main class="main-content">
@@ -335,6 +331,7 @@ body.theme-ji .teach-progress-timer { color:#16a34a; } }
 </main>
 </div>
 <script>
+
 var _selectedTeacher = localStorage.getItem("teacher") || "liangliang";
 var _teachQuotes = [
   "输入一道数学题，AI 老师带你一步步解题",
@@ -556,9 +553,8 @@ async function startTeaching(){
     }
   }catch(e){console.error(e);showError("网络错误，请确认后端已启动");resetStartBtn();}
 }
-function resetStartBtn(){document.getElementById("teachStartBtn").disabled=false;document.getElementById("teachLoading").style.display="none";document.getElementById("teachProgressArea").style.display="none";}
+function resetStartBtn(){document.getElementById("teachStartBtn").disabled=false;document.getElementById("teachLoading").style.display="none";} // progress area kept visible during teaching
 function showError(m){var e=document.getElementById("teachError");e.textContent=m;e.style.display="block";}
-function resetStartBtn(){document.getElementById("teachStartBtn").disabled=false;document.getElementById("teachLoading").style.display="none";}
 
 async function startTeachSession(q){
   try{
@@ -570,7 +566,7 @@ async function startTeachSession(q){
     _sessionChunkResults=data.chunk_results||[];_sessionSteps=data.steps||[];_stepErrorData={};
     document.getElementById("teachInput").style.display="none";
     document.getElementById("quoteArea").style.display="none";
-    document.getElementById("teachProgressArea").style.display="none";
+    // progress area kept visible during teaching
     document.getElementById("teachSession").style.display="flex";
     document.getElementById("teachChat").innerHTML="";
     document.getElementById("teachSummary").classList.remove("show");
@@ -750,6 +746,7 @@ document.addEventListener("DOMContentLoaded",function(){
   // Auto resize for question input
   var qi=document.getElementById("teachQuestionInput");if(qi)qi.addEventListener("input",function(){autoResize(this)});
 });
+
 </script>
 </body>
 </html>

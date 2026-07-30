@@ -20,7 +20,7 @@
 ## 步骤字段
 每个步骤包含以下字段：
 - `step_number`：步骤序号
-- `title`：一体步骤名
+- `title`：一级步骤名
 - `step_level1`：二级步骤名（有预定义步骤的题型必填，自由分步题型为 null）
 - `standard_writing`：标准过程
 - `detailed_writing`：详细过程
