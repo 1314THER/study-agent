@@ -187,6 +187,8 @@ var _selectedTeacher = "liangliang";
                 else if (data.source_type === '模拟题') srcClass += ' tag-source-monikao';
                 else if (data.source_type === '精选母题') srcClass += ' tag-source-muti';
                 html += '<span class="' + srcClass + '">' + escapeHtml(data.source_type) + '</span>';
+                var srcMetaText = sourceMetaText(data.source_type, data.source_meta);
+                if (srcMetaText) html += '<span class="tag tag-source-meta">' + escapeHtml(srcMetaText) + '</span>';
             }
             if (od && od.total_score !== undefined) {
                 html += '<span class="tag" style="background:#e8f0fe;color:#1565c0;">雪峰难度系数：' + od.total_score + '/15</span>';
@@ -660,8 +662,81 @@ document.getElementById('searchBtn').addEventListener('click', function() {
         // ========== Save to Lists Dialog (shared) ==========
         var _saveDialogCallback = null;
         var _selectedSourceType = '';
+        var _selectedSourceMeta = {};
+
+        function safeParseMeta(m){
+            if(m && typeof m === 'object') return m;
+            if(!m) return {};
+            try{var p=JSON.parse(m);return (p && typeof p === 'object') ? p : {};}catch(e){return {};}
+        }
+        function sourceMetaText(sourceType, sourceMeta){
+            var m = safeParseMeta(sourceMeta);
+            if(sourceType === '模拟题' || sourceType === '高考题'){
+                var no = m.question_no ? '第' + m.question_no + '题' : '';
+                if(m.paper && no) return m.paper + '·' + no;
+                return m.paper || no;
+            }
+            if(sourceType === 'ai生成') return m.reference_id ? '参考题 #' + m.reference_id : '';
+            if(sourceType === '精选母题'){
+                var owner = m.owner || 'sqz';
+                return m.mother_id ? owner + '·母题 #' + m.mother_id : owner;
+            }
+            return '';
+        }
+        function getRememberedSource(){
+            try{var raw = localStorage.getItem('remembered_question_source'); return raw ? JSON.parse(raw) : null;}catch(e){return null;}
+        }
+        function saveRememberedSource(data){ localStorage.setItem('remembered_question_source', JSON.stringify(data)); }
+        function clearRememberedSource(){ localStorage.removeItem('remembered_question_source'); }
+
+        function sourceMetaFieldsHtml(sourceType, sourceMeta){
+            var m = safeParseMeta(sourceMeta) || {};
+            var esc = escapeHtml;
+            var html = '<div class="source-meta-fields" id="sourceMetaFields">';
+            if (sourceType === '模拟题' || sourceType === '高考题') {
+                html += '<div class="source-meta-field"><label>卷子名字</label>';
+                html += '<input type="text" id="sdPaper" placeholder="如：' + (sourceType === '高考题' ? '2025一卷' : '巴蜀中学2026.12月考') + '" maxlength="60" value="' + esc(m.paper || '') + '"></div>';
+                html += '<div class="source-meta-field"><label>题号</label>';
+                html += '<input type="text" id="sdQuestionNo" placeholder="如：7" maxlength="20" value="' + esc(m.question_no || '') + '"></div>';
+            } else if (sourceType === 'ai生成') {
+                html += '<div class="source-meta-field"><label>参考题目ID</label>';
+                html += '<input type="text" id="sdReferenceId" placeholder="参考题目ID" maxlength="30" value="' + esc(m.reference_id || '') + '"></div>';
+            } else if (sourceType === '精选母题') {
+                html += '<div class="source-meta-field"><label>来源署名</label>';
+                html += '<input type="text" id="sdOwner" placeholder="sqz" maxlength="30" value="' + esc(m.owner || 'sqz') + '"></div>';
+                html += '<div class="source-meta-field"><label>母题ID</label>';
+                html += '<input type="text" id="sdMotherId" placeholder="母题ID" maxlength="30" value="' + esc(m.mother_id || '') + '"></div>';
+            } else {
+                html += '<p class="source-meta-hint">选择来源后填写二级标签</p>';
+            }
+            html += '</div>';
+            return html;
+        }
+        function updateSourceMetaFields(){
+            var box = document.getElementById('sourceMetaFields');
+            if (box) box.outerHTML = sourceMetaFieldsHtml(_selectedSourceType, _selectedSourceMeta);
+        }
+        function collectSourceMetaFromDialog(){
+            var type = _selectedSourceType;
+            var m = {};
+            if (type === '模拟题' || type === '高考题') {
+                var paper = document.getElementById('sdPaper');
+                var no = document.getElementById('sdQuestionNo');
+                if (paper && paper.value.trim()) m.paper = paper.value.trim();
+                if (no && no.value.trim()) m.question_no = no.value.trim();
+            } else if (type === 'ai生成') {
+                var ref = document.getElementById('sdReferenceId');
+                if (ref && ref.value.trim()) m.reference_id = ref.value.trim();
+            } else if (type === '精选母题') {
+                var owner = document.getElementById('sdOwner');
+                var mid = document.getElementById('sdMotherId');
+                m.owner = (owner && owner.value.trim()) ? owner.value.trim() : 'sqz';
+                if (mid && mid.value.trim()) m.mother_id = mid.value.trim();
+            }
+            return m;
+        }
         
-        function showSaveDialog(questionId, questionText, sourceType) {
+        function showSaveDialog(questionId, questionText, sourceType, sourceMeta) {
             fetch('http://127.0.0.1:8000/question-lists')
                 .then(function(r) { return r.json(); })
                 .then(function(lists) {
@@ -669,10 +744,10 @@ document.getElementById('searchBtn').addEventListener('click', function() {
                         .then(function(r) { return r.json(); })
                         .then(function(memberData) {
                             var memberIds = memberData.list_ids || [];
-                            renderSaveDialog(questionId, lists, memberIds, sourceType);
+                            renderSaveDialog(questionId, lists, memberIds, sourceType, sourceMeta);
                         })
                         .catch(function() {
-                            renderSaveDialog(questionId, lists, [], sourceType);
+                            renderSaveDialog(questionId, lists, [], sourceType, sourceMeta);
                         });
                 })
                 .catch(function(err) {
@@ -681,10 +756,16 @@ document.getElementById('searchBtn').addEventListener('click', function() {
                 });
         }
         
-        function renderSaveDialog(questionId, lists, memberIds, currentSourceType) {
+        function renderSaveDialog(questionId, lists, memberIds, currentSourceType, currentSourceMeta) {
             var existing = document.querySelector('.save-dialog-overlay');
             if (existing) existing.remove();
             _selectedSourceType = currentSourceType || '';
+            _selectedSourceMeta = safeParseMeta(currentSourceMeta) || {};
+            var remembered = getRememberedSource();
+            if (!_selectedSourceType && remembered && remembered.source_type) {
+                _selectedSourceType = remembered.source_type;
+                _selectedSourceMeta = safeParseMeta(remembered.source_meta) || {};
+            }
             
             var overlay = document.createElement('div');
             overlay.className = 'save-dialog-overlay';
@@ -714,6 +795,9 @@ document.getElementById('searchBtn').addEventListener('click', function() {
                 html += '<span class="source-type-option' + active + '" onclick="selectSourceType(this)" data-value="' + srcTypes[si] + '">' + srcTypes[si] + '</span>';
             }
             html += '</div>';
+
+            html += sourceMetaFieldsHtml(_selectedSourceType, _selectedSourceMeta);
+            html += '<label class="remember-source-row"><input type="checkbox" id="rememberSourceBox"' + (remembered ? ' checked' : '') + '><span>记住来源</span></label>';
             
             html += '<div class="save-dialog-create">';
             html += '<input type="text" id="saveDialogNewList" placeholder="新建题单..." maxlength="50">';
@@ -737,6 +821,8 @@ document.getElementById('searchBtn').addEventListener('click', function() {
             document.querySelectorAll('.source-type-option').forEach(function(s) { s.classList.remove('active'); });
             el.classList.add('active');
             _selectedSourceType = el.dataset.value;
+            _selectedSourceMeta = {};
+            updateSourceMetaFields();
         }
         
         function closeSaveDialog() {
@@ -764,7 +850,7 @@ document.getElementById('searchBtn').addEventListener('click', function() {
                         fetch('http://127.0.0.1:8000/questions/' + qid + '/lists')
                             .then(function(r) { return r.json(); })
                             .then(function(md) {
-                                showSaveDialog(qid, '', _selectedSourceType);
+                                showSaveDialog(qid, '', _selectedSourceType, _selectedSourceMeta);
                             });
                     }
                 }
@@ -783,12 +869,17 @@ document.getElementById('searchBtn').addEventListener('click', function() {
             }
             
             var srcType = _selectedSourceType || '';
+            var srcMeta = collectSourceMetaFromDialog();
+            var rememberBox = document.getElementById('rememberSourceBox');
+            var remember = rememberBox ? rememberBox.checked : false;
+            if (remember && srcType) saveRememberedSource({source_type: srcType, source_meta: srcMeta});
+            else if (!remember) clearRememberedSource();
             try {
                 if (srcType) {
                     var sr = await fetch('http://127.0.0.1:8000/questions/' + questionId + '/source-type', {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({source_type: srcType})
+                        body: JSON.stringify({source_type: srcType, source_meta: srcMeta})
                     });
                     var sd = await sr.json();
                     if (sd.error) throw new Error(sd.error);
@@ -815,19 +906,22 @@ document.getElementById('searchBtn').addEventListener('click', function() {
                     btn.disabled = true;
                     btn.className = 'save-after-btn saved';
                 }
-                updateResultSourceTag(srcType);
-                showToast(srcType ? ('已保存，来源：' + srcType) : '已保存', 'success');
+                updateResultSourceTag(srcType, srcMeta);
+                var srcMetaText = sourceMetaText(srcType, srcMeta);
+                showToast(srcType ? ('已保存，来源：' + srcType + (srcMetaText ? ' · ' + srcMetaText : '')) : '已保存', 'success');
             } catch (err) {
                 closeSaveDialog();
                 alert('保存失败: ' + err.message);
             }
         }
 
-        function updateResultSourceTag(sourceType) {
+        function updateResultSourceTag(sourceType, sourceMeta) {
             var meta = document.querySelector('#result .meta-bar');
             if (!meta) return;
             var old = meta.querySelector('.tag-source');
             if (old) old.remove();
+            var oldMeta = meta.querySelector('.tag-source-meta');
+            if (oldMeta) oldMeta.remove();
             if (!sourceType) return;
             var srcClass = 'tag-source';
             if (sourceType === 'ai生成') srcClass += ' tag-source-ai';
@@ -840,7 +934,15 @@ document.getElementById('searchBtn').addEventListener('click', function() {
             var coeff = meta.querySelector('.tag[style]');
             if (coeff) meta.insertBefore(span, coeff);
             else meta.appendChild(span);
-            if (_lastResult) _lastResult.source_type = sourceType;
+            var srcMetaText = sourceMetaText(sourceType, sourceMeta);
+            if (srcMetaText) {
+                var spanMeta = document.createElement('span');
+                spanMeta.className = 'tag tag-source-meta';
+                spanMeta.textContent = srcMetaText;
+                if (span.nextSibling) meta.insertBefore(spanMeta, span.nextSibling);
+                else meta.appendChild(spanMeta);
+            }
+            if (_lastResult) { _lastResult.source_type = sourceType; _lastResult.source_meta = sourceMeta || {}; }
         }
         
         // Make saveAfterSolve available globally for inline onclick

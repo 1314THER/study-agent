@@ -1452,6 +1452,32 @@ body.theme-ji .history-list-item.active { color: #16a34a; background: #f0fdf4; b
 .source-type-option:hover { border-color: #0071e3; color: #0071e3; }
 .source-type-option.active { background: #0071e3; color: #fff; border-color: #0071e3; }
 
+.source-meta-fields {
+    display: flex; gap: 10px; flex-wrap: wrap;
+    padding: 4px 0 10px; border-top: 1px solid #f0f0f0;
+}
+.source-meta-field {
+    flex: 1; min-width: 170px; display: flex; flex-direction: column; gap: 4px;
+}
+.source-meta-field label {
+    font-size: 12px; color: #86868b; font-weight: 500;
+}
+.source-meta-field input {
+    padding: 8px 10px; border: 1px solid #c7c7cc; border-radius: 8px;
+    font-size: 13px; outline: none; box-sizing: border-box; width: 100%;
+}
+.source-meta-field input:focus { border-color: #0071e3; }
+.source-meta-hint { font-size: 12px; color: #a1a1a6; padding: 6px 0; }
+.remember-source-row {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 0 12px; font-size: 13px; color: #515154;
+    border-top: 1px solid #f0f0f0; cursor: pointer;
+}
+.remember-source-row input { width: 16px; height: 16px; accent-color: #0071e3; cursor: pointer; }
+.tag-source-meta {
+    background: #f5f7fa; color: #5f6b7a; border-color: #e3e8ef;
+}
+
 .save-dialog-actions {
     display: flex; gap: 10px; justify-content: flex-end;
     padding-top: 12px; border-top: 1px solid #f0f0f0;
@@ -1483,6 +1509,48 @@ body.theme-ji .history-list-item.active { color: #16a34a; background: #f0fdf4; b
 .tag-source-gaokao { background: #fdeef0; color: #c2253a; border-color: #f6cfd6; }
 .tag-source-monikao { background: #eef2ff; color: #3f51b5; border-color: #d9e1fb; }
 .tag-source-muti { background: #fff4e2; color: #b45309; border-color: #f9dfae; }
+
+/* ---- Import dialog (multimodal batch / single) ---- */
+.mm-import-overlay {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.45); display: flex; align-items: center;
+    justify-content: center; z-index: 1000; padding: 16px; box-sizing: border-box;
+}
+.mm-import-dialog {
+    background: #fff; border-radius: 14px; padding: 22px 24px;
+    width: 100%; max-width: 520px; max-height: 86vh; overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+}
+.mm-import-dialog h3 {
+    font-size: 17px; font-weight: 600; color: #1d1d1f;
+    margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #f0f0f0;
+}
+.mm-import-modes { display: flex; gap: 8px; margin-bottom: 14px; }
+.mm-import-mode {
+    flex: 1; padding: 9px 10px; border: 1px solid #d2d2d7; border-radius: 10px;
+    background: #fafafa; font-size: 13px; color: #636366; cursor: pointer;
+    transition: all 0.15s;
+}
+.mm-import-mode.active { background: #0071e3; color: #fff; border-color: #0071e3; }
+.mm-import-rows { max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; }
+.mm-import-row {
+    border: 1px solid #e5e5e7; border-radius: 10px; padding: 12px; background: #fafafa;
+}
+.mm-import-row-head { font-size: 13px; font-weight: 600; color: #1d1d1f; margin-bottom: 8px; }
+.mm-import-row .mm-source-select { width: 100%; margin-bottom: 8px; }
+.auto-row { align-items: center; }
+.auto-row input[type="checkbox"] { width: 16px; height: 16px; accent-color: #0071e3; }
+.mm-import-actions {
+    display: flex; justify-content: flex-end; gap: 10px;
+    padding-top: 14px; border-top: 1px solid #f0f0f0; margin-top: 12px;
+}
+.mm-import-actions button {
+    padding: 9px 20px; border: none; border-radius: 8px; font-size: 14px;
+    font-weight: 500; cursor: pointer;
+}
+.mm-import-cancel { background: #f0f0f0; color: #515154; }
+.mm-import-confirm { background: #2e7d32; color: #fff; }
+.mm-import-confirm:hover { background: #256d28; }
 
 /* Radar chart empty state */
 .radar-empty {

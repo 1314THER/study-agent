@@ -161,14 +161,7 @@ function safeParseKps(kps){
                             <span id="mmBatchCount" style="font-size:13px;color:#86868b;">已选 0 道</span>
                             <button class="mm-qbtn" onclick="selectAllQuestions()" style="padding:6px 12px;border:1px solid #c7c7cc;border-radius:8px;font-size:13px;cursor:pointer;background:white;">☐ 全选</button>
                             <button class="mm-batch-btn" id="mmBatchSolveBtn" onclick="batchSolve()">批量解题</button>
-                            <select id="mmSourceSelect" class="mm-source-select" title="批量入库时选择的题目来源">
-                                <option value="">选择来源</option>
-                                <option value="ai生成">AI生成</option>
-                                <option value="高考题">高考题</option>
-                                <option value="模拟题">模拟题</option>
-                                <option value="精选母题">精选母题</option>
-                            </select>
-                            <button class="mm-batch-btn" onclick="batchSaveSelected()" style="background:#2e7d32;">📋 批量入库</button>
+                            <button class="mm-batch-btn" onclick="openBatchImportDialog()" style="background:#2e7d32;">📋 批量入库</button>
                             <button class="mm-batch-btn" onclick="batchAddSelectedToExam()" style="background:#0071e3;">📋 批量组卷</button>
                         </div>
                     </div>
@@ -219,6 +212,120 @@ var _teacherGradients = {
 var _pendingFile = null;
 var teacherNames = {liangliang:'梁梁',taotao:'韬韬',xuefeng:'雪峰',ji:'鸡'};
 var STORAGE_KEY = 'multimodal_state';
+
+function safeParseMeta(m){
+    if(m && typeof m === 'object') return m;
+    if(!m) return {};
+    try{var p=JSON.parse(m);return (p && typeof p === 'object') ? p : {};}catch(e){return {};}
+}
+function sourceMetaText(sourceType, sourceMeta){
+    var m = safeParseMeta(sourceMeta);
+    if(sourceType === '模拟题' || sourceType === '高考题'){
+        var no = m.question_no ? '第' + m.question_no + '题' : '';
+        if(m.paper && no) return m.paper + '·' + no;
+        return m.paper || no;
+    }
+    if(sourceType === 'ai生成') return m.reference_id ? '参考题 #' + m.reference_id : '';
+    if(sourceType === '精选母题'){
+        var owner = m.owner || 'sqz';
+        return m.mother_id ? owner + '·母题 #' + m.mother_id : owner;
+    }
+    return '';
+}
+function getRememberedSource(){
+    try{var raw = localStorage.getItem('remembered_question_source'); return raw ? JSON.parse(raw) : null;}catch(e){return null;}
+}
+function saveRememberedSource(data){ localStorage.setItem('remembered_question_source', JSON.stringify(data)); }
+function clearRememberedSource(){ localStorage.removeItem('remembered_question_source'); }
+
+function sourceFieldsHtml(sourceType, sourceMeta, prefix){
+    var m = safeParseMeta(sourceMeta) || {};
+    var html = '<div class="source-meta-fields" id="' + prefix + '_fields">';
+    if (sourceType === '模拟题' || sourceType === '高考题') {
+        html += '<div class="source-meta-field"><label>卷子名字</label>';
+        html += '<input type="text" id="' + prefix + '_paper" placeholder="如：' + (sourceType === '高考题' ? '2025一卷' : '巴蜀中学2026.12月考') + '" maxlength="60" value="' + escapeHtml(m.paper || '') + '"></div>';
+        html += '<div class="source-meta-field"><label>题号</label>';
+        html += '<input type="text" id="' + prefix + '_no" placeholder="如：7" maxlength="20" value="' + escapeHtml(m.question_no || '') + '"></div>';
+    } else if (sourceType === 'ai生成') {
+        html += '<div class="source-meta-field"><label>参考题目ID</label>';
+        html += '<input type="text" id="' + prefix + '_ref" placeholder="参考题目ID" maxlength="30" value="' + escapeHtml(m.reference_id || '') + '"></div>';
+    } else if (sourceType === '精选母题') {
+        html += '<div class="source-meta-field"><label>来源署名</label>';
+        html += '<input type="text" id="' + prefix + '_owner" placeholder="sqz" maxlength="30" value="' + escapeHtml(m.owner || 'sqz') + '"></div>';
+        html += '<div class="source-meta-field"><label>母题ID</label>';
+        html += '<input type="text" id="' + prefix + '_mid" placeholder="母题ID" maxlength="30" value="' + escapeHtml(m.mother_id || '') + '"></div>';
+    } else {
+        html += '<p class="source-meta-hint">选择来源后填写二级标签</p>';
+    }
+    html += '</div>';
+    return html;
+}
+function collectSourceFields(sourceType, prefix){
+    var m = {};
+    if (sourceType === '模拟题' || sourceType === '高考题') {
+        var paper = document.getElementById(prefix + '_paper');
+        var no = document.getElementById(prefix + '_no');
+        if (paper && paper.value.trim()) m.paper = paper.value.trim();
+        if (no && no.value.trim()) m.question_no = no.value.trim();
+    } else if (sourceType === 'ai生成') {
+        var ref = document.getElementById(prefix + '_ref');
+        if (ref && ref.value.trim()) m.reference_id = ref.value.trim();
+    } else if (sourceType === '精选母题') {
+        var owner = document.getElementById(prefix + '_owner');
+        var mid = document.getElementById(prefix + '_mid');
+        m.owner = (owner && owner.value.trim()) ? owner.value.trim() : 'sqz';
+        if (mid && mid.value.trim()) m.mother_id = mid.value.trim();
+    }
+    return m;
+}
+function sourceChipsHtml(activeType, prefix){
+    var types = ['ai生成', '高考题', '模拟题', '精选母题'];
+    var html = '<div class="source-type-row"><label>来源标签</label>';
+    for (var i = 0; i < types.length; i++) {
+        html += '<span class="source-type-option' + (types[i] === activeType ? ' active' : '') + '" onclick="selectImportSource(this,\'' + prefix + '\')" data-value="' + types[i] + '">' + types[i] + '</span>';
+    }
+    html += '</div>';
+    return html;
+}
+function selectImportSource(el, prefix){
+    var root = el.closest('.mm-import-dialog');
+    if (root) root.querySelectorAll('.source-type-option').forEach(function(s){ s.classList.remove('active'); });
+    el.classList.add('active');
+    var type = el.dataset.value;
+    var fieldsBox = document.getElementById(prefix + '_fields');
+    if (fieldsBox) fieldsBox.outerHTML = sourceFieldsHtml(type, {}, prefix);
+    if (prefix === 'bdu') syncUnifiedAutoRow();
+}
+
+function syncUnifiedAutoRow(){
+    if (_mmBatchMode !== 'unified') return;
+    var active = document.querySelector('.mm-import-dialog .source-type-option.active');
+    var type = active ? active.dataset.value : '';
+    var existing = document.getElementById('bduAutoNo');
+    if ((type === '模拟题' || type === '高考题') && !existing) {
+        var row = document.createElement('div');
+        row.className = 'source-meta-field auto-row';
+        row.id = 'bduAutoRow';
+        row.innerHTML = '<label>自动题号</label><input type="checkbox" id="bduAutoNo" checked onchange="toggleUnifiedAutoNo()"><span>从</span>' +
+            '<input type="text" id="bduStartNo" value="1" style="width:64px;padding:6px 8px;border:1px solid #c7c7cc;border-radius:8px;">' +
+            '<span>开始，按勾选顺序递增</span>';
+        var remember = document.querySelector('.mm-import-dialog .remember-source-row');
+        if (remember && remember.parentNode) remember.parentNode.insertBefore(row, remember);
+        toggleUnifiedAutoNo();
+    } else if ((type !== '模拟题' && type !== '高考题') && existing) {
+        var autoRow = existing.closest('.auto-row');
+        if (autoRow) autoRow.remove();
+    }
+}
+
+function toggleUnifiedAutoNo(){
+    var auto = document.getElementById('bduAutoNo');
+    var noInput = document.getElementById('bdu_no');
+    if (auto && noInput) {
+        var field = noInput.closest('.source-meta-field');
+        if (field) field.style.display = auto.checked ? 'none' : '';
+    }
+}
 
 // ---- Collapse ----
 function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
@@ -349,6 +456,7 @@ async function addSingleToExam(idx){
         try{
         var savePayload={question:_questions[idx].latex,answer_json:s.data};
         if(_questions[idx].source_type)savePayload.source_type=_questions[idx].source_type;
+        if(_questions[idx].source_meta)savePayload.source_meta=_questions[idx].source_meta;
         var r=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(savePayload)});
         var d=await r.json();if(d.id){qid=d.id;s.saved=true;s.data.saved_question_id=qid;}}catch(e){return;}
     }
@@ -442,6 +550,7 @@ function renderQuestionList(){
         html+='<span class="tag '+dc+' mm-qtag">'+escapeHtml(q.difficulty)+'</span>';
         if(q.question_type)html+='<span class="tag tag-type mm-qtag">'+escapeHtml(q.question_type)+'</span>';
         if(q.source_type)html+='<span class="tag tag-source mm-qtag">'+escapeHtml(q.source_type)+'</span>';
+        if(q.source_type){var qm=sourceMetaText(q.source_type,q.source_meta);if(qm)html+='<span class="tag tag-source-meta mm-qtag">'+escapeHtml(qm)+'</span>';}
         if(_sessions[i]&&_sessions[i].done)html+='<span class="mm-solved-tag">✓ 已解答</span>';
         html+='<button class="mm-qbtn" onclick="event.stopPropagation();startSingleSolve('+i+')" style="font-size:11px;padding:2px 8px;margin-left:auto;">'+(_sessions[i]&&_sessions[i].done?'↻ 重做':'▶ 解题')+'</button>';
         html+='</div><div class="mm-qpreview-latex" id="qpreview_'+i+'">'+escapeHtml(q.latex||'')+'</div></div>';
@@ -596,6 +705,7 @@ async function startSingleSolve(idx){
             try{
                 var overridePayload={question:_questions[idx].latex,answer_json:overrideData};
                 if(_questions[idx].source_type)overridePayload.source_type=_questions[idx].source_type;
+                if(_questions[idx].source_meta)overridePayload.source_meta=_questions[idx].source_meta;
                 var saveResp=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(overridePayload)});
                 var saveData=await saveResp.json();
                 if(saveData.id){_sessions[idx].saved=true;_sessions[idx].data.saved_question_id=saveData.id;}
@@ -655,6 +765,8 @@ function renderSessionResult(idx,data,autoSave,keepOpen){
         else if(q.source_type==='模拟题')srcClass+=' tag-source-monikao';
         else if(q.source_type==='精选母题')srcClass+=' tag-source-muti';
         html+='<span class="'+srcClass+'">'+escapeHtml(q.source_type)+'</span>';
+        var srcMetaText=sourceMetaText(q.source_type,q.source_meta);
+        if(srcMetaText)html+='<span class="tag tag-source-meta">'+escapeHtml(srcMetaText)+'</span>';
     }
     if(od&&od.total_score!==undefined)html+='<span class="tag" style="background:#e8f0fe;color:#1565c0;">雪峰难度系数：'+od.total_score+'/15</span>';
     if(data.step_difficulty_sum!==undefined)html+='<span class="tag" style="background:#fce4ec;color:#c62828;">武亮难度系数：'+data.step_difficulty_sum+'</span>';
@@ -693,13 +805,6 @@ function renderSessionResult(idx,data,autoSave,keepOpen){
     html+='<div style="text-align:center;margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">';
     html+='<button class="mm-solve-btn" onclick="startSingleSolve('+idx+')" style="background:#515154;">↻ 重新解答</button>';
     html+='<button class="mm-solve-btn" onclick="teachOpenMulti(this)" data-question="' + (_questions[idx] ? _questions[idx].latex.replace(/"/g, '&quot;') : '') + '" style="background:#ca8a04;">📖 教学</button>';
-    html+='<select id="mmSource_'+idx+'" class="mm-source-select" title="该题入库时的来源标签">';
-    html+='<option value="">选择来源</option>';
-    html+='<option value="ai生成"'+(q&&q.source_type==='ai生成'?' selected':'')+'>AI生成</option>';
-    html+='<option value="高考题"'+(q&&q.source_type==='高考题'?' selected':'')+'>高考题</option>';
-    html+='<option value="模拟题"'+(q&&q.source_type==='模拟题'?' selected':'')+'>模拟题</option>';
-    html+='<option value="精选母题"'+(q&&q.source_type==='精选母题'?' selected':'')+'>精选母题</option>';
-    html+='</select>';
     if(isSaved){html+='<span class="tag" style="background:#e8f5e9;color:#2e7d32;">✅ 已加入题库</span>';}
     else{html+='<button class="mm-solve-btn" onclick="saveToBank('+idx+')" style="background:#2e7d32;">📋 加入题库</button>';}
     html+='</div>';
@@ -724,7 +829,11 @@ function renderSessionResult(idx,data,autoSave,keepOpen){
         if(data.knowledge_points)safeParseKps(data.knowledge_points).slice(0,3).forEach(function(kp){
             compactHtml+='<span class="tag tag-category">'+kp+'</span>';
         });
-        if(q&&q.source_type)compactHtml+='<span class="tag tag-source">'+escapeHtml(q.source_type)+'</span>';
+        if(q&&q.source_type){
+            compactHtml+='<span class="tag tag-source">'+escapeHtml(q.source_type)+'</span>';
+            var srcMetaText=sourceMetaText(q.source_type,q.source_meta);
+            if(srcMetaText)compactHtml+='<span class="tag tag-source-meta">'+escapeHtml(srcMetaText)+'</span>';
+        }
         compactHtml+='</div><div style="display:flex;gap:6px;">';
         if(isSaved)compactHtml+='<span class="tag" style="background:#e8f5e9;color:#2e7d32;">✅ 已入库</span>';
         else compactHtml+='<button class="mm-solve-btn" onclick="saveToBank('+idx+')" style="background:#2e7d32;font-size:12px;padding:4px 10px;">📋 入库</button>';
@@ -762,22 +871,219 @@ function toggleDetail(el){
 }
 
 // ---- Save to Bank ----
-async function saveToBank(idx){
-    var q=_questions[idx];var data=_sessions[idx]?.data;if(!q||!data)return;
+var _mmSingleIdx = -1;
+var _mmBatchIndices = [];
+var _mmBatchMode = 'unified';
+
+function saveToBank(idx){
+    openSingleSaveDialog(idx);
+}
+
+async function performSaveToBank(idx, sourceType, sourceMeta){
+    var q=_questions[idx];var data=_sessions[idx]?.data;if(!q||!data)return false;
     try{
-        var sourceType=(document.getElementById('mmSource_'+idx)||{}).value||(document.getElementById('mmSourceSelect')||{}).value||'';
         var payload={question:q.latex,answer_json:data};
-        if(sourceType)payload.source_type=sourceType;
+        if(sourceType){payload.source_type=sourceType;payload.source_meta=sourceMeta||{};}
         var r=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         var d=await r.json();
         if(d.id){
             var s=_sessions[idx];s.saved=true;s.data.saved_question_id=d.id;
-            if(sourceType)_questions[idx].source_type=sourceType;
+            _questions[idx].source_type=sourceType||'';
+            _questions[idx].source_meta=sourceType?(sourceMeta||{}):null;
+            saveState();
             renderSessionResult(idx,s.data,true,true);
             renderQuestionList();
+            return true;
         }
-        showToast(sourceType?('已加入题库，来源：'+sourceType):'已加入个人题库','success');
-    }catch(e){showToast('保存失败: '+e.message,'info');}
+    }catch(e){console.error('save failed',idx,e);}
+    return false;
+}
+
+function closeImportDialog(){
+    var el=document.querySelector('.mm-import-overlay');
+    if(el)el.remove();
+    _mmSingleIdx=-1;_mmBatchIndices=[];
+}
+
+function openSingleSaveDialog(idx){
+    var q=_questions[idx];if(!q||!_sessions[idx]?.data)return;
+    _mmSingleIdx=idx;
+    var remembered=getRememberedSource();
+    var type=q.source_type||(remembered&&remembered.source_type)||'';
+    var meta=safeParseMeta(q.source_meta||(remembered&&remembered.source_meta))||{};
+    var html='<div class="mm-import-overlay"><div class="mm-import-dialog">';
+    html+='<h3>加入题库</h3>';
+    html+=sourceChipsHtml(type,'sgl');
+    html+=sourceFieldsHtml(type,meta,'sgl');
+    html+='<label class="remember-source-row"><input type="checkbox" id="sglRemember"'+(remembered?' checked':'')+'><span>记住来源</span></label>';
+    html+='<div class="mm-import-actions"><button class="mm-import-cancel" onclick="closeImportDialog()">取消</button>';
+    html+='<button class="mm-import-confirm" onclick="confirmSingleImport()">确认入库</button></div>';
+    html+='</div></div>';
+    var overlay=document.createElement('div');overlay.innerHTML=html;
+    var overlayEl=overlay.firstChild;
+    document.body.appendChild(overlayEl);
+    overlayEl.addEventListener('click',function(e){if(e.target===overlayEl)closeImportDialog();});
+}
+
+async function confirmSingleImport(){
+    var type='';
+    var active=document.querySelector('.mm-import-dialog .source-type-option.active');
+    if(active)type=active.dataset.value;
+    var meta=collectSourceFields(type,'sgl');
+    var remember=document.getElementById('sglRemember');
+    if(remember&&remember.checked&&type)saveRememberedSource({source_type:type,source_meta:meta});
+    else if(remember&&!remember.checked)clearRememberedSource();
+    var idx=_mmSingleIdx;closeImportDialog();
+    if(idx<0)return;
+    var ok=await performSaveToBank(idx,type,meta);
+    showToast(ok?(type?'已加入题库，来源：'+type:'已加入个人题库'):'保存失败', ok?'success':'error');
+}
+
+function getSelectedSolvedIndices(){
+    var cbs=document.querySelectorAll('#mmQuestionList .hc-checkbox:checked');
+    var indices=[];
+    for(var i=0;i<cbs.length;i++){
+        var idx=parseInt(cbs[i].dataset.idx);
+        if(_sessions[idx]&&_sessions[idx].done&&_sessions[idx].data)indices.push(idx);
+    }
+    return indices.sort(function(a,b){return a-b;});
+}
+
+function openBatchImportDialog(){
+    var indices=getSelectedSolvedIndices();
+    if(indices.length===0){showToast('请先勾选已解答的题目','info');return;}
+    _mmBatchIndices=indices;_mmBatchMode='unified';
+    var html='<div class="mm-import-overlay"><div class="mm-import-dialog mm-import-batch">';
+    html+='<h3>批量入库 · 共 '+indices.length+' 道</h3>';
+    html+='<div class="mm-import-modes">';
+    html+='<button class="mm-import-mode active" id="mmModeUnified" onclick="switchBatchImportMode(\'unified\')">统一填写 + 自动题号</button>';
+    html+='<button class="mm-import-mode" id="mmModePer" onclick="switchBatchImportMode(\'per\')">逐题填写</button>';
+    html+='</div>';
+    html+='<div id="mmImportBody"></div>';
+    html+='<div class="mm-import-actions"><button class="mm-import-cancel" onclick="closeImportDialog()">取消</button>';
+    html+='<button class="mm-import-confirm" onclick="confirmBatchImport()">确认批量入库</button></div>';
+    html+='</div></div>';
+    var overlay=document.createElement('div');overlay.innerHTML=html;
+    var overlayEl=overlay.firstChild;
+    document.body.appendChild(overlayEl);
+    overlayEl.addEventListener('click',function(e){if(e.target===overlayEl)closeImportDialog();});
+    renderBatchImportBody();
+}
+
+function switchBatchImportMode(mode){
+    _mmBatchMode=mode;
+    var u=document.getElementById('mmModeUnified');
+    var p=document.getElementById('mmModePer');
+    if(u)u.classList.toggle('active',mode==='unified');
+    if(p)p.classList.toggle('active',mode==='per');
+    renderBatchImportBody();
+}
+
+function renderBatchImportBody(){
+    var body=document.getElementById('mmImportBody');if(!body)return;
+    if(_mmBatchMode==='unified')body.innerHTML=renderUnifiedBatchForm();
+    else body.innerHTML=renderPerQuestionBatchForm();
+    if(_mmBatchMode==='unified')setTimeout(toggleUnifiedAutoNo,0);
+}
+
+function renderUnifiedBatchForm(){
+    var remembered=getRememberedSource();
+    var type=(remembered&&remembered.source_type)||'';
+    var meta=safeParseMeta(remembered&&remembered.source_meta)||{};
+    var html=sourceChipsHtml(type,'bdu');
+    html+=sourceFieldsHtml(type,meta,'bdu');
+    if(type==='模拟题'||type==='高考题'){
+        html+='<div class="source-meta-field auto-row"><label>自动题号</label>';
+        html+='<input type="checkbox" id="bduAutoNo" checked onchange="toggleUnifiedAutoNo()"><span>从</span>';
+        html+='<input type="text" id="bduStartNo" value="1" style="width:64px;padding:6px 8px;border:1px solid #c7c7cc;border-radius:8px;">';
+        html+='<span>开始，按勾选顺序递增</span></div>';
+    }
+    html+='<label class="remember-source-row"><input type="checkbox" id="bduRemember"'+(remembered?' checked':'')+'><span>记住来源</span></label>';
+    return html;
+}
+
+function renderPerQuestionBatchForm(){
+    var remembered=getRememberedSource();
+    var html='<div class="mm-import-rows">';
+    for(var i=0;i<_mmBatchIndices.length;i++){
+        var idx=_mmBatchIndices[i];var q=_questions[idx];
+        var type=q&&q.source_type?q.source_type:(remembered&&remembered.source_type)||'';
+        var meta=q&&q.source_meta?safeParseMeta(q.source_meta):safeParseMeta(remembered&&remembered.source_meta)||{};
+        var types=['','ai生成','高考题','模拟题','精选母题'];
+        html+='<div class="mm-import-row"><div class="mm-import-row-head">题'+(idx+1)+'</div>';
+        html+='<select id="pq_src_'+idx+'" class="mm-source-select" onchange="selectPerQuestionSource('+idx+')">';
+        for(var ti=0;ti<types.length;ti++){
+            var label=types[ti]===''?'选择来源':types[ti]==='ai生成'?'AI生成':types[ti];
+            html+='<option value="'+types[ti]+'"'+(types[ti]===type?' selected':'')+'>'+label+'</option>';
+        }
+        html+='</select>';
+        html+='<div id="pq_fields_'+idx+'">'+sourceFieldsHtml(type,meta,'pq_'+idx)+'</div>';
+        html+='</div>';
+    }
+    html+='</div>';
+    return html;
+}
+
+function selectPerQuestionSource(idx){
+    var sel=document.getElementById('pq_src_'+idx);
+    var box=document.getElementById('pq_fields_'+idx);
+    if(sel&&box)box.innerHTML=sourceFieldsHtml(sel.value,{},'pq_'+idx);
+}
+
+async function confirmBatchImport(){
+    var mode=_mmBatchMode;
+    var ok=false;
+    if(mode==='unified')ok=await saveBatchUnified();
+    else ok=await saveBatchPerQuestion();
+    if(ok)closeImportDialog();
+}
+
+async function saveBatchUnified(){
+    var type='';
+    var active=document.querySelector('.mm-import-dialog .source-type-option.active');
+    if(active)type=active.dataset.value;
+    if(!type){showToast('请先选择来源','info');return false;}
+    var baseMeta=collectSourceFields(type,'bdu');
+    if(type==='ai生成'&&!baseMeta.reference_id){showToast('请填写参考题目ID','info');return false;}
+    if(type==='精选母题'&&!baseMeta.mother_id){showToast('请填写母题ID','info');return false;}
+    var auto=document.getElementById('bduAutoNo')&&document.getElementById('bduAutoNo').checked;
+    var startNo=parseInt((document.getElementById('bduStartNo')||{}).value)||1;
+    var remember=document.getElementById('bduRemember');
+    if(remember&&remember.checked)saveRememberedSource({source_type:type,source_meta:baseMeta});
+    else if(remember&&!remember.checked)clearRememberedSource();
+    var done=0,skip=0;
+    for(var i=0;i<_mmBatchIndices.length;i++){
+        var idx=_mmBatchIndices[i];
+        if(!_sessions[idx]||!_sessions[idx].done){skip++;continue;}
+        var meta=Object.assign({},baseMeta);
+        if((type==='模拟题'||type==='高考题')){
+            if(!meta.paper){showToast('请填写卷子名字','info');return false;}
+            meta.question_no=auto?String(startNo+i):(meta.question_no||String(startNo+i));
+        }
+        var ok=await performSaveToBank(idx,type,meta);
+        if(ok)done++;
+    }
+    showToast('已完成 '+done+' 道题入库'+(skip>0?'，跳过 '+skip+' 道未解答':'')+(type?'，来源：'+type:''),'success');
+    return true;
+}
+
+async function saveBatchPerQuestion(){
+    var done=0,skip=0,noSource=0;
+    for(var i=0;i<_mmBatchIndices.length;i++){
+        var idx=_mmBatchIndices[i];
+        if(!_sessions[idx]||!_sessions[idx].done){skip++;continue;}
+        var sel=document.getElementById('pq_src_'+idx);
+        var type=sel?sel.value:'';
+        if(!type){noSource++;continue;}
+        var meta=collectSourceFields(type,'pq_'+idx);
+        var ok=await performSaveToBank(idx,type,meta);
+        if(ok)done++;
+    }
+    var extra=[];
+    if(skip>0)extra.push('跳过 '+skip+' 道未解答');
+    if(noSource>0)extra.push(noSource+' 道未选来源');
+    showToast('已完成 '+done+' 道题入库'+(extra.length?'，'+extra.join('，'):''),'success');
+    return true;
 }
 
 // ---- Error Dialog ----
@@ -787,6 +1093,7 @@ async function showErrorDialog(idx,stepNumber,chunkId){
         try{
         var errSavePayload={question:_questions[idx].latex,answer_json:_sessions[idx].data};
         if(_questions[idx].source_type)errSavePayload.source_type=_questions[idx].source_type;
+        if(_questions[idx].source_meta)errSavePayload.source_meta=_questions[idx].source_meta;
         var r=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(errSavePayload)});
         var d=await r.json();if(d.id){qid=d.id;_sessions[idx].saved=true;_sessions[idx].data.saved_question_id=d.id;renderQuestionList();}}catch(e){alert('保存失败，无法添加错因');return;}
     }
@@ -865,33 +1172,6 @@ function teachOpenMulti(btn) {
 function safeParseKps(kps){
     if(Array.isArray(kps)) return kps;
     try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
-}
-
-async function batchSaveSelected(){
-    var cbs=document.querySelectorAll('#mmQuestionList .hc-checkbox:checked');
-    var done=0,skip=0;
-    var sourceType=(document.getElementById('mmSourceSelect')||{}).value||'';
-    var updated=[];
-    for(var i=0;i<cbs.length;i++){
-        var idx=parseInt(cbs[i].dataset.idx);
-        if(!_sessions[idx]||!_sessions[idx].done){skip++;continue;}
-        try{
-            var s=_sessions[idx];
-            var payload={question:_questions[idx].latex,answer_json:s.data};
-            if(sourceType)payload.source_type=sourceType;
-            if(s.saved&&!sourceType)continue;
-            var r=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-            var d=await r.json();
-            if(d.saved||d.id){s.saved=true;if(sourceType)_questions[idx].source_type=sourceType;done++;updated.push(idx);}
-        }catch(e){console.error('save failed',idx,e);}
-    }
-    for(var ui=0;ui<updated.length;ui++){
-        var uidx=updated[ui];
-        renderSessionResult(uidx,_sessions[uidx].data,true,false);
-    }
-    if(skip>0)showToast('有 '+skip+' 道题未解答，已跳过','info');
-    showToast(sourceType?('已完成 '+done+' 道题入库，来源：'+sourceType):('已完成 '+done+' 道题入库'),'success');
-    renderQuestionList();
 }
 
 async function batchAddSelectedToExam(){

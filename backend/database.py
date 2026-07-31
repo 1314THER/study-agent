@@ -7,6 +7,7 @@
 import sqlite3
 import json
 import os
+import random
 from backend.categories import CATEGORIES
 from backend.steps import _load_steps
 
@@ -15,6 +16,14 @@ _VALID_CATEGORIES = set(CATEGORIES.keys())
 _VALID_DIFFICULTY_LEVELS = {"容易", "中等", "困难", "极难"}
 _VALID_DIMENSION_KEYS = {"非常规程度", "计算量", "理解难度", "分类讨论", "知识点密度"}
 _VALID_SOURCE_TYPES = {"ai生成", "高考题", "模拟题", "精选母题"}
+
+# 每种来源允许的二级标签字段，入库时只保留这些键
+_SOURCE_META_FIELDS = {
+    "模拟题": {"paper", "question_no"},
+    "高考题": {"paper", "question_no"},
+    "ai生成": {"reference_id"},
+    "精选母题": {"owner", "mother_id"},
+}
 _DIMENSION_ALIASES = {
     "常规程度": "非常规程度",
     "涉及到的知识点数量": "知识点密度",
@@ -40,6 +49,84 @@ def _ensure_system_lists(conn):
         else:
             _SYSTEM_LIST_IDS[name] = row["id"]
     conn.commit()
+
+
+def _sanitize_source_meta(source_type, source_meta):
+    """按来源类型清洗二级标签，未知来源或非 dict 一律返回 {}"""
+    if not source_type or source_type not in _SOURCE_META_FIELDS:
+        return {}
+    if not isinstance(source_meta, dict):
+        return {}
+    allowed = _SOURCE_META_FIELDS[source_type]
+    out = {}
+    for key in allowed:
+        val = source_meta.get(key)
+        if val is None:
+            continue
+        if isinstance(val, str):
+            val = val.strip()
+            if not val:
+                continue
+        elif isinstance(val, (int, float)) and not isinstance(val, bool):
+            val = str(val).strip()
+        else:
+            continue
+        out[key] = val
+    return out
+
+
+def _backfill_legacy_source_meta(conn):
+    """老库里的题没有二级标签：统一补成 模拟题 · test · 第 n 题（n 随机 1-19）"""
+    rows = conn.execute(
+        """SELECT id, source_type, source_meta FROM questions
+           WHERE source_type = '模拟题'
+             AND (source_meta IS NULL OR source_meta = '' OR source_meta = '{}')"""
+    ).fetchall()
+    changed = 0
+    for row in rows:
+        meta = {"paper": "test", "question_no": str(random.randint(1, 19))}
+        conn.execute(
+            "UPDATE questions SET source_meta = ? WHERE id = ?",
+            (json.dumps(meta, ensure_ascii=False), row["id"]),
+        )
+        changed += 1
+    if changed:
+        conn.commit()
+        print(f"[Database] 已为 {changed} 道旧题补写 模拟题·test·随机题号")
+
+
+def _sync_question_to_source_list(conn, question_id, source_type):
+    """按一级来源自动加入对应系统题单：高考题→高考题，精选母题→母题"""
+    list_name = None
+    if source_type == "高考题":
+        list_name = "高考题"
+    elif source_type == "精选母题":
+        list_name = "母题"
+    if not list_name:
+        return
+    row = conn.execute(
+        "SELECT id FROM question_lists WHERE name = ? AND list_type = 'system'",
+        (list_name,),
+    ).fetchone()
+    if row:
+        conn.execute(
+            "INSERT OR IGNORE INTO question_list_members (list_id, question_id) VALUES (?, ?)",
+            (row["id"], question_id),
+        )
+
+
+def _backfill_source_lists(conn):
+    """老题回填：已经带来源标签的题目补进对应系统题单"""
+    rows = conn.execute("SELECT id, source_type FROM questions").fetchall()
+    changed = 0
+    for row in rows:
+        before = conn.total_changes
+        _sync_question_to_source_list(conn, row["id"], row["source_type"])
+        if conn.total_changes != before:
+            changed += 1
+    if changed:
+        conn.commit()
+        print(f"[Database] 已为 {changed} 道题补进来源对应题单")
 
 def init_db():
     conn = get_connection()
@@ -145,6 +232,16 @@ def init_db():
             print(f"[Database] 新增 {col} 列")
         except sqlite3.OperationalError:
             pass
+    # 回填：老题没有二级标签时补成 模拟题·test·第 n 题（n 随机 1-19）
+    try:
+        _backfill_legacy_source_meta(conn)
+    except sqlite3.OperationalError as e:
+        print(f"[Database] 来源二级标签回填跳过: {e}")
+    # 回填：老题按来源标签补进高考题/母题系统题单
+    try:
+        _backfill_source_lists(conn)
+    except sqlite3.OperationalError as e:
+        print(f"[Database] 来源题单回填跳过: {e}")
     # 迁移：新增时间追踪列
     for col in ("last_viewed_at", "last_edited_at", "last_exam_at"):
         try:
@@ -389,17 +486,28 @@ def save_question(question_text: str, answer_dict: dict):
     source_type = answer_dict.get("source_type")
     if source_type not in _VALID_SOURCE_TYPES:
         source_type = None
-    if source_type is None:
+    source_meta = answer_dict.get("source_meta")
+    if not isinstance(source_meta, dict):
+        source_meta = None
+    if source_type is None or source_meta is None:
         existing_conn = get_connection()
         try:
             existing_row = existing_conn.execute(
-                "SELECT source_type FROM questions WHERE content = ?",
+                "SELECT source_type, source_meta FROM questions WHERE content = ?",
                 (question_text.strip(),)
             ).fetchone()
-            if existing_row and existing_row["source_type"]:
+            if source_type is None and existing_row and existing_row["source_type"]:
                 source_type = existing_row["source_type"]
+            if source_meta is None and existing_row and existing_row["source_meta"]:
+                try:
+                    source_meta = json.loads(existing_row["source_meta"])
+                except (json.JSONDecodeError, TypeError):
+                    pass
         finally:
             existing_conn.close()
+    if source_meta is None:
+        source_meta = {}
+    source_meta_json = json.dumps(_sanitize_source_meta(source_type, source_meta), ensure_ascii=False)
 
     # 构建 steps_structure（从 chunk_results 提取步骤索引）
     chunk_results = answer_dict.get("chunk_results", [])
@@ -438,8 +546,8 @@ def save_question(question_text: str, answer_dict: dict):
            (content, answer_json, category_level1, category_level2,
             difficulty_level, difficulty_score, difficulty_dimensions,
             common_mistakes, knowledge_points, question_type, steps_structure,
-            source_type)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            source_type, source_meta)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            ON CONFLICT(content) DO UPDATE SET
             answer_json = excluded.answer_json,
             category_level1 = excluded.category_level1,
@@ -451,7 +559,8 @@ def save_question(question_text: str, answer_dict: dict):
             knowledge_points = excluded.knowledge_points,
             question_type = excluded.question_type,
             steps_structure = excluded.steps_structure,
-            source_type = excluded.source_type""",
+            source_type = excluded.source_type,
+            source_meta = excluded.source_meta""",
         (
             question_text.strip(),
             json.dumps(answer_dict, ensure_ascii=False),
@@ -465,6 +574,7 @@ def save_question(question_text: str, answer_dict: dict):
             question_type,
             steps_structure,
             source_type,
+            source_meta_json,
         )
     )
     conn.commit()
@@ -482,7 +592,8 @@ def save_question(question_text: str, answer_dict: dict):
                     "INSERT OR IGNORE INTO question_list_members (list_id, question_id) VALUES (?, ?)",
                     (_r["id"], question_id)
                 )
-                _all_conn.commit()
+            _sync_question_to_source_list(_all_conn, question_id, source_type)
+            _all_conn.commit()
         except Exception:
             pass
         _all_conn.close()
@@ -508,14 +619,7 @@ def get_all_questions():
     for r in rows:
         d = dict(r)
         # JSON 字段解析
-        for key in ("difficulty_dimensions", "knowledge_points", "steps_structure"):
-            val = d.get(key)
-            if val:
-                try:
-                    d[key] = json.loads(val)
-                except (json.JSONDecodeError, TypeError):
-                    pass
-        for key in ("difficulty_dimensions", "knowledge_points"):
+        for key in ("difficulty_dimensions", "knowledge_points", "steps_structure", "source_meta"):
             val = d.get(key)
             if val:
                 try:
@@ -535,7 +639,7 @@ def get_question_by_id(qid: int):
     if not row:
         return None
     d = dict(row)
-    for key in ("answer_json", "difficulty_dimensions", "knowledge_points", "common_mistakes", "steps_structure"):
+    for key in ("answer_json", "difficulty_dimensions", "knowledge_points", "common_mistakes", "steps_structure", "source_meta"):
         val = d.get(key)
         if val:
             try:
@@ -569,10 +673,11 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
                 "q.difficulty_level LIKE ?",
                 "e.mistake_type LIKE ?",
                 "e.mistake_detail LIKE ?",
-                "q.source_type LIKE ?"
+                "q.source_type LIKE ?",
+                "q.source_meta LIKE ?"
             ]
             where_clauses.append(f"({' OR '.join(search_conds)})")
-            params.extend([kw_pat] * 9)
+            params.extend([kw_pat] * 10)
 
     if categories:
         placeholders = ",".join("?" for _ in categories)
@@ -633,14 +738,14 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
     all_rows = []
     for r in rows:
         d = dict(r)
-        for key in ("difficulty_dimensions", "knowledge_points", "steps_structure"):
+        for key in ("difficulty_dimensions", "knowledge_points", "steps_structure", "source_meta"):
             val = d.get(key)
             if val:
                 try:
                     d[key] = json.loads(val)
                 except (json.JSONDecodeError, TypeError):
                     pass
-        for key in ("difficulty_dimensions", "knowledge_points", "steps_structure"):
+        for key in ("difficulty_dimensions", "knowledge_points", "steps_structure", "source_meta"):
             val = d.get(key)
             if val:
                 try:
@@ -891,10 +996,11 @@ def get_list_questions(list_id, keywords=None, categories=None, difficulties=Non
                 "q.difficulty_level LIKE ?",
                 "e.mistake_type LIKE ?",
                 "e.mistake_detail LIKE ?",
-                "q.source_type LIKE ?"
+                "q.source_type LIKE ?",
+                "q.source_meta LIKE ?"
             ]
             where_clauses.append("(" + " OR ".join(search_conds) + ")")
-            params.extend([kw_pat] * 9)
+            params.extend([kw_pat] * 10)
     if categories:
         placeholders = ",".join("?" for _ in categories)
         where_clauses.append("q.category_level1 IN (" + placeholders + ")")
@@ -932,7 +1038,7 @@ def get_list_questions(list_id, keywords=None, categories=None, difficulties=Non
     rows = conn.execute(
         "SELECT DISTINCT q.id, q.content, q.category_level1, q.category_level2, "
         "q.difficulty_level, q.difficulty_score, q.difficulty_dimensions, "
-        "q.knowledge_points, q.question_type, q.source_type, "
+        "q.knowledge_points, q.question_type, q.source_type, q.source_meta, "
         "q.steps_structure, q.created_at, q.last_viewed_at, q.last_edited_at, q.last_exam_at "
         + from_clause + " WHERE " + where_sql + " ORDER BY m.id DESC" + limit_sql,
         params
@@ -941,7 +1047,7 @@ def get_list_questions(list_id, keywords=None, categories=None, difficulties=Non
     all_rows = []
     for r in rows:
         d = dict(r)
-        for key in ("difficulty_dimensions", "knowledge_points", "steps_structure"):
+        for key in ("difficulty_dimensions", "knowledge_points", "steps_structure", "source_meta"):
             val = d.get(key)
             if val:
                 try:
@@ -973,10 +1079,11 @@ def get_wrong_questions(keywords=None, categories=None, difficulties=None, types
                 "q.difficulty_level LIKE ?",
                 "e.mistake_type LIKE ?",
                 "e.mistake_detail LIKE ?",
-                "q.source_type LIKE ?"
+                "q.source_type LIKE ?",
+                "q.source_meta LIKE ?"
             ]
             where_clauses.append("(" + " OR ".join(search_conds) + ")")
-            params.extend([kw_pat] * 9)
+            params.extend([kw_pat] * 10)
     if categories:
         placeholders = ",".join("?" for _ in categories)
         where_clauses.append("q.category_level1 IN (" + placeholders + ")")
@@ -1007,7 +1114,7 @@ def get_wrong_questions(keywords=None, categories=None, difficulties=None, types
     rows = conn.execute(
         "SELECT DISTINCT q.id, q.content, q.category_level1, q.category_level2, "
         "q.difficulty_level, q.difficulty_score, q.difficulty_dimensions, "
-        "q.knowledge_points, q.question_type, q.source_type, "
+        "q.knowledge_points, q.question_type, q.source_type, q.source_meta, "
         "q.steps_structure, q.created_at, q.last_viewed_at, q.last_edited_at, q.last_exam_at "
         + from_clause + " WHERE " + where_sql + " ORDER BY q.created_at DESC" + limit_sql,
         params
@@ -1016,7 +1123,7 @@ def get_wrong_questions(keywords=None, categories=None, difficulties=None, types
     all_rows = []
     for r in rows:
         d = dict(r)
-        for key in ("difficulty_dimensions", "knowledge_points", "steps_structure"):
+        for key in ("difficulty_dimensions", "knowledge_points", "steps_structure", "source_meta"):
             val = d.get(key)
             if val:
                 try:
@@ -1030,11 +1137,35 @@ def get_wrong_questions(keywords=None, categories=None, difficulties=None, types
 
 
 def update_question_source_type(question_id, source_type):
+    """兼容旧接口：只更新一级来源标签，保留已有二级标签"""
+    return update_question_source(question_id, source_type, None)
+
+
+def update_question_source(question_id, source_type, source_meta=None):
+    """更新一级来源标签和二级标签（source_meta 为 None 时保留原有二级标签）"""
     if source_type not in _VALID_SOURCE_TYPES:
         return False
     conn = get_connection()
-    cur = conn.execute("UPDATE questions SET source_type = ? WHERE id = ?", (source_type, question_id))
+    row = conn.execute(
+        "SELECT source_type, source_meta FROM questions WHERE id = ?",
+        (question_id,)
+    ).fetchone()
+    if not row:
+        conn.close()
+        return False
+    if source_meta is None:
+        try:
+            source_meta = json.loads(row["source_meta"]) if row["source_meta"] else {}
+        except (json.JSONDecodeError, TypeError):
+            source_meta = {}
+    source_meta_json = json.dumps(_sanitize_source_meta(source_type, source_meta), ensure_ascii=False)
+    cur = conn.execute(
+        "UPDATE questions SET source_type = ?, source_meta = ? WHERE id = ?",
+        (source_type, source_meta_json, question_id)
+    )
     ok = cur.rowcount > 0
+    if ok:
+        _sync_question_to_source_list(conn, question_id, source_type)
     conn.commit()
     conn.close()
     return ok

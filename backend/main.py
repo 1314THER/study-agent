@@ -12,7 +12,7 @@ from backend.database import (
     init_db, get_all_questions, search_questions, delete_question,
     get_question_lists, create_question_list, delete_question_list,
     rename_question_list, add_question_to_lists, remove_question_from_list,
-    get_list_questions, get_wrong_questions, update_question_source_type,
+    get_list_questions, get_wrong_questions, update_question_source,
 )
 from backend.categories import get_all_categories
 from backend.steps import get_step_structure, get_all_question_types
@@ -85,6 +85,7 @@ class SaveQuestionRequest(BaseModel):
     question: str
     answer_json: dict
     source_type: Optional[str] = Field(None, description="来源类型：ai生成/高考题/模拟题/精选母题")
+    source_meta: Optional[dict] = Field(None, description="来源二级标签，如卷子名/题号/参考题ID/母题ID")
 
 
 @app.post("/questions/save")
@@ -99,6 +100,8 @@ def api_save_question(req: SaveQuestionRequest):
     req.answer_json["question_type"] = first.get("chunk_type")
     if req.source_type:
         req.answer_json["source_type"] = req.source_type
+    if req.source_meta is not None:
+        req.answer_json["source_meta"] = req.source_meta
     qid = _save_q(req.question, req.answer_json)
     if qid:
         return {"saved": True, "id": qid, "message": "已加入个人题库"}
@@ -538,6 +541,7 @@ def api_get_question_lists(qid: int):
 
 class SourceTypeRequest(BaseModel):
     source_type: str = Field(..., description="来源类型：ai生成/高考题/模拟题/精选母题")
+    source_meta: Optional[dict] = Field(None, description="来源二级标签，如卷子名/题号/参考题ID/母题ID")
 
 
 @app.put("/questions/{qid}/source-type")
@@ -545,10 +549,10 @@ def api_update_source_type(qid: int, req: SourceTypeRequest):
     """更新题目的来源类型标签"""
     if req.source_type not in ("ai\u751f\u6210", "\u9ad8\u8003\u9898", "\u6a21\u62df\u9898", "\u7cbe\u9009\u6bcd\u9898"):
         return {"error": "invalid_source_type", "valid_types": ["ai\u751f\u6210", "\u9ad8\u8003\u9898", "\u6a21\u62df\u9898", "\u7cbe\u9009\u6bcd\u9898"]}
-    ok = update_question_source_type(qid, req.source_type)
+    ok = update_question_source(qid, req.source_type, req.source_meta)
     if not ok:
         return {"error": "update_failed"}
-    return {"ok": True, "source_type": req.source_type}
+    return {"ok": True, "source_type": req.source_type, "source_meta": req.source_meta}
 
 # ---- Static files: serve frontend (must be last) ----
 
