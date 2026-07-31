@@ -84,6 +84,7 @@ def api_step2(req: Step2Request):
 class SaveQuestionRequest(BaseModel):
     question: str
     answer_json: dict
+    source_type: Optional[str] = Field(None, description="来源类型：ai生成/高考题/模拟题/精选母题")
 
 
 @app.post("/questions/save")
@@ -96,6 +97,8 @@ def api_save_question(req: SaveQuestionRequest):
     req.answer_json["category"] = first.get("category")
     req.answer_json["difficulty"] = req.answer_json.get("overall_difficulty") or first.get("difficulty")
     req.answer_json["question_type"] = first.get("chunk_type")
+    if req.source_type:
+        req.answer_json["source_type"] = req.source_type
     qid = _save_q(req.question, req.answer_json)
     if qid:
         return {"saved": True, "id": qid, "message": "已加入个人题库"}
@@ -472,6 +475,7 @@ def api_get_list_questions(
     difficulty: str = "",
     question_type: str = "",
     error_type: str = "",
+    source_type: str = "",
     page: int = Query(1, ge=1),
     page_size: int = Query(0, ge=0),
 ):
@@ -487,14 +491,15 @@ def api_get_list_questions(
     types = [t.strip() for t in question_type.split(",") if t.strip()] if question_type else None
     et = error_type if error_type else None
     ps = page_size if page_size > 0 else None
+    st = source_type if source_type else None
 
     if target == "wrong":
-        return get_wrong_questions(keywords, categories, difficulties, types, et, page, ps)
+        return get_wrong_questions(keywords, categories, difficulties, types, et, page, ps, st)
     try:
         list_id = int(target)
     except ValueError:
         return {"error": "invalid_target", "message": "target 必须是 all、wrong 或数字 ID"}
-    return get_list_questions(list_id, keywords, categories, difficulties, types, et, page, ps)
+    return get_list_questions(list_id, keywords, categories, difficulties, types, et, page, ps, st)
 
 
 class AddToListRequest(BaseModel):

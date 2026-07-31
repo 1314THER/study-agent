@@ -2,9 +2,10 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>数学最强大脑</title>
-    <link rel="stylesheet" href="style.css?v=20260729">
+    <link rel="stylesheet" href="style.css?v=20260731c">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script>
@@ -18,6 +19,7 @@ function safeParseKps(kps){
 }
 </script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="radar.js?v=20260731"></script>
 </head>
 <body class="theme-liangliang">
     <div class="app-layout">
@@ -172,6 +174,18 @@ var _selectedTeacher = "liangliang";
             }
             // 整体难度（从各块难度取每维最大值计算）
             var od = data.overall_difficulty;
+            if (od && od.level) {
+                var lCls = levelClass(od.level);
+                html += '<span class="tag ' + lCls + '">' + escapeHtml(od.level) + '</span>';
+            }
+            if (data.source_type) {
+                var srcClass = 'tag-source';
+                if (data.source_type === 'ai生成') srcClass += ' tag-source-ai';
+                else if (data.source_type === '高考题') srcClass += ' tag-source-gaokao';
+                else if (data.source_type === '模拟题') srcClass += ' tag-source-monikao';
+                else if (data.source_type === '精选母题') srcClass += ' tag-source-muti';
+                html += '<span class="' + srcClass + '">' + escapeHtml(data.source_type) + '</span>';
+            }
             if (od && od.total_score !== undefined) {
                 html += '<span class="tag" style="background:#e8f0fe;color:#1565c0;">雪峰难度系数：' + od.total_score + '/15</span>';
             }
@@ -274,112 +288,7 @@ var _selectedTeacher = "liangliang";
             });
 
             // 画雷达图（用整体难度维度）
-            var dims = od && od.dimensions;
-            if (dims && Object.keys(dims).length === 5) {
-                var dpr = window.devicePixelRatio || 1;
-                var canvas = document.createElement('canvas');
-                var cssW = 400, cssH = 360;
-                canvas.width = cssW * dpr;
-                canvas.height = cssH * dpr;
-                canvas.style.width = cssW + 'px';
-                canvas.style.height = cssH + 'px';
-                canvas.style.maxWidth = '100%';
-                document.getElementById('radarChart').appendChild(canvas);
-                var ctx = canvas.getContext('2d');
-                ctx.scale(dpr, dpr);
-                var cx = 200, cy = 185, radius = 100;
-                var labels = Object.keys(dims);
-                var values = labels.map(function(k) { return dims[k]; });
-                var n = labels.length;
-                // 3 层同心网格
-                var gridColors = ['#f0f0f0', '#e5e5e7', '#d8d8dc'];
-                for (var ri = 1; ri <= 3; ri++) {
-                    var r = radius * ri / 3;
-                    ctx.beginPath();
-                    for (var i = 0; i <= n; i++) {
-                        var angle = (i % n) * 2 * Math.PI / n - Math.PI / 2;
-                        var x = cx + r * Math.cos(angle);
-                        var y = cy + r * Math.sin(angle);
-                        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-                    }
-                    ctx.closePath();
-                    ctx.strokeStyle = gridColors[ri - 1];
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                }
-                // 轴线 + 标签
-                for (var i = 0; i < n; i++) {
-                    var angle = i * 2 * Math.PI / n - Math.PI / 2;
-                    ctx.beginPath(); ctx.moveTo(cx, cy);
-                    ctx.lineTo(cx + radius * Math.cos(angle), cy + radius * Math.sin(angle));
-                    ctx.strokeStyle = '#ececee';
-                    ctx.lineWidth = 1;
-                    ctx.stroke();
-                    var label = labels[i] + ' ' + values[i];
-                    ctx.font = '13px -apple-system, sans-serif';
-                    ctx.fillStyle = '#1d1d1f';
-                    var lr = radius + 16;
-                    var nx = cx + lr * Math.cos(angle);
-                    var ny = cy + lr * Math.sin(angle);
-                    // 自适应对齐
-                    var deg = ((i / n) * 360) % 360;
-                    if (deg < 18 || deg >= 342) {
-                        ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-                    } else if (deg >= 18 && deg < 72) {
-                        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-                    } else if (deg >= 72 && deg < 108) {
-                        ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
-                    } else if (deg >= 108 && deg < 162) {
-                        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-                    } else if (deg >= 162 && deg < 198) {
-                        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-                    } else if (deg >= 198 && deg < 252) {
-                        ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-                    } else if (deg >= 252 && deg < 288) {
-                        ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-                    } else {
-                        ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-                    }
-                    ctx.fillText(label, nx, ny);
-                }
-                // 数据多边形
-                ctx.beginPath();
-                for (var i = 0; i <= n; i++) {
-                    var angle = (i % n) * 2 * Math.PI / n - Math.PI / 2;
-                    var val = Math.min(values[i % n] / 3, 1);
-                    var x = cx + radius * val * Math.cos(angle);
-                    var y = cy + radius * val * Math.sin(angle);
-                    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-                }
-                ctx.closePath();
-                var grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-                grad.addColorStop(0, 'rgba(0, 113, 227, 0.25)');
-                grad.addColorStop(1, 'rgba(0, 113, 227, 0.06)');
-                ctx.fillStyle = grad;
-                ctx.fill();
-                ctx.strokeStyle = '#0071e3';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-                // 数据点
-                for (var i = 0; i < n; i++) {
-                    var angle = i * 2 * Math.PI / n - Math.PI / 2;
-                    var val = Math.min(values[i] / 3, 1);
-                    var x = cx + radius * val * Math.cos(angle);
-                    var y = cy + radius * val * Math.sin(angle);
-                    ctx.beginPath(); ctx.arc(x, y, 4.5, 0, 2 * Math.PI);
-                    ctx.fillStyle = '#0071e3';
-                    ctx.fill();
-                    ctx.beginPath(); ctx.arc(x, y, 2, 0, 2 * Math.PI);
-                    ctx.fillStyle = '#fff';
-                    ctx.fill();
-                }
-                // 标题
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'bottom';
-                ctx.font = '13px -apple-system, sans-serif';
-                ctx.fillStyle = '#86868b';
-                ctx.fillText('五维难度分布', cx, cssH - 10);
-            }
+            renderDifficultyRadar(document.getElementById('radarChart'), getDifficultyDims(data));
         }
 
         function displayXuebile(data) {
@@ -569,7 +478,6 @@ async function saveAfterSolve() {
                 console.error('\u4fdd\u5b58\u5931\u8d25:', e);
             }
         }
-        }
         
         document.addEventListener('DOMContentLoaded' , function() {
     var savedTeacher = localStorage.getItem('teacher');
@@ -726,10 +634,24 @@ document.getElementById('searchBtn').addEventListener('click', function() {
     localStorage.removeItem('solve_result');
 });
     
-function safeParseKps(kps){
-    if(Array.isArray(kps)) return kps;
-    try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
-}
+        function safeParseKps(kps){
+            if(Array.isArray(kps)) return kps;
+            try{var p=JSON.parse(kps);return Array.isArray(p)?p:[];}catch(e){return [];}
+        }
+
+        function showToast(msg, type) {
+            var existing = document.querySelector('.toast');
+            if (existing) existing.remove();
+            var toast = document.createElement('div');
+            toast.className = 'toast toast-' + (type || 'success');
+            toast.textContent = msg;
+            document.body.appendChild(toast);
+            requestAnimationFrame(function() { toast.classList.add('show'); });
+            setTimeout(function() {
+                toast.classList.remove('show');
+                setTimeout(function() { toast.remove(); }, 300);
+            }, 2000);
+        }
 
         // ========== Save to Lists Dialog (shared) ==========
         var _saveDialogCallback = null;
@@ -758,6 +680,7 @@ function safeParseKps(kps){
         function renderSaveDialog(questionId, lists, memberIds, currentSourceType) {
             var existing = document.querySelector('.save-dialog-overlay');
             if (existing) existing.remove();
+            _selectedSourceType = currentSourceType || '';
             
             var overlay = document.createElement('div');
             overlay.className = 'save-dialog-overlay';
@@ -844,7 +767,7 @@ function safeParseKps(kps){
             });
         }
         
-        function confirmSaveDialog(questionId) {
+        async function confirmSaveDialog(questionId) {
             var cbs = document.querySelectorAll('.sdl-checkbox:checked:not([disabled])');
             var listIds = [];
             // Also add "全部" if it's among the disabled ones
@@ -855,35 +778,32 @@ function safeParseKps(kps){
                 }
             }
             
-            if (_selectedSourceType) {
-                fetch('http://127.0.0.1:8000/questions/' + questionId + '/source-type', {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({source_type: _selectedSourceType})
-                }).catch(function() {});
+            var srcType = _selectedSourceType || '';
+            try {
+                if (srcType) {
+                    var sr = await fetch('http://127.0.0.1:8000/questions/' + questionId + '/source-type', {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({source_type: srcType})
+                    });
+                    var sd = await sr.json();
+                    if (sd.error) throw new Error(sd.error);
+                }
+            } catch (err) {
+                closeSaveDialog();
+                alert('来源标签保存失败: ' + err.message);
+                return;
             }
-            
-            if (listIds.length > 0) {
-                fetch('http://127.0.0.1:8000/questions/' + questionId + '/lists', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({list_ids: listIds})
-                })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    closeSaveDialog();
-                    var btn = document.getElementById('saveAfterBtn');
-                    if (btn) {
-                        btn.innerHTML = '<span class="btn-icon">✅</span><span>已加入个人题库</span>';
-                        btn.disabled = true;
-                        btn.className = 'save-after-btn saved';
-                    }
-                })
-                .catch(function(err) {
-                    closeSaveDialog();
-                    alert('保存失败: ' + err.message);
-                });
-            } else {
+
+            try {
+                if (listIds.length > 0) {
+                    var r = await fetch('http://127.0.0.1:8000/questions/' + questionId + '/lists', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({list_ids: listIds})
+                    });
+                    var data = await r.json();
+                }
                 closeSaveDialog();
                 var btn = document.getElementById('saveAfterBtn');
                 if (btn) {
@@ -891,7 +811,32 @@ function safeParseKps(kps){
                     btn.disabled = true;
                     btn.className = 'save-after-btn saved';
                 }
+                updateResultSourceTag(srcType);
+                showToast(srcType ? ('已保存，来源：' + srcType) : '已保存', 'success');
+            } catch (err) {
+                closeSaveDialog();
+                alert('保存失败: ' + err.message);
             }
+        }
+
+        function updateResultSourceTag(sourceType) {
+            var meta = document.querySelector('#result .meta-bar');
+            if (!meta) return;
+            var old = meta.querySelector('.tag-source');
+            if (old) old.remove();
+            if (!sourceType) return;
+            var srcClass = 'tag-source';
+            if (sourceType === 'ai生成') srcClass += ' tag-source-ai';
+            else if (sourceType === '高考题') srcClass += ' tag-source-gaokao';
+            else if (sourceType === '模拟题') srcClass += ' tag-source-monikao';
+            else if (sourceType === '精选母题') srcClass += ' tag-source-muti';
+            var span = document.createElement('span');
+            span.className = srcClass;
+            span.textContent = sourceType;
+            var coeff = meta.querySelector('.tag[style]');
+            if (coeff) meta.insertBefore(span, coeff);
+            else meta.appendChild(span);
+            if (_lastResult) _lastResult.source_type = sourceType;
         }
         
         // Make saveAfterSolve available globally for inline onclick

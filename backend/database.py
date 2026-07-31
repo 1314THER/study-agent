@@ -15,6 +15,10 @@ _VALID_CATEGORIES = set(CATEGORIES.keys())
 _VALID_DIFFICULTY_LEVELS = {"容易", "中等", "困难", "极难"}
 _VALID_DIMENSION_KEYS = {"非常规程度", "计算量", "理解难度", "分类讨论", "知识点密度"}
 _VALID_SOURCE_TYPES = {"ai生成", "高考题", "模拟题", "精选母题"}
+_DIMENSION_ALIASES = {
+    "常规程度": "非常规程度",
+    "涉及到的知识点数量": "知识点密度",
+}
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "study_agent.db")
 
@@ -162,6 +166,38 @@ def init_db():
         print("[Database] 新增 steps_structure 列")
     except sqlite3.OperationalError:
         pass
+    # 回填：把旧版难度维度字段名统一成新版，缺失时从 answer_json 补充
+    try:
+        rows = conn.execute(
+            "SELECT id, difficulty_dimensions, answer_json FROM questions"
+        ).fetchall()
+        for row in rows:
+            merged = {}
+            col_dims = row["difficulty_dimensions"]
+            if col_dims:
+                try:
+                    merged.update(_normalize_dimension_keys(json.loads(col_dims)))
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            aj_dims = {}
+            if row["answer_json"]:
+                try:
+                    aj = json.loads(row["answer_json"])
+                    diff = aj.get("overall_difficulty") or aj.get("difficulty") or {}
+                    aj_dims = diff.get("dimensions", {}) or {}
+                except (json.JSONDecodeError, TypeError):
+                    pass
+            merged.update(_normalize_dimension_keys(aj_dims))
+            if merged:
+                new_json = json.dumps(merged, ensure_ascii=False)
+                if new_json != (col_dims or ""):
+                    conn.execute(
+                        "UPDATE questions SET difficulty_dimensions = ? WHERE id = ?",
+                        (new_json, row["id"])
+                    )
+        conn.commit()
+    except sqlite3.OperationalError as e:
+        print(f"[Database] 难度维度回填跳过: {e}")
     # 迁移：新建题单表（兼容已有库）
     try:
         conn.execute("CREATE TABLE IF NOT EXISTS question_lists (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, list_type TEXT NOT NULL DEFAULT 'user', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
@@ -260,8 +296,20 @@ def _sanitize_difficulty(diff) -> tuple:
     score = diff.get("total_score")
     dims = diff.get("dimensions", {})
     if isinstance(dims, dict):
-        dims = {k: v for k, v in dims.items() if k in _VALID_DIMENSION_KEYS}
+        dims = _normalize_dimension_keys(dims)
     return level, score, json.dumps(dims, ensure_ascii=False)
+
+
+def _normalize_dimension_keys(dims: dict) -> dict:
+    """把旧版维度名映射到新版五维字段，并过滤未知字段。"""
+    if not isinstance(dims, dict):
+        return {}
+    out = {}
+    for k, v in dims.items():
+        key = _DIMENSION_ALIASES.get(k, k)
+        if key in _VALID_DIMENSION_KEYS:
+            out[key] = v
+    return out
 
 
 def _build_l3_to_l2_map() -> dict:
@@ -311,6 +359,14 @@ def save_question(question_text: str, answer_dict: dict):
     # 处理 difficulty（清洗）
     difficulty = answer_dict.get("overall_difficulty") or answer_dict.get("difficulty", {})
     difficulty_level, difficulty_score, difficulty_dimensions = _sanitize_difficulty(difficulty)
+    # 把清洗/归一化后的五维难度写回 answer_json，保证所有前端都能读到
+    if isinstance(difficulty, dict) and difficulty_dimensions:
+        try:
+            normalized_dims = json.loads(difficulty_dimensions)
+            if isinstance(normalized_dims, dict) and normalized_dims:
+                difficulty["dimensions"] = normalized_dims
+        except (json.JSONDecodeError, TypeError):
+            pass
 
     # 处理 knowledge_points（清洗）
     raw_kps = answer_dict.get("knowledge_points", [])
@@ -328,6 +384,22 @@ def save_question(question_text: str, answer_dict: dict):
                 question_type = first.get("chunk_type")
     if question_type not in ("选择题", "填空题"):
         question_type = "大题"
+
+    # 处理 source_type（清洗）
+    source_type = answer_dict.get("source_type")
+    if source_type not in _VALID_SOURCE_TYPES:
+        source_type = None
+    if source_type is None:
+        existing_conn = get_connection()
+        try:
+            existing_row = existing_conn.execute(
+                "SELECT source_type FROM questions WHERE content = ?",
+                (question_text.strip(),)
+            ).fetchone()
+            if existing_row and existing_row["source_type"]:
+                source_type = existing_row["source_type"]
+        finally:
+            existing_conn.close()
 
     # 构建 steps_structure（从 chunk_results 提取步骤索引）
     chunk_results = answer_dict.get("chunk_results", [])
@@ -365,8 +437,9 @@ def save_question(question_text: str, answer_dict: dict):
         """INSERT OR REPLACE INTO questions
            (content, answer_json, category_level1, category_level2,
             difficulty_level, difficulty_score, difficulty_dimensions,
-            common_mistakes, knowledge_points, question_type, steps_structure)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            common_mistakes, knowledge_points, question_type, steps_structure,
+            source_type)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
         (
             question_text.strip(),
             json.dumps(answer_dict, ensure_ascii=False),
@@ -379,6 +452,7 @@ def save_question(question_text: str, answer_dict: dict):
             json.dumps(clean_kps, ensure_ascii=False),
             question_type,
             steps_structure,
+            source_type,
         )
     )
     conn.commit()
@@ -412,6 +486,7 @@ def get_all_questions():
         """SELECT id, content, category_level1, category_level2,
                   difficulty_level, difficulty_score, difficulty_dimensions,
                   knowledge_points, question_type, steps_structure,
+                  source_type, source_meta,
                   created_at, last_viewed_at, last_edited_at, last_exam_at
            FROM questions ORDER BY created_at DESC"""
     ).fetchall()
@@ -527,6 +602,7 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
         f"""SELECT {select_prefix}{q_prefix}id, {q_prefix}content, {q_prefix}category_level1, {q_prefix}category_level2,
                    {q_prefix}difficulty_level, {q_prefix}difficulty_score, {q_prefix}difficulty_dimensions,
                    {q_prefix}knowledge_points, {q_prefix}question_type, {q_prefix}steps_structure,
+                   {q_prefix}source_type, {q_prefix}source_meta,
                    {q_prefix}created_at, {q_prefix}last_viewed_at, {q_prefix}last_edited_at, {q_prefix}last_exam_at
             {from_clause} WHERE {where_sql}
             ORDER BY {q_prefix}created_at DESC LIMIT ?""",
@@ -773,7 +849,7 @@ def get_question_list_ids(question_id):
     return [r["list_id"] for r in rows]
 
 
-def get_list_questions(list_id, keywords=None, categories=None, difficulties=None, types=None, error_type=None, page=1, page_size=None):
+def get_list_questions(list_id, keywords=None, categories=None, difficulties=None, types=None, error_type=None, page=1, page_size=None, source_type=None):
     conn = get_connection()
     where_clauses = []
     params = []
@@ -807,6 +883,9 @@ def get_list_questions(list_id, keywords=None, categories=None, difficulties=Non
         placeholders = ",".join("?" for _ in types)
         where_clauses.append("q.question_type IN (" + placeholders + ")")
         params.extend(types)
+    if source_type:
+        where_clauses.append("q.source_type = ?")
+        params.append(source_type)
     if error_type:
         if error_type == "none":
             where_clauses.append("NOT EXISTS (SELECT 1 FROM step_errors e2 WHERE e2.question_id = q.id)")
@@ -851,7 +930,7 @@ def get_list_questions(list_id, keywords=None, categories=None, difficulties=Non
     return {"data": all_rows, "total": total}
 
 
-def get_wrong_questions(keywords=None, categories=None, difficulties=None, types=None, error_type=None, page=1, page_size=None):
+def get_wrong_questions(keywords=None, categories=None, difficulties=None, types=None, error_type=None, page=1, page_size=None, source_type=None):
     conn = get_connection()
     where_clauses = ["EXISTS (SELECT 1 FROM step_errors e2 WHERE e2.question_id = q.id)"]
     params = []
@@ -885,6 +964,9 @@ def get_wrong_questions(keywords=None, categories=None, difficulties=None, types
         placeholders = ",".join("?" for _ in types)
         where_clauses.append("q.question_type IN (" + placeholders + ")")
         params.extend(types)
+    if source_type:
+        where_clauses.append("q.source_type = ?")
+        params.append(source_type)
     if error_type and error_type != "errors":
         if error_type != "none":
             where_clauses.append("EXISTS (SELECT 1 FROM step_errors e2 WHERE e2.question_id = q.id AND e2.mistake_type = ?)")

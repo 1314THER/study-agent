@@ -7,7 +7,7 @@
     <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>组卷 - 数学最强大脑</title>
-    <link rel="stylesheet" href="style.css?v=20260729">
+    <link rel="stylesheet" href="style.css?v=20260731c">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js">
 function safeParseKps(kps){
@@ -136,6 +136,7 @@ function safeParseKps(kps){
                             answer_json: data.answer_json || null,
                             category: data.category_level1 || '',
                             difficulty: data.difficulty_level || '',
+                            source: data.source_type || '',
                             question_type: data.question_type || '',
                             settings: item.settings || {
                                 blankHeight: 120,
@@ -180,6 +181,14 @@ function safeParseKps(kps){
                 if (q.question_type) tags.push('<span class="tag tag-type">' + escapeHtml(q.question_type) + '</span>');
                 if (q.difficulty) tags.push('<span class="tag tag-' + (q.difficulty === '容易' ? 'easy' : q.difficulty === '中等' ? 'medium' : q.difficulty === '困难' ? 'hard' : 'extreme') + '">' + escapeHtml(q.difficulty) + '</span>');
                 if (q.category) tags.push('<span class="tag tag-category">' + escapeHtml(q.category) + '</span>');
+                if (q.source) {
+                    var srcCls = 'tag-source';
+                    if (q.source === 'ai生成') srcCls += ' tag-source-ai';
+                    else if (q.source === '高考题') srcCls += ' tag-source-gaokao';
+                    else if (q.source === '模拟题') srcCls += ' tag-source-monikao';
+                    else if (q.source === '精选母题') srcCls += ' tag-source-muti';
+                    tags.push('<span class="' + srcCls + '">' + escapeHtml(q.source) + '</span>');
+                }
                 if (tags.length > 0) {
                     html += '<div class="exam-qitem-meta" style="display:flex;gap:4px;flex-wrap:wrap;padding:2px 14px 6px;">' + tags.join('') + '</div>';
                 }

@@ -2,12 +2,14 @@
 <html lang="zh-CN" style="overflow:hidden;height:100%;overscroll-behavior:none;">
 <head>
     <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>多模态解答 - 数学最强大脑</title>
-    <link rel="stylesheet" href="style.css?v=20260729">
+    <link rel="stylesheet" href="style.css?v=20260731c">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+    <script src="radar.js?v=20260731"></script>
 <script>
 function teachOpenMulti(btn) {
     var q = btn.getAttribute('data-question');
@@ -44,6 +46,8 @@ function safeParseKps(kps){
         .mm-batch-btn { padding: 8px 20px; background: #0071e3; color: white; border: none; border-radius: 10px; font-size: 14px; cursor: pointer; }
         .mm-batch-btn:hover { background: #0077ed; }
         .mm-batch-btn:disabled { background: #c7c7cc !important; cursor: not-allowed; opacity: 0.7; }
+        .mm-source-select { padding: 7px 10px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 13px; color: #1d1d1f; background: white; cursor: pointer; }
+        .mm-source-select:focus { outline: none; border-color: #0071e3; }
         
         /* Right panel: session */
         .mm-session { background: white; border: 1px solid #e0e0e0; border-radius: 12px; margin-bottom: 14px; overflow: hidden; }
@@ -155,6 +159,13 @@ function safeParseKps(kps){
                             <span id="mmBatchCount" style="font-size:13px;color:#86868b;">已选 0 道</span>
                             <button class="mm-qbtn" onclick="selectAllQuestions()" style="padding:6px 12px;border:1px solid #c7c7cc;border-radius:8px;font-size:13px;cursor:pointer;background:white;">☐ 全选</button>
                             <button class="mm-batch-btn" id="mmBatchSolveBtn" onclick="batchSolve()">批量解题</button>
+                            <select id="mmSourceSelect" class="mm-source-select" title="批量入库时选择的题目来源">
+                                <option value="">选择来源</option>
+                                <option value="ai生成">AI生成</option>
+                                <option value="高考题">高考题</option>
+                                <option value="模拟题">模拟题</option>
+                                <option value="精选母题">精选母题</option>
+                            </select>
                             <button class="mm-batch-btn" onclick="batchSaveSelected()" style="background:#2e7d32;">📋 批量入库</button>
                             <button class="mm-batch-btn" onclick="batchAddSelectedToExam()" style="background:#0071e3;">📋 批量组卷</button>
                         </div>
@@ -333,7 +344,10 @@ async function addSingleToExam(idx){
     var s=_sessions[idx];if(!s||!s.done||!_questions[idx])return;
     var qid=s.data&&s.data.saved_question_id;
     if(!qid){
-        try{var r=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:_questions[idx].latex,answer_json:s.data})});
+        try{
+        var savePayload={question:_questions[idx].latex,answer_json:s.data};
+        if(_questions[idx].source_type)savePayload.source_type=_questions[idx].source_type;
+        var r=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(savePayload)});
         var d=await r.json();if(d.id){qid=d.id;s.saved=true;s.data.saved_question_id=qid;}}catch(e){return;}
     }
     if(!qid)return;
@@ -425,6 +439,7 @@ function renderQuestionList(){
         html+='<span class="mm-qnum">题'+(i+1)+'</span>';
         html+='<span class="tag '+dc+' mm-qtag">'+escapeHtml(q.difficulty)+'</span>';
         if(q.question_type)html+='<span class="tag tag-type mm-qtag">'+escapeHtml(q.question_type)+'</span>';
+        if(q.source_type)html+='<span class="tag tag-source mm-qtag">'+escapeHtml(q.source_type)+'</span>';
         if(_sessions[i]&&_sessions[i].done)html+='<span class="mm-solved-tag">✓ 已解答</span>';
         html+='<button class="mm-qbtn" onclick="event.stopPropagation();startSingleSolve('+i+')" style="font-size:11px;padding:2px 8px;margin-left:auto;">'+(_sessions[i]&&_sessions[i].done?'↻ 重做':'▶ 解题')+'</button>';
         html+='</div><div class="mm-qpreview-latex" id="qpreview_'+i+'">'+escapeHtml(q.latex||'')+'</div></div>';
@@ -571,7 +586,13 @@ async function startSingleSolve(idx){
             var overrideData=JSON.parse(JSON.stringify(d3));
             overrideData.question_type=userType;
             if(overrideData.chunk_results&&overrideData.chunk_results[0])overrideData.chunk_results[0].chunk_type=userType;
-            try{await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:_questions[idx].latex,answer_json:overrideData})});}catch(e){}
+            try{
+                var overridePayload={question:_questions[idx].latex,answer_json:overrideData};
+                if(_questions[idx].source_type)overridePayload.source_type=_questions[idx].source_type;
+                var saveResp=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(overridePayload)});
+                var saveData=await saveResp.json();
+                if(saveData.id){_sessions[idx].saved=true;_sessions[idx].data.saved_question_id=saveData.id;}
+            }catch(e){}
         }
         // 维持第一次的题型判断，不覆盖
         var userType=document.getElementById('type_'+idx)?.value;
@@ -610,12 +631,24 @@ function renderProgress(idx,pct,msg,tokens){
 }
 
 // ---- Render Result ----
-function renderSessionResult(idx,data,autoSave){
+function renderSessionResult(idx,data,autoSave,keepOpen){
     var q=_questions[idx];
     var html='<div class="mm-preview-rendered" style="margin-bottom:12px;background:#fff;border:1px solid #e0e0e0;border-radius:10px;">'+escapedLatex(q?q.latex:'')+'</div>';
     html+='<div class="meta-bar">';
     if(data.knowledge_points&&data.knowledge_points.length>0)html+='<span class="tag tag-category">'+safeParseKps(data.knowledge_points).slice(0,3).join(' / ')+'</span>';
     var od=data.overall_difficulty;
+    if(od&&od.level){
+        var dlc=od.level==='容易'?'tag-easy':od.level==='中等'?'tag-medium':od.level==='困难'?'tag-hard':'tag-extreme';
+        html+='<span class="tag '+dlc+'">'+escapeHtml(od.level)+'</span>';
+    }
+    if(q&&q.source_type){
+        var srcClass='tag-source';
+        if(q.source_type==='ai生成')srcClass+=' tag-source-ai';
+        else if(q.source_type==='高考题')srcClass+=' tag-source-gaokao';
+        else if(q.source_type==='模拟题')srcClass+=' tag-source-monikao';
+        else if(q.source_type==='精选母题')srcClass+=' tag-source-muti';
+        html+='<span class="'+srcClass+'">'+escapeHtml(q.source_type)+'</span>';
+    }
     if(od&&od.total_score!==undefined)html+='<span class="tag" style="background:#e8f0fe;color:#1565c0;">雪峰难度系数：'+od.total_score+'/15</span>';
     if(data.step_difficulty_sum!==undefined)html+='<span class="tag" style="background:#fce4ec;color:#c62828;">武亮难度系数：'+data.step_difficulty_sum+'</span>';
     html+='</div><div id="radar_'+idx+'" style="display:flex;justify-content:center;margin-bottom:16px;"></div>';
@@ -653,11 +686,18 @@ function renderSessionResult(idx,data,autoSave){
     html+='<div style="text-align:center;margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">';
     html+='<button class="mm-solve-btn" onclick="startSingleSolve('+idx+')" style="background:#515154;">↻ 重新解答</button>';
     html+='<button class="mm-solve-btn" onclick="teachOpenMulti(this)" data-question="' + (_questions[idx] ? _questions[idx].latex.replace(/"/g, '&quot;') : '') + '" style="background:#ca8a04;">📖 教学</button>';
+    html+='<select id="mmSource_'+idx+'" class="mm-source-select" title="该题入库时的来源标签">';
+    html+='<option value="">选择来源</option>';
+    html+='<option value="ai生成"'+(q&&q.source_type==='ai生成'?' selected':'')+'>AI生成</option>';
+    html+='<option value="高考题"'+(q&&q.source_type==='高考题'?' selected':'')+'>高考题</option>';
+    html+='<option value="模拟题"'+(q&&q.source_type==='模拟题'?' selected':'')+'>模拟题</option>';
+    html+='<option value="精选母题"'+(q&&q.source_type==='精选母题'?' selected':'')+'>精选母题</option>';
+    html+='</select>';
     if(isSaved){html+='<span class="tag" style="background:#e8f5e9;color:#2e7d32;">✅ 已加入题库</span>';}
     else{html+='<button class="mm-solve-btn" onclick="saveToBank('+idx+')" style="background:#2e7d32;">📋 加入题库</button>';}
     html+='</div>';
     updateSessionBody(idx,html);
-    drawRadar(idx,od&&od.dimensions);
+    renderDifficultyRadar(document.getElementById('radar_'+idx),getDifficultyDims(data));
     // Auto-collapse: populate compact view with question + answer + buttons
     var compact=document.getElementById('compact_'+idx);
     if(compact){
@@ -677,6 +717,7 @@ function renderSessionResult(idx,data,autoSave){
         if(data.knowledge_points)safeParseKps(data.knowledge_points).slice(0,3).forEach(function(kp){
             compactHtml+='<span class="tag tag-category">'+kp+'</span>';
         });
+        if(q&&q.source_type)compactHtml+='<span class="tag tag-source">'+escapeHtml(q.source_type)+'</span>';
         compactHtml+='</div><div style="display:flex;gap:6px;">';
         if(isSaved)compactHtml+='<span class="tag" style="background:#e8f5e9;color:#2e7d32;">✅ 已入库</span>';
         else compactHtml+='<button class="mm-solve-btn" onclick="saveToBank('+idx+')" style="background:#2e7d32;font-size:12px;padding:4px 10px;">📋 入库</button>';
@@ -692,14 +733,20 @@ function renderSessionResult(idx,data,autoSave){
     document.querySelectorAll('#session_body_'+idx+' .step-content, #session_body_'+idx+' .detail-content').forEach(function(el){
         try{renderMathInElement(el,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],ignoredTags:[]});}catch(e){}
     });
-    // Auto-collapse after solve (force, not toggle)
-    _sessions[idx].collapsed=true;
+    // 保存入库后保持展开，方便看到已入库与来源标签；解题完成后默认折叠
+    _sessions[idx].collapsed=!keepOpen;
     var bodyEl=document.getElementById('session_body_'+idx);
     var compEl=document.getElementById('compact_'+idx);
     var arrowEl=document.querySelector('#session_'+idx+' .mm-collapse-arrow');
-    if(bodyEl)bodyEl.style.display='none';
-    if(compEl)compEl.style.display='block';
-    if(arrowEl)arrowEl.textContent='\u25b6';
+    if(keepOpen){
+        if(bodyEl)bodyEl.style.display='block';
+        if(compEl)compEl.style.display='none';
+        if(arrowEl)arrowEl.textContent='\u25bc';
+    }else{
+        if(bodyEl)bodyEl.style.display='none';
+        if(compEl)compEl.style.display='block';
+        if(arrowEl)arrowEl.textContent='\u25b6';
+    }
 }
 function toggleDetail(el){
     var c=el.nextElementSibling;var o=!c.classList.contains('show');
@@ -707,27 +754,22 @@ function toggleDetail(el){
     if(o&&window.renderMathInElement){try{renderMathInElement(c,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false},{left:'\\(',right:'\\)',display:false}],ignoredTags:[]});}catch(e){}}
 }
 
-function drawRadar(idx,dims){
-    if(!dims||Object.keys(dims).length<5)return;
-    var container=document.getElementById('radar_'+idx);if(!container)return;
-    var dpr=window.devicePixelRatio||1;var canvas=document.createElement('canvas');
-    var cw=320,ch=290;canvas.width=cw*dpr;canvas.height=ch*dpr;canvas.style.width=cw+'px';canvas.style.height=ch+'px';canvas.style.maxWidth='100%';
-    container.innerHTML='';container.appendChild(canvas);
-    var ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);
-    var cx=160,cy=150,radius=80;var labels=Object.keys(dims);var values=labels.map(function(k){return dims[k];});var n=labels.length;
-    for(var ri=1;ri<=3;ri++){var r=radius*ri/3;ctx.beginPath();for(var i=0;i<=n;i++){var a=(i%n)*2*Math.PI/n-Math.PI/2;var x=cx+r*Math.cos(a),y=cy+r*Math.sin(a);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}ctx.closePath();ctx.strokeStyle=['#f0f0f0','#e5e5e7','#d8d8dc'][ri-1];ctx.lineWidth=1;ctx.stroke();}
-    for(var i=0;i<n;i++){var a=i*2*Math.PI/n-Math.PI/2;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+radius*Math.cos(a),cy+radius*Math.sin(a));ctx.strokeStyle='#ececee';ctx.lineWidth=1;ctx.stroke();ctx.font='11px sans-serif';ctx.fillStyle='#1d1d1f';var lr=radius+12;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(labels[i],cx+lr*Math.cos(a),cy+lr*Math.sin(a));}
-    ctx.beginPath();for(var i=0;i<=n;i++){var a=(i%n)*2*Math.PI/n-Math.PI/2;var val=Math.min(values[i%n]/3,1);var x=cx+radius*val*Math.cos(a),y=cy+radius*val*Math.sin(a);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);}
-    ctx.closePath();var g=ctx.createRadialGradient(cx,cy,0,cx,cy,radius);g.addColorStop(0,'rgba(0,113,227,0.25)');g.addColorStop(1,'rgba(0,113,227,0.06)');ctx.fillStyle=g;ctx.fill();ctx.strokeStyle='#0071e3';ctx.lineWidth=2;ctx.stroke();
-    for(var i=0;i<n;i++){var a=i*2*Math.PI/n-Math.PI/2;var val=Math.min(values[i]/3,1);var x=cx+radius*val*Math.cos(a),y=cy+radius*val*Math.sin(a);ctx.beginPath();ctx.arc(x,y,3.5,0,2*Math.PI);ctx.fillStyle='#0071e3';ctx.fill();}
-}
-
 // ---- Save to Bank ----
 async function saveToBank(idx){
     var q=_questions[idx];var data=_sessions[idx]?.data;if(!q||!data)return;
     try{
-        await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:q.latex,answer_json:data})});
-        showToast('已加入个人题库','success');
+        var sourceType=(document.getElementById('mmSource_'+idx)||{}).value||(document.getElementById('mmSourceSelect')||{}).value||'';
+        var payload={question:q.latex,answer_json:data};
+        if(sourceType)payload.source_type=sourceType;
+        var r=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        var d=await r.json();
+        if(d.id){
+            var s=_sessions[idx];s.saved=true;s.data.saved_question_id=d.id;
+            if(sourceType)_questions[idx].source_type=sourceType;
+            renderSessionResult(idx,s.data,true,true);
+            renderQuestionList();
+        }
+        showToast(sourceType?('已加入题库，来源：'+sourceType):'已加入个人题库','success');
     }catch(e){showToast('保存失败: '+e.message,'info');}
 }
 
@@ -735,7 +777,10 @@ async function saveToBank(idx){
 async function showErrorDialog(idx,stepNumber,chunkId){
     var qid=_sessions[idx]?.data?.saved_question_id;
     if(!qid&&_sessions[idx]?.done&&_questions[idx]){
-        try{var r=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:_questions[idx].latex,answer_json:_sessions[idx].data})});
+        try{
+        var errSavePayload={question:_questions[idx].latex,answer_json:_sessions[idx].data};
+        if(_questions[idx].source_type)errSavePayload.source_type=_questions[idx].source_type;
+        var r=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(errSavePayload)});
         var d=await r.json();if(d.id){qid=d.id;_sessions[idx].saved=true;_sessions[idx].data.saved_question_id=d.id;renderQuestionList();}}catch(e){alert('保存失败，无法添加错因');return;}
     }
     if(!qid){alert('请先解答题目再添加错因');return;}
@@ -818,19 +863,27 @@ function safeParseKps(kps){
 async function batchSaveSelected(){
     var cbs=document.querySelectorAll('#mmQuestionList .hc-checkbox:checked');
     var done=0,skip=0;
+    var sourceType=(document.getElementById('mmSourceSelect')||{}).value||'';
+    var updated=[];
     for(var i=0;i<cbs.length;i++){
         var idx=parseInt(cbs[i].dataset.idx);
         if(!_sessions[idx]||!_sessions[idx].done){skip++;continue;}
         try{
             var s=_sessions[idx];
-            if(s.saved)continue;
-            var r=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question:_questions[idx].latex,answer_json:s.data})});
+            var payload={question:_questions[idx].latex,answer_json:s.data};
+            if(sourceType)payload.source_type=sourceType;
+            if(s.saved&&!sourceType)continue;
+            var r=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
             var d=await r.json();
-            if(d.saved||d.id){s.saved=true;done++;}
+            if(d.saved||d.id){s.saved=true;if(sourceType)_questions[idx].source_type=sourceType;done++;updated.push(idx);}
         }catch(e){console.error('save failed',idx,e);}
     }
+    for(var ui=0;ui<updated.length;ui++){
+        var uidx=updated[ui];
+        renderSessionResult(uidx,_sessions[uidx].data,true,false);
+    }
     if(skip>0)showToast('有 '+skip+' 道题未解答，已跳过','info');
-    showToast('已完成 '+done+' 道题入库','success');
+    showToast(sourceType?('已完成 '+done+' 道题入库，来源：'+sourceType):('已完成 '+done+' 道题入库'),'success');
     renderQuestionList();
 }
 
