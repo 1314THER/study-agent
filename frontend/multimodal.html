@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-CN" style="overflow:hidden;height:100%;overscroll-behavior:none;">
 <head>
+<script>document.documentElement.classList.add("nav-init")</script>
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>多模态解答 - 数学最强大脑</title>
-    <link rel="stylesheet" href="style.css?v=20260731c">
+    <link rel="stylesheet" href="style.css?v=20260731l">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
@@ -112,14 +113,15 @@ function safeParseKps(kps){
 </head>
 <body class="mm-active">
 <div class="app-layout">
+    <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
     <aside class="sidebar">
-        <a href="/" class="sidebar-logo">成为数学高手</a>
+        <button class="nav-expand-toggle" onclick="toggleNavExpand()" title="展开导航" aria-label="展开导航">☰</button>
         <nav>
-<a href="multimodal.html" class="nav-item active" data-page="multimodal"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
-<a href="teach.html" class="nav-item" data-page="teach"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
-<a href="exam.html" class="nav-item" data-page="exam"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
-<a href="history.html" class="nav-item" data-page="history"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
-<a href="index.html" class="nav-item" data-page="solve"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
+<a href="multimodal.html" class="nav-item active" data-page="multimodal" title="多模态解答"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
+<a href="teach.html" class="nav-item" data-page="teach" title="老师手把手教你做题"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
+<a href="exam.html" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
+<a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+<a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
 </nav>
     </aside>
     <main class="main-content">
@@ -455,7 +457,12 @@ function selectQuestion(idx){
     _selectedIdx=idx;renderQuestionList();
     // Show preview session
     createSessionEl(idx);saveState();
-    var el=document.getElementById('session_'+idx);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});
+    var el=document.getElementById('session_'+idx);
+    var rp=document.querySelector('.mm-right');
+    if(el&&rp){
+        var target=el.getBoundingClientRect().top-rp.getBoundingClientRect().top+rp.scrollTop-8;
+        rp.scrollTo({top:Math.max(0,target),behavior:'smooth'});
+    }
 }
 
 function updateBatchCount(){
@@ -908,5 +915,6 @@ async function batchAddSelectedToExam(){
     showToast('已将 '+done+' 道题加入组卷','success');
 }
 </script>
+<script src="nav.js?v=20260731h"></script>
 </body>
 </html>

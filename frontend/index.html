@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script>document.documentElement.classList.add("nav-init")</script>
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>数学最强大脑</title>
-    <link rel="stylesheet" href="style.css?v=20260731c">
+    <link rel="stylesheet" href="style.css?v=20260731l">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script>
@@ -23,14 +24,15 @@ function safeParseKps(kps){
 </head>
 <body class="theme-liangliang">
     <div class="app-layout">
+        <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
         <aside class="sidebar">
-            <a href="/" class="sidebar-logo">成为数学高手</a>
+            <button class="nav-expand-toggle" onclick="toggleNavExpand()" title="展开导航" aria-label="展开导航">☰</button>
             <nav>
-<a href="multimodal.html" class="nav-item" data-page="multimodal"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
-<a href="teach.html" class="nav-item" data-page="teach"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
-<a href="exam.html" class="nav-item" data-page="exam"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
-<a href="history.html" class="nav-item" data-page="history"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
-<a href="index.html" class="nav-item active" data-page="solve"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
+<a href="multimodal.html" class="nav-item" data-page="multimodal" title="多模态解答"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
+<a href="teach.html" class="nav-item" data-page="teach" title="老师手把手教你做题"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
+<a href="exam.html" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
+<a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+<a href="index.html" class="nav-item active" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
 </nav>
         </aside>
         <main class="main-content">
@@ -501,7 +503,9 @@ async function saveAfterSolve() {
     if (savedResult) {
         try {
             var parsed = JSON.parse(savedResult);
-            displayResult(parsed.data, parsed.totalTokens);
+            setTimeout(function() {
+                displayResult(parsed.data, parsed.totalTokens);
+            }, 30);
         } catch(e) {
             localStorage.removeItem('solve_result');
         }
@@ -872,5 +876,6 @@ document.getElementById('searchBtn').addEventListener('click', function() {
     </div>
 </div>
 
+<script src="nav.js?v=20260731h"></script>
 </body>
 </html>

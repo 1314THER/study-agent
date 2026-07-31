@@ -1,11 +1,12 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script>document.documentElement.classList.add("nav-init")</script>
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>个人题库 - 数学最强大脑</title>
-    <link rel="stylesheet" href="style.css?v=20260731c">
+    <link rel="stylesheet" href="style.css?v=20260731l">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
@@ -23,14 +24,15 @@ function safeParseKps(kps){
 </head>
 <body>
     <div class="app-layout">
+        <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
         <aside class="sidebar">
-            <a href="/" class="sidebar-logo">成为数学高手</a>
+            <button class="nav-expand-toggle" onclick="toggleNavExpand()" title="展开导航" aria-label="展开导航">☰</button>
             <nav>
-<a href="multimodal.html" class="nav-item" data-page="multimodal"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
-<a href="teach.html" class="nav-item" data-page="teach"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
-<a href="exam.html" class="nav-item" data-page="exam"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
-<a href="history.html" class="nav-item active" data-page="history"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
-<a href="index.html" class="nav-item" data-page="solve"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
+<a href="multimodal.html" class="nav-item" data-page="multimodal" title="多模态解答"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
+<a href="teach.html" class="nav-item" data-page="teach" title="老师手把手教你做题"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
+<a href="exam.html" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
+<a href="history.html" class="nav-item active" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+<a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
 </nav>
         </aside>
         <main class="main-content">
@@ -39,11 +41,6 @@ function safeParseKps(kps){
                     <h1>个人题库</h1>
                     <p class="subtitle" id="historyCount">个人题库 · 加载中...</p>
                 </div>
-                <button class="ql-header-btn" id="qlHeaderBtn" onclick="toggleQuestionList()" title="题单">
-                    <span class="ql-header-icon">📂</span>
-                    <span>题单</span>
-                    <span class="ql-header-dot" id="qlHeaderDot"></span>
-                </button>
             </div>
  
             <div class="history-layout">
@@ -55,7 +52,7 @@ function safeParseKps(kps){
                 <div class="filter-row-2">
                     <div class="filter-search" style="flex:2;">
                         <span class="search-icon">🔍</span>
-                        <input type="text" id="searchInput" placeholder="搜索关键词（支持空格分隔多个）" oninput="onFilterChange()">
+                        <input type="text" id="searchInput" placeholder="搜索关键词（支持空格分隔多个，来源也可搜）" oninput="onFilterChange()">
                     </div>
                     <select class="filter-select" id="filterSourceType" onchange="selectSourceFilter(this)">
                         <option value="">全部来源</option>
@@ -167,9 +164,6 @@ function safeParseKps(kps){
                             <button onclick="loadLists()" class="ql-icon-btn" title="刷新">
                                 <svg width="14" height="14" viewBox="0 0 14 14"><path d="M12 7a5 5 0 11-1.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M12 2v3.5H8.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
                             </button>
-                            <button onclick="toggleQuestionList()" class="ql-icon-btn" title="关闭">
-                                <svg width="14" height="14" viewBox="0 0 14 14"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
-                            </button>
                         </span>
                     </div>
                     <div class="ql-panel-body" id="historyListItems">
@@ -184,11 +178,6 @@ function safeParseKps(kps){
                 </div>
             </div><!-- /history-layout -->
 
-            <!-- Floating ball for question lists -->
-            <div class="ql-float-ball" id="qlFloatBall" onclick="toggleQuestionList()">
-                <span class="ql-ball-icon">📂</span>
-                <span class="ql-ball-dot"></span>
-            </div>
         </main>
     </div>
 
@@ -371,7 +360,6 @@ function safeParseKps(kps){
         function loadQuestions() {
             initFilters(); loadBigTypes();
             loadLists();
-            initPanelAutoDetect();
             // Restore saved page size
             var savedPageSize = localStorage.getItem('history_page_size');
             if (savedPageSize) {
@@ -413,6 +401,7 @@ function safeParseKps(kps){
             countEl.textContent = '共 ' + displayTotal + ' 道题'; updateListCounts();
 
             var html = '';
+            var cartIds = getExamCart().map(function(q) { return q.id; });
             for (var i = 0; i < data.length; i++) {
                 var q = data[i];
                 var preview = truncatePreview(q.content || '', 150);
@@ -458,7 +447,7 @@ function safeParseKps(kps){
                 var score = q.difficulty_score !== null ? '(' + q.difficulty_score + '\u5206)' : '';
 
                 html += '<div class="history-card" data-id="' + q.id + '">';
-                html += '<input type="checkbox" class="hc-checkbox" data-id="' + q.id + '" onchange="updateBatchCount()">';
+                html += '<input type="checkbox" class="hc-checkbox" data-id="' + q.id + '"' + (cartIds.indexOf(q.id) >= 0 ? ' checked' : '') + ' onchange="toggleExamSelection(this)">';
                 html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHtml(preview) + '</div>';
                 html += '<div class="hc-meta">';
                 html += typeTag;
@@ -475,21 +464,46 @@ function safeParseKps(kps){
                 html += '</div>';
             }
             listEl.innerHTML = html;
+            var batchToggle = document.getElementById('batchToggle');
+            if (batchToggle && batchToggle.classList.contains('active')) {
+                var newCards = listEl.querySelectorAll('.history-card');
+                for (var bi = 0; bi < newCards.length; bi++) newCards[bi].classList.add('batch-mode');
+                var batchBar = document.getElementById('batchActionBar');
+                if (batchBar) batchBar.classList.add('show');
+            }
             try { renderMathInElement(listEl, { delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false},{left: '\\(', right: '\\)', display: false},{left: '\\[', right: '\\]', display: true}], ignoredTags: ['script', 'style'] }); } catch(e) {}
             updatePagination(page, pageSize, total);
         }
 
         // ---- Delete ----
+        function isAllListView() {
+            if (_selectedListId === null) return true;
+            for (var i = 0; i < _listData.length; i++) {
+                if (_listData[i].id === _selectedListId && _listData[i].name === '全部') return true;
+            }
+            return false;
+        }
+
         function confirmDelete(id) {
             _deleteTargetId = id;
+            var removeOnly = _selectedListId !== null && _selectedListId !== '__wrong__' && !isAllListView();
+            var msg = removeOnly
+                ? '\u8bf7\u9009\u62e9\u64cd\u4f5c\uff1a<br>\u4ec5\u79fb\u51fa\u5f53\u524d\u9898\u5355\uff1a\u9898\u76ee\u4ecd\u4fdd\u7559\u5728\u300c\u5168\u90e8\u300d\u548c\u5176\u4ed6\u9898\u5355\u3002<br>\u5b8c\u5168\u5220\u9664\uff1a\u6c38\u4e45\u5220\u9664\u8fd9\u9053\u9898\u3002'
+                : '\u5c06\u6c38\u4e45\u5220\u9664\u8fd9\u9053\u9898\uff0c\u5e76\u4ece\u6240\u6709\u9898\u5355\u4e2d\u79fb\u9664\u3002';
             var overlay = document.createElement('div');
             overlay.className = 'confirm-overlay';
             overlay.id = 'confirmOverlay';
+            var actions = '<button class="confirm-cancel" onclick="closeConfirm()">\u53d6\u6d88</button>';
+            if (removeOnly) {
+                actions += '<button class="confirm-delete" style="background:#2e7d32;" onclick="doDelete(\'remove\')">\u4ec5\u79fb\u51fa\u5f53\u524d\u9898\u5355</button>';
+                actions += '<button class="confirm-delete" style="background:#c62828;" onclick="doDelete(\'delete\')">\u5b8c\u5168\u5220\u9664</button>';
+            } else {
+                actions += '<button class="confirm-delete" style="background:#c62828;" onclick="doDelete(\'delete\')">\u6c38\u4e45\u5220\u9664</button>';
+            }
             overlay.innerHTML = '<div class="confirm-dialog">' +
-                '<p>\u786e\u5b9a\u8981\u5220\u9664\u8fd9\u9053\u9898\u5417\uff1f\u5220\u9664\u540e\u4e0d\u53ef\u6062\u590d\u3002</p>' +
+                '<p>' + msg + '</p>' +
                 '<div class="confirm-actions">' +
-                '<button class="confirm-cancel" onclick="closeConfirm()">\u53d6\u6d88</button>' +
-                '<button class="confirm-delete" onclick="doDelete()">\u5220\u9664</button>' +
+                actions +
                 '</div></div>';
             document.body.appendChild(overlay);
         }
@@ -500,10 +514,28 @@ function safeParseKps(kps){
             _deleteTargetId = null;
         }
 
-        function doDelete() {
+        function doDelete(mode) {
             var id = _deleteTargetId;
             if (!id) return;
             closeConfirm();
+            var removeOnly = mode === 'remove' && _selectedListId !== null && _selectedListId !== '__wrong__' && !isAllListView();
+            if (removeOnly) {
+                var removeUrl = 'http://127.0.0.1:8000/questions/' + id + '/lists/' + _selectedListId;
+                fetch(removeUrl, { method: 'DELETE' })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        if (data.removed) {
+                            doSearch();
+                            loadLists();
+                        } else {
+                            alert('\u79fb\u9664\u5931\u8d25\uff1a' + (data.message || '\u672a\u77e5\u9519\u8bef'));
+                        }
+                    })
+                    .catch(function(err) {
+                        alert('\u79fb\u9664\u5931\u8d25\uff1a' + err.message);
+                    });
+                return;
+            }
             var url = 'http://127.0.0.1:8000/questions/' + id;
             fetch(url, { method: 'DELETE' })
                 .then(function(r) { return r.json(); })
@@ -987,13 +1019,13 @@ function safeParseKps(kps){
             updateCartBadge();
         }
         
-        function addToExam(qid) {
+        function addToExam(qid, silent) {
             // Track exam time
             fetch('http://127.0.0.1:8000/questions/' + qid + '/exam-touch', { method: 'POST' }).catch(function() {});
             
             var questions = getExamCart();
             if (questions.find(function(q) { return q.id === qid; })) {
-                showToast('该题已在组卷篮子中', 'info');
+                if (!silent) showToast('该题已在组卷篮子中', 'info');
                 return;  // already in cart
             }
             // Check if historyCards exists
@@ -1014,14 +1046,14 @@ function safeParseKps(kps){
             }};
             questions.push(data);
             saveExamCart(questions);
-            showToast('✅ 已加入组卷', 'success');
+            if (!silent) showToast('✅ 已加入组卷', 'success');
         }
         
-        function removeFromCart(qid) {
+        function removeFromCart(qid, silent) {
             var questions = getExamCart();
             questions = questions.filter(function(q) { return q.id !== qid; });
             saveExamCart(questions);
-            showToast('已从组卷中移除', 'info');
+            if (!silent) showToast('已从组卷中移除', 'info');
         }
         
         function clearExamCart() {
@@ -1036,6 +1068,23 @@ function safeParseKps(kps){
             var mainBadge = document.getElementById('cartBadge');
             if (mainBadge) mainBadge.textContent = items.length;
         }
+
+        function toggleExamSelection(cb) {
+            var qid = parseInt(cb.dataset.id);
+            if (cb.checked) addToExam(qid, true);
+            else removeFromCart(qid, true);
+            updateBatchCount();
+        }
+
+        window.addEventListener('pageshow', function() {
+            updateCartBadge();
+        });
+        window.addEventListener('focus', function() {
+            updateCartBadge();
+        });
+        window.addEventListener('storage', function(e) {
+            if (e.key === _examCartKey || e.key === 'exam_cart') updateCartBadge();
+        });
         
 
         
@@ -1081,7 +1130,11 @@ function safeParseKps(kps){
                 if (!cbs[i].checked) { allChecked = false; break; }
             }
             for (var i = 0; i < cbs.length; i++) {
-                cbs[i].checked = !allChecked;
+                var shouldCheck = !allChecked;
+                if (cbs[i].checked !== shouldCheck) {
+                    cbs[i].checked = shouldCheck;
+                    toggleExamSelection(cbs[i]);
+                }
             }
             updateBatchCount();
         }
@@ -1092,7 +1145,7 @@ function safeParseKps(kps){
             if (count === 0) { showToast('请先勾选题目', 'info'); return; }
             for (var i = 0; i < count; i++) {
                 var qid = parseInt(cbs[i].dataset.id);
-                addToExam(qid);
+                addToExam(qid, true);
             }
             // Re-apply cart memory: keep checked for items now in cart
             var cart = getExamCart();
@@ -1102,6 +1155,7 @@ function safeParseKps(kps){
                 var qid = parseInt(allCbs[i].dataset.id);
                 allCbs[i].checked = cartIds.indexOf(qid) >= 0;
             }
+            updateCartBadge();
             updateBatchCount();
             showToast('✓ 已将 ' + count + ' 道题加入组卷', 'success');
         }
@@ -1138,6 +1192,7 @@ function safeParseKps(kps){
                 var sel = document.getElementById('pageSizeSelect');
                 if (sel) sel.value = savedPageSize;
             }
+            updateCartBadge();
             setTimeout(function() {
                 updateCartBadge();
             }, 100);
@@ -1327,36 +1382,6 @@ function safeParseKps(kps){
         }
         
 
-        function toggleQuestionList() {
-            var panel = document.getElementById('qlPanel');
-            if (!panel) return;
-            if (window.innerWidth >= 1784) {
-                panel.classList.toggle('collapsed');
-            } else {
-                panel.classList.toggle('open');
-            }
-        }
-        
-        function checkPanelWidth() {
-            var panel = document.getElementById('qlPanel');
-            if (!panel) return;
-            var w = window.innerWidth;
-            if (w >= 1784) {
-                panel.classList.add('open');
-                panel.classList.remove('collapsed');
-            } else {
-                panel.classList.remove('collapsed');
-            }
-        }
-        
-        function initPanelAutoDetect() {
-            checkPanelWidth();
-            var timer;
-            window.addEventListener('resize', function() {
-                clearTimeout(timer);
-                timer = setTimeout(checkPanelWidth, 150);
-            });
-        }
         function updateListCounts() {
             loadLists();
         }
@@ -1572,5 +1597,6 @@ function safeParseKps(kps){
 
 <!-- Save to Lists Dialog (generated dynamically by JS) -->
 
+<script src="nav.js?v=20260731h"></script>
 </body>
 </html>

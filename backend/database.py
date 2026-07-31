@@ -434,12 +434,24 @@ def save_question(question_text: str, answer_dict: dict):
 
     conn = get_connection()
     conn.execute(
-        """INSERT OR REPLACE INTO questions
+        """INSERT INTO questions
            (content, answer_json, category_level1, category_level2,
             difficulty_level, difficulty_score, difficulty_dimensions,
             common_mistakes, knowledge_points, question_type, steps_structure,
             source_type)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(content) DO UPDATE SET
+            answer_json = excluded.answer_json,
+            category_level1 = excluded.category_level1,
+            category_level2 = excluded.category_level2,
+            difficulty_level = excluded.difficulty_level,
+            difficulty_score = excluded.difficulty_score,
+            difficulty_dimensions = excluded.difficulty_dimensions,
+            common_mistakes = excluded.common_mistakes,
+            knowledge_points = excluded.knowledge_points,
+            question_type = excluded.question_type,
+            steps_structure = excluded.steps_structure,
+            source_type = excluded.source_type""",
         (
             question_text.strip(),
             json.dumps(answer_dict, ensure_ascii=False),
@@ -534,8 +546,8 @@ def get_question_by_id(qid: int):
 
 
 def search_questions(keywords=None, categories=None, difficulties=None, types=None, limit=200, mode="content", error_type=None, page=1, page_size=None, source_type=None):
-    """按关键词 + 板块 + 难度 + 题型筛选
-    关键词同时搜索题目原文、板块、知识点、错因字段（OR），多个关键词之间取 AND。"""
+    """按关键词 + 板块 + 难度 + 题型 + 来源筛选
+    关键词同时搜索题目原文、板块、知识点、错因、来源字段（OR），多个关键词之间取 AND。"""
     conn = get_connection()
     # 统一走全局模式：搜全字段
     is_global = True
@@ -556,10 +568,11 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
                 "q.steps_structure LIKE ?",
                 "q.difficulty_level LIKE ?",
                 "e.mistake_type LIKE ?",
-                "e.mistake_detail LIKE ?"
+                "e.mistake_detail LIKE ?",
+                "q.source_type LIKE ?"
             ]
             where_clauses.append(f"({' OR '.join(search_conds)})")
-            params.extend([kw_pat] * 8)
+            params.extend([kw_pat] * 9)
 
     if categories:
         placeholders = ",".join("?" for _ in categories)
@@ -649,6 +662,8 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
 def delete_question(qid: int) -> bool:
     """删除指定 id 的题目，返回是否成功删除"""
     conn = get_connection()
+    conn.execute("DELETE FROM question_list_members WHERE question_id = ?", (qid,))
+    conn.execute("DELETE FROM step_errors WHERE question_id = ?", (qid,))
     cursor = conn.execute("DELETE FROM questions WHERE id = ?", (qid,))
     deleted = cursor.rowcount > 0
     conn.commit()
@@ -740,13 +755,18 @@ def get_question_lists():
     for r in rows:
         d = dict(r)
         cnt = conn.execute(
-            "SELECT COUNT(*) FROM question_list_members WHERE list_id = ? AND is_removed = 0",
+            """SELECT COUNT(*)
+               FROM question_list_members m
+               JOIN questions q ON q.id = m.question_id
+               WHERE m.list_id = ? AND m.is_removed = 0""",
             (d["id"],)
         ).fetchone()[0]
         d["count"] = cnt
         result.append(d)
     error_cnt = conn.execute(
-        "SELECT COUNT(DISTINCT question_id) FROM step_errors"
+        """SELECT COUNT(DISTINCT e.question_id)
+           FROM step_errors e
+           JOIN questions q ON q.id = e.question_id"""
     ).fetchone()[0]
     result.append({
         "id": None,
@@ -813,8 +833,11 @@ def add_question_to_lists(question_id, list_ids):
 
 def remove_question_from_list(question_id, list_id):
     conn = get_connection()
-    row = conn.execute("SELECT list_type FROM question_lists WHERE id = ?", (list_id,)).fetchone()
-    if row and row["list_type"] == "system":
+    row = conn.execute("SELECT list_type, name FROM question_lists WHERE id = ?", (list_id,)).fetchone()
+    if not row:
+        conn.close()
+        return False
+    if row["list_type"] == "system" and row["name"] == "全部":
         conn.close()
         return False
     cur = conn.execute(
@@ -867,10 +890,11 @@ def get_list_questions(list_id, keywords=None, categories=None, difficulties=Non
                 "q.steps_structure LIKE ?",
                 "q.difficulty_level LIKE ?",
                 "e.mistake_type LIKE ?",
-                "e.mistake_detail LIKE ?"
+                "e.mistake_detail LIKE ?",
+                "q.source_type LIKE ?"
             ]
             where_clauses.append("(" + " OR ".join(search_conds) + ")")
-            params.extend([kw_pat] * 8)
+            params.extend([kw_pat] * 9)
     if categories:
         placeholders = ",".join("?" for _ in categories)
         where_clauses.append("q.category_level1 IN (" + placeholders + ")")
@@ -948,10 +972,11 @@ def get_wrong_questions(keywords=None, categories=None, difficulties=None, types
                 "q.steps_structure LIKE ?",
                 "q.difficulty_level LIKE ?",
                 "e.mistake_type LIKE ?",
-                "e.mistake_detail LIKE ?"
+                "e.mistake_detail LIKE ?",
+                "q.source_type LIKE ?"
             ]
             where_clauses.append("(" + " OR ".join(search_conds) + ")")
-            params.extend([kw_pat] * 8)
+            params.extend([kw_pat] * 9)
     if categories:
         placeholders = ",".join("?" for _ in categories)
         where_clauses.append("q.category_level1 IN (" + placeholders + ")")
