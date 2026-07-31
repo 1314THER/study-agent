@@ -795,14 +795,15 @@ def update_question_time(question_id: int, field: str):
 
 
 def add_step_error(question_id: int, step_number: int, chunk_id: int,
-                   mistake_type: str, mistake_detail: str = "") -> int:
+                   mistake_type: str, mistake_detail: str = "",
+                   student_input: str = "") -> int:
     """写入一条错因记录，返回 id"""
     conn = get_connection()
     cur = conn.execute(
         """INSERT INTO step_errors
-           (question_id, step_number, chunk_id, mistake_type, mistake_detail)
-           VALUES (?, ?, ?, ?, ?)""",
-        (question_id, step_number, chunk_id, mistake_type, mistake_detail)
+           (question_id, step_number, chunk_id, mistake_type, mistake_detail, student_input)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (question_id, step_number, chunk_id, mistake_type, mistake_detail, student_input)
     )
     conn.commit()
     eid = cur.lastrowid
@@ -814,7 +815,7 @@ def get_step_errors(question_id: int) -> list:
     """返回某题的所有错因记录（按步骤排序）"""
     conn = get_connection()
     rows = conn.execute(
-        """SELECT id, step_number, chunk_id, mistake_type, mistake_detail, created_at
+        """SELECT id, step_number, chunk_id, mistake_type, mistake_detail, student_input, created_at
            FROM step_errors WHERE question_id = ?
            ORDER BY chunk_id, step_number""",
         (question_id,)

@@ -187,8 +187,7 @@ var _selectedTeacher = "liangliang";
                 else if (data.source_type === '模拟题') srcClass += ' tag-source-monikao';
                 else if (data.source_type === '精选母题') srcClass += ' tag-source-muti';
                 html += '<span class="' + srcClass + '">' + escapeHtml(data.source_type) + '</span>';
-                var srcMetaText = sourceMetaText(data.source_type, data.source_meta);
-                if (srcMetaText) html += '<span class="tag tag-source-meta">' + escapeHtml(srcMetaText) + '</span>';
+                html += sourceMetaLink(data.source_type, data.source_meta);
             }
             if (od && od.total_score !== undefined) {
                 html += '<span class="tag" style="background:#e8f0fe;color:#1565c0;">雪峰难度系数：' + od.total_score + '/15</span>';
@@ -683,6 +682,22 @@ document.getElementById('searchBtn').addEventListener('click', function() {
             }
             return '';
         }
+        function sourceMetaLink(sourceType, sourceMeta){
+            var m = safeParseMeta(sourceMeta);
+            var text = sourceMetaText(sourceType, m);
+            if (!text) return '';
+            if (sourceType === 'ai生成' && m.reference_id) {
+                var rid = String(m.reference_id).replace(/\D/g, '');
+                if (rid) {
+                    return '<a class="tag tag-source-meta tag-ref-link" href="javascript:void(0)" onclick="openReferenceQuestion(' + rid + ')" title="查看参考题详情">' + escapeHtml(text) + '</a>';
+                }
+            }
+            return '<span class="tag tag-source-meta">' + escapeHtml(text) + '</span>';
+        }
+        function openReferenceQuestion(rid){
+            localStorage.setItem('_open_question_id', String(rid));
+            window.open('history.html', '_blank');
+        }
         function getRememberedSource(){
             try{var raw = localStorage.getItem('remembered_question_source'); return raw ? JSON.parse(raw) : null;}catch(e){return null;}
         }
@@ -934,11 +949,11 @@ document.getElementById('searchBtn').addEventListener('click', function() {
             var coeff = meta.querySelector('.tag[style]');
             if (coeff) meta.insertBefore(span, coeff);
             else meta.appendChild(span);
-            var srcMetaText = sourceMetaText(sourceType, sourceMeta);
-            if (srcMetaText) {
-                var spanMeta = document.createElement('span');
-                spanMeta.className = 'tag tag-source-meta';
-                spanMeta.textContent = srcMetaText;
+            var srcMetaHtml = sourceMetaLink(sourceType, sourceMeta);
+            if (srcMetaHtml) {
+                var wrapper = document.createElement('span');
+                wrapper.innerHTML = srcMetaHtml;
+                var spanMeta = wrapper.firstChild;
                 if (span.nextSibling) meta.insertBefore(spanMeta, span.nextSibling);
                 else meta.appendChild(spanMeta);
             }

@@ -591,6 +591,28 @@ def step_verify_chunk(chunk: dict, question: str, solved: list) -> dict:
 
 
 # ---------- Formatter：全局校验 ----------
+def _is_well_formed_chunk_results(chunk_results) -> bool:
+    """Formatter 输出必须保留每个步骤的标题、标准过程和详细过程，否则视为不合格。"""
+    if not isinstance(chunk_results, list) or not chunk_results:
+        return False
+    for cr in chunk_results:
+        if not isinstance(cr, dict):
+            return False
+        steps = cr.get("steps")
+        if not isinstance(steps, list) or not steps:
+            return False
+        for step in steps:
+            if not isinstance(step, dict):
+                return False
+            if not (step.get("title") or "").strip():
+                return False
+            if not (step.get("standard_writing") or "").strip():
+                return False
+            if not (step.get("detailed_writing") or "").strip():
+                return False
+    return True
+
+
 def _aggregate_from_chunks(question: str, chunk_results: list, token_total: dict) -> dict:
     """聚合 Verifier 输出为最终 JSON（当 Formatter 失败时的兜底）"""
     kps = set()
@@ -634,6 +656,8 @@ def step_final_check(question: str, chunk_results: list, chunks_raw: list, token
     try:
         result = json.loads(_extract_json(formatted))
         if "error" in result:
+            return _aggregate_from_chunks(question, chunk_results, token_total)
+        if not _is_well_formed_chunk_results(result.get("chunk_results")):
             return _aggregate_from_chunks(question, chunk_results, token_total)
         # 计算武亮难度系数（步骤难度之和）
         step_sum = 0

@@ -68,6 +68,7 @@ class StepErrorRequest(BaseModel):
     chunk_id: int = Field(..., ge=1, description="块编号")
     mistake_type: str = Field(..., description="错因类型")
     mistake_detail: str = Field("", description="错因详细说明")
+    student_input: Optional[str] = Field(None, description="学生当时的错误作答")
 
 @app.post("/solve/step1")
 def api_step1(req: Step1Request):
@@ -220,7 +221,8 @@ def api_add_step_error(qid: int, req: StepErrorRequest):
             step_number=req.step_number,
             chunk_id=req.chunk_id,
             mistake_type=req.mistake_type,
-            mistake_detail=req.mistake_detail
+            mistake_detail=req.mistake_detail,
+            student_input=req.student_input or "",
         )
         return {"id": error_id, "saved": True}
     except Exception as e:
@@ -257,6 +259,22 @@ def api_delete_question(qid: int):
 class AiSearchRequest(BaseModel):
     query: str
     limit: int = 20
+
+
+class GenerateVariantsRequest(BaseModel):
+    count: int = Field(3, ge=1, le=5, description="生成数量")
+    teacher: Optional[str] = Field("liangliang", description="生成与校验老师")
+
+
+@app.post("/questions/{qid}/generate")
+def api_generate_variants(qid: int, req: GenerateVariantsRequest):
+    """基于一道已有题目及其学生错因，AI 仿造变式题并自动入库"""
+    from backend.generate import generate_variants
+    try:
+        return generate_variants(qid, count=req.count, teacher=req.teacher or "liangliang")
+    except ValueError as e:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=404, content={"error": "not_found", "detail": str(e)})
 
 
 @app.post("/questions/ai-search")

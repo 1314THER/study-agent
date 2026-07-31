@@ -44,3 +44,13 @@
   "knowledge_points": ["去重后的所有知识点"],
   "token_usage": {...}
 }
+
+## 完整性硬性要求
+
+`chunk_results` 中的每个块必须原样保留 Verifier 给出的完整步骤数组：
+- 不能删除任何 `steps` 条目
+- 不能删除或截断 `title`、`step_level1`、`standard_writing`、`detailed_writing`、`knowledge_point`、`step_difficulty`
+- `standard_writing` 和 `detailed_writing` 必须保持非空
+
+你的职责是全局校验和聚合，不是精简或改写解答过程。只要输出结构不完整、步骤被删减或过程字段为空，就必须输出：
+{"error": "雪碧了", "reason": "具体说明缺少了哪个块的哪些步骤或字段"}

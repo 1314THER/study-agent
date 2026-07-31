@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>手把手教学 - 数学最强大脑</title>
-    <link rel="stylesheet" href="style.css?v=20260731l">
+    <link rel="stylesheet" href="style.css?v=20260731ai">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
@@ -327,11 +327,23 @@ body.theme-ji .teach-progress-timer { color:#16a34a; }
 <div id="teachResultList"></div>
 </div>
 <div style="text-align:center;margin-top:20px;">
+<button class="teach-btn" id="teachAiGenBtn" onclick="generateFromTeach()" style="background:#ca8a04;padding:10px 28px;margin-right:10px;display:none;">✨ AI 仿题</button>
 <button class="teach-btn" onclick="resetAll()" style="background:#515154;padding:10px 28px;">再做一道</button>
 </div>
 </div>
 </div>
 </main>
+</div>
+
+<!-- AI 仿题 Dialog -->
+<div class="ai-gen-overlay" id="aiGenOverlay" style="display:none" onclick="if(event.target===this)closeAiGenModal()">
+    <div class="ai-gen-dialog">
+        <div class="ai-gen-head">
+            <div class="ai-gen-title">AI 仿题</div>
+            <button class="ai-gen-close" onclick="closeAiGenModal()">×</button>
+        </div>
+        <div id="aiGenContent"></div>
+    </div>
 </div>
 <script>
 
@@ -353,6 +365,7 @@ var _totalSteps = 0;
 var _sessionChunkResults = [];
 var _sessionSteps = [];
 var _stepErrorData = {};
+var _teachQuestionId = null;
 var SAVE_KEY = "_teach_session_v2";
 var _pendingResolve = null;
 
@@ -566,6 +579,7 @@ async function startTeachSession(q){
     if(data.error){showError(data.detail||"无法创建教学会话");resetStartBtn();return;}
     _sessionId=data.session_id;_totalSteps=data.total_steps||0;_currentStepIndex=0;
     _stats={correct:0,wrong:0,skipped:0};
+    _teachQuestionId=null;
     _sessionChunkResults=data.chunk_results||[];_sessionSteps=data.steps||[];_stepErrorData={};
     document.getElementById("teachInput").style.display="none";
     document.getElementById("quoteArea").style.display="none";
@@ -595,7 +609,7 @@ async function sendMessage(){
     }else if(a==="complete"){if(d.message)addChatMessage("teacher",d.message);_isWaiting=false;setInputEnabled(false);showSummary(d);}
     else{
       addChatMessage("teacher",d.message,d);
-      if(d.is_correct===false&&d.error_type){var st=_sessionSteps[_currentStepIndex];if(st){_stepErrorData[(st.chunk_id||1)+"-"+(st.step_number||(_currentStepIndex+1))]={error_type:d.error_type,error_detail:d.error_detail||""}}}
+      if(d.is_correct===false&&d.error_type){var st=_sessionSteps[_currentStepIndex];if(st){_stepErrorData[(st.chunk_id||1)+"-"+(st.step_number||(_currentStepIndex+1))]={error_type:d.error_type,error_detail:d.error_detail||"",student_input:m}}}
       _currentStepIndex=d.current_step?d.current_step-1:_currentStepIndex;updateProgress();updateInfoPanel();_isWaiting=false;setInputEnabled(true);
       if(m.match(/\u4E0D\u4F1A|\u4E0D\u61C2|\u4E0D\u77E5\u9053|\u770B\u4E0D\u61C2|\u600E\u4E48|help|\u63D0\u793A/)){
         var sugDiv=document.createElement("div");sugDiv.style.cssText="align-self:flex-start;margin-top:-4px;";sugDiv.id="suggestionBar";
@@ -652,7 +666,7 @@ function understoodStep(){
   // Record error for this step
   var curStep=_sessionSteps[stepIdx];
   if(curStep){
-    _stepErrorData[curStep.chunk_id+"-"+curStep.step_number]={error_type:"其他",error_detail:"完全不会"};
+    _stepErrorData[curStep.chunk_id+"-"+curStep.step_number]={error_type:"其他",error_detail:"完全不会",student_input:"完全不会"};
   }
   // Last step → show summary
   if(stepIdx>=_totalSteps-1){
@@ -676,12 +690,12 @@ function understoodStep(){
   fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:"跳过"})}).catch(function(){});
 }
 
-function cancelTeaching(){if(!_sessionId)return;clearSavedSession();_sessionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("quoteArea").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachStartBtn").disabled=false;}
+function cancelTeaching(){if(!_sessionId)return;clearSavedSession();_sessionId=null;_teachQuestionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("quoteArea").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachStartBtn").disabled=false;}
 
 async function saveTeachingResults(){
   try{
     var q=document.getElementById("teachQuestionInput").value.trim();
-    if(!q||!_sessionChunkResults||!_sessionChunkResults.length)return null;
+    if(!q||!_sessionChunkResults||!_sessionChunkResults.length){return null;}
     var aj={chunk_results:_sessionChunkResults};
     if(_sessionChunkResults.length>0){
       var first_cr=_sessionChunkResults[0];
@@ -691,6 +705,7 @@ async function saveTeachingResults(){
     var data=await r.json();
     if(data.saved&&data.id){
       var qid=data.id;
+      _teachQuestionId=qid;
       // Save step errors
       var errKeys=Object.keys(_stepErrorData);
       for(var i=0;i<errKeys.length;i++){
@@ -699,11 +714,12 @@ async function saveTeachingResults(){
         var err=_stepErrorData[errKeys[i]];
         if(err&&err.error_type){
           try{
-            await fetch("http://127.0.0.1:8000/questions/"+qid+"/step-error",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({step_number:stepNum,chunk_id:chunkId,mistake_type:err.error_type,mistake_detail:err.error_detail||""})});
+            await fetch("http://127.0.0.1:8000/questions/"+qid+"/step-error",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({step_number:stepNum,chunk_id:chunkId,mistake_type:err.error_type,mistake_detail:err.error_detail||"",student_input:err.student_input||""})});
           }catch(e){console.error("Save step error failed:",e);}
         }
       }
       document.getElementById("teachSavedStatus").textContent="✅ 已加入个人题库";
+      return qid;
     }else{
       document.getElementById("teachSavedStatus").textContent="ℹ️ 保存失败";
     }
@@ -712,10 +728,75 @@ async function saveTeachingResults(){
     document.getElementById("teachSavedStatus").textContent="ℹ️ 保存失败";
   }
   document.getElementById("teachSavedStatus").style.display="block";
+  return null;
 }
-function showSummary(d){document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.add("show");var st=d.stats||_stats;document.getElementById("summaryCorrect").textContent=st.correct||0;document.getElementById("summaryWrong").textContent=st.wrong||0;document.getElementById("summarySkipped").textContent=(st.skipped||0)+(st.viewed_answer||0);saveTeachingResults();}
+async function showSummary(d){document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.add("show");var st=d.stats||_stats;document.getElementById("summaryCorrect").textContent=st.correct||0;document.getElementById("summaryWrong").textContent=st.wrong||0;document.getElementById("summarySkipped").textContent=(st.skipped||0)+(st.viewed_answer||0);var qid=await saveTeachingResults();var btn=document.getElementById("teachAiGenBtn");if(btn){btn.style.display=qid?"inline-block":"none";}}
 
-function resetAll(){clearSavedSession();_sessionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("quoteArea").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachQuestionInput").value="";document.getElementById("teachStartBtn").disabled=false;document.getElementById("teachLoading").style.display="none";}
+function closeAiGenModal(){var ov=document.getElementById("aiGenOverlay");if(ov)ov.style.display="none";}
+
+function aiGenDifficultyText(c){
+  if(!c||!c.difficulty)return "";
+  var lv=c.difficulty.level||"";var sc=c.difficulty.total_score;
+  return lv+(sc!==undefined&&sc!==null?" · "+sc+"分":"");
+}
+
+function escJsStr(s){return escapeHtml(String(s)).replace(/\\/g,"\\\\").replace(/'/g,"\\'").replace(/\r?\n/g,"\\n");}
+
+async function generateFromTeach(){
+  var qid=_teachQuestionId;
+  if(!qid){qid=await saveTeachingResults();_teachQuestionId=qid;}
+  if(!qid){alert("请先保存当前教学记录");return;}
+  var ov=document.getElementById("aiGenOverlay"),ct=document.getElementById("aiGenContent");
+  if(!ov||!ct)return;
+  ov.style.display="flex";
+  ct.innerHTML='<div class="ai-gen-loading"><div class="ai-gen-spinner"></div><div>梁梁正在生成仿题，并逐题校验</div><div style="font-size:12px;color:#b0b0b5;">生成 1 次 + 3 道题 × 3 步解题，请稍候</div></div>';
+  try{
+    var r=await fetch("http://127.0.0.1:8000/questions/"+qid+"/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({count:3,teacher:"liangliang"})});
+    var d=await r.json();
+    renderAiGenResult(d);
+  }catch(e){
+    ct.innerHTML='<div class="ai-gen-status" style="color:#b3261e;">请求失败：'+escapeHtml(e.message||"无法连接后端")+'</div>';
+  }
+}
+
+function renderAiGenResult(d){
+  var ct=document.getElementById("aiGenContent");if(!ct)return;
+  if(!d||d.error){
+    ct.innerHTML='<div class="ai-gen-status" style="color:#b3261e;">'+escapeHtml((d&&(d.detail||d.message))||"生成失败")+'</div>';
+    return;
+  }
+  var list=d.candidates||[];
+  var html='<div class="ai-gen-status">生成 '+list.length+' 道，通过 '+(d.accepted||0)+' 道，淘汰 '+(d.rejected||0)+' 道。通过的题目已自动保存并标记为 AI 仿题。</div>';
+  if(!list.length){ct.innerHTML=html+'<div class="ai-gen-status">没有通过校验的题目，稍后再试一次。</div>';return;}
+  for(var i=0;i<list.length;i++){
+    var c=list[i],ok=c.status==="accepted",cls=ok?"ai-gen-accepted":"ai-gen-rejected";
+    html+='<div class="ai-gen-card '+cls+'">';
+    html+='<div class="ai-gen-q">'+escapeHtml(c.question||"")+'</div>';
+    html+='<div class="ai-gen-tags">';
+    if(ok){
+      html+='<span class="ai-gen-tag ai-gen-tag-ok">通过 · 贴合度 '+escapeHtml(String(c.fit_score||0))+'</span>';
+      var dt=aiGenDifficultyText(c);if(dt)html+='<span class="ai-gen-tag">'+escapeHtml(dt)+'</span>';
+    }else{
+      html+='<span class="ai-gen-tag ai-gen-tag-bad">未通过</span>';
+    }
+    if(c.design_focus)html+='<span class="ai-gen-tag">'+escapeHtml(c.design_focus)+'</span>';
+    html+='</div>';
+    if(ok){
+      html+='<div class="ai-gen-actions"><button class="ai-gen-action ai-gen-action-primary" onclick="aiTeachNewQuestion(\''+escJsStr(c.question)+'\')">📖 手把手教学</button></div>';
+    }else if(c.rejected_reason){
+      html+='<div class="ai-gen-note">淘汰原因：'+escapeHtml(c.rejected_reason)+'</div>';
+    }
+    html+='</div>';
+  }
+  ct.innerHTML=html;
+  if(window.renderMathInElement){
+    try{renderMathInElement(ct,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}],ignoredTags:["script","style"]});}catch(e){}
+  }
+}
+
+function aiTeachNewQuestion(q){localStorage.setItem("_teach_question",q);window.open("teach.html","_blank");}
+
+function resetAll(){clearSavedSession();_sessionId=null;_teachQuestionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("quoteArea").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachQuestionInput").value="";document.getElementById("teachStartBtn").disabled=false;document.getElementById("teachLoading").style.display="none";}
 
 
 document.addEventListener("DOMContentLoaded",function(){
