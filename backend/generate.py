@@ -3,6 +3,8 @@
 import json
 import os
 import re
+import threading
+import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 from backend.solver import (
@@ -190,8 +192,14 @@ def _is_duplicate(question_text: str) -> bool:
         return False
 
 
-def _solve_candidate(candidate: dict, teacher: str) -> dict:
+def _solve_candidate(candidate: dict, teacher: str, on_phase=None) -> dict:
     question = candidate.get("question", "").strip()
+    def _phase(phase):
+        if on_phase:
+            try:
+                on_phase(phase)
+            except Exception:
+                pass
     result = {
         "question": question,
         "status": "rejected",
@@ -204,9 +212,13 @@ def _solve_candidate(candidate: dict, teacher: str) -> dict:
     try:
         if _is_duplicate(question):
             result["rejected_reason"] = "题目已存在于题库"
+            _phase("solver")
+            _phase("verifier")
+            _phase("formatter")
             return result
 
         solver = step_solver_only(question, teacher=teacher)
+        _phase("solver")
         if solver.get("error"):
             result["rejected_reason"] = solver.get("status") or solver.get("detail") or "Solver 无法解题"
             return result
@@ -218,6 +230,7 @@ def _solve_candidate(candidate: dict, teacher: str) -> dict:
             solver.get("category"),
             teacher=teacher,
         )
+        _phase("verifier")
         if verified.get("error"):
             result["rejected_reason"] = verified.get("detail") or verified.get("status") or "Verifier 校验失败"
             return result
@@ -230,6 +243,7 @@ def _solve_candidate(candidate: dict, teacher: str) -> dict:
             result["token_usage"],
             teacher=teacher,
         )
+        _phase("formatter")
         if final.get("error"):
             result["rejected_reason"] = final.get("detail") or final.get("reason") or "Formatter 判定题目有误"
             return result
@@ -313,7 +327,8 @@ def _save_accepted(reference: dict, result: dict) -> int:
     return save_question(result["question"], final)
 
 
-def generate_variants(qid: int, count: int = 3, teacher: str = "liangliang") -> dict:
+def generate_variants(qid: int, count: int = 3, teacher: str = "liangliang",
+                      progress_callback=None) -> dict:
     reference = _load_reference(qid)
     reference["chunk_results"] = (reference.get("answer_json") or {}).get("chunk_results", [])
     candidates = _call_generation(reference, count, teacher)
@@ -326,11 +341,16 @@ def generate_variants(qid: int, count: int = 3, teacher: str = "liangliang") -> 
         seen.add(key)
         unique_candidates.append(cand)
     candidates = unique_candidates
+    if progress_callback:
+        try:
+            progress_callback("generating")
+        except Exception:
+            pass
 
     total_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
     solved = []
     with ThreadPoolExecutor(max_workers=min(len(candidates), 5)) as pool:
-        futures = [pool.submit(_solve_candidate, cand, teacher) for cand in candidates]
+        futures = [pool.submit(_solve_candidate, cand, teacher, on_phase=progress_callback) for cand in candidates]
         solved = [f.result() for f in futures]
 
     accepted = []
@@ -366,3 +386,98 @@ def generate_variants(qid: int, count: int = 3, teacher: str = "liangliang") -> 
         "candidates": accepted + rejected,
         "token_usage": total_usage,
     }
+
+
+_GENERATE_JOB_LOCK = threading.Lock()
+_GENERATE_JOBS = {}
+
+
+def _job_snapshot(job: dict) -> dict:
+    snap = dict(job)
+    if isinstance(snap.get("result"), dict):
+        snap["result"] = dict(snap["result"])
+    return snap
+
+
+def _progress_text(phase: str, done: int, total: int) -> str:
+    if phase == "generating":
+        return f"{total} 道题已全部生成，开始校验"
+    if phase == "solver":
+        return f"第 {done}/{total} 道题 Solver 完成"
+    if phase == "verifier":
+        return f"第 {done}/{total} 道题 Verifier 完成"
+    if phase == "formatter":
+        return f"第 {done}/{total} 道题 Formatter 完成"
+    return ""
+
+
+def start_generate_job(qid: int, count: int = 3, teacher: str = "liangliang") -> dict:
+    if not get_question_by_id(qid):
+        raise ValueError(f"题目不存在: {qid}")
+    job_id = uuid.uuid4().hex
+    job = {
+        "job_id": job_id,
+        "status": "running",
+        "stage": "generating",
+        "progress": 0,
+        "detail": "AI 正在生成题目",
+        "solver_done": 0,
+        "verifier_done": 0,
+        "formatter_done": 0,
+        "result": None,
+        "error": None,
+    }
+    with _GENERATE_JOB_LOCK:
+        _GENERATE_JOBS[job_id] = job
+
+    def run_job():
+        def on_phase(phase: str) -> None:
+            with _GENERATE_JOB_LOCK:
+                if phase == "generating":
+                    job["stage"] = "generating"
+                    job["progress"] = 13
+                    job["detail"] = _progress_text("generating", 0, count)
+                elif phase == "solver":
+                    job["solver_done"] = job.get("solver_done", 0) + 1
+                    done = job["solver_done"]
+                    job["stage"] = "solver"
+                    job["progress"] = round(13 + 65 * done / count)
+                    job["detail"] = _progress_text("solver", done, count)
+                elif phase == "verifier":
+                    job["verifier_done"] = job.get("verifier_done", 0) + 1
+                    done = job["verifier_done"]
+                    job["stage"] = "verifier"
+                    job["progress"] = round(78 + 13 * done / count)
+                    job["detail"] = _progress_text("verifier", done, count)
+                elif phase == "formatter":
+                    job["formatter_done"] = job.get("formatter_done", 0) + 1
+                    done = job["formatter_done"]
+                    job["stage"] = "formatter"
+                    job["progress"] = min(99, round(91 + 9 * done / count))
+                    job["detail"] = _progress_text("formatter", done, count)
+
+        try:
+            result = generate_variants(qid, count=count, teacher=teacher,
+                                       progress_callback=on_phase)
+            with _GENERATE_JOB_LOCK:
+                job["status"] = "done"
+                job["stage"] = "done"
+                job["progress"] = 100
+                job["detail"] = "生成完成"
+                job["result"] = result
+        except Exception as e:
+            with _GENERATE_JOB_LOCK:
+                job["status"] = "error"
+                job["detail"] = f"生成失败: {str(e)[:300]}"
+                job["error"] = str(e)[:500]
+
+    threading.Thread(target=run_job, daemon=True).start()
+    return _job_snapshot(job)
+
+
+def get_generate_job(job_id: str) -> dict:
+    with _GENERATE_JOB_LOCK:
+        job = _GENERATE_JOBS.get(job_id)
+        if not job:
+            return None
+        return _job_snapshot(job)

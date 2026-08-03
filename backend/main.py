@@ -277,6 +277,28 @@ def api_generate_variants(qid: int, req: GenerateVariantsRequest):
         return JSONResponse(status_code=404, content={"error": "not_found", "detail": str(e)})
 
 
+@app.post("/questions/{qid}/generate/async")
+def api_generate_variants_async(qid: int, req: GenerateVariantsRequest):
+    """异步启动 AI 仿题任务，返回 job_id 供前端轮询进度"""
+    from backend.generate import start_generate_job
+    try:
+        return start_generate_job(qid, count=req.count, teacher=req.teacher or "liangliang")
+    except ValueError as e:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=404, content={"error": "not_found", "detail": str(e)})
+
+
+@app.get("/generate-jobs/{job_id}")
+def api_get_generate_job(job_id: str):
+    """获取 AI 仿题任务的进度与结果"""
+    from backend.generate import get_generate_job
+    job = get_generate_job(job_id)
+    if not job:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=404, content={"error": "not_found", "detail": "任务不存在"})
+    return job
+
+
 @app.post("/questions/ai-search")
 def api_ai_search_questions(req: AiSearchRequest):
     """AI 语义搜索（预留）"""
@@ -435,6 +457,13 @@ def api_teach_session_chat(session_id: str, req: TeachSessionChatRequest):
         return {"error": "session_not_found", "detail": "会话不存在"}
     result = teach_session_chat(session_id, req.message)
     return result
+
+
+@app.post("/teach/session/{session_id}/ack")
+def api_teach_session_ack(session_id: str):
+    """前端展示完下一步引导后确认"""
+    from backend.teach import teach_ack_prompt
+    return teach_ack_prompt(session_id)
 
 
 @app.get("/teach/session/{session_id}")

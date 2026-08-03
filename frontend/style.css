@@ -382,6 +382,41 @@
         .ai-gen-action-primary:hover { background: #a16207; }
         .ai-gen-action-plain { background: #f5f5f7; color: #515154; }
         .ai-gen-action-plain:hover { background: #e8e8ed; }
+
+        /* ---- AI 仿题进度条 ---- */
+        .ai-gen-progress { padding: 4px 0 18px; }
+        .ai-gen-progress-stages {
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 14px; padding: 0 6px;
+        }
+        .ai-gen-progress-stage {
+            display: flex; align-items: center; gap: 7px; font-size: 12px;
+            color: #86868b; transition: color 0.3s;
+        }
+        .ai-gen-progress-dot {
+            width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0;
+            background: #e0e0e0; transition: all 0.3s ease;
+        }
+        .ai-gen-progress-stage.active { color: #ca8a04; font-weight: 600; }
+        .ai-gen-progress-stage.active .ai-gen-progress-dot {
+            background: #ca8a04; box-shadow: 0 0 0 3px rgba(202,138,4,0.18);
+        }
+        .ai-gen-progress-stage.completed { color: #1e7d3c; }
+        .ai-gen-progress-stage.completed .ai-gen-progress-dot { background: #34c759; }
+        .ai-gen-progress-bar {
+            height: 6px; background: #e5e5e7; border-radius: 3px; overflow: hidden;
+        }
+        .ai-gen-progress-fill {
+            height: 100%; background: linear-gradient(90deg, #ca8a04, #f59e0b);
+            border-radius: 3px; transition: width 0.35s ease;
+        }
+        .ai-gen-progress-pct {
+            text-align: center; font-size: 18px; font-weight: 700;
+            color: #ca8a04; margin-top: 8px;
+        }
+        .ai-gen-progress-text {
+            text-align: center; font-size: 13px; color: #86868b; margin-top: 4px;
+        }
         
         
 

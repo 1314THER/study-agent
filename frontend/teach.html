@@ -6,7 +6,7 @@
 <meta http-equiv="Cache-Control" content="no-cache">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>手把手教学 - 数学最强大脑</title>
-    <link rel="stylesheet" href="style.css?v=20260731ai">
+    <link rel="stylesheet" href="style.css?v=20260731progress">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
@@ -593,6 +593,14 @@ async function startTeachSession(q){
     setInputEnabled(true);saveSession();
   }catch(e){console.error(e);showError("网络错误");resetStartBtn();}
 }
+
+async function ackTeachPrompt(){
+  if(!_sessionId)return;
+  try{
+    await fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/ack",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+  }catch(e){console.error("Ack prompt failed:",e);}
+}
+
 async function sendMessage(){
   if(_isWaiting)return;var i=document.getElementById("teachChatInput");var m=i.value.trim();if(!m||!_sessionId)return;
   i.value="";i.style.height="auto";addChatMessage("student",m);_isWaiting=true;setInputEnabled(false);addLoadingMessage();
@@ -602,8 +610,12 @@ async function sendMessage(){
     if(d.error){addChatMessage("teacher","\u62B1\u6B49\uFF0C\u51FA\u4E86\u70B9\u95EE\u9898\uFF0C\u8BF7\u518D\u8BD5\u4E00\u6B21\u3002");_isWaiting=false;setInputEnabled(true);saveSession();return;}
     var a=d.action||"guide";
     if(a==="advance"){
-      if(d.message)addChatMessage("teacher",d.message,{});updateInfoPanel();
-      if(d.next_step_message){_currentStepIndex=(d.current_step||1)-1;updateProgress();addChatMessage("teacher",d.next_step_message);updateProgress();}
+      if(d.message)addChatMessage("teacher",d.message,{});
+      document.getElementById("skipBtn").style.display="";
+      document.getElementById("showAnswerBtn").style.display="";
+      document.getElementById("understandBtn").style.display="none";
+      updateInfoPanel();
+      if(d.next_step_message){_currentStepIndex=(d.current_step||1)-1;updateProgress();addChatMessage("teacher",d.next_step_message);updateProgress();await ackTeachPrompt();}
       else{_currentStepIndex=(d.current_step||1)-1;updateProgress();}
       updateInfoPanel();_isWaiting=false;setInputEnabled(true);
     }else if(a==="complete"){if(d.message)addChatMessage("teacher",d.message);_isWaiting=false;setInputEnabled(false);showSummary(d);}
@@ -623,23 +635,8 @@ async function sendMessage(){
 
 function skipStep(){
   if(!_sessionId||_isWaiting)return;
-  _stats.skipped=(_stats.skipped||0)+1;
-  if(_currentStepIndex>=_totalSteps-1){
-    addChatMessage("system","已完成所有步骤");
-    saveSession();showSummary({stats:_stats});
-    fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:"跳过"})}).catch(function(){});
-    return;
-  }
-  var stepIdx=_currentStepIndex;
-  _currentStepIndex=Math.min(_currentStepIndex+1,_totalSteps-1);
-  addChatMessage("system","已跳过步骤 "+(stepIdx+1));
-  updateProgress();updateInfoPanel();setInputEnabled(true);saveSession();
-  var nextStep=_sessionSteps[_currentStepIndex];
-  if(nextStep){
-    var nextMsg=nextStep.step_prompt||("请完成第 "+(_currentStepIndex+1)+" 步："+(nextStep.title||""));
-    addChatMessage("teacher",nextMsg);saveSession();
-  }
-  fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:"跳过"})}).catch(function(){});
+  var i=document.getElementById("teachChatInput");
+  if(i){i.value="跳过";sendMessage();}
 }
 
 function showAnswer(){
@@ -660,34 +657,14 @@ function showAnswer(){
 }
 
 function understoodStep(){
-  if(!_sessionId)return;
-  _stats.skipped=(_stats.skipped||0)+1;
+  if(!_sessionId||_isWaiting)return;
   var stepIdx=_currentStepIndex;
-  // Record error for this step
   var curStep=_sessionSteps[stepIdx];
   if(curStep){
     _stepErrorData[curStep.chunk_id+"-"+curStep.step_number]={error_type:"其他",error_detail:"完全不会",student_input:"完全不会"};
   }
-  // Last step → show summary
-  if(stepIdx>=_totalSteps-1){
-    saveSession();showSummary({stats:_stats});
-    fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:"跳过"})}).catch(function(){});
-    document.getElementById("skipBtn").style.display="";
-    document.getElementById("showAnswerBtn").style.display="";
-    document.getElementById("understandBtn").style.display="none";
-    return;
-  }
-  _currentStepIndex=Math.min(stepIdx+1,_totalSteps-1);
-  var nextStep=_sessionSteps[_currentStepIndex];
-  if(nextStep){
-    var nextMsg=nextStep.step_prompt||("请完成第 "+(_currentStepIndex+1)+" 步："+(nextStep.title||""));
-    addChatMessage("teacher",nextMsg);
-  }
-  updateProgress();updateInfoPanel();setInputEnabled(true);saveSession();
-  document.getElementById("skipBtn").style.display="";
-  document.getElementById("showAnswerBtn").style.display="";
-  document.getElementById("understandBtn").style.display="none";
-  fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:"跳过"})}).catch(function(){});
+  var i=document.getElementById("teachChatInput");
+  if(i){i.value="跳过";sendMessage();}
 }
 
 function cancelTeaching(){if(!_sessionId)return;clearSavedSession();_sessionId=null;_teachQuestionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("quoteArea").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachStartBtn").disabled=false;}
@@ -732,7 +709,60 @@ async function saveTeachingResults(){
 }
 async function showSummary(d){document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.add("show");var st=d.stats||_stats;document.getElementById("summaryCorrect").textContent=st.correct||0;document.getElementById("summaryWrong").textContent=st.wrong||0;document.getElementById("summarySkipped").textContent=(st.skipped||0)+(st.viewed_answer||0);var qid=await saveTeachingResults();var btn=document.getElementById("teachAiGenBtn");if(btn){btn.style.display=qid?"inline-block":"none";}}
 
-function closeAiGenModal(){var ov=document.getElementById("aiGenOverlay");if(ov)ov.style.display="none";}
+var _aiGenTimer = null;
+
+function closeAiGenModal(){
+  if(_aiGenTimer){clearTimeout(_aiGenTimer);_aiGenTimer=null;}
+  var ov=document.getElementById("aiGenOverlay");if(ov)ov.style.display="none";
+}
+
+function aiGenProgressHtml(pct, stage, detail){
+  var stages=["AI出题","Solver","Verifier","Formatter"];
+  var idx={generating:0,solver:1,verifier:2,formatter:3,done:3}[stage]||0;
+  var html='<div class="ai-gen-progress"><div class="ai-gen-progress-stages">';
+  for(var i=0;i<stages.length;i++){
+    var cls=i<idx?"completed":(i===idx?"active":"");
+    html+='<div class="ai-gen-progress-stage '+cls+'"><span class="ai-gen-progress-dot"></span><span>'+stages[i]+'</span></div>';
+  }
+  html+='</div><div class="ai-gen-progress-bar"><div class="ai-gen-progress-fill" style="width:'+pct+'%"></div></div>';
+  html+='<div class="ai-gen-progress-pct">'+pct+'%</div><div class="ai-gen-progress-text">'+escapeHtml(detail||"")+'</div></div>';
+  return html;
+}
+
+function aiGenErrorHtml(msg){
+  return '<div class="ai-gen-status" style="color:#b3261e;">'+escapeHtml(msg||"生成失败")+'</div>';
+}
+
+async function startAiGenJob(qid){
+  var ov=document.getElementById("aiGenOverlay"),ct=document.getElementById("aiGenContent");
+  if(!ov||!ct)return;
+  ov.style.display="flex";
+  ct.innerHTML=aiGenProgressHtml(0,"generating","正在启动 AI 仿题");
+  try{
+    var r=await fetch("http://127.0.0.1:8000/questions/"+qid+"/generate/async",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({count:3,teacher:"liangliang"})});
+    var sj=await r.json();
+    if(sj.error||!sj.job_id){ct.innerHTML=aiGenErrorHtml(sj.detail||sj.error||"启动生成任务失败");return;}
+    var jobId=sj.job_id;
+    async function poll(){
+      try{
+        var pr=await fetch("http://127.0.0.1:8000/generate-jobs/"+jobId);
+        var pj=await pr.json();
+        if(pj.status==="done"){_aiGenTimer=null;renderAiGenResult(pj.result);}
+        else if(pj.status==="error"){_aiGenTimer=null;ct.innerHTML=aiGenErrorHtml(pj.detail||pj.error||"生成失败");}
+        else{
+          ct.innerHTML=aiGenProgressHtml(pj.progress||0,pj.stage||"generating",pj.detail||"");
+          _aiGenTimer=setTimeout(poll,800);
+        }
+      }catch(e){
+        _aiGenTimer=null;
+        ct.innerHTML=aiGenErrorHtml("请求失败："+(e.message||"无法连接后端"));
+      }
+    }
+    _aiGenTimer=setTimeout(poll,800);
+  }catch(e){
+    ct.innerHTML=aiGenErrorHtml("请求失败："+(e.message||"无法连接后端"));
+  }
+}
 
 function aiGenDifficultyText(c){
   if(!c||!c.difficulty)return "";
@@ -746,17 +776,7 @@ async function generateFromTeach(){
   var qid=_teachQuestionId;
   if(!qid){qid=await saveTeachingResults();_teachQuestionId=qid;}
   if(!qid){alert("请先保存当前教学记录");return;}
-  var ov=document.getElementById("aiGenOverlay"),ct=document.getElementById("aiGenContent");
-  if(!ov||!ct)return;
-  ov.style.display="flex";
-  ct.innerHTML='<div class="ai-gen-loading"><div class="ai-gen-spinner"></div><div>梁梁正在生成仿题，并逐题校验</div><div style="font-size:12px;color:#b0b0b5;">生成 1 次 + 3 道题 × 3 步解题，请稍候</div></div>';
-  try{
-    var r=await fetch("http://127.0.0.1:8000/questions/"+qid+"/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({count:3,teacher:"liangliang"})});
-    var d=await r.json();
-    renderAiGenResult(d);
-  }catch(e){
-    ct.innerHTML='<div class="ai-gen-status" style="color:#b3261e;">请求失败：'+escapeHtml(e.message||"无法连接后端")+'</div>';
-  }
+  await startAiGenJob(qid);
 }
 
 function renderAiGenResult(d){

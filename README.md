@@ -185,6 +185,8 @@ study-agent/
 | POST | `/questions/{id}/step-error` | 记录步骤错因 |
 | DELETE | `/questions/{id}/step-error/{eid}` | 删除步骤错因 |
 | POST | `/questions/{id}/generate` | AI 仿题：生成变式题、校验、筛选并入库 |
+| POST | `/questions/{id}/generate/async` | 异步启动 AI 仿题，返回任务 ID |
+| GET | `/generate-jobs/{job_id}` | 查询 AI 仿题任务进度与结果 |
 | GET | `/categories` | 知识点分类（categories.yaml 动态加载） |
 | GET | `/steps` | 所有题型的两级步骤结构 |
 | POST | `/questions/ai-search` | AI 语义搜索（预留，当前返回空列表） |

@@ -281,12 +281,14 @@ def _parse_steps(text: str) -> list:
     steps = []
     current_step = None
     in_step = False
+    parsing_standard = False
     for line in text.split("\n"):
         stripped = line.strip()
         m = STEP_HEADER_PATTERN.match(stripped)
         if m:
             if current_step is not None:
                 steps.append(current_step)
+            parsing_standard = False
             current_step = {
                 "step_number": int(m.group(1)),
                 "title": (m.group(2) or "").strip(),
@@ -302,10 +304,12 @@ def _parse_steps(text: str) -> list:
             continue
         slm = STEP_LEVEL1_PATTERN.match(stripped)
         if slm:
+            parsing_standard = False
             current_step["step_level1"] = slm.group(1).strip()
             continue
         km = KNOWLEDGE_POINT_PATTERN.match(stripped)
         if km:
+            parsing_standard = False
             kp_raw = km.group(1).strip()
             # 去掉可能的外层方括号
             kp_raw = re.sub(r'^\[(.+)\]$', r'\1', kp_raw)
@@ -314,17 +318,21 @@ def _parse_steps(text: str) -> list:
         bm = BRIEF_PATTERN.match(stripped)
         if bm:
             current_step["standard_writing"] = bm.group(1).strip()
+            parsing_standard = True
             continue
         sm = STANDARD_PATTERN.match(stripped)
         if sm:
             current_step["standard_writing"] = sm.group(1).strip()
+            parsing_standard = True
             continue
         dm2 = DETAIL_PATTERN.match(stripped)
         if dm2:
+            parsing_standard = False
             current_step["detailed_writing"] = dm2.group(1).strip()
             continue
         dm = STEP_DIFFICULTY_PATTERN.match(stripped)
         if dm:
+            parsing_standard = False
             try:
                 current_step["step_difficulty"] = json.loads(dm.group(1).strip())
             except (json.JSONDecodeError, ValueError):
@@ -334,6 +342,10 @@ def _parse_steps(text: str) -> list:
         if not stripped:
             continue
         if stripped.startswith("块") and any(stripped.startswith(p) for p in ("块类型", "板块", "块难度", "块最终答案", "块知识点")):
+            parsing_standard = False
+            continue
+        if parsing_standard:
+            current_step["standard_writing"] += "\n" + stripped
             continue
         if current_step and current_step["detailed_writing"]:
             current_step["detailed_writing"] += "\n" + stripped

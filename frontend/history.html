@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>个人题库 - 数学最强大脑</title>
-    <link rel="stylesheet" href="style.css?v=20260731ai">
+    <link rel="stylesheet" href="style.css?v=20260731progress">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
@@ -1712,32 +1712,81 @@ function safeParseKps(kps){
         }
 
         // ========== AI 仿题 ==========
+        var _aiGenTimer = null;
+
         function closeAiGenModal() {
+            if (_aiGenTimer) { clearTimeout(_aiGenTimer); _aiGenTimer = null; }
             var ov = document.getElementById('aiGenOverlay');
             if (ov) ov.style.display = 'none';
         }
 
-        async function generateFromQuestion(qid) {
+        function aiGenProgressHtml(pct, stage, detail) {
+            var stages = ['AI出题', 'Solver', 'Verifier', 'Formatter'];
+            var idx = {generating: 0, solver: 1, verifier: 2, formatter: 3, done: 3}[stage] || 0;
+            var html = '<div class="ai-gen-progress">';
+            html += '<div class="ai-gen-progress-stages">';
+            for (var i = 0; i < stages.length; i++) {
+                var cls = i < idx ? 'completed' : (i === idx ? 'active' : '');
+                html += '<div class="ai-gen-progress-stage ' + cls + '">' +
+                    '<span class="ai-gen-progress-dot"></span><span>' + stages[i] + '</span></div>';
+            }
+            html += '</div>';
+            html += '<div class="ai-gen-progress-bar"><div class="ai-gen-progress-fill" style="width:' + pct + '%"></div></div>';
+            html += '<div class="ai-gen-progress-pct">' + pct + '%</div>';
+            html += '<div class="ai-gen-progress-text">' + escapeHtml(detail || '') + '</div>';
+            html += '</div>';
+            return html;
+        }
+
+        function aiGenErrorHtml(msg) {
+            return '<div class="ai-gen-status" style="color:#b3261e;">' + escapeHtml(msg || '生成失败') + '</div>';
+        }
+
+        async function startAiGenJob(qid) {
             var ov = document.getElementById('aiGenOverlay');
             var ct = document.getElementById('aiGenContent');
             if (!ov || !ct) return;
             ov.style.display = 'flex';
-            ct.innerHTML = '<div class="ai-gen-loading">' +
-                '<div class="ai-gen-spinner"></div>' +
-                '<div>梁梁正在生成仿题，并逐题校验</div>' +
-                '<div style="font-size:12px;color:#b0b0b5;">生成 1 次 + 3 道题 × 3 步解题，请稍候</div>' +
-                '</div>';
+            ct.innerHTML = aiGenProgressHtml(0, 'generating', '正在启动 AI 仿题');
             try {
-                var r = await fetch('http://127.0.0.1:8000/questions/' + qid + '/generate', {
+                var r = await fetch('http://127.0.0.1:8000/questions/' + qid + '/generate/async', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ count: 3, teacher: 'liangliang' })
                 });
-                var d = await r.json();
-                renderAiGenResult(d);
+                var sj = await r.json();
+                if (sj.error || !sj.job_id) {
+                    ct.innerHTML = aiGenErrorHtml(sj.detail || sj.error || '启动生成任务失败');
+                    return;
+                }
+                var jobId = sj.job_id;
+                async function poll() {
+                    try {
+                        var pr = await fetch('http://127.0.0.1:8000/generate-jobs/' + jobId);
+                        var pj = await pr.json();
+                        if (pj.status === 'done') {
+                            _aiGenTimer = null;
+                            renderAiGenResult(pj.result);
+                        } else if (pj.status === 'error') {
+                            _aiGenTimer = null;
+                            ct.innerHTML = aiGenErrorHtml(pj.detail || pj.error || '生成失败');
+                        } else {
+                            ct.innerHTML = aiGenProgressHtml(pj.progress || 0, pj.stage || 'generating', pj.detail || '');
+                            _aiGenTimer = setTimeout(poll, 800);
+                        }
+                    } catch (e) {
+                        _aiGenTimer = null;
+                        ct.innerHTML = aiGenErrorHtml('请求失败：' + (e.message || '无法连接后端'));
+                    }
+                }
+                _aiGenTimer = setTimeout(poll, 800);
             } catch (e) {
-                ct.innerHTML = '<div class="ai-gen-status" style="color:#b3261e;">请求失败：' + escapeHtml(e.message || '无法连接后端') + '</div>';
+                ct.innerHTML = aiGenErrorHtml('请求失败：' + (e.message || '无法连接后端'));
             }
+        }
+
+        async function generateFromQuestion(qid) {
+            await startAiGenJob(qid);
         }
 
         function aiGenDifficultyText(c) {
