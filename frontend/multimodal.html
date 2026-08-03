@@ -891,7 +891,8 @@ async function performSaveToBank(idx, sourceType, sourceMeta){
             _questions[idx].source_type=sourceType||'';
             _questions[idx].source_meta=sourceType?(sourceMeta||{}):null;
             saveState();
-            renderSessionResult(idx,s.data,true,true);
+            var wasCollapsed=!!s.collapsed;
+            renderSessionResult(idx,s.data,true,!wasCollapsed);
             renderQuestionList();
             return true;
         }
