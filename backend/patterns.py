@@ -494,3 +494,42 @@ def get_mastery_summary() -> dict:
         }
     finally:
         conn.close()
+
+
+def sync_mother_questions() -> dict:
+    """把题库里 source_type=精选母题 的题目同步成母题看板上的套路。"""
+    from backend.database import get_all_questions
+
+    init_mastery_db()
+    conn = _get_conn()
+    synced = 0
+    try:
+        for question in get_all_questions():
+            if question.get("source_type") != "精选母题":
+                continue
+            meta = question.get("source_meta") or {}
+            if not isinstance(meta, dict):
+                continue
+            category = (meta.get("category") or "").strip()
+            name = (meta.get("pattern") or "").strip()
+            if category not in CATEGORIES or not name:
+                continue
+            existing = conn.execute(
+                "SELECT id FROM patterns WHERE category = ? AND name = ?",
+                (category, name),
+            ).fetchone()
+            if existing:
+                pattern_id = existing["id"]
+            else:
+                pattern_id = _ensure_pattern_row(conn, f"pat-{uuid.uuid4().hex[:10]}", category, name)
+            _ensure_pattern_mastery(conn, pattern_id)
+            _link_question(conn, pattern_id, question["id"], "mother")
+            _recalc_category_mastery(conn, category)
+            synced += 1
+        conn.commit()
+    finally:
+        conn.close()
+
+    if synced:
+        export_patterns_yaml()
+    return {"synced": synced}

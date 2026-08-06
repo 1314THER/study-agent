@@ -645,6 +645,7 @@
 
 /* ---- Question Type Tag ---- */
 .tag-type-choice { background: #f3e5f5; color: #6a1b9a; }
+.tag-type-multi { background: #ede7f6; color: #4527a0; }
 .tag-type-blank { background: #e3f2fd; color: #1565c0; }
 .tag-type-long { background: #e8f5e9; color: #2e7d32; }
 .tag-type-special { background: #fff3e0; color: #e65100; }

@@ -23,6 +23,7 @@ from backend.database import (
     get_question_by_id,
     get_step_errors,
     looks_like_choice_question,
+    looks_like_multi_choice_question,
     save_question,
 )
 
@@ -89,9 +90,11 @@ def _load_reference(qid: int) -> dict:
     question_type = question.get("question_type")
     if not question_type and aj.get("chunk_results"):
         question_type = aj["chunk_results"][0].get("chunk_type")
-    if question_type not in ("选择题", "填空题"):
+    if question_type not in ("选择题", "填空题", "多选题"):
         question_type = "大题"
-    if question_type == "大题" and looks_like_choice_question(question.get("content", "")):
+    if looks_like_multi_choice_question(question.get("content", ""), aj):
+        question_type = "多选题"
+    elif question_type == "大题" and looks_like_choice_question(question.get("content", "")):
         question_type = "选择题"
 
     difficulty = aj.get("overall_difficulty") or aj.get("difficulty")

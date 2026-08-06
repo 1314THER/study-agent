@@ -243,6 +243,21 @@ def _extract_verifier_template(text: str) -> Optional[str]:
     return None
 
 
+def _resolve_question_type(question: str, content: str, question_type: str = None) -> str:
+    """在 Verifier 前确定题型：优先显式指定，其次题干/ Solver 输出。"""
+    if question_type in ("选择题", "填空题", "多选题"):
+        return question_type
+    if "多选" in (question or ""):
+        return "多选题"
+    for line in (content or "").split("\n"):
+        m = re.match(r"^题型\s*[：:]\s*(.+)$", line.strip())
+        if m:
+            t = m.group(1).strip().strip("[]")
+            if t in ("选择题", "填空题", "多选题"):
+                return t
+    return question_type or ""
+
+
 def _parse_chunk_meta(text: str) -> dict:
     """从 Verifier 输出的块内容中提取块级元数据"""
     meta = {"chunk_type": None, "category": None,
@@ -556,8 +571,9 @@ def _validate_step_names(verifier_cat: str, steps: list) -> list:
 def step_verify_all(content: str, question: str, category: str = None, question_type: str = None, teacher: str = None) -> dict:
     """一次 Verifier：将完整解答切成大块/小块 + 归类知识点 + 打分"""
     config = TEACHER_CONFIG.get(teacher or "liangliang", TEACHER_CONFIG["liangliang"])
-    if question_type in ("选择题", "填空题"):
-        verifier_cat = question_type
+    resolved_type = _resolve_question_type(question, content, question_type)
+    if resolved_type in ("选择题", "填空题", "多选题"):
+        verifier_cat = resolved_type
     else:
         # 优先使用 Solver 输出的校验模板
         verifier_template = _extract_verifier_template(content)
@@ -594,7 +610,7 @@ def step_verify_all(content: str, question: str, category: str = None, question_
 
         chunk_results.append({
             "chunk_id": pc["id"],
-            "chunk_type": meta.get("chunk_type") or category or "整体",
+            "chunk_type": meta.get("chunk_type") or resolved_type or category or "整体",
             "category": {"level1": meta.get("category") or category or "整体", "level2": None},
             "difficulty": _recalc_difficulty(meta.get("difficulty")),
             "steps": steps,
@@ -654,6 +670,11 @@ def _aggregate_from_chunks(question: str, chunk_results: list, token_total: dict
         if cr.get("final_answer"):
             answers.append(cr["final_answer"])
         for step in cr.get("steps", []):
+            if isinstance(step, dict) and step.get("knowledge_point"):
+                for part in re.split(r"[、,，;；]+", str(step["knowledge_point"])):
+                    part = part.strip()
+                    if part:
+                        kps.add(part)
             sd = step.get("step_difficulty", {})
             step_sum += sd.get("score", 0) if isinstance(sd, dict) else 0
     overall = _compute_overall_difficulty(chunk_results)
@@ -666,6 +687,24 @@ def _aggregate_from_chunks(question: str, chunk_results: list, token_total: dict
         "overall_difficulty": overall,
         "token_usage": {k: token_total.get(k, 0) for k in token_total},
     }
+
+
+def _collect_kps_from_steps(chunk_results: list) -> list:
+    """从步骤级 knowledge_point 去重收集知识点。"""
+    out = []
+    seen = set()
+    for cr in chunk_results or []:
+        if not isinstance(cr, dict):
+            continue
+        for step in cr.get("steps", []) or []:
+            if not isinstance(step, dict) or not step.get("knowledge_point"):
+                continue
+            for part in re.split(r"[、,，;；]+", str(step["knowledge_point"])):
+                part = part.strip()
+                if part and part not in seen:
+                    seen.add(part)
+                    out.append(part)
+    return out
 
 
 def step_final_check(question: str, chunk_results: list, chunks_raw: list, token_total: dict, teacher: str = None) -> dict:
@@ -689,6 +728,8 @@ def step_final_check(question: str, chunk_results: list, chunks_raw: list, token
             return _aggregate_from_chunks(question, chunk_results, token_total)
         if not _is_well_formed_chunk_results(result.get("chunk_results")):
             return _aggregate_from_chunks(question, chunk_results, token_total)
+        if not result.get("knowledge_points"):
+            result["knowledge_points"] = _collect_kps_from_steps(chunk_results)
         # 计算武亮难度系数（步骤难度之和）
         step_sum = 0
         for cr in chunk_results:

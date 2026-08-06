@@ -44,6 +44,7 @@ function safeParseKps(kps){
             <span class="type-label">题型：</span>
             <button class="type-btn active" data-type="" onclick="selectType(this, '')">自动识别</button>
             <button class="type-btn" data-type="选择题" onclick="selectType(this, '选择题')">选择题</button>
+            <button class="type-btn" data-type="多选题" onclick="selectType(this, '多选题')">多选题</button>
             <button class="type-btn" data-type="填空题" onclick="selectType(this, '填空题')">填空题</button>
             <button class="type-btn" data-type="大题" onclick="selectType(this, '大题')">大题</button>
         </div>
@@ -218,7 +219,7 @@ var _selectedTeacher = "liangliang";
                     html += '<span class="chunk-label">块' + chunkId + '</span>';
                     if (cr.chunk_type) {
                         var tc = 'tag-type';
-                        if (cr.chunk_type === '选择题' || cr.chunk_type === '填空题') tc += ' tag-type-simple';
+                        if (cr.chunk_type === '选择题' || cr.chunk_type === '填空题' || cr.chunk_type === '多选题') tc += ' tag-type-simple';
                         html += '<span class="tag ' + tc + '">' + cr.chunk_type + '</span>';
                     }
                     if (cat.level1) html += '<span class="chunk-cat">' + cat.level1 + '</span>';

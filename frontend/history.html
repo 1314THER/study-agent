@@ -130,6 +130,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
                     <select class="filter-select" id="filterType" onchange="onFilterChange()">
                         <option value="">全部题型</option>
                         <option value="选择题">选择题</option>
+                        <option value="多选题">多选题</option>
                         <option value="填空题">填空题</option>
                         <option value="大题">大题</option>
                         
@@ -473,6 +474,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
                 if (q.question_type) {
                     var tc = 'tag-type';
                     if (q.question_type === '\u9009\u62e9\u9898') tc += ' tag-type-choice';
+                    else if (q.question_type === '\u591a\u9009\u9898') tc += ' tag-type-multi';
                     else if (q.question_type === '\u586b\u7a7a\u9898') tc += ' tag-type-blank';
                     else if (q.question_type === '\u5927\u9898') tc += ' tag-type-long';
                     else tc += ' tag-type-special';
@@ -751,6 +753,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
                     if (cr.chunk_type) {
                         var tc = 'tag-type';
                         if (cr.chunk_type === '\u9009\u62e9\u9898' || cr.chunk_type === '\u586b\u7a7a\u9898') tc += ' tag-type-simple';
+                        else if (cr.chunk_type === '\u591a\u9009\u9898') tc += ' tag-type-multi';
                         else if (cr.chunk_type === '\u975e\u5e38\u89c4\u538b\u8f74\u9898') tc += ' tag-type-special';
                         html += '<span class="tag ' + tc + '">' + escapeHtml(cr.chunk_type) + '</span>';
                     }

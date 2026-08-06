@@ -33,8 +33,10 @@ async def global_exception_handler(request, exc):
 @app.on_event("startup")
 def startup():
     init_db()
-    from backend.patterns import init_mastery_db
+    from backend.patterns import init_mastery_db, sync_mother_questions
     init_mastery_db()
+    sync_mother_questions()
+
 
 class SolveRequest(BaseModel):
     question: str
@@ -360,6 +362,11 @@ def api_export_patterns_yaml():
     return {"exported": True, "patterns": data}
 
 
+@app.post("/patterns/sync")
+def api_sync_patterns():
+    """把题库里的精选母题同步为母题看板套路"""
+    from backend.patterns import sync_mother_questions
+    return sync_mother_questions()
 
 
 class AiSearchRequest(BaseModel):

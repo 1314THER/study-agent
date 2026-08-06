@@ -8,7 +8,7 @@
 
 - `reference_question_id`：参考题 ID
 - `reference_question`：参考题完整题目
-- `question_type`：题型（选择题 / 填空题 / 大题）
+- `question_type`：题型（选择题 / 多选题 / 填空题 / 大题）
 - `category`：板块
 - `difficulty`：参考题整体难度，包含五维难度
 - `steps`：参考题的步骤列表，每步含步骤名、二级步骤名、标准过程

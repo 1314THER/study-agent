@@ -45,6 +45,25 @@ def looks_like_choice_question(text: str) -> bool:
     return False
 
 
+def looks_like_multi_choice_question(question_text: str = "", answer_dict: dict = None) -> bool:
+    """题干带（多选）或最终答案选了多个选项时，按多选题处理。"""
+    if question_text and "多选" in question_text:
+        return True
+    if not isinstance(answer_dict, dict):
+        return False
+    final_answer = answer_dict.get("final_answer") or ""
+    chunk_results = answer_dict.get("chunk_results")
+    if not final_answer and isinstance(chunk_results, list) and chunk_results:
+        first = chunk_results[0]
+        if isinstance(first, dict):
+            final_answer = first.get("final_answer") or ""
+    m = re.search(r"选\s*([A-H](?:\s*[、,，/]\s*[A-H])+)", final_answer or "")
+    if not m:
+        return False
+    labels = set(re.findall(r"[A-H]", m.group(1)))
+    return len(labels) >= 2
+
+
 def _normalize_choice_question_text(text: str) -> str:
     """把选择题选项统一为独立成行，选项之间只换一行。"""
     if not text:
@@ -58,6 +77,29 @@ def _normalize_choice_question_text(text: str) -> str:
             continue
         lines.append(stripped)
     return "\n".join(lines).strip()
+
+
+def _collect_step_knowledge_points(chunk_results: list) -> list:
+    """从各步骤的 knowledge_point 收集去重后的知识点。"""
+    if not isinstance(chunk_results, list):
+        return []
+    out = []
+    seen = set()
+    for cr in chunk_results:
+        if not isinstance(cr, dict):
+            continue
+        for step in cr.get("steps", []) or []:
+            if not isinstance(step, dict):
+                continue
+            kp = step.get("knowledge_point")
+            if not kp:
+                continue
+            for part in re.split(r"[、,，;；]+", str(kp)):
+                part = part.strip()
+                if part and part not in seen:
+                    seen.add(part)
+                    out.append(part)
+    return out
 
 
 def get_connection():
@@ -158,35 +200,43 @@ def _backfill_source_lists(conn):
 
 
 def _backfill_choice_questions(conn):
-    """老题回填：选项齐全却按大题保存的题改为选择题，并统一选项排版。"""
+    """老题回填：选择题/多选题的题型与选项排版，并从步骤级补回知识点。"""
     rows = conn.execute(
-        "SELECT id, content, question_type, answer_json FROM questions"
+        "SELECT id, content, question_type, answer_json, knowledge_points, category_level1 FROM questions"
     ).fetchall()
     changed = 0
     for row in rows:
         content = row["content"] or ""
         qtype = row["question_type"]
+        answer_json = row["answer_json"]
+        try:
+            aj = json.loads(answer_json) if answer_json else {}
+        except (json.JSONDecodeError, TypeError):
+            aj = {}
+        if not isinstance(aj, dict):
+            aj = {}
+
+        is_multi = looks_like_multi_choice_question(content, aj)
         is_choice = looks_like_choice_question(content)
-        effective = qtype if qtype in ("选择题", "填空题") else ("选择题" if is_choice else (qtype or "大题"))
+        if is_multi:
+            effective = "多选题"
+        elif is_choice:
+            effective = "选择题"
+        else:
+            effective = qtype if qtype in ("选择题", "填空题", "大题") else "大题"
+
         row_changed = False
-        if effective == "选择题" and qtype != "选择题":
-            answer_json = row["answer_json"]
-            try:
-                aj = json.loads(answer_json) if answer_json else {}
-            except (json.JSONDecodeError, TypeError):
-                aj = {}
-            if isinstance(aj, dict):
-                aj["question_type"] = "选择题"
-                chunk_results = aj.get("chunk_results")
-                if isinstance(chunk_results, list) and chunk_results and isinstance(chunk_results[0], dict):
-                    chunk_results[0]["chunk_type"] = "选择题"
-                answer_json = json.dumps(aj, ensure_ascii=False)
+        if effective in ("选择题", "多选题") and qtype != effective:
+            aj["question_type"] = effective
+            chunk_results = aj.get("chunk_results")
+            if isinstance(chunk_results, list) and chunk_results and isinstance(chunk_results[0], dict):
+                chunk_results[0]["chunk_type"] = effective
             conn.execute(
                 "UPDATE questions SET question_type = ?, answer_json = ? WHERE id = ?",
-                (effective, answer_json, row["id"]),
+                (effective, json.dumps(aj, ensure_ascii=False), row["id"]),
             )
             row_changed = True
-        if effective == "选择题":
+        if effective in ("选择题", "多选题"):
             new_content = _normalize_choice_question_text(content)
             if new_content != content:
                 conn.execute(
@@ -194,11 +244,32 @@ def _backfill_choice_questions(conn):
                     (new_content, row["id"]),
                 )
                 row_changed = True
+
+        # 知识点回填：顶层为空时从步骤级收集，并映射到二级知识点
+        raw_kps = aj.get("knowledge_points")
+        if not isinstance(raw_kps, list) or not raw_kps:
+            collected = _collect_step_knowledge_points(aj.get("chunk_results"))
+            if collected:
+                clean_kps = _sanitize_knowledge_points(row["category_level1"], collected)
+                aj["knowledge_points"] = clean_kps
+                conn.execute(
+                    "UPDATE questions SET answer_json = ?, knowledge_points = ? WHERE id = ?",
+                    (json.dumps(aj, ensure_ascii=False), json.dumps(clean_kps, ensure_ascii=False), row["id"]),
+                )
+                row_changed = True
+        elif not row["knowledge_points"]:
+            clean_kps = _sanitize_knowledge_points(row["category_level1"], raw_kps)
+            if clean_kps:
+                conn.execute(
+                    "UPDATE questions SET knowledge_points = ? WHERE id = ?",
+                    (json.dumps(clean_kps, ensure_ascii=False), row["id"]),
+                )
+                row_changed = True
         if row_changed:
             changed += 1
     if changed:
         conn.commit()
-        print(f"[Database] 已修正 {changed} 道选择题的题型/选项排版")
+        print(f"[Database] 已修正 {changed} 道题的题型/选项/知识点")
 
 
 def init_db():
@@ -543,31 +614,40 @@ def save_question(question_text: str, answer_dict: dict):
         except (json.JSONDecodeError, TypeError):
             pass
 
-    # 处理 knowledge_points（清洗）
+    # 处理 knowledge_points（清洗；顶层为空时从步骤级补）
+    chunk_results = answer_dict.get("chunk_results", [])
     raw_kps = answer_dict.get("knowledge_points", [])
     if not isinstance(raw_kps, list):
         raw_kps = []
+    if not raw_kps:
+        raw_kps = _collect_step_knowledge_points(chunk_results)
     clean_kps = _sanitize_knowledge_points(category_level1, raw_kps)
 
     # 提取 question_type（从 chunk_results[0].chunk_type 或 answer_dict 顶层）
-    chunk_results = answer_dict.get("chunk_results", [])
     question_type = answer_dict.get("question_type")
     if not question_type:
         if chunk_results and isinstance(chunk_results, list):
             first = chunk_results[0]
             if isinstance(first, dict):
                 question_type = first.get("chunk_type")
-    if question_type not in ("选择题", "填空题"):
+    if question_type not in ("选择题", "填空题", "多选题"):
         question_type = "大题"
-    # 兜底：内容明显带 A/B/C/D 选项时按选择题保存，并同步修正数据结构
-    if question_type == "大题" and looks_like_choice_question(question_text):
+    # 兜底：答案有多个选项或题干带“多选”时按多选题保存
+    if looks_like_multi_choice_question(question_text, answer_dict):
+        question_type = "多选题"
+        answer_dict["question_type"] = "多选题"
+        if chunk_results and isinstance(chunk_results, list):
+            first = chunk_results[0]
+            if isinstance(first, dict):
+                first["chunk_type"] = "多选题"
+    elif question_type == "大题" and looks_like_choice_question(question_text):
         question_type = "选择题"
         answer_dict["question_type"] = "选择题"
         if chunk_results and isinstance(chunk_results, list):
             first = chunk_results[0]
             if isinstance(first, dict):
                 first["chunk_type"] = "选择题"
-    if question_type == "选择题":
+    if question_type in ("选择题", "多选题"):
         question_text = _normalize_choice_question_text(question_text)
 
     # 处理 source_type（清洗）

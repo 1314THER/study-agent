@@ -184,7 +184,7 @@ def _post_process(questions: list) -> list:
             difficulty = "中等"
         teacher_map = {"简单": "liangliang", "中等": "liangliang", "困难": "taotao"}
         question_type = q.get("type", q.get("question_type", ""))
-        if question_type not in ("选择题", "填空题", "大题"):
+        if question_type not in ("选择题", "多选题", "填空题", "大题"):
             question_type = ""
         result.append({
             "index": q.get("index", i + 1),

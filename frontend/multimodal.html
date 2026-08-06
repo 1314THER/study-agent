@@ -764,7 +764,7 @@ function renderPreview(idx){
     for(var ti=0;ti<ts.length;ti++){var sel=ts[ti]===(q.recommended_teacher||'liangliang')?' selected':'';html+='<option value="'+ts[ti]+'"'+sel+'>'+tn[ts[ti]]+'</option>';}
     html+='</select>';
     html+='<span style="font-size:13px;color:#86868b;margin-left:8px;">题型：</span><select id="type_'+idx+'" onchange="changeType('+idx+',this.value)">';
-    var currentType=q.question_type||'';var tys=['','选择题','填空题','大题'];var tlabels=['自动','选择题','填空题','大题'];
+    var currentType=q.question_type||'';var tys=['','选择题','多选题','填空题','大题'];var tlabels=['自动','选择题','多选题','填空题','大题'];
     for(var ti=0;ti<tys.length;ti++){var sel=tys[ti]===currentType?' selected':'';html+='<option value="'+tys[ti]+'"'+sel+'>'+tlabels[ti]+'</option>';}
     html+='</select>';
     

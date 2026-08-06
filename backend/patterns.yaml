@@ -7,15 +7,29 @@
 #     mother_id: 当前母题在 study_agent.db 中的题目 ID
 #     variant_ids: [变式题 ID]
 
-集合与逻辑用语: {}
-不等式: {}
-一元二次式: {}
-函数与导数: {}
-指对幂耐克函数: {}
-三角函数: {}
-平面向量: {}
-复数: {}
-立体几何: {}
-数列: {}
-解析几何: {}
-概率统计: {}
+集合与逻辑用语:
+  判断元素是否属于常用数集:
+    key: pat-06dace51fe
+    description: ''
+    mother_id: 2
+    variant_ids: []
+  剩余类描述集合1:同一剩余类:
+    key: pat-3bebbd69a0
+    description: ''
+    mother_id: 3
+    variant_ids: []
+  剩余类描述集合2:子集关系:
+    key: pat-2f3defd5ce
+    description: ''
+    mother_id: 4
+    variant_ids: []
+  剩余类描述集合3:完全无关:
+    key: pat-78bad569f6
+    description: ''
+    mother_id: 5
+    variant_ids: []
+  直接提问集合的性质:
+    key: pat-74a8382628
+    description: ''
+    mother_id: 1
+    variant_ids: []

@@ -75,7 +75,7 @@
                 <h1>母题看板</h1>
                 <div class="mother-actions">
                     <button class="mother-btn secondary" onclick="newPattern()">新增套路</button>
-                    <button class="mother-btn secondary" onclick="loadPatterns()">刷新</button>
+                    <button class="mother-btn secondary" onclick="syncPatterns()">刷新</button>
                     <button class="mother-btn" onclick="exportYaml()">导出 YAML</button>
                 </div>
             </div>
@@ -145,6 +145,19 @@ async function loadPatterns() {
         if (p) selectPattern(p.id);
         else _selectedPatternId = null;
     }
+}
+
+async function syncPatterns() {
+    setStatus('正在同步题库母题...');
+    try {
+        var r = await fetch('http://127.0.0.1:8000/patterns/sync', {method: 'POST'});
+        var d = await r.json();
+        if (d.error) throw new Error(d.detail || d.error);
+        setStatus('已同步 ' + (d.synced || 0) + ' 道精选母题');
+    } catch (e) {
+        setStatus('同步失败：' + e.message, true);
+    }
+    await loadPatterns();
 }
 
 function renderTree() {
@@ -327,7 +340,7 @@ function setStatus(msg, isError) {
 
 document.addEventListener('DOMContentLoaded', function() {
     loadCategories();
-    loadPatterns();
+    syncPatterns();
 });
 </script>
 </body>
