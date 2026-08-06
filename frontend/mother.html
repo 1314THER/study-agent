@@ -66,6 +66,8 @@
 <a href="exam.html" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
 <a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
 <a href="mother.html" class="nav-item active" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
+<a href="loop.html" class="nav-item" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
+<a href="board.html" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
 <a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
         </nav>
     </aside>
@@ -79,6 +81,7 @@
                     <button class="mother-btn" onclick="exportYaml()">导出 YAML</button>
                 </div>
             </div>
+            <div id="motherReminder" style="display:none;margin-bottom:12px;padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#9a3412;font-size:14px;"></div>
             <div class="mother-layout">
                 <div class="mother-panel">
                     <h2>板块 · 套路 · 母题</h2>
@@ -108,6 +111,23 @@ function stateLabel(s) {
 }
 
 function stateClass(s) { return 'state-' + (s || 'never'); }
+
+function isDue(p) {
+    var m = p.mastery || {};
+    return m.need_check && m.next_check_at && new Date(m.next_check_at.replace(' ', 'T')) <= new Date();
+}
+
+function checkReminders() {
+    var due = _patterns.filter(isDue);
+    var el = document.getElementById('motherReminder');
+    if (!el) return;
+    if (due.length) {
+        el.style.display = 'block';
+        el.textContent = '有 ' + due.length + ' 个套路需要复查：' + due.map(function(p) { return p.name; }).join('、');
+    } else {
+        el.style.display = 'none';
+    }
+}
 
 async function loadCategories() {
     try {
@@ -140,6 +160,7 @@ async function loadPatterns() {
         document.getElementById('motherTree').innerHTML = '<div class="mother-empty">加载失败</div>';
     }
     renderTree();
+    checkReminders();
     if (_selectedPatternId) {
         var p = _patterns.find(function(x) { return x.id === _selectedPatternId; });
         if (p) selectPattern(p.id);
@@ -158,6 +179,7 @@ async function syncPatterns() {
         setStatus('同步失败：' + e.message, true);
     }
     await loadPatterns();
+    checkReminders();
 }
 
 function renderTree() {
@@ -184,7 +206,9 @@ function renderTree() {
             var p = list[pi];
             var state = p.mastery ? p.mastery.state : 'never';
             html += '<li class="mm-pattern' + (p.id === _selectedPatternId ? ' active' : '') + '" onclick="selectPattern(' + p.id + ')">';
-            html += '<div class="mm-pattern-name">' + escapeHtml(p.name) + '<span class="state-badge ' + stateClass(state) + '">' + escapeHtml(stateLabel(state)) + '</span></div>';
+            html += '<div class="mm-pattern-name">' + escapeHtml(p.name) + '<span class="state-badge ' + stateClass(state) + '">' + escapeHtml(stateLabel(state)) + '</span>';
+            if (isDue(p)) html += '<span class="state-badge" style="background:#fee2e2;color:#b91c1c;">待复查</span>';
+            html += '</div>';
             html += '<div class="mm-pattern-meta">母题 #' + (p.mother_id || '无') + (p.variant_ids.length ? ' · 变式 ' + p.variant_ids.length + ' 道' : '') + '</div>';
             html += '</li>';
         }
@@ -203,6 +227,7 @@ function selectPattern(id) {
     html += '<div><label>稳定编号 key</label><input id="patternKey" value="' + escapeHtml(p.yaml_key || '') + '"></div></div>';
     html += '<div class="form-row"><div><label>所属板块</label><select id="patternCategory" onchange="fillCategorySelect(this)"></select></div>';
     html += '<div><label>套路名</label><input id="patternName" value="' + escapeHtml(p.name || '') + '"></div></div>';
+    html += '<div class="form-row"><div><label>单题限时（秒）</label><input id="patternMaxTime" type="number" min="10" value="' + (p.max_time_seconds || 120) + '"></div><div></div></div>';
     html += '<div class="form-row one"><label>套路说明</label><textarea id="patternDesc">' + escapeHtml(p.description || '') + '</textarea></div>';
     html += '<div class="form-row one"><label>已关联题目</label><div id="questionLinks"></div>';
     html += '<div class="add-question-row"><input id="newQuestionId" type="number" placeholder="题目ID" min="1">';
@@ -254,7 +279,8 @@ async function savePattern() {
         category: document.getElementById('patternCategory').value,
         name: document.getElementById('patternName').value.trim(),
         description: document.getElementById('patternDesc').value,
-        key: document.getElementById('patternKey').value.trim() || null
+        key: document.getElementById('patternKey').value.trim() || null,
+        max_time_seconds: parseInt(document.getElementById('patternMaxTime').value) || 120
     };
     if (!payload.category || !payload.name) { setStatus('板块和套路名不能为空', true); return; }
     try {

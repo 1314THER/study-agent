@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>document.documentElement.classList.add("nav-init")</script>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>套路循环 - 数学最强大脑</title>
+<link rel="stylesheet" href="style.css?v=20260806loop">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+    body { background: #f5f5f7; }
+    .loop-wrap { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+    .loop-header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .loop-header h1 { font-size: 22px; font-weight: 700; color: #1d1d1f; margin: 0; }
+    .loop-card { background: white; border: 1px solid #e5e5e7; border-radius: 12px; padding: 20px 22px; margin-bottom: 14px; }
+    .loop-card h2 { font-size: 15px; font-weight: 600; color: #1d1d1f; margin: 0 0 12px; }
+    .loop-meta { display: flex; gap: 8px; flex-wrap: wrap; }
+    .loop-meta .tag { font-size: 12px; }
+    .loop-time-box { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
+    .loop-time-box input { width: 80px; padding: 6px 8px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 14px; }
+    .loop-question { font-size: 16px; line-height: 1.8; color: #1d1d1f; white-space: pre-line; }
+    .loop-answer { display: none; margin-top: 14px; padding: 12px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; font-size: 15px; line-height: 1.7; }
+    .loop-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .loop-btn { padding: 10px 20px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; background: #0071e3; color: white; }
+    .loop-btn.secondary { background: #f5f5f7; color: #515154; }
+    .loop-btn.danger { background: #c62828; color: white; }
+    .loop-btn.green { background: #2e7d32; color: white; }
+    .loop-btn:disabled { opacity: 0.5; cursor: default; }
+    .loop-timer { font-size: 28px; font-weight: 700; color: #0071e3; font-variant-numeric: tabular-nums; }
+    .loop-timer.over { color: #c62828; }
+    .loop-progress { font-size: 13px; color: #86868b; }
+    .loop-banner { padding: 12px 16px; background: #fff7ed; border: 1px solid #fed7aa; border-radius: 10px; color: #9a3412; margin-bottom: 14px; font-size: 14px; }
+    .teach-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; z-index: 1000; }
+    .teach-modal-inner { position: absolute; inset: 24px; background: white; border-radius: 14px; overflow: hidden; display: flex; flex-direction: column; }
+    .teach-modal-inner iframe { flex: 1; border: none; width: 100%; }
+    .teach-modal-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 16px; border-bottom: 1px solid #e5e5e7; }
+</style>
+</head>
+<body class="theme-liangliang">
+<div class="app-layout">
+    <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
+    <aside class="sidebar">
+        <button class="nav-expand-toggle" onclick="toggleNavExpand()" title="展开导航" aria-label="展开导航">☰</button>
+        <nav>
+<a href="multimodal.html" class="nav-item" data-page="multimodal" title="多模态解答"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
+<a href="teach.html" class="nav-item" data-page="teach" title="老师手把手教你做题"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
+<a href="exam.html" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
+<a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+<a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
+<a href="loop.html" class="nav-item active" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
+<a href="board.html" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
+<a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
+        </nav>
+    </aside>
+    <main class="main-content">
+        <div class="loop-wrap">
+            <div class="loop-header">
+                <h1 id="loopTitle">套路循环</h1>
+                <button class="loop-btn secondary" onclick="pickPattern()">选择套路</button>
+            </div>
+            <div id="loopBody"><div class="loop-card"><div class="mother-empty">加载中...</div></div></div>
+        </div>
+    </main>
+</div>
+
+<div class="teach-modal" id="teachModal">
+    <div class="teach-modal-inner">
+        <div class="teach-modal-head">
+            <span style="font-weight:600;">手把手教学</span>
+            <button class="loop-btn secondary" onclick="closeTeach()">完成教学，回去重做</button>
+        </div>
+        <iframe id="teachFrame" src="about:blank"></iframe>
+    </div>
+</div>
+
+<script src="nav.js?v=20260731h"></script>
+<script>
+var state = {
+    patternId: null,
+    data: null,
+    queue: [],
+    queueIdx: 0,
+    currentQuestion: null,
+    timerStart: null,
+    timerElapsed: 0,
+    timerHandle: null,
+    questionAttempts: 0,
+    sessionFailed: false,
+    motherOnlyMode: false,
+    allQuestionsPassed: false,
+    answerShown: false,
+    viewMode: 'question',
+    failMessage: '',
+    restoring: false
+};
+
+function saveDraft() {
+    try {
+        localStorage.setItem('loop_draft', JSON.stringify({
+            patternId: state.patternId,
+            queue: state.queue.map(function(q) { return q.role; }),
+            queueIdx: state.queueIdx,
+            questionAttempts: state.questionAttempts,
+            sessionFailed: state.sessionFailed,
+            motherOnlyMode: state.motherOnlyMode,
+            allQuestionsPassed: state.allQuestionsPassed,
+            answerShown: state.answerShown,
+            viewMode: state.viewMode,
+            failMessage: state.failMessage,
+            timerStart: state.timerStart,
+            timerElapsed: state.timerElapsed,
+            currentRole: state.currentQuestion ? state.currentQuestion.role : null
+        }));
+    } catch (e) {}
+}
+
+function clearDraft() {
+    try { localStorage.removeItem('loop_draft'); } catch (e) {}
+}
+
+function qs(name) {
+    return new URLSearchParams(location.search).get(name);
+}
+
+function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function formatChoiceQuestion(text) {
+    if (!text) return '';
+    var s = String(text).replace(/\r\n/g, '\n');
+    s = s.replace(/(?<![A-Za-z0-9$])([A-H])\s*[.．、)]\s*/g, '\n$1. ');
+    var lines = s.split('\n');
+    var out = [];
+    for (var i = 0; i < lines.length; i++) {
+        var line = lines[i].trim();
+        if (line) out.push(line);
+    }
+    return out.join('\n');
+}
+
+function renderMath(el) {
+    try {
+        renderMathInElement(el, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+        ], ignoredTags: []});
+    } catch (e) {}
+}
+
+async function api(path, opts) {
+    var r = await fetch('http://127.0.0.1:8000' + path, opts || {});
+    return r.json();
+}
+
+function stateLabel(s) {
+    return {never: '从来都不会', first_pass: '第一次会', second_pass: '第二次会', third_pass: '第三次会', again_wrong: '再次出错'}[s] || s || '从未挑战';
+}
+
+function stateClass(s) {
+    return s === 'third_pass' ? 'state-third_pass' : (s === 'never' ? 'state-never' : 'state-first_pass');
+}
+
+async function pickPattern() {
+    var patterns = await api('/patterns');
+    var html = '<div class="loop-card"><h2>选择套路</h2>';
+    html += '<div style="display:flex;flex-direction:column;gap:8px;">';
+    for (var i = 0; i < patterns.length; i++) {
+        var p = patterns[i];
+        html += '<button class="loop-btn secondary" style="text-align:left;" onclick="startPattern(' + p.id + ')">';
+        html += escapeHtml(p.category) + ' · ' + escapeHtml(p.name);
+        html += ' <span class="state-badge ' + stateClass(p.mastery && p.mastery.state) + '">' + escapeHtml(stateLabel(p.mastery && p.mastery.state)) + '</span>';
+        html += '</button>';
+    }
+    html += '</div></div>';
+    document.getElementById('loopBody').innerHTML = html;
+}
+
+function startPattern(id) {
+    history.replaceState(null, '', '?pattern_id=' + id);
+    clearDraft();
+    state.patternId = id;
+    loadLoop();
+}
+
+async function loadLoop() {
+    if (!state.patternId) {
+        document.getElementById('loopTitle').textContent = '套路循环';
+        await pickPattern();
+        return;
+    }
+    state.motherOnlyMode = false;
+    var d = await api('/patterns/' + state.patternId + '/loop');
+    if (d.error) {
+        document.getElementById('loopBody').innerHTML = '<div class="loop-card">加载失败：' + escapeHtml(d.detail || d.error) + '</div>';
+        return;
+    }
+    state.data = d;
+    renderHeader();
+    if (state.restoring) {
+        restoreDraftState();
+    } else {
+        buildQueue();
+    }
+}
+
+function restoreDraftState() {
+    var draft = null;
+    try { draft = JSON.parse(localStorage.getItem('loop_draft') || 'null'); } catch (e) {}
+    if (!draft || draft.patternId !== state.patternId) {
+        state.restoring = false;
+        buildQueue();
+        return;
+    }
+    state.sessionFailed = draft.sessionFailed || false;
+    state.motherOnlyMode = draft.motherOnlyMode || false;
+    state.allQuestionsPassed = draft.allQuestionsPassed || false;
+    state.queue = (draft.queue || []).map(function(role) {
+        return state.data.questions.find(function(q) { return q.role === role; });
+    }).filter(Boolean);
+    state.queueIdx = Math.min(draft.queueIdx || 0, Math.max(state.queue.length - 1, 0));
+    state.currentQuestion = state.queue[state.queueIdx] || null;
+    state.questionAttempts = draft.questionAttempts || 0;
+    state.answerShown = draft.answerShown || false;
+    state.viewMode = draft.viewMode || 'question';
+    state.failMessage = draft.failMessage || '';
+    state.timerStart = draft.timerStart || null;
+    state.timerElapsed = draft.timerElapsed || 0;
+    state.restoring = false;
+    if (!state.currentQuestion) {
+        startQuestion();
+        return;
+    }
+    renderQuestion();
+    if (state.viewMode === 'judge' || state.viewMode === 'fail') {
+        var ans = document.getElementById('loopAnswer');
+        ans.style.display = 'block';
+        renderMath(ans);
+        var timerEl = document.getElementById('loopTimer');
+        if (timerEl) {
+            timerEl.textContent = state.timerElapsed.toFixed(1) + 's';
+            timerEl.classList.toggle('over', state.timerElapsed > (state.data.pattern.max_time_seconds || 120));
+        }
+        if (state.viewMode === 'judge') {
+            document.getElementById('loopActions').innerHTML = '<div class="loop-actions"><button class="loop-btn green" onclick="onSelfJudge(true)">做对了</button><button class="loop-btn danger" onclick="onSelfJudge(false)">做错了</button></div>';
+        } else {
+            renderFailActions(state.failMessage || '');
+        }
+    } else {
+        startTimer();
+        saveDraft();
+    }
+}
+
+function renderHeader() {
+    var p = state.data.pattern;
+    var m = p.mastery || {};
+    var due = m.need_check && m.next_check_at && new Date(m.next_check_at.replace(' ', 'T')) <= new Date();
+    var html = '<div class="loop-card">';
+    html += '<div class="loop-meta">';
+    html += '<span class="tag tag-category">' + escapeHtml(p.category) + '</span>';
+    html += '<span class="tag ' + stateClass(m.state) + '">' + escapeHtml(stateLabel(m.state)) + '</span>';
+    html += '<span class="tag tag-id">套路 #' + p.id + '</span>';
+    html += '</div>';
+    html += '<div style="font-size:18px;font-weight:600;margin-top:10px;">' + escapeHtml(p.name) + '</div>';
+    html += '<div class="loop-time-box"><label>单题限时（秒）</label><input id="maxTimeInput" type="number" min="10" value="' + (p.max_time_seconds || 120) + '">';
+    html += '<button class="loop-btn secondary" onclick="saveMaxTime()">保存限时</button></div>';
+    if (due) html += '<div class="loop-banner">该套路已到复查时间，进入后开始复查。</div>';
+    html += '</div>';
+    document.getElementById('loopTitle').textContent = p.name;
+    document.getElementById('loopBody').innerHTML = html;
+}
+
+async function saveMaxTime() {
+    var v = parseInt(document.getElementById('maxTimeInput').value);
+    if (!v || v < 10) return;
+    await api('/patterns/' + state.patternId, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({max_time_seconds: v})
+    });
+    loadLoop();
+}
+
+function buildQueue() {
+    var p = state.data.pattern;
+    var m = p.mastery || {};
+    var never = m.state === 'never';
+    var questions = state.data.questions || [];
+    var mother = questions.find(function(q) { return q.role === 'mother'; });
+    var variants = questions.filter(function(q) { return q.role !== 'mother' && q.question_id; });
+    var needVariants = never || state.sessionFailed;
+    if (needVariants && variants.length < 3) {
+        renderGenerateButton();
+        return;
+    }
+    state.queue = [mother];
+    if (needVariants) state.queue = state.queue.concat(variants);
+    state.queueIdx = 0;
+    state.allQuestionsPassed = false;
+    startQuestion();
+}
+
+function renderGenerateButton() {
+    var html = '<div class="loop-card"><h2>还需要 3 道变式题</h2>';
+    html += '<p style="color:#515154;font-size:14px;line-height:1.7;">当前套路还没有足够的变式题。先挑战母题，之后用变式题巩固。';
+    html += '点击生成会调用 AI 并自动保存为变式 1/2/3，可能需要一些时间。</p>';
+    html += '<div class="loop-actions"><button class="loop-btn" onclick="generateVariants()">AI 生成 3 道变式</button>';
+    html += '<button class="loop-btn secondary" onclick="startMotherOnly()">先只挑战母题</button></div></div>';
+    document.getElementById('loopBody').innerHTML += html;
+    state.queue = [state.data.questions.find(function(q) { return q.role === 'mother'; })];
+    state.queueIdx = 0;
+    state.motherOnlyMode = true;
+    saveDraft();
+}
+
+async function generateVariants() {
+    document.getElementById('loopBody').insertAdjacentHTML('beforeend', '<div class="loop-card" id="genBox">正在生成变式，请稍候...</div>');
+    var d = await api('/patterns/' + state.patternId + '/ensure-variants', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({})
+    });
+    if (d.error) {
+        document.getElementById('genBox').innerHTML = '生成失败：' + escapeHtml(d.detail || d.error);
+        return;
+    }
+    if (!d.generated) {
+        var cands = (d.result && d.result.candidates) || [];
+        var reasons = cands.map(function(c) { return c.rejected_reason || '未通过校验'; }).join('；');
+        document.getElementById('genBox').innerHTML = '这次没有生成成功：' + escapeHtml(reasons || 'AI 未通过校验');
+        return;
+    }
+    loadLoop();
+}
+
+function startMotherOnly() {
+    var questions = state.data.questions || [];
+    state.queue = [questions.find(function(q) { return q.role === 'mother'; })];
+    state.queueIdx = 0;
+    state.motherOnlyMode = true;
+    startQuestion();
+}
+
+function startQuestion() {
+    if (state.queueIdx >= state.queue.length) {
+        finishAllPassed();
+        return;
+    }
+    state.currentQuestion = state.queue[state.queueIdx];
+    state.questionAttempts = 0;
+    state.timerStart = null;
+    state.timerElapsed = 0;
+    state.answerShown = false;
+    state.viewMode = 'question';
+    state.failMessage = '';
+    renderQuestion();
+    startTimer();
+    saveDraft();
+}
+
+function renderQuestion() {
+    var q = state.currentQuestion;
+    var idx = state.queueIdx + 1;
+    var total = state.queue.length;
+    var roleLabel = {mother: '母题', variant1: '变式 1', variant2: '变式 2', variant3: '变式 3'}[q.role] || q.role;
+    var html = '<div class="loop-card">';
+    html += '<div class="loop-meta"><span class="tag tag-category">' + escapeHtml(roleLabel) + '</span>';
+    html += '<span class="loop-progress">第 ' + idx + ' / ' + total + ' 关</span></div>';
+    html += '<div class="loop-question" id="loopQuestion">' + formatChoiceQuestion(q.content || '') + '</div>';
+    html += '<div class="loop-time-box"><span style="color:#86868b;font-size:13px;">用时</span><span class="loop-timer" id="loopTimer">0.0s</span></div>';
+    html += '<div class="loop-answer" id="loopAnswer"><strong>答案：</strong><span>' + escapeHtml(q.answer || '暂无') + '</span></div>';
+    html += '<div class="loop-actions" id="loopActions">';
+    html += '<button class="loop-btn" id="doneBtn" onclick="onDone()">做完了</button>';
+    html += '</div></div>';
+    document.getElementById('loopBody').innerHTML = html;
+    renderMath(document.getElementById('loopQuestion'));
+}
+
+function startTimer() {
+    clearInterval(state.timerHandle);
+    if (!state.timerStart) {
+        state.timerStart = Date.now();
+        state.timerElapsed = 0;
+    } else {
+        state.timerElapsed = (Date.now() - state.timerStart) / 1000;
+    }
+    var timerEl = document.getElementById('loopTimer');
+    state.timerHandle = setInterval(function() {
+        if (!timerEl) return;
+        state.timerElapsed = (Date.now() - state.timerStart) / 1000;
+        timerEl.textContent = state.timerElapsed.toFixed(1) + 's';
+        var maxT = state.data.pattern.max_time_seconds || 120;
+        timerEl.classList.toggle('over', state.timerElapsed > maxT);
+    }, 100);
+}
+
+function stopTimer() {
+    clearInterval(state.timerHandle);
+    if (state.timerStart) state.timerElapsed = (Date.now() - state.timerStart) / 1000;
+}
+
+function onDone() {
+    stopTimer();
+    state.questionAttempts++;
+    state.answerShown = true;
+    document.getElementById('loopAnswer').style.display = 'block';
+    renderMath(document.getElementById('loopAnswer'));
+    var maxT = state.data.pattern.max_time_seconds || 120;
+    if (state.timerElapsed > maxT) {
+        recordAttempt(false);
+        state.viewMode = 'fail';
+        renderFailActions('超时：用时 ' + state.timerElapsed.toFixed(1) + 's，超过了限时 ' + maxT + 's。');
+    } else {
+        state.viewMode = 'judge';
+        var html = '<div class="loop-actions"><button class="loop-btn green" onclick="onSelfJudge(true)">做对了</button>';
+        html += '<button class="loop-btn danger" onclick="onSelfJudge(false)">做错了</button></div>';
+        document.getElementById('loopActions').innerHTML = html;
+        saveDraft();
+    }
+}
+
+async function recordAttempt(correct) {
+    var q = state.currentQuestion;
+    await api('/patterns/' + state.patternId + '/attempt', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            question_id: q.question_id,
+            role: q.role,
+            correct: correct,
+            is_first_try: state.questionAttempts === 1,
+            duration_seconds: Math.round(state.timerElapsed)
+        })
+    });
+}
+
+function renderFailActions(msg) {
+    state.viewMode = 'fail';
+    state.failMessage = msg;
+    var html = '<div class="loop-banner" style="margin-top:10px;">' + escapeHtml(msg) + '</div>';
+    html += '<div class="loop-actions">';
+    html += '<button class="loop-btn" onclick="retryQuestion()">重新挑战</button>';
+    html += '<button class="loop-btn secondary" onclick="openTeach()">手把手教学</button>';
+    html += '</div>';
+    document.getElementById('loopActions').innerHTML = html;
+    saveDraft();
+}
+
+async function onSelfJudge(correct) {
+    recordAttempt(correct);
+    if (!correct) {
+        state.sessionFailed = true;
+        state.viewMode = 'fail';
+        renderFailActions('做错了，先重新挑战这道题。');
+        return;
+    }
+    saveDraft();
+    onQuestionPassed();
+}
+
+function onQuestionPassed() {
+    state.queueIdx++;
+    if (state.queueIdx >= state.queue.length) {
+        var m = (state.data.pattern.mastery || {});
+        var never = m.state === 'never';
+        if (state.motherOnlyMode && (never || state.sessionFailed)) {
+            renderGenerateButton();
+        } else {
+            finishAllPassed();
+        }
+    } else {
+        startQuestion();
+    }
+}
+
+function retryQuestion() {
+    document.getElementById('loopAnswer').style.display = 'none';
+    state.answerShown = false;
+    state.viewMode = 'question';
+    state.failMessage = '';
+    startQuestion();
+}
+
+function openTeach() {
+    var q = state.currentQuestion;
+    try { localStorage.setItem('_teach_question', q.content || ''); } catch (e) {}
+    document.getElementById('teachFrame').src = 'teach.html';
+    document.getElementById('teachModal').style.display = 'block';
+}
+
+function closeTeach() {
+    document.getElementById('teachModal').style.display = 'none';
+    document.getElementById('teachFrame').src = 'about:blank';
+    retryQuestion();
+}
+
+async function finishAllPassed() {
+    if (state.allQuestionsPassed) return;
+    state.allQuestionsPassed = true;
+    clearDraft();
+    await api('/patterns/' + state.patternId + '/complete', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({passed: true})
+    });
+    var m = (state.data.pattern.mastery || {});
+    var isOnePass = !state.sessionFailed && state.queue.length <= 1;
+    var next = '已完成一轮套路循环';
+    var html = '<div class="loop-card"><h2>' + (isOnePass ? '一遍过，直接通过' : '全部题目做对，套路通过') + '</h2>';
+    html += '<p style="color:#515154;">' + escapeHtml(next) + '</p>';
+    html += '<div class="loop-actions"><button class="loop-btn" onclick="loadLoop()">查看最新状态</button>';
+    html += '<button class="loop-btn secondary" onclick="pickPattern()">换一个套路</button></div></div>';
+    document.getElementById('loopBody').innerHTML = html;
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    var id = qs('pattern_id');
+    if (id) {
+        state.patternId = parseInt(id);
+        clearDraft();
+        loadLoop();
+    } else {
+        var draft = null;
+        try { draft = JSON.parse(localStorage.getItem('loop_draft') || 'null'); } catch (e) {}
+        if (draft && draft.patternId) {
+            state.patternId = draft.patternId;
+            state.restoring = true;
+            loadLoop();
+        } else {
+            pickPattern();
+        }
+    }
+});
+</script>
+</body>
+</html>

@@ -2,6 +2,7 @@
 
 import json
 import os
+import re
 import sqlite3
 import uuid
 from datetime import datetime, timedelta
@@ -177,8 +178,42 @@ def init_mastery_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_attempts_question ON attempts(question_id);
             CREATE INDEX IF NOT EXISTS idx_attempts_pattern ON attempts(pattern_id);
             CREATE INDEX IF NOT EXISTS idx_attempts_created ON attempts(created_at);
+
+            CREATE TABLE IF NOT EXISTS boards (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                category TEXT NOT NULL UNIQUE,
+                name TEXT DEFAULT '',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+
+            CREATE TABLE IF NOT EXISTS board_nodes (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                board_id INTEGER NOT NULL REFERENCES boards(id),
+                question_id INTEGER NOT NULL,
+                x REAL NOT NULL DEFAULT 0,
+                y REAL NOT NULL DEFAULT 0,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(board_id, question_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_board_nodes_board ON board_nodes(board_id);
+
+            CREATE TABLE IF NOT EXISTS board_edges (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                board_id INTEGER NOT NULL REFERENCES boards(id),
+                from_question_id INTEGER NOT NULL,
+                to_question_id INTEGER NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(board_id, from_question_id, to_question_id)
+            );
+            CREATE INDEX IF NOT EXISTS idx_board_edges_board ON board_edges(board_id);
         """)
         conn.commit()
+        # 迁移：patterns 增加 max_time_seconds
+        cols = [r["name"] for r in conn.execute("PRAGMA table_info(patterns)").fetchall()]
+        if "max_time_seconds" not in cols:
+            conn.execute("ALTER TABLE patterns ADD COLUMN max_time_seconds INTEGER NOT NULL DEFAULT 120")
+            conn.commit()
     finally:
         conn.close()
 
@@ -191,7 +226,7 @@ def get_patterns() -> list:
     conn = _get_conn()
     try:
         rows = conn.execute(
-            "SELECT id, yaml_key, category, name, description FROM patterns ORDER BY category, name"
+            "SELECT id, yaml_key, category, name, description, max_time_seconds FROM patterns ORDER BY category, name"
         ).fetchall()
         qrows = conn.execute(
             "SELECT pattern_id, question_id, role FROM pattern_questions ORDER BY role"
@@ -215,6 +250,7 @@ def get_patterns() -> list:
                 "category": row["category"],
                 "name": row["name"],
                 "description": row["description"],
+                "max_time_seconds": row["max_time_seconds"] or 120,
                 "mother_id": next((q["question_id"] for q in qlist if q["role"] == "mother"), None),
                 "variant_ids": [q["question_id"] for q in qlist if q["role"].startswith("variant")],
                 "mastery": mastery.get(row["id"], {"state": "never", "need_check": 0}),
@@ -282,7 +318,8 @@ def get_pattern(pattern_id: int) -> dict:
 
 
 def update_pattern(pattern_id: int, category: str = None, name: str = None,
-                   description: str = None, key: str = None) -> dict:
+                   description: str = None, key: str = None,
+                   max_time_seconds: int = None) -> dict:
     conn = _get_conn()
     try:
         row = conn.execute("SELECT * FROM patterns WHERE id = ?", (pattern_id,)).fetchone()
@@ -310,9 +347,11 @@ def update_pattern(pattern_id: int, category: str = None, name: str = None,
             ).fetchone()
             if dup_key:
                 raise ValueError(f"套路编号已存在: {key}")
+        new_max_time = max_time_seconds if max_time_seconds is not None else (row["max_time_seconds"] or 120)
+        new_max_time = max(10, int(new_max_time))
         conn.execute(
-            """UPDATE patterns SET category = ?, name = ?, description = ?, yaml_key = ? WHERE id = ?""",
-            (new_category, new_name, new_desc, new_key, pattern_id),
+            """UPDATE patterns SET category = ?, name = ?, description = ?, yaml_key = ?, max_time_seconds = ? WHERE id = ?""",
+            (new_category, new_name, new_desc, new_key, new_max_time, pattern_id),
         )
         if old_category != new_category:
             _recalc_category_mastery(conn, old_category)
@@ -533,3 +572,216 @@ def sync_mother_questions() -> dict:
     if synced:
         export_patterns_yaml()
     return {"synced": synced}
+
+
+def get_pattern_loop(pattern_id: int) -> dict:
+    """返回套路循环页所需的题目、答案、限时与掌握状态。"""
+    pattern = get_pattern(pattern_id)
+    if not pattern:
+        raise ValueError(f"套路不存在: {pattern_id}")
+    roles = ["mother", "variant1", "variant2", "variant3"]
+    variants = pattern.get("variant_ids") or []
+    def _variant_qid(i):
+        return variants[i] if i < len(variants) else None
+    qids = {
+        "mother": pattern.get("mother_id"),
+        "variant1": _variant_qid(0),
+        "variant2": _variant_qid(1),
+        "variant3": _variant_qid(2),
+    }
+    questions = []
+    for role in roles:
+        qid = qids.get(role)
+        if not qid:
+            questions.append({"role": role, "question_id": None, "content": "", "answer": "", "question_type": ""})
+            continue
+        q = get_question_by_id(qid)
+        if not q:
+            questions.append({"role": role, "question_id": qid, "content": "", "answer": "", "question_type": ""})
+            continue
+        aj = q.get("answer_json") or {}
+        answer = aj.get("final_answer") or ""
+        if not answer and aj.get("chunk_results"):
+            answer = " | ".join(cr.get("final_answer", "") for cr in aj["chunk_results"] if cr.get("final_answer"))
+        if not answer:
+            for cr in aj.get("chunk_results", []) or []:
+                if not isinstance(cr, dict):
+                    continue
+                for step in cr.get("steps", []) or []:
+                    if not isinstance(step, dict):
+                        continue
+                    text = str(step.get("detailed_writing") or "") + "\n" + str(step.get("standard_writing") or "")
+                    m = re.search(r"最终答案\s*[：:]\s*(.+)$", text, re.M)
+                    if m:
+                        answer = m.group(1).strip()
+                        break
+                    m2 = re.search(r"选\s*[A-H][、,，]?[A-H]*", text)
+                    if m2:
+                        answer = m2.group(0).strip()
+                        break
+                if answer:
+                    break
+        questions.append({
+            "role": role,
+            "question_id": qid,
+            "content": q.get("content", ""),
+            "answer": answer,
+            "question_type": q.get("question_type", ""),
+        })
+    return {
+        "pattern": pattern,
+        "questions": questions,
+        "has_all_variants": all(q["question_id"] for q in questions if q["role"] != "mother"),
+    }
+
+
+def record_attempt(pattern_id: int, question_id: int, role: str,
+                   correct: bool, is_first_try: bool = False,
+                   duration_seconds: int = 0) -> int:
+    """记录一次套路循环尝试。"""
+    init_mastery_db()
+    conn = _get_conn()
+    try:
+        cur = conn.execute(
+            """INSERT INTO attempts
+               (question_id, pattern_id, role, correct, is_first_try, duration_seconds)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (question_id, pattern_id, role, 1 if correct else 0, 1 if is_first_try else 0, int(duration_seconds or 0)),
+        )
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        conn.close()
+
+
+def ensure_variants(pattern_id: int, teacher: str = "liangliang") -> dict:
+    """变式1/2/3 为空时调用 AI 生成并持久化。"""
+    pattern = get_pattern(pattern_id)
+    if not pattern:
+        raise ValueError(f"套路不存在: {pattern_id}")
+    mother_id = pattern.get("mother_id")
+    if not mother_id:
+        raise ValueError("该套路还没有母题")
+    conn = _get_conn()
+    try:
+        rows = conn.execute(
+            "SELECT role, question_id FROM pattern_questions WHERE pattern_id = ? AND role LIKE 'variant%'",
+            (pattern_id,),
+        ).fetchall()
+    finally:
+        conn.close()
+    existing = {r["role"]: r["question_id"] for r in rows}
+    missing_roles = [f"variant{i}" for i in (1, 2, 3) if f"variant{i}" not in existing]
+    if not missing_roles:
+        return {"generated": 0, "variants": [existing[f"variant{i}"] for i in (1, 2, 3)]}
+
+    from backend.generate import generate_variants
+    result = generate_variants(mother_id, count=len(missing_roles), teacher=teacher)
+    accepted = [c for c in result.get("candidates", []) if c.get("status") == "accepted" and c.get("question_id")]
+    linked = []
+    for role, cand in zip(missing_roles, accepted):
+        add_variant_question(pattern_id, cand["question_id"], role)
+        linked.append({"role": role, "question_id": cand["question_id"]})
+    return {
+        "generated": len(linked),
+        "variants": [x["question_id"] for x in linked],
+        "linked": linked,
+        "result": result,
+    }
+
+
+def get_boards() -> list:
+    """返回所有板块地图：节点、连线、题目摘要与掌握状态。"""
+    init_mastery_db()
+    conn = _get_conn()
+    try:
+        for cat in CATEGORIES:
+            conn.execute(
+                """INSERT OR IGNORE INTO boards (category, name) VALUES (?, ?)""",
+                (cat, cat),
+            )
+        conn.commit()
+        board_rows = conn.execute("SELECT * FROM boards ORDER BY category").fetchall()
+        node_rows = conn.execute("SELECT * FROM board_nodes ORDER BY id").fetchall()
+        edge_rows = conn.execute("SELECT * FROM board_edges ORDER BY id").fetchall()
+        pq_rows = conn.execute(
+            "SELECT pattern_id, question_id, role FROM pattern_questions"
+        ).fetchall()
+        mrows = conn.execute(
+            "SELECT pattern_id, state, need_check, next_check_at, last_completed_at FROM pattern_mastery"
+        ).fetchall()
+    finally:
+        conn.close()
+
+    mastery = {m["pattern_id"]: dict(m) for m in mrows}
+    pq_by_qid = {}
+    for pq in pq_rows:
+        pq_by_qid.setdefault(pq["question_id"], []).append(dict(pq))
+
+    boards = []
+    for b in board_rows:
+        nodes = []
+        for n in node_rows:
+            if n["board_id"] != b["id"]:
+                continue
+            q = get_question_by_id(n["question_id"])
+            links = pq_by_qid.get(n["question_id"], [])
+            pattern_id = next((l["pattern_id"] for l in links if l["role"] == "mother"), None)
+            state = "never"
+            if pattern_id and mastery.get(pattern_id):
+                state = mastery[pattern_id].get("state", "never")
+            nodes.append({
+                "node_id": n["id"],
+                "question_id": n["question_id"],
+                "x": n["x"],
+                "y": n["y"],
+                "content": (q.get("content", "") if q else "")[:120],
+                "question_type": (q.get("question_type", "") if q else ""),
+                "pattern_id": pattern_id,
+                "state": state,
+            })
+        edges = [
+            {"from_question_id": e["from_question_id"], "to_question_id": e["to_question_id"]}
+            for e in edge_rows if e["board_id"] == b["id"]
+        ]
+        boards.append({
+            "id": b["id"],
+            "category": b["category"],
+            "name": b["name"],
+            "nodes": nodes,
+            "edges": edges,
+        })
+    return boards
+
+
+def save_board_layout(board_id: int, nodes: list, edges: list) -> dict:
+    """整体替换某板块地图的节点与连线。nodes 含 question_id/x/y，edges 含 from/to question_id。"""
+    conn = _get_conn()
+    try:
+        board = conn.execute("SELECT * FROM boards WHERE id = ?", (board_id,)).fetchone()
+        if not board:
+            raise ValueError(f"地图不存在: {board_id}")
+        conn.execute("DELETE FROM board_edges WHERE board_id = ?", (board_id,))
+        conn.execute("DELETE FROM board_nodes WHERE board_id = ?", (board_id,))
+        for n in nodes or []:
+            qid = int(n.get("question_id") or 0)
+            if not qid:
+                continue
+            conn.execute(
+                "INSERT INTO board_nodes (board_id, question_id, x, y) VALUES (?, ?, ?, ?)",
+                (board_id, qid, float(n.get("x", 0)), float(n.get("y", 0))),
+            )
+        for e in edges or []:
+            fq = int(e.get("from_question_id") or 0)
+            tq = int(e.get("to_question_id") or 0)
+            if not fq or not tq or fq == tq:
+                continue
+            conn.execute(
+                "INSERT INTO board_edges (board_id, from_question_id, to_question_id) VALUES (?, ?, ?)",
+                (board_id, fq, tq),
+            )
+        conn.execute("UPDATE boards SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (board_id,))
+        conn.commit()
+    finally:
+        conn.close()
+    return next((b for b in get_boards() if b["id"] == board_id), None)

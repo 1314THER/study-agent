@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>document.documentElement.classList.add("nav-init")</script>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>闯关地图 - 数学最强大脑</title>
+<link rel="stylesheet" href="style.css?v=20260806board">
+<style>
+    body { background: #f5f5f7; overflow: hidden; }
+    .board-wrap { height: 100vh; display: flex; flex-direction: column; padding: 16px; box-sizing: border-box; }
+    .board-top { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+    .board-top h1 { font-size: 22px; font-weight: 700; color: #1d1d1f; margin: 0; }
+    .board-btn { padding: 8px 16px; border: none; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; background: #0071e3; color: white; }
+    .board-btn.secondary { background: #f5f5f7; color: #515154; }
+    .board-btn.danger { background: #c62828; color: white; }
+    .board-layout { display: grid; grid-template-columns: 230px 1fr; gap: 12px; flex: 1; min-height: 0; }
+    .board-side { background: white; border: 1px solid #e5e5e7; border-radius: 12px; padding: 12px; overflow-y: auto; }
+    .board-side h2 { font-size: 14px; font-weight: 600; margin: 0 0 10px; }
+    .board-cat { display: block; width: 100%; text-align: left; padding: 9px 10px; border: none; border-radius: 8px; background: transparent; cursor: pointer; font-size: 13px; color: #1d1d1f; }
+    .board-cat:hover { background: #f0f7ff; }
+    .board-cat.active { background: #e8f4ff; color: #0071e3; font-weight: 600; }
+    .board-canvas-wrap { background: #eef0f3; border: 1px solid #e5e5e7; border-radius: 12px; position: relative; overflow: auto; }
+    .board-canvas { position: relative; width: 100%; min-height: 100%; }
+    .board-svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .board-node { position: absolute; width: 190px; min-height: 86px; background: white; border: 2px solid #c7c7cc; border-radius: 10px; padding: 8px 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); user-select: none; z-index: 2; }
+    .board-node.done { border-color: #2e7d32; background: #f0fdf4; }
+    .board-node.progress { border-color: #b45309; background: #fff7ed; }
+    .board-node.locked { border-color: #d1d5db; background: #f3f4f6; color: #9ca3af; }
+    .board-node .bn-title { font-size: 12px; font-weight: 600; margin-bottom: 4px; word-break: break-all; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .board-node .bn-meta { font-size: 11px; color: #86868b; }
+    .board-node .bn-actions { margin-top: 6px; display: flex; gap: 4px; flex-wrap: wrap; }
+    .board-node .bn-actions button { border: none; background: #f0f0f0; border-radius: 5px; font-size: 11px; padding: 3px 6px; cursor: pointer; }
+    .board-node .bn-add { display: none; margin-top: 6px; }
+    .board-node .bn-add input { width: 70px; padding: 3px 5px; border: 1px solid #c7c7cc; border-radius: 5px; font-size: 11px; }
+    .board-node .bn-add button { margin-left: 4px; }
+    .board-hint { font-size: 12px; color: #86868b; line-height: 1.6; margin-bottom: 8px; }
+    .board-status { font-size: 12px; color: #2e7d32; min-height: 18px; margin-top: 8px; }
+</style>
+</head>
+<body class="theme-liangliang">
+<div class="app-layout">
+    <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
+    <aside class="sidebar">
+        <button class="nav-expand-toggle" onclick="toggleNavExpand()" title="展开导航" aria-label="展开导航">☰</button>
+        <nav>
+<a href="multimodal.html" class="nav-item" data-page="multimodal" title="多模态解答"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
+<a href="teach.html" class="nav-item" data-page="teach" title="老师手把手教你做题"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
+<a href="exam.html" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
+<a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+<a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
+<a href="loop.html" class="nav-item" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
+<a href="board.html" class="nav-item active" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
+<a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
+        </nav>
+    </aside>
+    <main class="main-content">
+        <div class="board-wrap">
+            <div class="board-top">
+                <h1>闯关地图</h1>
+                <button class="board-btn" onclick="saveBoard()">保存布局</button>
+                <button class="board-btn secondary" onclick="autoArrange()">自动排版</button>
+                <button class="board-btn secondary" onclick="loadBoards()">刷新</button>
+                <span class="board-status" id="boardStatus"></span>
+            </div>
+            <div class="board-layout">
+                <div class="board-side">
+                    <h2>板块地图</h2>
+                    <div id="boardList"></div>
+                    <div style="margin-top:12px;" class="board-add">
+                        <input id="addRootQid" type="number" placeholder="根节点题目ID" min="1" style="width:100%;box-sizing:border-box;padding:6px 8px;border:1px solid #c7c7cc;border-radius:8px;font-size:13px;">
+                        <button class="board-btn secondary" style="width:100%;margin-top:6px;" onclick="addRoot()">添加根节点</button>
+                    </div>
+                    <div class="board-hint" style="margin-top:12px;">思维导图式闯关：根节点在左侧，后置节点向右展开。点节点上的“加后置”添加下一关。</div>
+                </div>
+                <div class="board-canvas-wrap" id="canvasWrap">
+                    <div class="board-canvas" id="canvas"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="nav.js?v=20260731h"></script>
+<script>
+var boards = [];
+var currentBoard = null;
+
+function saveDraft() {
+    if (!currentBoard) return;
+    try {
+        localStorage.setItem('board_draft', JSON.stringify({
+            boardId: currentBoard.id,
+            nodes: currentBoard.nodes,
+            edges: currentBoard.edges,
+            updatedAt: Date.now()
+        }));
+    } catch (e) {}
+}
+
+function loadDraft() {
+    if (!currentBoard) return;
+    try {
+        var draft = JSON.parse(localStorage.getItem('board_draft') || 'null');
+        if (draft && draft.boardId === currentBoard.id) {
+            currentBoard.nodes = draft.nodes || [];
+            currentBoard.edges = draft.edges || [];
+            document.getElementById('boardStatus').textContent = '已恢复未保存的草稿';
+        }
+    } catch (e) {}
+}
+
+function clearDraft() {
+    try { localStorage.removeItem('board_draft'); } catch (e) {}
+}
+
+function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+async function api(path, opts) {
+    var r = await fetch('http://127.0.0.1:8000' + path, opts || {});
+    return r.json();
+}
+
+async function loadBoards() {
+    boards = await api('/boards');
+    renderBoardList();
+    if (!currentBoard && boards.length) selectBoard(boards[0].id);
+    else if (currentBoard) selectBoard(currentBoard.id);
+}
+
+function renderBoardList() {
+    var html = '';
+    for (var i = 0; i < boards.length; i++) {
+        var b = boards[i];
+        html += '<button class="board-cat' + (currentBoard && currentBoard.id === b.id ? ' active' : '') + '" onclick="selectBoard(' + b.id + ')">' + escapeHtml(b.category) + ' <span style="color:#86868b;">(' + b.nodes.length + ')</span></button>';
+    }
+    document.getElementById('boardList').innerHTML = html || '<div class="mother-empty">暂无地图</div>';
+}
+
+function selectBoard(id) {
+    currentBoard = boards.find(function(b) { return b.id === id; });
+    loadDraft();
+    renderBoardList();
+    autoArrange();
+}
+
+function nodeStatus(node) {
+    if (!currentBoard) return 'available';
+    var prereqs = currentBoard.edges.filter(function(e) { return e.to_question_id === node.question_id; });
+    for (var i = 0; i < prereqs.length; i++) {
+        var from = currentBoard.nodes.find(function(n) { return n.question_id === prereqs[i].from_question_id; });
+        if (!from || from.state !== 'third_pass') return 'locked';
+    }
+    if (node.state === 'third_pass') return 'done';
+    if (node.state === 'first_pass' || node.state === 'second_pass') return 'progress';
+    return 'available';
+}
+
+function autoArrange() {
+    if (!currentBoard) return;
+    var nodes = currentBoard.nodes || [];
+    var edges = currentBoard.edges || [];
+    if (!nodes.length) { renderCanvas(); return; }
+    var children = {};
+    var hasParent = {};
+    for (var i = 0; i < edges.length; i++) {
+        var e = edges[i];
+        if (!children[e.from_question_id]) children[e.from_question_id] = [];
+        children[e.from_question_id].push(e.to_question_id);
+        hasParent[e.to_question_id] = true;
+    }
+    var roots = nodes.filter(function(n) { return !hasParent[n.question_id]; });
+    var levels = [];
+    var seen = {};
+    function visit(qid, depth) {
+        if (seen[qid] && seen[qid] <= depth) return;
+        seen[qid] = depth;
+        if (!levels[depth]) levels[depth] = [];
+        if (levels[depth].indexOf(qid) < 0) levels[depth].push(qid);
+        var kids = children[qid] || [];
+        for (var k = 0; k < kids.length; k++) visit(kids[k], depth + 1);
+    }
+    for (var r = 0; r < roots.length; r++) visit(roots[r].question_id, 0);
+    var orphans = nodes.filter(function(n) { return seen[n.question_id] === undefined; });
+    for (var o = 0; o < orphans.length; o++) visit(orphans[o].question_id, 0);
+    var positions = {};
+    for (var d = 0; d < levels.length; d++) {
+        for (var li = 0; li < levels[d].length; li++) {
+            positions[levels[d][li]] = {x: d * 240 + 30, y: li * 150 + 30};
+        }
+    }
+    for (var j = 0; j < nodes.length; j++) {
+        var p = positions[nodes[j].question_id] || {x: 30, y: 30};
+        nodes[j].x = p.x;
+        nodes[j].y = p.y;
+    }
+    renderCanvas();
+}
+
+function renderCanvas() {
+    var canvas = document.getElementById('canvas');
+    if (!currentBoard) { canvas.innerHTML = ''; return; }
+    var nodes = currentBoard.nodes || [];
+    var edges = currentBoard.edges || [];
+    var maxX = 800, maxY = 600;
+    for (var i = 0; i < nodes.length; i++) {
+        maxX = Math.max(maxX, nodes[i].x + 220);
+        maxY = Math.max(maxY, nodes[i].y + 130);
+    }
+    canvas.style.width = maxX + 'px';
+    canvas.style.height = maxY + 'px';
+    var svg = '<svg class="board-svg" id="boardSvg" width="' + maxX + '" height="' + maxY + '">';
+    for (var e = 0; e < edges.length; e++) {
+        var from = nodes.find(function(n) { return n.question_id === edges[e].from_question_id; });
+        var to = nodes.find(function(n) { return n.question_id === edges[e].to_question_id; });
+        if (!from || !to) continue;
+        var x1 = from.x + 190, y1 = from.y + 43;
+        var x2 = to.x, y2 = to.y + 43;
+        var mid = (x1 + x2) / 2;
+        svg += '<path d="M' + x1 + ',' + y1 + ' C' + mid + ',' + y1 + ' ' + mid + ',' + y2 + ' ' + x2 + ',' + y2 + '" stroke="#0071e3" stroke-width="2" fill="none" marker-end="url(#arrow)"/>';
+    }
+    svg += '<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#0071e3"/></marker></defs></svg>';
+    var html = svg;
+    for (var j = 0; j < nodes.length; j++) {
+        var n = nodes[j];
+        var st = nodeStatus(n);
+        html += '<div class="board-node ' + st + '" id="node_' + n.question_id + '" style="left:' + n.x + 'px;top:' + n.y + 'px;">';
+        html += '<div class="bn-title">' + escapeHtml(n.content || ('题目 #' + n.question_id)) + '</div>';
+        html += '<div class="bn-meta">#' + n.question_id + ' · ' + escapeHtml(n.question_type || '') + ' · ' + st + '</div>';
+        html += '<div class="bn-actions">';
+        if (n.pattern_id) html += '<button onclick="openLoop(' + n.pattern_id + ')">闯关</button>';
+        html += '<button onclick="toggleAddChild(' + n.question_id + ')">加后置</button>';
+        html += '<button onclick="removeNode(' + n.question_id + ')">删除</button>';
+        html += '</div>';
+        html += '<div class="bn-add" id="addBox_' + n.question_id + '"><input id="childQid_' + n.question_id + '" type="number" placeholder="题目ID" min="1"><button onclick="addChild(' + n.question_id + ')">加</button></div>';
+        html += '</div>';
+    }
+    canvas.innerHTML = html;
+}
+
+function toggleAddChild(qid) {
+    var box = document.getElementById('addBox_' + qid);
+    if (box) box.style.display = box.style.display === 'block' ? 'none' : 'block';
+}
+
+function addChild(parentQid) {
+    var qid = parseInt(document.getElementById('childQid_' + parentQid).value);
+    if (!qid || qid === parentQid) return;
+    if (!currentBoard.nodes.find(function(n) { return n.question_id === qid; })) {
+        currentBoard.nodes.push({question_id: qid, x: 0, y: 0, content: '题目 #' + qid, question_type: '', state: 'never'});
+        refreshNode(qid);
+    }
+    var exists = currentBoard.edges.find(function(e) { return e.from_question_id === parentQid && e.to_question_id === qid; });
+    if (!exists) currentBoard.edges.push({from_question_id: parentQid, to_question_id: qid});
+    autoArrange();
+    saveDraft();
+}
+
+async function refreshNode(qid) {
+    var q = await api('/questions/' + qid);
+    var node = currentBoard.nodes.find(function(n) { return n.question_id === qid; });
+    if (node && q && q.content) node.content = q.content;
+    renderCanvas();
+}
+
+function addRoot() {
+    var qid = parseInt(document.getElementById('addRootQid').value);
+    if (!qid) return;
+    if (currentBoard.nodes.find(function(n) { return n.question_id === qid; })) return;
+    currentBoard.nodes.push({question_id: qid, x: 30, y: 30, content: '题目 #' + qid, question_type: '', state: 'never'});
+    refreshNode(qid);
+    autoArrange();
+    saveDraft();
+}
+
+function removeNode(qid) {
+    currentBoard.nodes = currentBoard.nodes.filter(function(n) { return n.question_id !== qid; });
+    currentBoard.edges = currentBoard.edges.filter(function(e) { return e.from_question_id !== qid && e.to_question_id !== qid; });
+    autoArrange();
+    saveDraft();
+}
+
+async function saveBoard() {
+    if (!currentBoard) return;
+    var payload = {
+        nodes: currentBoard.nodes.map(function(n) { return {question_id: n.question_id, x: Math.round(n.x), y: Math.round(n.y)}; }),
+        edges: currentBoard.edges.map(function(e) { return {from_question_id: e.from_question_id, to_question_id: e.to_question_id}; })
+    };
+    var d = await api('/boards/' + currentBoard.id, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(payload)
+    });
+    document.getElementById('boardStatus').textContent = d && d.id ? '布局已保存' : '保存失败';
+    if (d && d.id) clearDraft();
+    await loadBoards();
+}
+
+function openLoop(patternId) {
+    window.open('loop.html?pattern_id=' + patternId, '_blank');
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadBoards();
+});
+</script>
+</body>
+</html>

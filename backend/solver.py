@@ -23,7 +23,13 @@ BRIEF_PATTERN = re.compile(r'^简略过程[：:]\s*(.*)$')
 STANDARD_PATTERN = re.compile(r'^标准过程[：:]\s*(.*)$')
 DETAIL_PATTERN = re.compile(r'^详细过程[：:]\s*(.*)$')
 KNOWLEDGE_POINT_PATTERN = re.compile(r'^知识点[：:]\s*(.+)$')
-STEP_HEADER_PATTERN = re.compile(r'^步骤(\d+)\s*(?:[（(]?小块[）)]?)?[：:]\s*(.*)$')
+STEP_HEADER_PATTERN = re.compile(r'^(?:#{1,6}\s*|\*\*\s*)?步骤\s*([一二三四五六七八九十]+|\d+)\s*(?:[（(]?小块[）)]?)?[：:]\s*(.*?)\s*\**$')
+OPTION_STEP_PATTERN = re.compile(r'^(?:#{1,6}\s*|\*\*\s*)([A-H])\s*(?:选项|、|\.|．)?\s*(?:[:：]\s*(.*?))?\s*\**$')
+CN_STEP_HEADER_PATTERN = re.compile(r'^(?:#{1,6}\s*|\*\*\s*)?第\s*([一二三四五六七八九十]+|\d+)\s*步\s*[：:]\s*(.*?)\s*\**$')
+_CN_NUM = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
+FINAL_ANSWER_LINE_PATTERN = re.compile(r'^(?:最终答案|正确答案|答案)\s*[：:]\s*(.+)$')
+TOTAL_DIFF_PATTERN = re.compile(r'总分\s*[：:]\s*\$?(\d+)\$?\s*分?\s*[→\-]?\s*(容易|中等|困难|极难)')
+KP_LINE_PATTERN = re.compile(r'^(?:块知识点|知识点)\s*[：:]\s*(.+)$')
 CHUNK_PATTERN = re.compile(r'###\s*块(\d+)\s*')
 
 # Verifier 输出中的块级字段
@@ -283,10 +289,25 @@ def _parse_chunk_meta(text: str) -> dict:
         if m:
             meta["final_answer"] = m.group(1).strip()
             continue
+        m = FINAL_ANSWER_LINE_PATTERN.match(stripped)
+        if m and not meta["final_answer"]:
+            meta["final_answer"] = m.group(1).strip()
+            continue
         m = BLOCK_KP_PATTERN.match(stripped)
         if m:
             kps = [kp.strip().strip("[]") for kp in m.group(1).split("、") if kp.strip()]
             meta["knowledge_points"] = kps
+            continue
+        m = TOTAL_DIFF_PATTERN.search(stripped)
+        if m and meta["difficulty"] is None:
+            meta["difficulty"] = {"level": m.group(2), "total_score": int(m.group(1)), "dimensions": {}}
+            continue
+        m = KP_LINE_PATTERN.match(stripped)
+        if m:
+            kps = [kp.strip().strip("[]") for kp in m.group(1).split("、") if kp.strip()]
+            for kp in kps:
+                if kp and kp not in meta["knowledge_points"]:
+                    meta["knowledge_points"].append(kp)
             continue
     return meta
 
@@ -301,14 +322,27 @@ def _parse_steps(text: str) -> list:
     for line in text.split("\n"):
         stripped = line.strip()
         m = STEP_HEADER_PATTERN.match(stripped)
+        if not m:
+            m = OPTION_STEP_PATTERN.match(stripped)
+        if not m:
+            m = CN_STEP_HEADER_PATTERN.match(stripped)
         if m:
             if current_step is not None:
                 steps.append(current_step)
-            parsing_standard = False
+            num_raw = m.group(1)
+            title_raw = m.group(2) if m.lastindex and m.lastindex >= 2 else ""
+            parsing_standard = not num_raw.isdigit()
             parsing_detailed = False
+            if num_raw.isdigit():
+                step_number = int(num_raw)
+            elif num_raw in _CN_NUM:
+                step_number = _CN_NUM[num_raw]
+                parsing_standard = True
+            else:
+                step_number = len(steps) + 1
             current_step = {
-                "step_number": int(m.group(1)),
-                "title": (m.group(2) or "").strip(),
+                "step_number": step_number,
+                "title": (title_raw or ("选项 " + num_raw if not num_raw.isdigit() else "")).strip(),
                 "step_level1": None,
                 "standard_writing": "",
                 "detailed_writing": "",
@@ -599,6 +633,25 @@ def step_verify_all(content: str, question: str, category: str = None, question_
     for pc in raw_chunks:
         meta = _parse_chunk_meta(pc["content"])
         steps = _parse_steps(pc["content"])
+        if not steps:
+            print(f"[Verifier] {verifier_cat} 未解析到步骤，输出片段: {pc['content'][:300]}", file=sys.stderr)
+            steps = [{
+                "step_number": 1,
+                "title": (meta.get("chunk_type") or "解答")[:30],
+                "step_level1": None,
+                "standard_writing": pc["content"][:4000],
+                "detailed_writing": pc["content"][:4000],
+                "knowledge_point": "",
+                "step_difficulty": {"level": "容易", "score": 1},
+            }]
+        for step in steps:
+            if not step.get("standard_writing"):
+                step["standard_writing"] = pc["content"][:4000]
+            # 详细过程缺失时用标准过程兜底，避免 Formatter 判为不完整
+            if not step.get("detailed_writing"):
+                step["detailed_writing"] = step.get("standard_writing", "")
+            if not step.get("title") and step.get("standard_writing"):
+                step["title"] = step.get("standard_writing", "")[:30]
         steps = _validate_step_names(verifier_cat, steps)
 
         seen = set()
@@ -617,6 +670,10 @@ def step_verify_all(content: str, question: str, category: str = None, question_
             "final_answer": meta.get("final_answer", ""),
             "knowledge_points": unique_kps,
         })
+        for step in steps:
+            missing = [k for k in ("title", "standard_writing", "detailed_writing") if not str(step.get(k) or "").strip()]
+            if missing:
+                print(f"[Verifier] 步骤 {step.get('step_number')} 缺字段 {missing}: {json.dumps(step, ensure_ascii=False)[:300]}", file=sys.stderr)
     # 知识点过滤：只保留 CATEGORIES 中存在的子板块名
     _all_valid_kps = set()
     for subs in CATEGORIES.values():

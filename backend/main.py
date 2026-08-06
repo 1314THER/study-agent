@@ -300,6 +300,7 @@ class UpdatePatternRequest(BaseModel):
     name: Optional[str] = Field(None, description="套路名")
     description: Optional[str] = Field(None, description="套路说明")
     key: Optional[str] = Field(None, description="套路稳定编号")
+    max_time_seconds: Optional[int] = Field(None, description="单题限时（秒）")
 
 
 class PatternQuestionRequest(BaseModel):
@@ -317,6 +318,7 @@ def api_update_pattern(pattern_id: int, req: UpdatePatternRequest):
             name=req.name,
             description=req.description,
             key=req.key,
+            max_time_seconds=req.max_time_seconds,
         )
     except ValueError as e:
         from fastapi.responses import JSONResponse
@@ -367,6 +369,103 @@ def api_sync_patterns():
     """把题库里的精选母题同步为母题看板套路"""
     from backend.patterns import sync_mother_questions
     return sync_mother_questions()
+
+
+@app.get("/patterns/{pattern_id}/loop")
+def api_get_pattern_loop(pattern_id: int):
+    """返回套路循环页数据：母题/变式/限时/掌握状态"""
+    from backend.patterns import get_pattern_loop
+    try:
+        return get_pattern_loop(pattern_id)
+    except ValueError as e:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=404, content={"error": "not_found", "detail": str(e)})
+
+
+class PatternAttemptRequest(BaseModel):
+    question_id: int
+    role: str = Field(..., description="mother/variant1/variant2/variant3")
+    correct: bool
+    is_first_try: bool = False
+    duration_seconds: int = 0
+
+
+@app.post("/patterns/{pattern_id}/attempt")
+def api_record_pattern_attempt(pattern_id: int, req: PatternAttemptRequest):
+    from backend.patterns import record_attempt
+    aid = record_attempt(
+        pattern_id=pattern_id,
+        question_id=req.question_id,
+        role=req.role,
+        correct=req.correct,
+        is_first_try=req.is_first_try,
+        duration_seconds=req.duration_seconds,
+    )
+    return {"attempt_id": aid, "saved": True}
+
+
+class EnsureVariantsRequest(BaseModel):
+    teacher: Optional[str] = Field("liangliang", description="老师")
+
+
+class PatternCompleteRequest(BaseModel):
+    passed: bool
+
+
+@app.post("/patterns/{pattern_id}/complete")
+def api_complete_pattern_loop(pattern_id: int, req: PatternCompleteRequest):
+    """完成一次套路循环，推进掌握状态"""
+    from backend.patterns import complete_pattern_loop
+    return complete_pattern_loop(pattern_id, req.passed)
+
+
+@app.post("/patterns/{pattern_id}/ensure-variants")
+def api_ensure_pattern_variants(pattern_id: int, req: EnsureVariantsRequest):
+    """变式1/2/3 为空时 AI 生成并持久化"""
+    from backend.patterns import ensure_variants
+    try:
+        return ensure_variants(pattern_id, teacher=req.teacher or "liangliang")
+    except Exception as e:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=400, content={"error": "generate_failed", "detail": str(e)[:200]})
+
+
+@app.get("/boards")
+def api_get_boards():
+    """返回全部板块闯关地图"""
+    from backend.patterns import get_boards
+    return get_boards()
+
+
+class BoardNodePayload(BaseModel):
+    question_id: int
+    x: float = 0
+    y: float = 0
+
+
+class BoardEdgePayload(BaseModel):
+    from_question_id: int
+    to_question_id: int
+
+
+class BoardLayoutRequest(BaseModel):
+    nodes: List[BoardNodePayload] = []
+    edges: List[BoardEdgePayload] = []
+
+
+@app.put("/boards/{board_id}")
+def api_save_board_layout(board_id: int, req: BoardLayoutRequest):
+    """整体保存某板块地图的节点与连线"""
+    from backend.patterns import save_board_layout
+    try:
+        return save_board_layout(
+            board_id,
+            [{"question_id": n.question_id, "x": n.x, "y": n.y} for n in req.nodes],
+            [{"from_question_id": e.from_question_id, "to_question_id": e.to_question_id} for e in req.edges],
+        )
+    except ValueError as e:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=400, content={"error": "invalid_board", "detail": str(e)})
 
 
 class AiSearchRequest(BaseModel):
