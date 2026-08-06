@@ -33,15 +33,34 @@ _DIMENSION_ALIASES = {
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "study_agent.db")
 
 
+_MATH_SPAN_PATTERN = re.compile(r"\$\$.*?\$\$|\$[^$\n]*?\$", re.DOTALL)
+_OPTION_LABEL_PATTERN = re.compile(r"(?<![A-Za-z0-9$\\])([A-H])\s*[.．、)]\s*")
+
+
+def _plain_segments(text: str) -> list:
+    """把字符串切成“非公式”片段，LaTeX 的 $...$ / $$...$$ 原样保留。"""
+    out = []
+    pos = 0
+    for m in _MATH_SPAN_PATTERN.finditer(text):
+        if m.start() > pos:
+            out.append(text[pos:m.start()])
+        out.append(m.group(0))
+        pos = m.end()
+    if pos < len(text):
+        out.append(text[pos:])
+    return out
+
+
 def looks_like_choice_question(text: str) -> bool:
     """内容中出现两个以上 A/B/C/D 选项标记时，按选择题处理。"""
     if not text:
         return False
     labels = set()
-    for m in re.finditer(r"(?<![A-Za-z0-9])([A-H])\s*[.．、)]", text):
-        labels.add(m.group(1).upper())
-        if len(labels) >= 2:
-            return True
+    for segment in _plain_segments(text):
+        for m in _OPTION_LABEL_PATTERN.finditer(segment):
+            labels.add(m.group(1).upper())
+            if len(labels) >= 2:
+                return True
     return False
 
 
@@ -57,7 +76,8 @@ def looks_like_multi_choice_question(question_text: str = "", answer_dict: dict 
         first = chunk_results[0]
         if isinstance(first, dict):
             final_answer = first.get("final_answer") or ""
-    m = re.search(r"选\s*([A-H](?:\s*[、,，/]\s*[A-H])+)", final_answer or "")
+    cleaned = re.sub(r"\$", "", final_answer or "")
+    m = re.search(r"选\s*([A-H](?:\s*[、,，/]\s*[A-H]|\s*[A-H])+)", cleaned)
     if not m:
         return False
     labels = set(re.findall(r"[A-H]", m.group(1)))
@@ -69,7 +89,12 @@ def _normalize_choice_question_text(text: str) -> str:
     if not text:
         return text
     s = text.replace("\r\n", "\n")
-    s = re.sub(r"(?<![A-Za-z0-9$])([A-H])\s*[.．、)]\s*", r"\n\1. ", s)
+    segments = _plain_segments(s)
+    for i, segment in enumerate(segments):
+        if segment.startswith(("$", "$$")):
+            continue
+        segments[i] = _OPTION_LABEL_PATTERN.sub(r"\n\1. ", segment)
+    s = "".join(segments)
     lines = []
     for line in s.split("\n"):
         stripped = line.strip()
@@ -77,6 +102,15 @@ def _normalize_choice_question_text(text: str) -> str:
             continue
         lines.append(stripped)
     return "\n".join(lines).strip()
+
+
+def _ensure_multi_choice_marker(text: str) -> str:
+    """多选题入库前在题干开头补上（多选），方便学生一眼区分。"""
+    if not text:
+        return text
+    if re.match(r"^[（(]\s*多选\s*[）)]", text.strip()):
+        return text
+    return "（多选）" + text.strip()
 
 
 def _collect_step_knowledge_points(chunk_results: list) -> list:
@@ -237,6 +271,8 @@ def _backfill_choice_questions(conn):
             )
             row_changed = True
         if effective in ("选择题", "多选题"):
+            if effective == "多选题":
+                content = _ensure_multi_choice_marker(content)
             new_content = _normalize_choice_question_text(content)
             if new_content != content:
                 conn.execute(
@@ -648,6 +684,8 @@ def save_question(question_text: str, answer_dict: dict):
             if isinstance(first, dict):
                 first["chunk_type"] = "选择题"
     if question_type in ("选择题", "多选题"):
+        if question_type == "多选题":
+            question_text = _ensure_multi_choice_marker(question_text)
         question_text = _normalize_choice_question_text(question_text)
 
     # 处理 source_type（清洗）

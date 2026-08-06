@@ -132,11 +132,16 @@ function escapeHtml(s) {
 function formatChoiceQuestion(text) {
     if (!text) return '';
     var s = String(text).replace(/\r\n/g, '\n');
-    s = s.replace(/(?<![A-Za-z0-9$])([A-H])\s*[.．、)]\s*/g, '\n$1. ');
+    var parts = s.split(/(\$\$[^$]*\$\$|\$[^$\n]*\$)/g);
+    for (var i = 0; i < parts.length; i++) {
+        if (parts[i].charAt(0) === '$') continue;
+        parts[i] = parts[i].replace(/(?<![A-Za-z0-9$\\])([A-H])\s*[.．、)]\s*/g, '\n$1. ');
+    }
+    s = parts.join('');
     var lines = s.split('\n');
     var out = [];
-    for (var i = 0; i < lines.length; i++) {
-        var line = lines[i].trim();
+    for (var j = 0; j < lines.length; j++) {
+        var line = lines[j].trim();
         if (line) out.push(line);
     }
     return out.join('\n');

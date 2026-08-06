@@ -312,7 +312,7 @@ def _parse_chunk_meta(text: str) -> dict:
     return meta
 
 
-def _parse_steps(text: str) -> list:
+def _parse_steps(text: str, allow_option_steps: bool = True) -> list:
     """从 Verifier 输出中解析步骤（小块）"""
     steps = []
     current_step = None
@@ -322,7 +322,7 @@ def _parse_steps(text: str) -> list:
     for line in text.split("\n"):
         stripped = line.strip()
         m = STEP_HEADER_PATTERN.match(stripped)
-        if not m:
+        if not m and allow_option_steps:
             m = OPTION_STEP_PATTERN.match(stripped)
         if not m:
             m = CN_STEP_HEADER_PATTERN.match(stripped)
@@ -331,7 +331,7 @@ def _parse_steps(text: str) -> list:
                 steps.append(current_step)
             num_raw = m.group(1)
             title_raw = m.group(2) if m.lastindex and m.lastindex >= 2 else ""
-            parsing_standard = not num_raw.isdigit()
+            parsing_standard = True
             parsing_detailed = False
             if num_raw.isdigit():
                 step_number = int(num_raw)
@@ -632,21 +632,24 @@ def step_verify_all(content: str, question: str, category: str = None, question_
     chunk_results = []
     for pc in raw_chunks:
         meta = _parse_chunk_meta(pc["content"])
-        steps = _parse_steps(pc["content"])
+        steps = _parse_steps(pc["content"], allow_option_steps=(verifier_cat == "多选题"))
         if not steps:
             print(f"[Verifier] {verifier_cat} 未解析到步骤，输出片段: {pc['content'][:300]}", file=sys.stderr)
             steps = [{
                 "step_number": 1,
                 "title": (meta.get("chunk_type") or "解答")[:30],
                 "step_level1": None,
-                "standard_writing": pc["content"][:4000],
-                "detailed_writing": pc["content"][:4000],
+                "standard_writing": pc["content"],
+                "detailed_writing": pc["content"],
                 "knowledge_point": "",
                 "step_difficulty": {"level": "容易", "score": 1},
             }]
         for step in steps:
             if not step.get("standard_writing"):
-                step["standard_writing"] = pc["content"][:4000]
+                fallback_text = step.get("detailed_writing") or ""
+                if not fallback_text and len(steps) == 1:
+                    fallback_text = pc["content"]
+                step["standard_writing"] = fallback_text
             # 详细过程缺失时用标准过程兜底，避免 Formatter 判为不完整
             if not step.get("detailed_writing"):
                 step["detailed_writing"] = step.get("standard_writing", "")
