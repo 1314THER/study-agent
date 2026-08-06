@@ -39,6 +39,7 @@ function safeParseKps(kps){
 <a href="teach.html" class="nav-item" data-page="teach" title="老师手把手教你做题"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
 <a href="exam.html" class="nav-item active" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
 <a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+<a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
 <a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
 </nav>
         </aside>
@@ -177,7 +178,7 @@ function safeParseKps(kps){
                 html += '<div class="exam-qitem-header" onclick="toggleQItem(this)">';
                 html += '<span class="exam-qitem-arrow">▶</span>';
                 html += '<span class="exam-qitem-num">' + (i + 1) + '</span>';
-                html += '<span class="exam-qitem-preview">' + (q.content || '') + '</span>';
+                html += '<span class="exam-qitem-preview">' + formatChoiceQuestion(q.content || '') + '</span>';
                 html += '<button class="exam-move-btn" onclick="event.stopPropagation();moveQuestion(' + i + ', -1)" title="上移">↑</button>';
                 html += '<button class="exam-move-btn" onclick="event.stopPropagation();moveQuestion(' + i + ', 1)" title="下移">↓</button>';
                 html += '<button class="exam-qitem-remove" onclick="event.stopPropagation();removeQ(' + i + ')" title="移除">✕</button>';
@@ -405,7 +406,7 @@ function renderPreview() {
                 
                 // Question number + content
                 appendHtml(
-                    '<div style="font-weight:600;margin-bottom:6px;">' + (i + 1) + '. ' + (q.content || '') + '</div>'
+                    '<div style="font-weight:600;margin-bottom:6px;white-space:pre-line;">' + (i + 1) + '. ' + formatChoiceQuestion(q.content || '') + '</div>'
                 );
                 
                 if (mode === 'teacher' && cr) {
@@ -619,6 +620,20 @@ function renderPreview() {
         // ---- Utils ----
         function escapeHtml(str) {
             return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        function formatChoiceQuestion(text) {
+            if (!text) return '';
+            var s = String(text).replace(/\r\n/g, '\n');
+            s = s.replace(/(?<![A-Za-z0-9$])([A-H])\s*[.．、)]\s*/g, '\n$1. ');
+            var lines = s.split('\n');
+            var out = [];
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i].trim();
+                if (!line) continue;
+                out.push(line);
+            }
+            return out.join('\n');
         }
 
         // ---- Init ----

@@ -31,6 +31,7 @@ function safeParseKps(kps){
         .mm-upload-icon { font-size: 48px; margin-bottom: 12px; }
         .mm-upload-text { font-size: 16px; color: #1d1d1f; margin-bottom: 8px; }
         .mm-upload-hint { font-size: 13px; color: #86868b; }
+        .mm-input-hint { font-size: 12px; color: #86868b; margin-top: 6px; }
         .mm-loading { text-align: center; padding: 40px; }
         .mm-spinner { width: 32px; height: 32px; border: 3px solid #e5e5e7; border-top-color: #0071e3; border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 12px; }
         
@@ -61,6 +62,7 @@ function safeParseKps(kps){
         .mm-preview-section { margin-bottom: 12px; }
         .mm-preview-rendered { padding: 12px; background: #fafafa; border-radius: 8px; font-size: 15px; line-height: 1.7; margin-bottom: 8px; }
         .mm-preview-rendered .katex { font-size: 1.1em; }
+        .mm-preview-rendered, .mm-qpreview-latex, .compact-question { white-space: pre-wrap; overflow-wrap: break-word; }
         .mm-edit-area { margin-bottom: 8px; }
         .mm-edit-area textarea { width: 100%; padding: 10px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 14px; font-family: monospace; min-height: 80px; resize: vertical; }
         .mm-edit-area textarea:focus { border-color: #0071e3; outline: none; }
@@ -121,6 +123,7 @@ function safeParseKps(kps){
 <a href="teach.html" class="nav-item" data-page="teach" title="老师手把手教你做题"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
 <a href="exam.html" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
 <a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+<a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
 <a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
 </nav>
     </aside>
@@ -130,23 +133,24 @@ function safeParseKps(kps){
             <p class="subtitle" id="mmSubtitle">上传试卷 / 图片 / 文档，自动切题后勾选批量解答</p>
 
             <div id="mmUploadArea">
-                <div class="mm-upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                <div class="mm-upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()" ondragover="onDropZoneDragOver(event)" ondragleave="onDropZoneDragLeave(event)" ondrop="onDropZoneDrop(event)">
                     <div class="mm-upload-icon">📄</div>
                     <div class="mm-upload-text">拖拽文件到此处</div>
                     <div class="mm-upload-hint">支持 PDF / JPG / PNG / Word(.docx) / 文本(.txt)</div>
                 </div>
-                <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.docx,.txt" style="display:none" onchange="onFileSelect(event)">
+                <input type="file" id="fileInput" accept=".pdf,.jpg,.jpeg,.png,.docx,.txt" multiple style="display:none" onchange="onFileSelect(event)">
                 <div id="filePreview" style="display:none;text-align:center;padding:12px;">
-                    <span id="fileName" style="font-size:15px;color:#1d1d1f;"></span>
-                    <button class="mm-solve-btn" onclick="startParse()" style="margin-left:12px;padding:8px 20px;">开始解析</button>
+                    <div id="fileList" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:10px;"></div>
+                    <button class="mm-solve-btn" onclick="startParse()" style="padding:8px 20px;">开始解析</button>
                 </div>
                 <div style="text-align:center;margin:14px 0;color:#c7c7cc;font-size:13px;">—— 或 ——</div>
                 <div style="display:flex;gap:8px;align-items:flex-end;">
-                    <textarea id="mmTextInput" placeholder="直接输入题目文本，支持 LaTeX 语法，Enter 发送..." 
-                        style="flex:1;padding:12px 16px;border:1px solid #c7c7cc;border-radius:12px;font-size:15px;resize:vertical;height:44px;font-family:inherit;outline:none;box-sizing:border-box;" oninput="autoResize(this)"
+                    <textarea id="mmTextInput" placeholder="输入题目文本，支持 LaTeX；可直接粘贴图片 / 文件，Enter 发送..." 
+                        style="flex:1;padding:12px 16px;border:1px solid #c7c7cc;border-radius:12px;font-size:15px;resize:vertical;height:44px;font-family:inherit;outline:none;box-sizing:border-box;" oninput="autoResize(this)" onpaste="onTextPaste(event)"
                         onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();submitText();}"></textarea>
                     <button onclick="submitText()" style="padding:12px 28px;background:#0071e3;color:white;border:none;border-radius:12px;font-size:15px;cursor:pointer;white-space:nowrap;">发送</button>
                 </div>
+                <div class="mm-input-hint">也可直接把图片或文件拖到上方虚线区域</div>
                 <div id="mmLoading" class="mm-loading" style="display:none;"><div class="mm-spinner"></div><div>正在解析题目，请稍候...</div></div>
             </div>
 
@@ -209,7 +213,8 @@ var _teacherGradients = {
     xuefeng:'linear-gradient(90deg,#7c3aed,#a78bfa)',
     ji:'linear-gradient(90deg,#16a34a,#4ade80)'
 };
-var _pendingFile = null;
+var _pendingFiles = [];
+var _filePreviewUrls = [];
 var teacherNames = {liangliang:'梁梁',taotao:'韬韬',xuefeng:'雪峰',ji:'鸡'};
 var STORAGE_KEY = 'multimodal_state';
 
@@ -228,7 +233,11 @@ function sourceMetaText(sourceType, sourceMeta){
     if(sourceType === 'ai生成') return m.reference_id ? '参考题 #' + m.reference_id : '';
     if(sourceType === '精选母题'){
         var owner = m.owner || 'sqz';
-        return m.mother_id ? owner + '·母题 #' + m.mother_id : owner;
+        var txt = owner;
+        if (m.pattern) txt += '·' + m.pattern;
+        if (m.category) txt += ' · ' + m.category;
+        if (m.mother_id) txt += ' · 母题 #' + m.mother_id;
+        return txt;
     }
     return '';
 }
@@ -250,6 +259,10 @@ function sourceFieldsHtml(sourceType, sourceMeta, prefix){
         html += '<div class="source-meta-field"><label>参考题目ID</label>';
         html += '<input type="text" id="' + prefix + '_ref" placeholder="参考题目ID" maxlength="30" value="' + escapeHtml(m.reference_id || '') + '"></div>';
     } else if (sourceType === '精选母题') {
+        html += '<div class="source-meta-field"><label>所属板块</label>';
+        html += '<select id="' + prefix + '_category" class="mother-category-select"><option value="">加载中...</option></select></div>';
+        html += '<div class="source-meta-field"><label>套路名</label>';
+        html += '<input type="text" id="' + prefix + '_pattern" placeholder="如：直线与圆锥曲线联立" maxlength="50" value="' + escapeHtml(m.pattern || '') + '"></div>';
         html += '<div class="source-meta-field"><label>来源署名</label>';
         html += '<input type="text" id="' + prefix + '_owner" placeholder="sqz" maxlength="30" value="' + escapeHtml(m.owner || 'sqz') + '"></div>';
         html += '<div class="source-meta-field"><label>母题ID</label>';
@@ -273,10 +286,36 @@ function collectSourceFields(sourceType, prefix){
     } else if (sourceType === '精选母题') {
         var owner = document.getElementById(prefix + '_owner');
         var mid = document.getElementById(prefix + '_mid');
+        var cat = document.getElementById(prefix + '_category');
+        var pat = document.getElementById(prefix + '_pattern');
         m.owner = (owner && owner.value.trim()) ? owner.value.trim() : 'sqz';
         if (mid && mid.value.trim()) m.mother_id = mid.value.trim();
+        if (cat && cat.value) m.category = cat.value;
+        if (pat && pat.value.trim()) m.pattern = pat.value.trim();
     }
     return m;
+}
+function populateMotherCategoryOptions(){
+    fetch('http://127.0.0.1:8000/categories')
+        .then(function(r){return r.json();})
+        .then(function(data){
+            var cats=(data||[]).map(function(x){return x.level1;});
+            var sels=document.querySelectorAll('.mother-category-select');
+            for(var i=0;i<sels.length;i++){
+                var cur=sels[i].value;
+                var html='<option value="">请选择板块</option>';
+                for(var j=0;j<cats.length;j++)html+='<option value="'+escapeHtml(cats[j])+'">'+escapeHtml(cats[j])+'</option>';
+                sels[i].innerHTML=html;
+                if(cur)sels[i].value=cur;
+            }
+        })
+        .catch(function(){});
+}
+async function registerMotherQuestion(questionId, srcMeta){
+    if(!srcMeta||!srcMeta.category||!srcMeta.pattern)return;
+    try{
+        await fetch('http://127.0.0.1:8000/patterns/mother',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question_id:questionId,category:srcMeta.category,name:srcMeta.pattern})});
+    }catch(e){console.error('登记母题失败:',e);}
 }
 function sourceChipsHtml(activeType, prefix){
     var types = ['ai生成', '高考题', '模拟题', '精选母题'];
@@ -294,6 +333,7 @@ function selectImportSource(el, prefix){
     var type = el.dataset.value;
     var fieldsBox = document.getElementById(prefix + '_fields');
     if (fieldsBox) fieldsBox.outerHTML = sourceFieldsHtml(type, {}, prefix);
+    if (type === '精选母题') populateMotherCategoryOptions();
     if (prefix === 'bdu') syncUnifiedAutoRow();
 }
 
@@ -325,18 +365,6 @@ function toggleUnifiedAutoNo(){
         var field = noInput.closest('.source-meta-field');
         if (field) field.style.display = auto.checked ? 'none' : '';
     }
-}
-
-// ---- Collapse ----
-function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
-function submitText(){
-    var ta=document.getElementById('mmTextInput');
-    if(ta&&ta.value.trim())_pendingFile=null;onFileSelect({target:{files:[]}});
-    var text=ta&&ta.value.trim();if(!text)return;
-    _questions=[{index:1,latex:text,type:'',difficulty:'中等',question_type:''}];
-    document.getElementById('mmUploadArea').style.display='none';
-    document.getElementById('mmSolveArea').style.display='block';
-    document.getElementById('mmTitle').textContent='1 道题';renderQuestionList();saveState();
 }
 
 function toggleSessionCollapse(idx){
@@ -382,23 +410,111 @@ function selectAllQuestions(){
 
 // ---- File + Text Parse ----
 function startParse(){
-    if(!_pendingFile){alert('请先选择文件');return;}
-    uploadFile(_pendingFile);
+    if(_pendingFiles.length===0){alert('请先选择文件');return;}
+    uploadFiles(_pendingFiles.slice());
 }
 function autoResize(el){el.style.height="auto";el.style.height=el.scrollHeight+"px";}
 function submitText(){
-    var text=document.getElementById('mmTextInput').value.trim();
-    if(!text){return;}
-    // Create a Blob and upload as file
-    var blob=new Blob([text],{type:'text/plain'});
-    var file=new File([blob],'input.txt',{type:'text/plain'});
-    document.getElementById('mmTextInput').value='';
-    uploadFile(file);
+    var ta=document.getElementById('mmTextInput');
+    var text=ta&&ta.value.trim();
+    if(!text&&_pendingFiles.length===0)return;
+    var files=_pendingFiles.slice();
+    if(text){
+        var blob=new Blob([text],{type:'text/plain'});
+        files.push(new File([blob],'input.txt',{type:'text/plain'}));
+    }
+    if(ta){ta.value='';autoResize(ta);}
+    uploadFiles(files);
+}
+function onTextPaste(e){
+    var cd=e.clipboardData||window.clipboardData;
+    if(!cd||!cd.items)return;
+    var files=[];
+    for(var i=0;i<cd.items.length;i++){
+        var it=cd.items[i];
+        if(it.kind==='file'){
+            var f=it.getAsFile();
+            if(f)files.push(f);
+        }
+    }
+    if(files.length===0)return;
+    e.preventDefault();
+    addPendingFiles(files);
+}
+function getSupportedExts(){return ['.pdf','.jpg','.jpeg','.png','.docx','.txt'];}
+function addPendingFiles(files){
+    var exts=getSupportedExts();
+    var added=0;
+    for(var i=0;i<files.length;i++){
+        var f=files[i];
+        var name=f.name||('粘贴文件 '+(i+1));
+        var dot=name.lastIndexOf('.');
+        var ext=dot>=0?name.substring(dot).toLowerCase():'';
+        if(exts.indexOf(ext)<0){showToast('不支持的文件格式：'+name,'info');continue;}
+        var dup=_pendingFiles.some(function(x){return x.name===f.name&&x.size===f.size&&x.lastModified===f.lastModified;});
+        if(dup)continue;
+        _pendingFiles.push(f);added++;
+    }
+    if(added>0){renderFilePreview();showToast('已添加 '+added+' 个文件，可继续添加或点击"开始解析"','success');}
+}
+function removePendingFile(idx){
+    if(idx>=0&&idx<_pendingFiles.length)_pendingFiles.splice(idx,1);
+    renderFilePreview();
+    if(_pendingFiles.length===0)showToast('已移除全部文件','info');
+}
+function renderFilePreview(){
+    var preview=document.getElementById('filePreview');
+    var list=document.getElementById('fileList');
+    if(!preview||!list)return;
+    for(var i=0;i<_filePreviewUrls.length;i++){try{URL.revokeObjectURL(_filePreviewUrls[i]);}catch(e){}}
+    _filePreviewUrls=[];
+    if(_pendingFiles.length===0){preview.style.display='none';return;}
+    list.innerHTML='';
+    for(var j=0;j<_pendingFiles.length;j++){
+        (function(f,idx){
+            var item=document.createElement('div');
+            item.style.cssText='position:relative;width:84px;background:#fff;border:1px solid #e0e0e0;border-radius:8px;padding:6px;text-align:center;';
+            var bodyHtml;
+            if(f.type&&f.type.indexOf('image/')===0){
+                var url=URL.createObjectURL(f);_filePreviewUrls.push(url);
+                bodyHtml='<img src="'+url+'" alt="" style="width:70px;height:52px;object-fit:cover;border-radius:6px;background:#f5f5f7;">';
+            }else{
+                bodyHtml='<div style="width:70px;height:52px;display:flex;align-items:center;justify-content:center;background:#f0f7ff;border-radius:6px;font-size:24px;">📄</div>';
+            }
+            item.innerHTML='<div style="position:absolute;top:2px;right:2px;"><button onclick="removePendingFile('+idx+')" title="移除" style="width:20px;height:20px;border:none;border-radius:50%;background:#c62828;color:#fff;font-size:11px;cursor:pointer;line-height:1;">✕</button></div>'+
+                bodyHtml+
+                '<div title="'+escapeHtml(f.name)+'" style="font-size:11px;color:#515154;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:4px;">'+escapeHtml(f.name)+'</div>';
+            list.appendChild(item);
+        })(_pendingFiles[j],j);
+    }
+    preview.style.display='block';
 }
 function showUploadBtn(){
     var btn=document.querySelector('.mm-upload-zone');
     if(btn)btn.style.display='block';
     document.getElementById('filePreview').style.display='none';
+}
+function onDropZoneDragOver(e){
+    if(!dragHasFiles(e))return;
+    e.preventDefault();e.stopPropagation();
+    if(e.dataTransfer)e.dataTransfer.dropEffect='copy';
+    var dz=document.getElementById('dropZone');if(dz)dz.classList.add('dragover');
+}
+function onDropZoneDragLeave(e){
+    var dz=document.getElementById('dropZone');if(!dz)return;
+    var rel=e.relatedTarget;
+    if(rel&&dz.contains(rel))return;
+    dz.classList.remove('dragover');
+}
+function onDropZoneDrop(e){
+    if(!dragHasFiles(e))return;
+    e.preventDefault();e.stopPropagation();
+    var dz=document.getElementById('dropZone');if(dz)dz.classList.remove('dragover');
+    var files=e.dataTransfer&&e.dataTransfer.files?Array.prototype.slice.call(e.dataTransfer.files):[];
+    if(files.length)addPendingFiles(files);
+}
+function dragHasFiles(e){
+    return !!(e.dataTransfer&&e.dataTransfer.types&&Array.prototype.indexOf.call(e.dataTransfer.types,'Files')>=0);
 }
 
 // ---- Timer ----
@@ -470,33 +586,51 @@ async function addSingleToExam(idx){
 }
 
 
-function onFileSelect(e){if(e.target.files.length>0){_pendingFile=e.target.files[0];var fn=document.getElementById('fileName');fn.textContent='已选择: '+_pendingFile.name;document.getElementById('filePreview').style.display='block';}}
-
-function uploadFile(file){
-    var fd = new FormData(); fd.append('file',file);
-    document.getElementById('mmLoading').style.display='block';
-    document.querySelector('.mm-upload-zone').style.display='none';
-    fetch('http://127.0.0.1:8000/multimodal/parse',{method:'POST',body:fd})
-    .then(function(r){return r.json()})
-    .then(function(data){
-        document.getElementById('mmLoading').style.display='none';
-        if(data.error){alert('解析失败: '+data.error);resetUpload();return;}
-        _questions=(data.questions||[]).map(function(q){
-        if(typeof q.latex !== 'string') q.latex = '';
-        return q;
-    });
-        if(_questions.length===0){alert('未识别到题目');resetUpload();return;}
-        _sessions={}; _selectedIdx=-1;
-        document.getElementById('mmUploadArea').style.display='none';
-        document.getElementById('mmSolveArea').style.display='block';
-        document.documentElement.style.overflow='hidden';
-        document.getElementById('mmTitle').textContent='共 '+_questions.length+' 道题';
-        renderQuestionList(); saveState();
-    })
-    .catch(function(err){document.getElementById('mmLoading').style.display='none';alert('上传失败: '+err.message);resetUpload();});
+function onFileSelect(e){
+    var files=e.target.files?Array.prototype.slice.call(e.target.files):[];
+    if(files.length)addPendingFiles(files);
+    if(e.target)e.target.value='';
 }
 
-function resetUpload(){document.getElementById('mmUploadArea').style.display='block';document.querySelector('.mm-upload-zone').style.display='block';document.getElementById('mmSolveArea').style.display='none';document.documentElement.style.overflow='';document.getElementById('mmSubtitle').textContent='上传试卷 / 图片 / 文档，自动切题后勾选批量解答';}
+async function uploadFiles(files){
+    if(!files||files.length===0)return;
+    document.getElementById('mmLoading').style.display='block';
+    document.querySelector('.mm-upload-zone').style.display='none';
+    var allQuestions=[];
+    var loadingText=document.querySelector('#mmLoading div:last-child');
+    for(var i=0;i<files.length;i++){
+        var f=files[i];
+        if(loadingText)loadingText.textContent=files.length>1?'正在解析 ('+(i+1)+'/'+files.length+') '+f.name+'...':'正在解析 '+f.name+'，请稍候...';
+        try{
+            var fd=new FormData();fd.append('file',f);
+            var r=await fetch('http://127.0.0.1:8000/multimodal/parse',{method:'POST',body:fd});
+            var data=await r.json();
+            if(data.error){alert('文件 "'+f.name+'" 解析失败: '+data.error);continue;}
+            allQuestions=allQuestions.concat(data.questions||[]);
+        }catch(err){alert('文件 "'+f.name+'" 上传失败: '+err.message);}
+    }
+    document.getElementById('mmLoading').style.display='none';
+    if(loadingText)loadingText.textContent='正在解析题目，请稍候...';
+    _pendingFiles=[];renderFilePreview();
+    allQuestions=allQuestions.map(function(q,qi){if(typeof q.latex!=='string')q.latex='';q.index=qi+1;return q;});
+    if(allQuestions.length===0){resetUpload();return;}
+    _questions=allQuestions;_sessions={};_selectedIdx=-1;
+    document.getElementById('mmUploadArea').style.display='none';
+    document.getElementById('mmSolveArea').style.display='block';
+    document.documentElement.style.overflow='hidden';
+    document.getElementById('mmTitle').textContent='共 '+_questions.length+' 道题';
+    renderQuestionList();saveState();
+}
+
+function resetUpload(){
+    _pendingFiles=[];renderFilePreview();
+    var input=document.getElementById('fileInput');if(input)input.value='';
+    document.getElementById('mmUploadArea').style.display='block';
+    document.querySelector('.mm-upload-zone').style.display='block';
+    document.getElementById('mmSolveArea').style.display='none';
+    document.documentElement.style.overflow='';
+    document.getElementById('mmSubtitle').textContent='上传试卷 / 图片 / 文档，自动切题后勾选批量解答';
+}
 function resetAll(){_questions=[];_sessions={};_selectedIdx=-1;localStorage.removeItem(STORAGE_KEY);document.documentElement.style.overflow='';document.getElementById('mmQuestionList').innerHTML='';document.getElementById('mmSessions').innerHTML='<div class="mm-empty"><div class="mm-empty-icon">📎</div><p>点击左侧题目，在右侧预览和编辑</p></div>';resetUpload();}
 
 // ---- Persistence ----
@@ -923,6 +1057,7 @@ function openSingleSaveDialog(idx){
     var overlay=document.createElement('div');overlay.innerHTML=html;
     var overlayEl=overlay.firstChild;
     document.body.appendChild(overlayEl);
+    populateMotherCategoryOptions();
     overlayEl.addEventListener('click',function(e){if(e.target===overlayEl)closeImportDialog();});
 }
 
@@ -931,12 +1066,16 @@ async function confirmSingleImport(){
     var active=document.querySelector('.mm-import-dialog .source-type-option.active');
     if(active)type=active.dataset.value;
     var meta=collectSourceFields(type,'sgl');
+    if(type==='精选母题'&&(!meta.category||!meta.pattern)){showToast('请选择所属板块并填写套路名','info');return;}
     var remember=document.getElementById('sglRemember');
     if(remember&&remember.checked&&type)saveRememberedSource({source_type:type,source_meta:meta});
     else if(remember&&!remember.checked)clearRememberedSource();
     var idx=_mmSingleIdx;closeImportDialog();
     if(idx<0)return;
     var ok=await performSaveToBank(idx,type,meta);
+    if(ok&&type==='精选母题'&&_sessions[idx]&&_sessions[idx].data&&_sessions[idx].data.saved_question_id){
+        await registerMotherQuestion(_sessions[idx].data.saved_question_id,meta);
+    }
     showToast(ok?(type?'已加入题库，来源：'+type:'已加入个人题库'):'保存失败', ok?'success':'error');
 }
 
@@ -984,6 +1123,7 @@ function renderBatchImportBody(){
     var body=document.getElementById('mmImportBody');if(!body)return;
     if(_mmBatchMode==='unified')body.innerHTML=renderUnifiedBatchForm();
     else body.innerHTML=renderPerQuestionBatchForm();
+    populateMotherCategoryOptions();
     if(_mmBatchMode==='unified')setTimeout(toggleUnifiedAutoNo,0);
 }
 
@@ -1162,6 +1302,8 @@ async function batchSolve(){
 
 // ---- Init ----
 document.addEventListener('DOMContentLoaded',function(){
+    document.addEventListener('dragover',function(e){if(dragHasFiles(e))e.preventDefault();});
+    document.addEventListener('drop',function(e){if(dragHasFiles(e))e.preventDefault();});
     if(!restoreState()){document.getElementById('fileInput').value='';}
 });
 

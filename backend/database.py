@@ -4,10 +4,11 @@
 知识点分类从 categories.py 读取，调整时改那个文件即可。
 """
 
-import sqlite3
 import json
 import os
 import random
+import re
+import sqlite3
 from backend.categories import CATEGORIES
 from backend.steps import _load_steps
 
@@ -22,7 +23,7 @@ _SOURCE_META_FIELDS = {
     "模拟题": {"paper", "question_no"},
     "高考题": {"paper", "question_no"},
     "ai生成": {"reference_id"},
-    "精选母题": {"owner", "mother_id"},
+    "精选母题": {"owner", "mother_id", "category", "pattern"},
 }
 _DIMENSION_ALIASES = {
     "常规程度": "非常规程度",
@@ -30,6 +31,33 @@ _DIMENSION_ALIASES = {
 }
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "study_agent.db")
+
+
+def looks_like_choice_question(text: str) -> bool:
+    """内容中出现两个以上 A/B/C/D 选项标记时，按选择题处理。"""
+    if not text:
+        return False
+    labels = set()
+    for m in re.finditer(r"(?<![A-Za-z0-9])([A-H])\s*[.．、)]", text):
+        labels.add(m.group(1).upper())
+        if len(labels) >= 2:
+            return True
+    return False
+
+
+def _normalize_choice_question_text(text: str) -> str:
+    """把选择题选项统一为独立成行，选项之间只换一行。"""
+    if not text:
+        return text
+    s = text.replace("\r\n", "\n")
+    s = re.sub(r"(?<![A-Za-z0-9$])([A-H])\s*[.．、)]\s*", r"\n\1. ", s)
+    lines = []
+    for line in s.split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            continue
+        lines.append(stripped)
+    return "\n".join(lines).strip()
 
 
 def get_connection():
@@ -127,6 +155,51 @@ def _backfill_source_lists(conn):
     if changed:
         conn.commit()
         print(f"[Database] 已为 {changed} 道题补进来源对应题单")
+
+
+def _backfill_choice_questions(conn):
+    """老题回填：选项齐全却按大题保存的题改为选择题，并统一选项排版。"""
+    rows = conn.execute(
+        "SELECT id, content, question_type, answer_json FROM questions"
+    ).fetchall()
+    changed = 0
+    for row in rows:
+        content = row["content"] or ""
+        qtype = row["question_type"]
+        is_choice = looks_like_choice_question(content)
+        effective = qtype if qtype in ("选择题", "填空题") else ("选择题" if is_choice else (qtype or "大题"))
+        row_changed = False
+        if effective == "选择题" and qtype != "选择题":
+            answer_json = row["answer_json"]
+            try:
+                aj = json.loads(answer_json) if answer_json else {}
+            except (json.JSONDecodeError, TypeError):
+                aj = {}
+            if isinstance(aj, dict):
+                aj["question_type"] = "选择题"
+                chunk_results = aj.get("chunk_results")
+                if isinstance(chunk_results, list) and chunk_results and isinstance(chunk_results[0], dict):
+                    chunk_results[0]["chunk_type"] = "选择题"
+                answer_json = json.dumps(aj, ensure_ascii=False)
+            conn.execute(
+                "UPDATE questions SET question_type = ?, answer_json = ? WHERE id = ?",
+                (effective, answer_json, row["id"]),
+            )
+            row_changed = True
+        if effective == "选择题":
+            new_content = _normalize_choice_question_text(content)
+            if new_content != content:
+                conn.execute(
+                    "UPDATE questions SET content = ? WHERE id = ?",
+                    (new_content, row["id"]),
+                )
+                row_changed = True
+        if row_changed:
+            changed += 1
+    if changed:
+        conn.commit()
+        print(f"[Database] 已修正 {changed} 道选择题的题型/选项排版")
+
 
 def init_db():
     conn = get_connection()
@@ -242,6 +315,11 @@ def init_db():
         _backfill_source_lists(conn)
     except sqlite3.OperationalError as e:
         print(f"[Database] 来源题单回填跳过: {e}")
+    # 回填：选项齐全却按大题保存的题改为选择题
+    try:
+        _backfill_choice_questions(conn)
+    except sqlite3.OperationalError as e:
+        print(f"[Database] 选择题题型回填跳过: {e}")
     # 迁移：新增时间追踪列
     for col in ("last_viewed_at", "last_edited_at", "last_exam_at"):
         try:
@@ -472,15 +550,25 @@ def save_question(question_text: str, answer_dict: dict):
     clean_kps = _sanitize_knowledge_points(category_level1, raw_kps)
 
     # 提取 question_type（从 chunk_results[0].chunk_type 或 answer_dict 顶层）
+    chunk_results = answer_dict.get("chunk_results", [])
     question_type = answer_dict.get("question_type")
     if not question_type:
-        chunk_results = answer_dict.get("chunk_results", [])
         if chunk_results and isinstance(chunk_results, list):
             first = chunk_results[0]
             if isinstance(first, dict):
                 question_type = first.get("chunk_type")
     if question_type not in ("选择题", "填空题"):
         question_type = "大题"
+    # 兜底：内容明显带 A/B/C/D 选项时按选择题保存，并同步修正数据结构
+    if question_type == "大题" and looks_like_choice_question(question_text):
+        question_type = "选择题"
+        answer_dict["question_type"] = "选择题"
+        if chunk_results and isinstance(chunk_results, list):
+            first = chunk_results[0]
+            if isinstance(first, dict):
+                first["chunk_type"] = "选择题"
+    if question_type == "选择题":
+        question_text = _normalize_choice_question_text(question_text)
 
     # 处理 source_type（清洗）
     source_type = answer_dict.get("source_type")
@@ -510,7 +598,6 @@ def save_question(question_text: str, answer_dict: dict):
     source_meta_json = json.dumps(_sanitize_source_meta(source_type, source_meta), ensure_ascii=False)
 
     # 构建 steps_structure（从 chunk_results 提取步骤索引）
-    chunk_results = answer_dict.get("chunk_results", [])
     steps_structure = _build_steps_structure(chunk_results)
     # 追加预定义步骤名（方便按步骤名搜索）
     if category_level1 and steps_structure != "[]":

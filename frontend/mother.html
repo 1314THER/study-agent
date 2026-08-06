@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>document.documentElement.classList.add("nav-init")</script>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>母题看板 - 数学最强大脑</title>
+<link rel="stylesheet" href="style.css?v=20260804mother">
+<style>
+    .mother-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .mother-header h1 { font-size: 22px; font-weight: 700; color: #1d1d1f; }
+    .mother-actions { display: flex; gap: 8px; }
+    .mother-btn { padding: 8px 16px; border: none; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; background: #0071e3; color: white; transition: all 0.15s; }
+    .mother-btn:hover { background: #005bbf; }
+    .mother-btn.secondary { background: #f5f5f7; color: #515154; }
+    .mother-btn.secondary:hover { background: #e8e8ed; }
+    .mother-btn.danger { background: #c62828; }
+    .mother-btn.danger:hover { background: #b71c1c; }
+    .mother-layout { display: grid; grid-template-columns: minmax(320px, 42%) 1fr; gap: 16px; align-items: start; }
+    @media (max-width: 900px) { .mother-layout { grid-template-columns: 1fr; } }
+    .mother-panel { background: white; border: 1px solid #e5e5e7; border-radius: 12px; padding: 16px; }
+    .mother-panel h2 { font-size: 16px; font-weight: 600; color: #1d1d1f; margin-bottom: 12px; }
+    .mother-empty { color: #86868b; font-size: 14px; padding: 24px 8px; text-align: center; }
+    .mindmap { padding: 8px 0; }
+    .mm-category { margin-bottom: 14px; }
+    .mm-category-head { display: flex; align-items: center; gap: 8px; font-weight: 700; color: #1d1d1f; padding: 8px 10px; background: #f8f9fa; border-radius: 8px; }
+    .mm-category-percent { margin-left: auto; font-size: 12px; color: #0071e3; font-weight: 600; }
+    .mm-pattern-list { list-style: none; padding-left: 22px; margin: 6px 0 0; border-left: 2px solid #e5e5e7; }
+    .mm-pattern { padding: 6px 8px; border-radius: 8px; cursor: pointer; transition: background 0.15s; }
+    .mm-pattern:hover { background: #f0f7ff; }
+    .mm-pattern.active { background: #e8f4ff; }
+    .mm-pattern-name { font-size: 14px; font-weight: 600; color: #1d1d1f; }
+    .mm-pattern-meta { font-size: 12px; color: #86868b; margin-top: 2px; }
+    .state-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; margin-left: 6px; }
+    .state-never { background: #f3f4f6; color: #6b7280; }
+    .state-first_pass { background: #fff7ed; color: #c2410c; }
+    .state-second_pass { background: #fef3c7; color: #b45309; }
+    .state-third_pass { background: #d1fae5; color: #047857; }
+    .state-again_wrong { background: #fee2e2; color: #b91c1c; }
+    .mother-form .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+    .mother-form .form-row.one { grid-template-columns: 1fr; }
+    .mother-form label { display: block; font-size: 12px; color: #86868b; margin-bottom: 4px; font-weight: 500; }
+    .mother-form input, .mother-form select, .mother-form textarea { width: 100%; padding: 8px 10px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 14px; box-sizing: border-box; font-family: inherit; }
+    .mother-form input:focus, .mother-form select:focus, .mother-form textarea:focus { outline: none; border-color: #0071e3; }
+    .mother-form textarea { min-height: 70px; resize: vertical; }
+    .question-link { display: flex; align-items: center; gap: 8px; padding: 6px 8px; background: #fafafa; border-radius: 8px; margin-bottom: 6px; font-size: 13px; }
+    .question-link .qid { font-weight: 600; color: #1d1d1f; }
+    .question-link .role { color: #0071e3; font-size: 12px; }
+    .question-link button { margin-left: auto; border: none; background: #fff0f0; color: #c62828; border-radius: 6px; padding: 4px 8px; cursor: pointer; font-size: 12px; }
+    .add-question-row { display: flex; gap: 8px; align-items: end; margin-top: 10px; }
+    .add-question-row input, .add-question-row select { flex: 1; }
+    .add-question-row button { white-space: nowrap; }
+    .form-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    #motherStatus { min-height: 20px; font-size: 13px; color: #2e7d32; margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="app-layout">
+    <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
+    <aside class="sidebar">
+        <button class="nav-expand-toggle" onclick="toggleNavExpand()" title="展开导航" aria-label="展开导航">☰</button>
+        <nav>
+<a href="multimodal.html" class="nav-item" data-page="multimodal" title="多模态解答"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
+<a href="teach.html" class="nav-item" data-page="teach" title="老师手把手教你做题"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
+<a href="exam.html" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
+<a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+<a href="mother.html" class="nav-item active" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
+<a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
+        </nav>
+    </aside>
+    <main class="main-content">
+        <div class="container">
+            <div class="mother-header">
+                <h1>母题看板</h1>
+                <div class="mother-actions">
+                    <button class="mother-btn secondary" onclick="newPattern()">新增套路</button>
+                    <button class="mother-btn secondary" onclick="loadPatterns()">刷新</button>
+                    <button class="mother-btn" onclick="exportYaml()">导出 YAML</button>
+                </div>
+            </div>
+            <div class="mother-layout">
+                <div class="mother-panel">
+                    <h2>板块 · 套路 · 母题</h2>
+                    <div id="motherTree" class="mindmap"><div class="mother-empty">加载中...</div></div>
+                </div>
+                <div class="mother-panel">
+                    <h2>套路编辑</h2>
+                    <div id="motherEditForm" class="mother-form"><div class="mother-empty">从左侧选择一个套路，或新增套路</div></div>
+                    <div id="motherStatus"></div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="nav.js?v=20260731h"></script>
+<script>
+var _patterns = [];
+var _categories = [];
+var _selectedPatternId = null;
+
+function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function stateLabel(s) {
+    return {never: '从来都不会', first_pass: '第一次会', second_pass: '第二次会', third_pass: '第三次会', again_wrong: '再次出错'}[s] || s;
+}
+
+function stateClass(s) { return 'state-' + (s || 'never'); }
+
+async function loadCategories() {
+    try {
+        var r = await fetch('http://127.0.0.1:8000/categories');
+        var data = await r.json();
+        _categories = (data || []).map(function(x) { return x.level1; });
+    } catch (e) {
+        _categories = [];
+    }
+    var sel = document.getElementById('patternCategory');
+    if (sel) fillCategorySelect(sel);
+}
+
+function fillCategorySelect(sel) {
+    var cur = sel.value;
+    var html = '<option value="">请选择板块</option>';
+    for (var i = 0; i < _categories.length; i++) {
+        html += '<option value="' + escapeHtml(_categories[i]) + '">' + escapeHtml(_categories[i]) + '</option>';
+    }
+    sel.innerHTML = html;
+    if (cur) sel.value = cur;
+}
+
+async function loadPatterns() {
+    try {
+        var r = await fetch('http://127.0.0.1:8000/patterns');
+        _patterns = await r.json();
+    } catch (e) {
+        _patterns = [];
+        document.getElementById('motherTree').innerHTML = '<div class="mother-empty">加载失败</div>';
+    }
+    renderTree();
+    if (_selectedPatternId) {
+        var p = _patterns.find(function(x) { return x.id === _selectedPatternId; });
+        if (p) selectPattern(p.id);
+        else _selectedPatternId = null;
+    }
+}
+
+function renderTree() {
+    var tree = document.getElementById('motherTree');
+    var byCat = {};
+    for (var i = 0; i < _patterns.length; i++) {
+        var p = _patterns[i];
+        (byCat[p.category] = byCat[p.category] || []).push(p);
+    }
+    var cats = Object.keys(byCat).sort();
+    if (!cats.length) {
+        tree.innerHTML = '<div class="mother-empty">还没有母题套路，点击“新增套路”开始</div>';
+        return;
+    }
+    var html = '';
+    for (var ci = 0; ci < cats.length; ci++) {
+        var cat = cats[ci];
+        var list = byCat[cat];
+        var mastered = list.filter(function(x) { return x.mastery && x.mastery.state === 'third_pass'; }).length;
+        var percent = list.length ? Math.round(mastered / list.length * 100) : 0;
+        html += '<div class="mm-category"><div class="mm-category-head"><span>📘 ' + escapeHtml(cat) + '</span><span class="mm-category-percent">掌握 ' + percent + '%</span></div>';
+        html += '<ul class="mm-pattern-list">';
+        for (var pi = 0; pi < list.length; pi++) {
+            var p = list[pi];
+            var state = p.mastery ? p.mastery.state : 'never';
+            html += '<li class="mm-pattern' + (p.id === _selectedPatternId ? ' active' : '') + '" onclick="selectPattern(' + p.id + ')">';
+            html += '<div class="mm-pattern-name">' + escapeHtml(p.name) + '<span class="state-badge ' + stateClass(state) + '">' + escapeHtml(stateLabel(state)) + '</span></div>';
+            html += '<div class="mm-pattern-meta">母题 #' + (p.mother_id || '无') + (p.variant_ids.length ? ' · 变式 ' + p.variant_ids.length + ' 道' : '') + '</div>';
+            html += '</li>';
+        }
+        html += '</ul></div>';
+    }
+    tree.innerHTML = html;
+}
+
+function selectPattern(id) {
+    _selectedPatternId = id;
+    var p = _patterns.find(function(x) { return x.id === id; });
+    renderTree();
+    if (!p) return;
+    var form = document.getElementById('motherEditForm');
+    var html = '<div class="form-row"><div><label>套路 ID</label><input id="patternId" value="' + p.id + '" readonly></div>';
+    html += '<div><label>稳定编号 key</label><input id="patternKey" value="' + escapeHtml(p.yaml_key || '') + '"></div></div>';
+    html += '<div class="form-row"><div><label>所属板块</label><select id="patternCategory" onchange="fillCategorySelect(this)"></select></div>';
+    html += '<div><label>套路名</label><input id="patternName" value="' + escapeHtml(p.name || '') + '"></div></div>';
+    html += '<div class="form-row one"><label>套路说明</label><textarea id="patternDesc">' + escapeHtml(p.description || '') + '</textarea></div>';
+    html += '<div class="form-row one"><label>已关联题目</label><div id="questionLinks"></div>';
+    html += '<div class="add-question-row"><input id="newQuestionId" type="number" placeholder="题目ID" min="1">';
+    html += '<select id="newQuestionRole"><option value="mother">母题</option><option value="variant1">变式1</option><option value="variant2">变式2</option><option value="variant3">变式3</option></select>';
+    html += '<button class="mother-btn" onclick="linkQuestion(' + p.id + ')">挂载</button></div></div>';
+    html += '<div class="form-actions">';
+    html += '<button class="mother-btn" onclick="savePattern()">保存修改</button>';
+    html += '<button class="mother-btn danger" onclick="deletePattern(' + p.id + ')">删除套路</button>';
+    html += '</div>';
+    form.innerHTML = html;
+    var sel = document.getElementById('patternCategory');
+    fillCategorySelect(sel);
+    sel.value = p.category || '';
+    renderQuestionLinks(p);
+}
+
+function renderQuestionLinks(p) {
+    var box = document.getElementById('questionLinks');
+    if (!box) return;
+    var html = '';
+    if (p.mother_id) html += '<div class="question-link"><span class="role">母题</span><span class="qid">#' + p.mother_id + '</span><button onclick="unlinkQuestion(' + p.id + ',' + p.mother_id + ',\'mother\')">移除</button></div>';
+    var roles = {variant1: '变式1', variant2: '变式2', variant3: '变式3'};
+    for (var i = 0; i < p.variant_ids.length; i++) {
+        var qid = p.variant_ids[i];
+        var role = 'variant' + (i + 1);
+        html += '<div class="question-link"><span class="role">' + roles[role] + '</span><span class="qid">#' + qid + '</span><button onclick="unlinkQuestion(' + p.id + ',' + qid + ',\'' + role + '\')">移除</button></div>';
+    }
+    box.innerHTML = html || '<div class="mother-empty" style="padding:6px;">暂无题目关联</div>';
+}
+
+function newPattern() {
+    _selectedPatternId = null;
+    renderTree();
+    var form = document.getElementById('motherEditForm');
+    var html = '<div class="form-row"><div><label>题目 ID（母题）</label><input id="newMotherQuestionId" type="number" min="1" placeholder="题库中的题目ID"></div>';
+    html += '<div><label>稳定编号 key</label><input id="patternKey" placeholder="留空自动生成"></div></div>';
+    html += '<div class="form-row"><div><label>所属板块</label><select id="patternCategory"></select></div>';
+    html += '<div><label>套路名</label><input id="patternName" placeholder="如：直线与圆锥曲线联立"></div></div>';
+    html += '<div class="form-row one"><label>套路说明</label><textarea id="patternDesc" placeholder="这个套路考什么、怎么破题"></textarea></div>';
+    html += '<div class="form-actions"><button class="mother-btn" onclick="createPattern()">创建套路</button></div>';
+    form.innerHTML = html;
+    fillCategorySelect(document.getElementById('patternCategory'));
+    if (!_categories.length) loadCategories();
+}
+
+async function savePattern() {
+    var id = parseInt(document.getElementById('patternId').value);
+    var payload = {
+        category: document.getElementById('patternCategory').value,
+        name: document.getElementById('patternName').value.trim(),
+        description: document.getElementById('patternDesc').value,
+        key: document.getElementById('patternKey').value.trim() || null
+    };
+    if (!payload.category || !payload.name) { setStatus('板块和套路名不能为空', true); return; }
+    try {
+        var r = await fetch('http://127.0.0.1:8000/patterns/' + id, {method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
+        var d = await r.json();
+        if (d.error) throw new Error(d.detail || d.error);
+        setStatus('已保存');
+        await loadPatterns();
+    } catch (e) { setStatus('保存失败：' + e.message, true); }
+}
+
+async function createPattern() {
+    var qid = parseInt(document.getElementById('newMotherQuestionId').value);
+    if (!qid) { setStatus('请填写母题题目 ID', true); return; }
+    var payload = {
+        question_id: qid,
+        category: document.getElementById('patternCategory').value,
+        name: document.getElementById('patternName').value.trim(),
+        key: document.getElementById('patternKey').value.trim() || null,
+        description: document.getElementById('patternDesc').value
+    };
+    if (!payload.category || !payload.name) { setStatus('板块和套路名不能为空', true); return; }
+    try {
+        var r = await fetch('http://127.0.0.1:8000/patterns/mother', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)});
+        var d = await r.json();
+        if (d.error) throw new Error(d.detail || d.error);
+        setStatus('套路已创建');
+        await loadPatterns();
+        selectPattern(d.pattern_id);
+    } catch (e) { setStatus('创建失败：' + e.message, true); }
+}
+
+async function linkQuestion(patternId) {
+    var qid = parseInt(document.getElementById('newQuestionId').value);
+    var role = document.getElementById('newQuestionRole').value;
+    if (!qid) { setStatus('请填写题目 ID', true); return; }
+    try {
+        var r = await fetch('http://127.0.0.1:8000/patterns/' + patternId + '/questions', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({question_id: qid, role: role})});
+        var d = await r.json();
+        if (d.error) throw new Error(d.detail || d.error);
+        setStatus('题目已挂载');
+        await loadPatterns();
+        selectPattern(patternId);
+    } catch (e) { setStatus('挂载失败：' + e.message, true); }
+}
+
+async function unlinkQuestion(patternId, questionId, role) {
+    try {
+        var url = 'http://127.0.0.1:8000/patterns/' + patternId + '/questions/' + questionId;
+        if (role) url += '?role=' + encodeURIComponent(role);
+        var r = await fetch(url, {method: 'DELETE'});
+        if (!r.ok) throw new Error('移除失败');
+        setStatus('已移除题目');
+        await loadPatterns();
+        selectPattern(patternId);
+    } catch (e) { setStatus(e.message, true); }
+}
+
+async function deletePattern(patternId) {
+    if (!confirm('确定删除这个套路吗？')) return;
+    try {
+        var r = await fetch('http://127.0.0.1:8000/patterns/' + patternId, {method: 'DELETE'});
+        if (!r.ok) throw new Error('删除失败');
+        _selectedPatternId = null;
+        setStatus('套路已删除');
+        await loadPatterns();
+    } catch (e) { setStatus(e.message, true); }
+}
+
+async function exportYaml() {
+    try {
+        var r = await fetch('http://127.0.0.1:8000/patterns/export-yaml', {method: 'POST'});
+        var d = await r.json();
+        if (!d.exported) throw new Error(d.detail || '导出失败');
+        setStatus('已定型导出到 patterns.yaml');
+    } catch (e) { setStatus(e.message, true); }
+}
+
+function setStatus(msg, isError) {
+    var el = document.getElementById('motherStatus');
+    if (el) { el.textContent = msg; el.style.color = isError ? '#c62828' : '#2e7d32'; }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadCategories();
+    loadPatterns();
+});
+</script>
+</body>
+</html>

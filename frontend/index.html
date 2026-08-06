@@ -32,6 +32,7 @@ function safeParseKps(kps){
 <a href="teach.html" class="nav-item" data-page="teach" title="老师手把手教你做题"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
 <a href="exam.html" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
 <a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+<a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
 <a href="index.html" class="nav-item active" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
 </nav>
         </aside>
@@ -676,10 +677,14 @@ document.getElementById('searchBtn').addEventListener('click', function() {
                 return m.paper || no;
             }
             if(sourceType === 'ai生成') return m.reference_id ? '参考题 #' + m.reference_id : '';
-            if(sourceType === '精选母题'){
-                var owner = m.owner || 'sqz';
-                return m.mother_id ? owner + '·母题 #' + m.mother_id : owner;
-            }
+    if(sourceType === '精选母题'){
+        var owner = m.owner || 'sqz';
+        var txt = owner;
+        if (m.pattern) txt += '·' + m.pattern;
+        if (m.category) txt += ' · ' + m.category;
+        if (m.mother_id) txt += ' · 母题 #' + m.mother_id;
+        return txt;
+    }
             return '';
         }
         function sourceMetaLink(sourceType, sourceMeta){
@@ -717,6 +722,10 @@ document.getElementById('searchBtn').addEventListener('click', function() {
                 html += '<div class="source-meta-field"><label>参考题目ID</label>';
                 html += '<input type="text" id="sdReferenceId" placeholder="参考题目ID" maxlength="30" value="' + esc(m.reference_id || '') + '"></div>';
             } else if (sourceType === '精选母题') {
+                html += '<div class="source-meta-field"><label>所属板块</label>';
+                html += '<select id="sdMotherCategory" class="mother-category-select"><option value="">加载中...</option></select></div>';
+                html += '<div class="source-meta-field"><label>套路名</label>';
+                html += '<input type="text" id="sdMotherPattern" placeholder="如：直线与圆锥曲线联立" maxlength="50" value="' + esc(m.pattern || '') + '"></div>';
                 html += '<div class="source-meta-field"><label>来源署名</label>';
                 html += '<input type="text" id="sdOwner" placeholder="sqz" maxlength="30" value="' + esc(m.owner || 'sqz') + '"></div>';
                 html += '<div class="source-meta-field"><label>母题ID</label>';
@@ -745,10 +754,46 @@ document.getElementById('searchBtn').addEventListener('click', function() {
             } else if (type === '精选母题') {
                 var owner = document.getElementById('sdOwner');
                 var mid = document.getElementById('sdMotherId');
+                var cat = document.getElementById('sdMotherCategory');
+                var pat = document.getElementById('sdMotherPattern');
                 m.owner = (owner && owner.value.trim()) ? owner.value.trim() : 'sqz';
                 if (mid && mid.value.trim()) m.mother_id = mid.value.trim();
+                if (cat && cat.value) m.category = cat.value;
+                if (pat && pat.value.trim()) m.pattern = pat.value.trim();
             }
             return m;
+        }
+
+        function populateMotherCategoryOptions() {
+            fetch('http://127.0.0.1:8000/categories')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var cats = (data || []).map(function(x) { return x.level1; });
+                    var sels = document.querySelectorAll('.mother-category-select');
+                    for (var i = 0; i < sels.length; i++) {
+                        var cur = sels[i].value;
+                        var html = '<option value="">请选择板块</option>';
+                        for (var j = 0; j < cats.length; j++) {
+                            html += '<option value="' + escapeHtml(cats[j]) + '">' + escapeHtml(cats[j]) + '</option>';
+                        }
+                        sels[i].innerHTML = html;
+                        if (cur) sels[i].value = cur;
+                    }
+                })
+                .catch(function() {});
+        }
+
+        async function registerMotherQuestion(questionId, srcMeta) {
+            if (!srcMeta || !srcMeta.category || !srcMeta.pattern) return;
+            try {
+                await fetch('http://127.0.0.1:8000/patterns/mother', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({question_id: questionId, category: srcMeta.category, name: srcMeta.pattern})
+                });
+            } catch (e) {
+                console.error('登记母题失败:', e);
+            }
         }
         
         function showSaveDialog(questionId, questionText, sourceType, sourceMeta) {
@@ -826,6 +871,7 @@ document.getElementById('searchBtn').addEventListener('click', function() {
             
             overlay.innerHTML = html;
             document.body.appendChild(overlay);
+            populateMotherCategoryOptions();
             
             overlay.addEventListener('click', function(e) {
                 if (e.target === overlay) closeSaveDialog();
@@ -838,6 +884,7 @@ document.getElementById('searchBtn').addEventListener('click', function() {
             _selectedSourceType = el.dataset.value;
             _selectedSourceMeta = {};
             updateSourceMetaFields();
+            if (_selectedSourceType === '精选母题') populateMotherCategoryOptions();
         }
         
         function closeSaveDialog() {
@@ -885,6 +932,10 @@ document.getElementById('searchBtn').addEventListener('click', function() {
             
             var srcType = _selectedSourceType || '';
             var srcMeta = collectSourceMetaFromDialog();
+            if (srcType === '精选母题' && (!srcMeta.category || !srcMeta.pattern)) {
+                alert('请选择所属板块并填写套路名');
+                return;
+            }
             var rememberBox = document.getElementById('rememberSourceBox');
             var remember = rememberBox ? rememberBox.checked : false;
             if (remember && srcType) saveRememberedSource({source_type: srcType, source_meta: srcMeta});
@@ -915,6 +966,7 @@ document.getElementById('searchBtn').addEventListener('click', function() {
                     var data = await r.json();
                 }
                 closeSaveDialog();
+                await registerMotherQuestion(questionId, srcMeta);
                 var btn = document.getElementById('saveAfterBtn');
                 if (btn) {
                     btn.innerHTML = '<span class="btn-icon">✅</span><span>已加入个人题库</span>';

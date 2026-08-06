@@ -33,6 +33,8 @@ async def global_exception_handler(request, exc):
 @app.on_event("startup")
 def startup():
     init_db()
+    from backend.patterns import init_mastery_db
+    init_mastery_db()
 
 class SolveRequest(BaseModel):
     question: str
@@ -251,7 +253,111 @@ def api_delete_question(qid: int):
     ok = delete_question(qid)
     if not ok:
         return {"deleted": False, "message": "未找到该题"}
+    try:
+        from backend.patterns import delete_question_links
+        delete_question_links(qid)
+    except Exception as e:
+        print(f"[Warn] 清理母题库关联失败: {e}")
     return {"deleted": True, "id": qid, "message": "已删除"}
+
+
+class AddMotherQuestionRequest(BaseModel):
+    question_id: int
+    category: str
+    name: str
+    key: Optional[str] = Field(None, description="套路稳定编号")
+    description: Optional[str] = Field("", description="套路说明")
+
+
+@app.get("/patterns")
+def api_patterns():
+    """返回母题套路列表"""
+    from backend.patterns import get_patterns
+    return get_patterns()
+
+
+@app.post("/patterns/mother")
+def api_add_mother_question(req: AddMotherQuestionRequest):
+    """将一道题登记为母题并写入 patterns.yaml / mastery.db"""
+    from backend.patterns import add_mother_question
+    try:
+        return add_mother_question(
+            question_id=req.question_id,
+            category=req.category,
+            name=req.name,
+            key=req.key,
+            description=req.description,
+        )
+    except ValueError as e:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=400, content={"error": "invalid_mother", "detail": str(e)})
+
+
+class UpdatePatternRequest(BaseModel):
+    category: Optional[str] = Field(None, description="板块")
+    name: Optional[str] = Field(None, description="套路名")
+    description: Optional[str] = Field(None, description="套路说明")
+    key: Optional[str] = Field(None, description="套路稳定编号")
+
+
+class PatternQuestionRequest(BaseModel):
+    question_id: int
+    role: str = Field(..., description="mother/variant1/variant2/variant3")
+
+
+@app.put("/patterns/{pattern_id}")
+def api_update_pattern(pattern_id: int, req: UpdatePatternRequest):
+    from backend.patterns import update_pattern
+    try:
+        return update_pattern(
+            pattern_id=pattern_id,
+            category=req.category,
+            name=req.name,
+            description=req.description,
+            key=req.key,
+        )
+    except ValueError as e:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=400, content={"error": "invalid_pattern", "detail": str(e)})
+
+
+@app.delete("/patterns/{pattern_id}")
+def api_delete_pattern(pattern_id: int):
+    from backend.patterns import delete_pattern
+    ok = delete_pattern(pattern_id)
+    if not ok:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=404, content={"error": "not_found", "detail": "套路不存在"})
+    return {"deleted": True, "id": pattern_id}
+
+
+@app.post("/patterns/{pattern_id}/questions")
+def api_link_pattern_question(pattern_id: int, req: PatternQuestionRequest):
+    from backend.patterns import link_question_to_pattern
+    try:
+        return link_question_to_pattern(pattern_id, req.question_id, req.role)
+    except ValueError as e:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=400, content={"error": "invalid_link", "detail": str(e)})
+
+
+@app.delete("/patterns/{pattern_id}/questions/{question_id}")
+def api_unlink_pattern_question(pattern_id: int, question_id: int,
+                                role: Optional[str] = Query(None, description="可选：只移除指定角色")):
+    from backend.patterns import unlink_question_from_pattern
+    ok = unlink_question_from_pattern(pattern_id, question_id, role)
+    if not ok:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=404, content={"error": "not_found", "detail": "未找到关联"})
+    return {"unlinked": True}
+
+
+@app.post("/patterns/export-yaml")
+def api_export_patterns_yaml():
+    """把当前 mastery.db 中的母题套路定型导出到 patterns.yaml"""
+    from backend.patterns import export_patterns_yaml
+    data = export_patterns_yaml()
+    return {"exported": True, "patterns": data}
 
 
 

@@ -35,7 +35,11 @@ function sourceMetaText(sourceType, sourceMeta){
     if(sourceType === 'ai生成') return m.reference_id ? '参考题 #' + m.reference_id : '';
     if(sourceType === '精选母题'){
         var owner = m.owner || 'sqz';
-        return m.mother_id ? owner + '·母题 #' + m.mother_id : owner;
+        var txt = owner;
+        if (m.pattern) txt += '·' + m.pattern;
+        if (m.category) txt += ' · ' + m.category;
+        if (m.mother_id) txt += ' · 母题 #' + m.mother_id;
+        return txt;
     }
     return '';
 }
@@ -72,6 +76,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
 <a href="teach.html" class="nav-item" data-page="teach" title="老师手把手教你做题"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
 <a href="exam.html" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
 <a href="history.html" class="nav-item active" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+<a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
 <a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
 </nav>
         </aside>
@@ -492,6 +497,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
                 html += '<input type="checkbox" class="hc-checkbox" data-id="' + q.id + '"' + (cartIds.indexOf(q.id) >= 0 ? ' checked' : '') + ' onchange="toggleExamSelection(this)">';
                 html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHtml(preview) + '</div>';
                 html += '<div class="hc-meta">';
+                html += '<span class="tag tag-id">ID ' + q.id + '</span>';
                 html += typeTag;
                 html += catTag;
                 if (q.difficulty_level) {
@@ -639,7 +645,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
                         resultEl.innerHTML = '<p style="color:red;text-align:center;padding:40px;">\u52a0\u8f7d\u5931\u8d25: ' + escapeHtml(errMsg) + '</p>';
                         return;
                     }
-                    var qHtml = '<div class="detail-question"><h3>\u9898\u76ee</h3><div class="question-text">' + escapeHtml(data.content || '') + '</div></div>';
+                    var qHtml = '<div class="detail-question"><h3>\u9898\u76ee</h3><div class="question-text">' + escapeHtml(formatChoiceQuestion(data.content || '')).replace(/\n/g, '<br>') + '</div></div>';
                     document.getElementById('detailQuestion').innerHTML = qHtml;
                     try { renderMathInElement(document.getElementById('detailQuestion'), { delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}], ignoredTags: [] }); } catch(e) {}
                     var answerData = data.answer_json;
@@ -864,6 +870,20 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
 
         function escapeHtml(str) {
             return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;');
+        }
+
+        function formatChoiceQuestion(text) {
+            if (!text) return '';
+            var s = String(text).replace(/\r\n/g, '\n');
+            s = s.replace(/(?<![A-Za-z0-9$])([A-H])\s*[.．、)]\s*/g, '\n$1. ');
+            var lines = s.split('\n');
+            var out = [];
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i].trim();
+                if (!line) continue;
+                out.push(line);
+            }
+            return out.join('\n');
         }
 
         function toggleDetail(el) {
@@ -1552,6 +1572,7 @@ function safeParseKps(kps){
             
             overlay.innerHTML = html;
             document.body.appendChild(overlay);
+            populateMotherCategoryOptions();
             
             overlay.addEventListener('click', function(e) {
                 if (e.target === overlay) closeSaveDialog();
@@ -1574,6 +1595,10 @@ function safeParseKps(kps){
                 html += '<div class="source-meta-field"><label>参考题目ID</label>';
                 html += '<input type="text" id="sdReferenceId" placeholder="参考题目ID" maxlength="30" value="' + esc(m.reference_id || '') + '"></div>';
             } else if (sourceType === '精选母题') {
+                html += '<div class="source-meta-field"><label>所属板块</label>';
+                html += '<select id="sdMotherCategory" class="mother-category-select"><option value="">加载中...</option></select></div>';
+                html += '<div class="source-meta-field"><label>套路名</label>';
+                html += '<input type="text" id="sdMotherPattern" placeholder="如：直线与圆锥曲线联立" maxlength="50" value="' + esc(m.pattern || '') + '"></div>';
                 html += '<div class="source-meta-field"><label>来源署名</label>';
                 html += '<input type="text" id="sdOwner" placeholder="sqz" maxlength="30" value="' + esc(m.owner || 'sqz') + '"></div>';
                 html += '<div class="source-meta-field"><label>母题ID</label>';
@@ -1604,10 +1629,47 @@ function safeParseKps(kps){
             } else if (type === '精选母题') {
                 var owner = document.getElementById('sdOwner');
                 var mid = document.getElementById('sdMotherId');
+                var cat = document.getElementById('sdMotherCategory');
+                var pat = document.getElementById('sdMotherPattern');
                 m.owner = (owner && owner.value.trim()) ? owner.value.trim() : 'sqz';
                 if (mid && mid.value.trim()) m.mother_id = mid.value.trim();
+                if (cat && cat.value) m.category = cat.value;
+                if (pat && pat.value.trim()) m.pattern = pat.value.trim();
             }
             return m;
+        }
+
+        function populateMotherCategoryOptions() {
+            fetch('http://127.0.0.1:8000/categories')
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    var cats = (data || []).map(function(x) { return x.level1; });
+                    var sels = document.querySelectorAll('.mother-category-select');
+                    for (var i = 0; i < sels.length; i++) {
+                        var cur = sels[i].value;
+                        var html = '<option value="">请选择板块</option>';
+                        for (var j = 0; j < cats.length; j++) {
+                            html += '<option value="' + escapeHtml(cats[j]) + '">' + escapeHtml(cats[j]) + '</option>';
+                        }
+                        sels[i].innerHTML = html;
+                        if (cur) sels[i].value = cur;
+                    }
+                })
+                .catch(function() {});
+        }
+
+        async function registerMotherQuestion(questionId, srcMeta) {
+            if (!srcMeta || !srcMeta.category || !srcMeta.pattern) return;
+            try {
+                await fetch('http://127.0.0.1:8000/patterns/mother', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({question_id: questionId, category: srcMeta.category, name: srcMeta.pattern})
+                });
+            } catch (e) {
+                console.error('登记母题失败:', e);
+                showToast('题目已保存，但套路登记失败', 'error');
+            }
         }
 
         function selectSourceType(el) {
@@ -1616,6 +1678,7 @@ function safeParseKps(kps){
             _selectedSourceType = el.dataset.value;
             _selectedSourceMeta = {};
             updateSourceMetaFields();
+            if (_selectedSourceType === '精选母题') populateMotherCategoryOptions();
         }
         
         function closeSaveDialog() {
@@ -1666,6 +1729,10 @@ function safeParseKps(kps){
             
             var srcType = _selectedSourceType || '';
             var srcMeta = collectSourceMetaFromDialog();
+            if (srcType === '精选母题' && (!srcMeta.category || !srcMeta.pattern)) {
+                alert('请选择所属板块并填写套路名');
+                return;
+            }
             var rememberBox = document.getElementById('rememberSourceBox');
             var remember = rememberBox ? rememberBox.checked : false;
             if (remember && srcType) saveRememberedSource({source_type: srcType, source_meta: srcMeta});
@@ -1696,9 +1763,11 @@ function safeParseKps(kps){
                     var data = await r.json();
                     closeSaveDialog();
                     showToast('✓ 已保存到 ' + data.added + ' 个题单' + (srcType ? '，来源：' + srcType : ''), 'success');
+                    await registerMotherQuestion(questionId, srcMeta);
                 } else {
                     closeSaveDialog();
                     showToast('已保存' + (srcType ? '，来源：' + srcType : ''), 'success');
+                    await registerMotherQuestion(questionId, srcMeta);
                 }
             } catch (err) {
                 closeSaveDialog();

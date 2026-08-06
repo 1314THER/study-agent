@@ -18,7 +18,13 @@ from backend.solver import (
     _compute_overall_difficulty,
     _extract_json,
 )
-from backend.database import find_question, get_question_by_id, get_step_errors, save_question
+from backend.database import (
+    find_question,
+    get_question_by_id,
+    get_step_errors,
+    looks_like_choice_question,
+    save_question,
+)
 
 PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
 
@@ -85,6 +91,8 @@ def _load_reference(qid: int) -> dict:
         question_type = aj["chunk_results"][0].get("chunk_type")
     if question_type not in ("选择题", "填空题"):
         question_type = "大题"
+    if question_type == "大题" and looks_like_choice_question(question.get("content", "")):
+        question_type = "选择题"
 
     difficulty = aj.get("overall_difficulty") or aj.get("difficulty")
     if not isinstance(difficulty, dict) and aj.get("chunk_results"):
