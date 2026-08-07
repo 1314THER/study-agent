@@ -635,6 +635,35 @@ def get_pattern_loop(pattern_id: int) -> dict:
     }
 
 
+def check_pattern_answer(pattern_id: int, question_id: int, user_answer: str,
+                         teacher: str = "liangliang") -> dict:
+    """套路循环里用 AI 比对学生答案与参考答案。"""
+    data = get_pattern_loop(pattern_id)
+    q = next((x for x in data["questions"] if x["question_id"] == question_id), None)
+    if not q:
+        raise ValueError(f"题目不在该套路中: {question_id}")
+    answer = (q.get("answer") or "").strip()
+    if not answer:
+        return {
+            "error": "no_answer",
+            "detail": "这道题暂时没有参考答案，无法比对，请换一题再试。",
+        }
+    from backend.teach import teach_check
+    result = teach_check(
+        question=q.get("content") or "",
+        step_prompt="请写出这道题的最终答案",
+        step_answer=answer,
+        user_answer=user_answer or "",
+        teacher=teacher,
+    )
+    if result.get("feedback") == "抱歉，无法判断":
+        return {
+            "error": "unable_to_judge",
+            "detail": "AI 暂时无法判断，请重新提交答案。",
+        }
+    return result
+
+
 def record_attempt(pattern_id: int, question_id: int, role: str,
                    correct: bool, is_first_try: bool = False,
                    duration_seconds: int = 0) -> int:
@@ -710,10 +739,12 @@ def get_boards() -> list:
         mrows = conn.execute(
             "SELECT pattern_id, state, need_check, next_check_at, last_completed_at FROM pattern_mastery"
         ).fetchall()
+        prow_rows = conn.execute("SELECT id, name FROM patterns").fetchall()
     finally:
         conn.close()
 
     mastery = {m["pattern_id"]: dict(m) for m in mrows}
+    pattern_info = {p["id"]: dict(p) for p in prow_rows}
     pq_by_qid = {}
     for pq in pq_rows:
         pq_by_qid.setdefault(pq["question_id"], []).append(dict(pq))
@@ -738,6 +769,7 @@ def get_boards() -> list:
                 "content": (q.get("content", "") if q else "")[:120],
                 "question_type": (q.get("question_type", "") if q else ""),
                 "pattern_id": pattern_id,
+                "name": pattern_info.get(pattern_id, {}).get("name", "") if pattern_id else "",
                 "state": state,
             })
         edges = [

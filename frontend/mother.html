@@ -66,8 +66,8 @@
 <a href="exam.html" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
 <a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
 <a href="mother.html" class="nav-item active" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
-<a href="loop.html" class="nav-item" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
-<a href="board.html" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
+<a href="loop.html?v=20260807" class="nav-item" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
+<a href="board.html?v=20260807" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
 <a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
         </nav>
     </aside>
@@ -139,6 +139,7 @@ async function loadCategories() {
     }
     var sel = document.getElementById('patternCategory');
     if (sel) fillCategorySelect(sel);
+    if (_patterns.length) renderTree();
 }
 
 function fillCategorySelect(sel) {
@@ -194,6 +195,13 @@ function renderTree() {
         tree.innerHTML = '<div class="mother-empty">还没有母题套路，点击“新增套路”开始</div>';
         return;
     }
+    var warning = '';
+    if (_categories.length) {
+        var bad = cats.filter(function(c) { return _categories.indexOf(c) < 0; });
+        if (bad.length) {
+            warning = '<div style="margin-bottom:12px;padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#9a3412;font-size:14px;">板块与栏目不一致：' + escapeHtml(bad.join('、')) + '，请先修正后重试 <button class="mother-btn secondary" style="margin-left:8px;" onclick="syncPatterns()">重试</button></div>';
+        }
+    }
     var html = '';
     for (var ci = 0; ci < cats.length; ci++) {
         var cat = cats[ci];
@@ -214,7 +222,7 @@ function renderTree() {
         }
         html += '</ul></div>';
     }
-    tree.innerHTML = html;
+    tree.innerHTML = warning + html;
 }
 
 function selectPattern(id) {
@@ -364,9 +372,9 @@ function setStatus(msg, isError) {
     if (el) { el.textContent = msg; el.style.color = isError ? '#c62828' : '#2e7d32'; }
 }
 
-document.addEventListener('DOMContentLoaded', function() {
-    loadCategories();
-    syncPatterns();
+document.addEventListener('DOMContentLoaded', async function() {
+    await loadCategories();
+    await syncPatterns();
 });
 </script>
 </body>

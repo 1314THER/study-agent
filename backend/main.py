@@ -21,6 +21,15 @@ app = FastAPI(title="你好，我是张雪峰老师")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
+@app.middleware("http")
+async def no_cache_html(request, call_next):
+    response = await call_next(request)
+    if request.url.path == "/" or request.url.path.endswith(".html"):
+        response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+        response.headers["Pragma"] = "no-cache"
+    return response
+
+
 @app.exception_handler(Exception)
 async def global_exception_handler(request, exc):
     from fastapi.responses import JSONResponse
@@ -412,11 +421,30 @@ class PatternCompleteRequest(BaseModel):
     passed: bool
 
 
+class PatternCheckRequest(BaseModel):
+    question_id: int
+    user_answer: str
+    teacher: Optional[str] = Field("liangliang", description="老师")
+
+
 @app.post("/patterns/{pattern_id}/complete")
 def api_complete_pattern_loop(pattern_id: int, req: PatternCompleteRequest):
     """完成一次套路循环，推进掌握状态"""
     from backend.patterns import complete_pattern_loop
     return complete_pattern_loop(pattern_id, req.passed)
+
+
+@app.post("/patterns/{pattern_id}/check")
+def api_check_pattern_answer(pattern_id: int, req: PatternCheckRequest):
+    """套路循环中由 AI 比对学生输入的答案"""
+    from backend.patterns import check_pattern_answer
+    try:
+        return check_pattern_answer(
+            pattern_id, req.question_id, req.user_answer, teacher=req.teacher
+        )
+    except ValueError as e:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=404, content={"error": "not_found", "detail": str(e)})
 
 
 @app.post("/patterns/{pattern_id}/ensure-variants")

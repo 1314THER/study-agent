@@ -4,6 +4,7 @@
 <script>document.documentElement.classList.add("nav-init")</script>
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-cache">
+<meta http-equiv="Pragma" content="no-cache">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>套路循环 - 数学最强大脑</title>
 <link rel="stylesheet" href="style.css?v=20260806loop">
@@ -22,7 +23,10 @@
     .loop-time-box { display: flex; align-items: center; gap: 8px; margin: 10px 0; }
     .loop-time-box input { width: 80px; padding: 6px 8px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 14px; }
     .loop-question { font-size: 16px; line-height: 1.8; color: #1d1d1f; white-space: pre-line; }
-    .loop-answer { display: none; margin-top: 14px; padding: 12px 14px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 10px; font-size: 15px; line-height: 1.7; }
+    .loop-answer-box { margin-top: 14px; }
+    .loop-answer-box textarea { width: 100%; min-height: 92px; padding: 10px 12px; border: 1px solid #c7c7cc; border-radius: 10px; font-size: 14px; line-height: 1.7; box-sizing: border-box; resize: vertical; font-family: inherit; }
+    .loop-answer-box textarea:focus { outline: none; border-color: #0071e3; }
+    .loop-check-status { margin-top: 10px; font-size: 14px; color: #86868b; min-height: 20px; line-height: 1.6; }
     .loop-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
     .loop-btn { padding: 10px 20px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; background: #0071e3; color: white; }
     .loop-btn.secondary { background: #f5f5f7; color: #515154; }
@@ -50,8 +54,8 @@
 <a href="exam.html" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
 <a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
 <a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
-<a href="loop.html" class="nav-item active" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
-<a href="board.html" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
+<a href="loop.html?v=20260807" class="nav-item active" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
+<a href="board.html?v=20260807" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
 <a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
         </nav>
     </aside>
@@ -60,6 +64,7 @@
             <div class="loop-header">
                 <h1 id="loopTitle">套路循环</h1>
                 <button class="loop-btn secondary" onclick="pickPattern()">选择套路</button>
+                <button class="loop-btn danger" onclick="cancelLoop()">取消并返回首页</button>
             </div>
             <div id="loopBody"><div class="loop-card"><div class="mother-empty">加载中...</div></div></div>
         </div>
@@ -73,6 +78,17 @@
             <button class="loop-btn secondary" onclick="closeTeach()">完成教学，回去重做</button>
         </div>
         <iframe id="teachFrame" src="about:blank"></iframe>
+    </div>
+</div>
+
+<!-- AI 生成变式 Dialog -->
+<div class="ai-gen-overlay" id="aiGenOverlay" style="display:none" onclick="if(event.target===this)closeAiGenModal()">
+    <div class="ai-gen-dialog">
+        <div class="ai-gen-head">
+            <div class="ai-gen-title">AI 生成变式</div>
+            <button class="ai-gen-close" onclick="closeAiGenModal()">×</button>
+        </div>
+        <div id="aiGenContent"></div>
     </div>
 </div>
 
@@ -91,7 +107,6 @@ var state = {
     sessionFailed: false,
     motherOnlyMode: false,
     allQuestionsPassed: false,
-    answerShown: false,
     viewMode: 'question',
     failMessage: '',
     restoring: false
@@ -107,7 +122,6 @@ function saveDraft() {
             sessionFailed: state.sessionFailed,
             motherOnlyMode: state.motherOnlyMode,
             allQuestionsPassed: state.allQuestionsPassed,
-            answerShown: state.answerShown,
             viewMode: state.viewMode,
             failMessage: state.failMessage,
             timerStart: state.timerStart,
@@ -115,6 +129,13 @@ function saveDraft() {
             currentRole: state.currentQuestion ? state.currentQuestion.role : null
         }));
     } catch (e) {}
+}
+
+function cancelLoop() {
+    clearInterval(state.timerHandle);
+    closeAiGenModal();
+    clearDraft();
+    window.location.href = 'index.html';
 }
 
 function clearDraft() {
@@ -229,7 +250,6 @@ function restoreDraftState() {
     state.queueIdx = Math.min(draft.queueIdx || 0, Math.max(state.queue.length - 1, 0));
     state.currentQuestion = state.queue[state.queueIdx] || null;
     state.questionAttempts = draft.questionAttempts || 0;
-    state.answerShown = draft.answerShown || false;
     state.viewMode = draft.viewMode || 'question';
     state.failMessage = draft.failMessage || '';
     state.timerStart = draft.timerStart || null;
@@ -240,19 +260,12 @@ function restoreDraftState() {
         return;
     }
     renderQuestion();
-    if (state.viewMode === 'judge' || state.viewMode === 'fail') {
-        var ans = document.getElementById('loopAnswer');
-        ans.style.display = 'block';
-        renderMath(ans);
+    if (state.viewMode === 'fail') {
+        renderFailActions(state.failMessage || '');
         var timerEl = document.getElementById('loopTimer');
         if (timerEl) {
             timerEl.textContent = state.timerElapsed.toFixed(1) + 's';
             timerEl.classList.toggle('over', state.timerElapsed > (state.data.pattern.max_time_seconds || 120));
-        }
-        if (state.viewMode === 'judge') {
-            document.getElementById('loopActions').innerHTML = '<div class="loop-actions"><button class="loop-btn green" onclick="onSelfJudge(true)">做对了</button><button class="loop-btn danger" onclick="onSelfJudge(false)">做错了</button></div>';
-        } else {
-            renderFailActions(state.failMessage || '');
         }
     } else {
         startTimer();
@@ -322,24 +335,134 @@ function renderGenerateButton() {
     saveDraft();
 }
 
+var _aiGenTimers = [];
+
+function _clearAiGenTimers() {
+    for (var i = 0; i < _aiGenTimers.length; i++) clearTimeout(_aiGenTimers[i]);
+    _aiGenTimers = [];
+}
+
+function closeAiGenModal() {
+    _clearAiGenTimers();
+    var ov = document.getElementById('aiGenOverlay');
+    if (ov) ov.style.display = 'none';
+}
+
+function aiGenProgressHtml(pct, stage, detail) {
+    var stages = ['AI出题', 'Solver', 'Verifier', 'Formatter'];
+    var idx = {generating: 0, solver: 1, verifier: 2, formatter: 3, done: 3}[stage] || 0;
+    var html = '<div class="ai-gen-progress">';
+    html += '<div class="ai-gen-progress-stages">';
+    for (var i = 0; i < stages.length; i++) {
+        var cls = i < idx ? 'completed' : (i === idx ? 'active' : '');
+        html += '<div class="ai-gen-progress-stage ' + cls + '">' +
+            '<span class="ai-gen-progress-dot"></span><span>' + stages[i] + '</span></div>';
+    }
+    html += '</div>';
+    html += '<div class="ai-gen-progress-bar"><div class="ai-gen-progress-fill" style="width:' + pct + '%"></div></div>';
+    html += '<div class="ai-gen-progress-pct">' + pct + '%</div>';
+    html += '<div class="ai-gen-progress-text">' + escapeHtml(detail || '') + '</div>';
+    html += '</div>';
+    return html;
+}
+
+function aiGenErrorHtml(msg) {
+    return '<div class="ai-gen-status" style="color:#b3261e;">' + escapeHtml(msg || '生成失败') + '</div>';
+}
+
+function aiGenDifficultyText(c) {
+    if (!c || !c.difficulty) return '';
+    var lv = c.difficulty.level || '';
+    var sc = c.difficulty.total_score;
+    return lv + (sc !== undefined && sc !== null ? ' · ' + sc + '分' : '');
+}
+
+function escJsStr(s) {
+    return escapeHtml(String(s)).replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/\r?\n/g, '\\n');
+}
+
+function aiTeachNewQuestion(q) {
+    localStorage.setItem('_teach_question', q);
+    window.open('teach.html', '_blank');
+}
+
+function renderAiGenResult(d) {
+    var ct = document.getElementById('aiGenContent');
+    if (!ct) return;
+    if (!d || d.error) {
+        ct.innerHTML = '<div class="ai-gen-status" style="color:#b3261e;">' + escapeHtml((d && (d.detail || d.message)) || '生成失败') + '</div>';
+        return;
+    }
+    var list = d.candidates || [];
+    var html = '<div class="ai-gen-status">生成 ' + list.length + ' 道，通过 ' + (d.accepted || 0) + ' 道，淘汰 ' + (d.rejected || 0) + ' 道。通过的题目已保存为套路变式。</div>';
+    if (!list.length) {
+        html += '<div class="ai-gen-status">没有通过校验的题目，稍后再试一次。</div>';
+        html += '<div class="ai-gen-actions"><button class="ai-gen-action ai-gen-action-primary" onclick="closeAiGenModal();loadLoop()">完成并刷新套路循环</button></div>';
+        ct.innerHTML = html;
+        return;
+    }
+    for (var i = 0; i < list.length; i++) {
+        var c = list[i];
+        var ok = c.status === 'accepted';
+        var cls = ok ? 'ai-gen-accepted' : 'ai-gen-rejected';
+        html += '<div class="ai-gen-card ' + cls + '">';
+        html += '<div class="ai-gen-q">' + escapeHtml(c.question || '') + '</div>';
+        html += '<div class="ai-gen-tags">';
+        if (ok) {
+            html += '<span class="ai-gen-tag ai-gen-tag-ok">通过 · 贴合度 ' + escapeHtml(String(c.fit_score || 0)) + '</span>';
+            var dt = aiGenDifficultyText(c);
+            if (dt) html += '<span class="ai-gen-tag">' + escapeHtml(dt) + '</span>';
+        } else {
+            html += '<span class="ai-gen-tag ai-gen-tag-bad">未通过</span>';
+        }
+        if (c.design_focus) html += '<span class="ai-gen-tag">' + escapeHtml(c.design_focus) + '</span>';
+        html += '</div>';
+        if (ok) {
+            html += '<div class="ai-gen-actions">' +
+                '<button class="ai-gen-action ai-gen-action-primary" onclick="aiTeachNewQuestion(\'' + escJsStr(c.question) + '\')">📖 手把手教学</button>';
+            if (c.question_id) {
+                html += '<button class="ai-gen-action ai-gen-action-plain" onclick="localStorage.setItem(\'_open_question_id\', ' + c.question_id + ');window.open(\'history.html\', \'_blank\')">查看解析</button>';
+            }
+            html += '</div>';
+        } else if (c.rejected_reason) {
+            html += '<div class="ai-gen-note">淘汰原因：' + escapeHtml(c.rejected_reason) + '</div>';
+        }
+        html += '</div>';
+    }
+    html += '<div class="ai-gen-actions"><button class="ai-gen-action ai-gen-action-primary" onclick="closeAiGenModal();loadLoop()">完成并刷新套路循环</button></div>';
+    ct.innerHTML = html;
+    if (window.renderMathInElement) {
+        try { renderMathInElement(ct, {delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}], ignoredTags: ['script', 'style'] }); } catch (e) {}
+    }
+}
+
 async function generateVariants() {
-    document.getElementById('loopBody').insertAdjacentHTML('beforeend', '<div class="loop-card" id="genBox">正在生成变式，请稍候...</div>');
-    var d = await api('/patterns/' + state.patternId + '/ensure-variants', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({})
-    });
-    if (d.error) {
-        document.getElementById('genBox').innerHTML = '生成失败：' + escapeHtml(d.detail || d.error);
-        return;
+    var ov = document.getElementById('aiGenOverlay');
+    var ct = document.getElementById('aiGenContent');
+    if (!ov || !ct) return;
+    _clearAiGenTimers();
+    ov.style.display = 'flex';
+    ct.innerHTML = aiGenProgressHtml(6, 'generating', '正在启动变式生成...');
+    _aiGenTimers.push(setTimeout(function() { ct.innerHTML = aiGenProgressHtml(26, 'solver', 'AI 正在出题并解题...'); }, 2500));
+    _aiGenTimers.push(setTimeout(function() { ct.innerHTML = aiGenProgressHtml(68, 'verifier', '正在校验步骤...'); }, 8000));
+    _aiGenTimers.push(setTimeout(function() { ct.innerHTML = aiGenProgressHtml(90, 'formatter', '正在整理入库...'); }, 15000));
+    try {
+        var d = await api('/patterns/' + state.patternId + '/ensure-variants', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({})
+        });
+        _clearAiGenTimers();
+        if (d.error) {
+            ct.innerHTML = aiGenErrorHtml(d.detail || d.error || '生成失败');
+            return;
+        }
+        ct.innerHTML = aiGenProgressHtml(100, 'done', '生成完成');
+        renderAiGenResult(d.result || {candidates: [], accepted: 0, rejected: 0});
+    } catch (e) {
+        _clearAiGenTimers();
+        ct.innerHTML = aiGenErrorHtml('请求失败：' + (e.message || '无法连接后端'));
     }
-    if (!d.generated) {
-        var cands = (d.result && d.result.candidates) || [];
-        var reasons = cands.map(function(c) { return c.rejected_reason || '未通过校验'; }).join('；');
-        document.getElementById('genBox').innerHTML = '这次没有生成成功：' + escapeHtml(reasons || 'AI 未通过校验');
-        return;
-    }
-    loadLoop();
 }
 
 function startMotherOnly() {
@@ -359,7 +482,6 @@ function startQuestion() {
     state.questionAttempts = 0;
     state.timerStart = null;
     state.timerElapsed = 0;
-    state.answerShown = false;
     state.viewMode = 'question';
     state.failMessage = '';
     renderQuestion();
@@ -377,9 +499,12 @@ function renderQuestion() {
     html += '<span class="loop-progress">第 ' + idx + ' / ' + total + ' 关</span></div>';
     html += '<div class="loop-question" id="loopQuestion">' + formatChoiceQuestion(q.content || '') + '</div>';
     html += '<div class="loop-time-box"><span style="color:#86868b;font-size:13px;">用时</span><span class="loop-timer" id="loopTimer">0.0s</span></div>';
-    html += '<div class="loop-answer" id="loopAnswer"><strong>答案：</strong><span>' + escapeHtml(q.answer || '暂无') + '</span></div>';
+    html += '<div class="loop-answer-box">';
+    html += '<label for="userAnswerInput" style="display:block;font-size:13px;color:#515154;margin-bottom:6px;font-weight:600;">你的答案</label>';
+    html += '<textarea id="userAnswerInput" placeholder="写出你的最终答案，例如：选 A、$x = 2$、单调递增区间为..."></textarea>';
+    html += '<div class="loop-check-status" id="checkStatus"></div>';
     html += '<div class="loop-actions" id="loopActions">';
-    html += '<button class="loop-btn" id="doneBtn" onclick="onDone()">做完了</button>';
+    html += '<button class="loop-btn" id="doneBtn" onclick="submitAnswer()">提交答案</button>';
     html += '</div></div>';
     document.getElementById('loopBody').innerHTML = html;
     renderMath(document.getElementById('loopQuestion'));
@@ -408,26 +533,6 @@ function stopTimer() {
     if (state.timerStart) state.timerElapsed = (Date.now() - state.timerStart) / 1000;
 }
 
-function onDone() {
-    stopTimer();
-    state.questionAttempts++;
-    state.answerShown = true;
-    document.getElementById('loopAnswer').style.display = 'block';
-    renderMath(document.getElementById('loopAnswer'));
-    var maxT = state.data.pattern.max_time_seconds || 120;
-    if (state.timerElapsed > maxT) {
-        recordAttempt(false);
-        state.viewMode = 'fail';
-        renderFailActions('超时：用时 ' + state.timerElapsed.toFixed(1) + 's，超过了限时 ' + maxT + 's。');
-    } else {
-        state.viewMode = 'judge';
-        var html = '<div class="loop-actions"><button class="loop-btn green" onclick="onSelfJudge(true)">做对了</button>';
-        html += '<button class="loop-btn danger" onclick="onSelfJudge(false)">做错了</button></div>';
-        document.getElementById('loopActions').innerHTML = html;
-        saveDraft();
-    }
-}
-
 async function recordAttempt(correct) {
     var q = state.currentQuestion;
     await api('/patterns/' + state.patternId + '/attempt', {
@@ -443,6 +548,72 @@ async function recordAttempt(correct) {
     });
 }
 
+async function markPatternWrong() {
+    try {
+        await api('/patterns/' + state.patternId + '/complete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({passed: false})
+        });
+    } catch (e) {}
+}
+
+async function submitAnswer() {
+    var q = state.currentQuestion;
+    if (!q) return;
+    var input = document.getElementById('userAnswerInput');
+    var statusEl = document.getElementById('checkStatus');
+    var doneBtn = document.getElementById('doneBtn');
+    var userAnswer = input ? input.value.trim() : '';
+    if (!userAnswer) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:#c62828;">请先输入你的答案。</span>';
+        return;
+    }
+    stopTimer();
+    state.questionAttempts++;
+    if (statusEl) statusEl.innerHTML = 'AI 正在比对答案，请稍候...';
+    if (doneBtn) doneBtn.disabled = true;
+    var maxT = state.data.pattern.max_time_seconds || 120;
+    if (state.timerElapsed > maxT) {
+        await recordAttempt(false);
+        await markPatternWrong();
+        renderFailActions('超时：用时 ' + state.timerElapsed.toFixed(1) + 's，超过了限时 ' + maxT + 's。');
+        return;
+    }
+    try {
+        var d = await api('/patterns/' + state.patternId + '/check', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                question_id: q.question_id,
+                user_answer: userAnswer,
+                teacher: localStorage.getItem('teacher') || 'liangliang'
+            })
+        });
+        if (d.error) {
+            if (statusEl) statusEl.innerHTML = '<span style="color:#c62828;">无法比对：' + escapeHtml(d.detail || d.error) + '</span>';
+            if (doneBtn) doneBtn.disabled = false;
+            startTimer();
+            return;
+        }
+        if (d.is_correct) {
+            await recordAttempt(true);
+            onQuestionPassed();
+            return;
+        }
+        state.sessionFailed = true;
+        await recordAttempt(false);
+        await markPatternWrong();
+        var msg = d.feedback || '答案不对，再试一次。';
+        if (d.is_partial) msg = '答案还不完整：' + msg;
+        renderFailActions(msg);
+    } catch (e) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:#c62828;">请求失败：' + escapeHtml(e.message || '无法连接后端') + '</span>';
+        if (doneBtn) doneBtn.disabled = false;
+        startTimer();
+    }
+}
+
 function renderFailActions(msg) {
     state.viewMode = 'fail';
     state.failMessage = msg;
@@ -453,18 +624,6 @@ function renderFailActions(msg) {
     html += '</div>';
     document.getElementById('loopActions').innerHTML = html;
     saveDraft();
-}
-
-async function onSelfJudge(correct) {
-    recordAttempt(correct);
-    if (!correct) {
-        state.sessionFailed = true;
-        state.viewMode = 'fail';
-        renderFailActions('做错了，先重新挑战这道题。');
-        return;
-    }
-    saveDraft();
-    onQuestionPassed();
 }
 
 function onQuestionPassed() {
@@ -483,8 +642,6 @@ function onQuestionPassed() {
 }
 
 function retryQuestion() {
-    document.getElementById('loopAnswer').style.display = 'none';
-    state.answerShown = false;
     state.viewMode = 'question';
     state.failMessage = '';
     startQuestion();
@@ -524,20 +681,18 @@ async function finishAllPassed() {
 
 document.addEventListener('DOMContentLoaded', function() {
     var id = qs('pattern_id');
+    var draft = null;
+    try { draft = JSON.parse(localStorage.getItem('loop_draft') || 'null'); } catch (e) {}
     if (id) {
         state.patternId = parseInt(id);
-        clearDraft();
+        state.restoring = !!(draft && draft.patternId === state.patternId);
+        loadLoop();
+    } else if (draft && draft.patternId) {
+        state.patternId = draft.patternId;
+        state.restoring = true;
         loadLoop();
     } else {
-        var draft = null;
-        try { draft = JSON.parse(localStorage.getItem('loop_draft') || 'null'); } catch (e) {}
-        if (draft && draft.patternId) {
-            state.patternId = draft.patternId;
-            state.restoring = true;
-            loadLoop();
-        } else {
-            pickPattern();
-        }
+        pickPattern();
     }
 });
 </script>
