@@ -715,7 +715,11 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
         // ---- Display Result (from index.html) ----
         function displayDetailResult(data) {
             var result = document.getElementById('detailResult');
-            var html = '<div class="meta-bar">';
+            var html = '';
+            if (data.formatter_fallback) {
+                html += '<div style="margin-bottom:12px;padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#9a3412;font-size:13px;line-height:1.6;">可能有错误：该题 Formatter 校验未通过，已用 Verifier 结果兜底。</div>';
+            }
+            html += '<div class="meta-bar">';
             if (data.knowledge_points && data.knowledge_points.length > 0) {
                 html += '<span class="tag tag-category">' + safeParseKps(data.knowledge_points).join(' / ') + '</span>';
             }

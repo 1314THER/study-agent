@@ -643,6 +643,7 @@ def get_pattern_loop(pattern_id: int) -> dict:
             "content": q.get("content", ""),
             "answer": answer,
             "question_type": q.get("question_type", ""),
+            "formatter_fallback": bool(aj.get("formatter_fallback")),
         })
     return {
         "pattern": pattern,

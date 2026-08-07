@@ -48,6 +48,20 @@ BLOCK_FINAL_ANSWER_PATTERN = re.compile(r'^块最终答案[：:]\s*(.+)$')
 BLOCK_KP_PATTERN = re.compile(r'^块知识点[：:]\s*(.+)$')
 STEP_DIFFICULTY_PATTERN = re.compile(r'^步骤难度[：:]\s*(.+)$')
 STEP_LEVEL1_PATTERN = re.compile(r'^二级步骤[：:]\s*(.+)$')
+DIFF_TABLE_HEADER_PATTERN = re.compile(r'^#{1,6}\s*难度评分')
+DIFF_TABLE_ROW_PATTERN = re.compile(r'^\|\s*([^|]+?)\s*\|\s*(\d+)\s*\|')
+STEP_DIFF_JSON_PATTERN = re.compile(r'^步骤难度\s*[：:]\s*(\{.*\})$')
+STEP_DIFF_HEAD_PATTERN = re.compile(r'^步骤难度\s*[：:]\s*$')
+STEP_DIFF_LEVEL_PATTERN = re.compile(r'^level\s*[：:]\s*(.+)$')
+STEP_DIFF_SCORE_PATTERN = re.compile(r'^score\s*[：:]\s*(\d+)$')
+STEP_KP_PATTERN = re.compile(r'^知识点\s*[：:]\s*(.*)$')
+CHUNK_META_LINE_PATTERN = re.compile(r'^(块类型|板块|块难度|块最终答案|块知识点)\s*[：:]\s*')
+DIMENSION_ALIASES = {"常规程度": "非常规程度", "涉及到的知识点数量": "知识点密度"}
+
+
+def _strip_bullet(text: str) -> str:
+    """去掉步骤/块元数据行常见的 '- '、'* ' 等列表前缀"""
+    return re.sub(r'^\s*[-*•]\s*', '', text.strip())
 
 
 # ---------- 读取 prompt ----------
@@ -83,6 +97,45 @@ TEACHER_CONFIG = {
 
 SOLVER_PROMPT = _read_prompt("solver")
 FORMATTER_PROMPT = _read_prompt("formatter")
+
+_VERIFIER_OUTPUT_TEMPLATE = """## 输出格式（必须严格遵守，否则无法入库）
+
+第一行必须输出状态：[确认：可解] / [确认：不会做] / [确认：错题]
+
+如果状态为 [确认：可解]，必须按下面的固定结构输出，不要使用其它格式：
+
+### 块1
+块类型：选择题/填空题/多选题/子问/大题
+板块：<一级板块名>
+块难度：{"level": "容易/中等/困难/极难", "total_score": <0-15>, "dimensions": {"常规程度": <0-3>, "计算量": <0-3>, "理解难度": <0-3>, "分类讨论": <0-3>, "涉及到的知识点数量": <0-3>}}
+块最终答案：<该块的最终答案，多选题直接写 选 AB>
+块知识点：<知识点1>、<知识点2>
+
+步骤1：<步骤名>
+二级步骤：<二级步骤名，没有就写 null>
+标准过程：<标准/简略过程>
+详细过程：<详细过程>
+步骤难度：{"level": "基础/容易/中等/困难", "score": <0-3>}
+知识点：<知识点1>、<知识点2>
+
+步骤2：<步骤名>
+...（每个步骤都按同样结构）
+
+---
+### 难度评分
+| 维度 | 分数 | 说明 |
+|------|------|------|
+| 常规程度 | 1 | 说明 |
+| 计算量 | 2 | 说明 |
+| 理解难度 | 1 | 说明 |
+| 分类讨论 | 0 | 说明 |
+| 涉及到的知识点数量 | 1 | 说明 |
+
+格式要求：
+1. 块与块之间用 `### 块N` 分隔，步骤与步骤之间用 `---` 分隔。
+2. `步骤难度：`、`知识点：` 只能放在各自字段里，不得写进标准过程或详细过程。
+3. 不要修改或删除任何推导步骤；步骤名、标准过程、详细过程都必须完整。
+4. 多选题的原题开头必须带（多选），块最终答案直接写 `选 AB` 这种紧凑格式。"""
 
 
 # ---------- API Key ----------
@@ -268,47 +321,76 @@ def _parse_chunk_meta(text: str) -> dict:
     """从 Verifier 输出的块内容中提取块级元数据"""
     meta = {"chunk_type": None, "category": None,
             "difficulty": None, "final_answer": "", "knowledge_points": []}
+    diff_rows = {}
+    in_diff_table = False
     for line in text.split("\n"):
         stripped = line.strip()
-        m = BLOCK_TYPE_PATTERN.match(stripped)
+        if not stripped:
+            continue
+        body = _strip_bullet(stripped)
+        if DIFF_TABLE_HEADER_PATTERN.match(body):
+            in_diff_table = True
+            continue
+        if in_diff_table:
+            m = DIFF_TABLE_ROW_PATTERN.match(body)
+            if m:
+                key = m.group(1).strip()
+                value = int(m.group(2))
+                diff_rows[DIMENSION_ALIASES.get(key, key)] = value
+            continue
+        m = BLOCK_TYPE_PATTERN.match(body)
         if m:
             meta["chunk_type"] = m.group(1).strip()
             continue
-        m = BLOCK_CATEGORY_PATTERN.match(stripped)
+        m = BLOCK_CATEGORY_PATTERN.match(body)
         if m:
             meta["category"] = m.group(1).strip()
             continue
-        m = BLOCK_DIFFICULTY_PATTERN.match(stripped)
+        m = BLOCK_DIFFICULTY_PATTERN.match(body)
         if m:
             try:
-                meta["difficulty"] = json.loads(m.group(1).strip())
+                parsed_diff = json.loads(m.group(1).strip())
+                if isinstance(parsed_diff, dict):
+                    dims = parsed_diff.get("dimensions") or {}
+                    if isinstance(dims, dict):
+                        parsed_diff["dimensions"] = {
+                            DIMENSION_ALIASES.get(k, k): v for k, v in dims.items()
+                        }
+                meta["difficulty"] = parsed_diff
             except (json.JSONDecodeError, ValueError):
                 pass
             continue
-        m = BLOCK_FINAL_ANSWER_PATTERN.match(stripped)
+        m = BLOCK_FINAL_ANSWER_PATTERN.match(body)
         if m:
             meta["final_answer"] = m.group(1).strip()
             continue
-        m = FINAL_ANSWER_LINE_PATTERN.match(stripped)
+        m = FINAL_ANSWER_LINE_PATTERN.match(body)
         if m and not meta["final_answer"]:
             meta["final_answer"] = m.group(1).strip()
             continue
-        m = BLOCK_KP_PATTERN.match(stripped)
+        m = BLOCK_KP_PATTERN.match(body)
         if m:
             kps = [kp.strip().strip("[]") for kp in m.group(1).split("、") if kp.strip()]
             meta["knowledge_points"] = kps
             continue
-        m = TOTAL_DIFF_PATTERN.search(stripped)
+        m = TOTAL_DIFF_PATTERN.search(body)
         if m and meta["difficulty"] is None:
             meta["difficulty"] = {"level": m.group(2), "total_score": int(m.group(1)), "dimensions": {}}
             continue
-        m = KP_LINE_PATTERN.match(stripped)
+        m = KP_LINE_PATTERN.match(body)
         if m:
             kps = [kp.strip().strip("[]") for kp in m.group(1).split("、") if kp.strip()]
             for kp in kps:
                 if kp and kp not in meta["knowledge_points"]:
                     meta["knowledge_points"].append(kp)
             continue
+    if diff_rows:
+        if isinstance(meta["difficulty"], dict):
+            dims = dict(meta["difficulty"].get("dimensions") or {})
+            dims.update(diff_rows)
+            meta["difficulty"]["dimensions"] = dims
+        else:
+            meta["difficulty"] = {"level": "未知", "total_score": 0, "dimensions": diff_rows}
     return meta
 
 
@@ -319,6 +401,9 @@ def _parse_steps(text: str, allow_option_steps: bool = True) -> list:
     in_step = False
     parsing_standard = False
     parsing_detailed = False
+    diff_state = 0
+    kp_bullet_state = False
+    skip_rest = False
     for line in text.split("\n"):
         stripped = line.strip()
         m = STEP_HEADER_PATTERN.match(stripped)
@@ -328,16 +413,19 @@ def _parse_steps(text: str, allow_option_steps: bool = True) -> list:
             m = CN_STEP_HEADER_PATTERN.match(stripped)
         if m:
             if current_step is not None:
+                current_step.pop("_diff_level", None)
                 steps.append(current_step)
             num_raw = m.group(1)
             title_raw = m.group(2) if m.lastindex and m.lastindex >= 2 else ""
             parsing_standard = True
             parsing_detailed = False
+            diff_state = 0
+            kp_bullet_state = False
+            skip_rest = False
             if num_raw.isdigit():
                 step_number = int(num_raw)
             elif num_raw in _CN_NUM:
                 step_number = _CN_NUM[num_raw]
-                parsing_standard = True
             else:
                 step_number = len(steps) + 1
             current_step = {
@@ -353,52 +441,100 @@ def _parse_steps(text: str, allow_option_steps: bool = True) -> list:
             continue
         if not in_step or current_step is None:
             continue
-        slm = STEP_LEVEL1_PATTERN.match(stripped)
+        if re.match(r'^-{2,}\s*$', stripped) or re.match(r'^\*{2,}\s*$', stripped):
+            continue
+        body = _strip_bullet(stripped)
+        if DIFF_TABLE_HEADER_PATTERN.match(body):
+            skip_rest = True
+            parsing_standard = False
+            parsing_detailed = False
+            diff_state = 0
+            kp_bullet_state = False
+            continue
+        if skip_rest:
+            continue
+        m = STEP_DIFF_JSON_PATTERN.match(body)
+        if m:
+            try:
+                current_step["step_difficulty"] = json.loads(m.group(1).strip())
+            except (json.JSONDecodeError, ValueError):
+                current_step["step_difficulty"] = {"level": "未知", "score": 0}
+            parsing_standard = False
+            parsing_detailed = False
+            diff_state = 0
+            kp_bullet_state = False
+            continue
+        m = STEP_DIFF_HEAD_PATTERN.match(body)
+        if m:
+            diff_state = 1
+            parsing_standard = False
+            parsing_detailed = False
+            continue
+        if diff_state == 1:
+            m = STEP_DIFF_LEVEL_PATTERN.match(body)
+            if m:
+                current_step["_diff_level"] = m.group(1).strip()
+                diff_state = 2
+                continue
+        if diff_state == 2:
+            m = STEP_DIFF_SCORE_PATTERN.match(body)
+            if m:
+                current_step["step_difficulty"] = {
+                    "level": current_step.get("_diff_level") or "未知",
+                    "score": int(m.group(1)),
+                }
+                current_step.pop("_diff_level", None)
+                diff_state = 0
+                continue
+        if diff_state:
+            diff_state = 0
+        m = STEP_KP_PATTERN.match(body)
+        if m:
+            parsing_standard = False
+            parsing_detailed = False
+            kp_raw = m.group(1).strip()
+            if kp_raw:
+                current_step["knowledge_point"] = re.sub(r'^\[(.+)\]$', r'\1', kp_raw)
+                kp_bullet_state = False
+            else:
+                kp_bullet_state = True
+            continue
+        if kp_bullet_state:
+            kp = re.sub(r'^\[(.+)\]$', r'\1', body)
+            if kp and kp not in current_step["knowledge_point"]:
+                current_step["knowledge_point"] = (current_step["knowledge_point"] + "、" + kp).strip("、")
+            continue
+        slm = STEP_LEVEL1_PATTERN.match(body)
         if slm:
             parsing_standard = False
             parsing_detailed = False
             current_step["step_level1"] = slm.group(1).strip()
             continue
-        km = KNOWLEDGE_POINT_PATTERN.match(stripped)
-        if km:
-            parsing_standard = False
-            parsing_detailed = False
-            kp_raw = km.group(1).strip()
-            # 去掉可能的外层方括号
-            kp_raw = re.sub(r'^\[(.+)\]$', r'\1', kp_raw)
-            current_step["knowledge_point"] = kp_raw
-            continue
         bm = BRIEF_PATTERN.match(stripped)
+        if not bm:
+            bm = BRIEF_PATTERN.match(body)
         if bm:
             current_step["standard_writing"] = bm.group(1).strip()
             parsing_standard = True
             parsing_detailed = False
             continue
         sm = STANDARD_PATTERN.match(stripped)
+        if not sm:
+            sm = STANDARD_PATTERN.match(body)
         if sm:
             current_step["standard_writing"] = sm.group(1).strip()
             parsing_standard = True
             parsing_detailed = False
             continue
         dm2 = DETAIL_PATTERN.match(stripped)
+        if not dm2:
+            dm2 = DETAIL_PATTERN.match(body)
         if dm2:
             parsing_standard = False
             parsing_detailed = True
             current_step["detailed_writing"] = dm2.group(1).strip()
             continue
-        dm = STEP_DIFFICULTY_PATTERN.match(stripped)
-        if dm:
-            parsing_standard = False
-            parsing_detailed = False
-            try:
-                current_step["step_difficulty"] = json.loads(dm.group(1).strip())
-            except (json.JSONDecodeError, ValueError):
-                current_step["step_difficulty"] = {"level": "未知", "score": 0}
-            continue
-        # 遇到块级元数据或空白行，不追加到 detailed_writing
-        if not stripped:
-            continue
-        if stripped.startswith("块") and any(stripped.startswith(p) for p in ("块类型", "板块", "块难度", "块最终答案", "块知识点")):
+        if CHUNK_META_LINE_PATTERN.match(body):
             parsing_standard = False
             parsing_detailed = False
             continue
@@ -418,6 +554,7 @@ def _parse_steps(text: str, allow_option_steps: bool = True) -> list:
             current_step["detailed_writing"] += "\n" + stripped
             continue
     if current_step is not None:
+        current_step.pop("_diff_level", None)
         steps.append(current_step)
     return steps
 
@@ -504,6 +641,8 @@ def _load_verifier_prompt(category: str) -> str:
         else:
             prompt = prompt[:idx].rstrip()
     prompt += "\n\n" + _make_kp_list()
+    if "## 输出格式（必须严格遵守" not in prompt:
+        prompt += "\n\n" + _VERIFIER_OUTPUT_TEMPLATE
     return prompt
 
 
@@ -749,6 +888,15 @@ def _aggregate_from_chunks(question: str, chunk_results: list, token_total: dict
     }
 
 
+def _mark_formatter_fallback(result: dict) -> dict:
+    result["formatter_fallback"] = True
+    result.setdefault(
+        "formatter_note",
+        "Formatter 校验未通过，已用 Verifier 结果兜底，可能有错误",
+    )
+    return result
+
+
 def _collect_kps_from_steps(chunk_results: list) -> list:
     """从步骤级 knowledge_point 去重收集知识点。"""
     out = []
@@ -785,9 +933,9 @@ def step_final_check(question: str, chunk_results: list, chunks_raw: list, token
     try:
         result = json.loads(_extract_json(formatted))
         if "error" in result:
-            return _aggregate_from_chunks(question, chunk_results, token_total)
+            return _mark_formatter_fallback(_aggregate_from_chunks(question, chunk_results, token_total))
         if not _is_well_formed_chunk_results(result.get("chunk_results")):
-            return _aggregate_from_chunks(question, chunk_results, token_total)
+            return _mark_formatter_fallback(_aggregate_from_chunks(question, chunk_results, token_total))
         if not result.get("knowledge_points"):
             result["knowledge_points"] = _collect_kps_from_steps(chunk_results)
         # 计算武亮难度系数（步骤难度之和）
@@ -801,4 +949,4 @@ def step_final_check(question: str, chunk_results: list, chunks_raw: list, token
         result["token_usage"] = {k: token_total.get(k, 0) for k in token_total}
         return result
     except (json.JSONDecodeError, ValueError):
-        return _aggregate_from_chunks(question, chunk_results, token_total)
+        return _mark_formatter_fallback(_aggregate_from_chunks(question, chunk_results, token_total))

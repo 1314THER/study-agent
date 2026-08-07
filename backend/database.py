@@ -308,6 +308,26 @@ def _backfill_choice_questions(conn):
         print(f"[Database] 已修正 {changed} 道题的题型/选项/知识点")
 
 
+def _backfill_multi_choice_marker(conn):
+    """老题回填：多选题题干开头统一补上（多选）标记"""
+    rows = conn.execute(
+        "SELECT id, content FROM questions WHERE question_type = '多选题'"
+    ).fetchall()
+    changed = 0
+    for row in rows:
+        content = row["content"] or ""
+        new_content = _ensure_multi_choice_marker(content)
+        if new_content != content:
+            conn.execute(
+                "UPDATE questions SET content = ? WHERE id = ?",
+                (new_content, row["id"]),
+            )
+            changed += 1
+    if changed:
+        conn.commit()
+        print(f"[Database] 已为 {changed} 道多选题补上（多选）标记")
+
+
 def init_db():
     conn = get_connection()
     conn.executescript("""
@@ -427,6 +447,11 @@ def init_db():
         _backfill_choice_questions(conn)
     except sqlite3.OperationalError as e:
         print(f"[Database] 选择题题型回填跳过: {e}")
+    # 回填：多选题题干开头统一加（多选）
+    try:
+        _backfill_multi_choice_marker(conn)
+    except sqlite3.OperationalError as e:
+        print(f"[Database] 多选题标记回填跳过: {e}")
     # 迁移：新增时间追踪列
     for col in ("last_viewed_at", "last_edited_at", "last_exam_at"):
         try:

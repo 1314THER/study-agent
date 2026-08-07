@@ -530,6 +530,9 @@ function renderQuestion() {
     var html = '<div class="loop-card">';
     html += '<div class="loop-meta"><span class="tag tag-category">' + escapeHtml(roleLabel) + '</span>';
     html += '<span class="loop-progress">第 ' + idx + ' / ' + total + ' 关</span></div>';
+    if (q.formatter_fallback) {
+        html += '<div class="loop-banner" style="margin-bottom:12px;">可能有错误：该题经过 Verifier 兜底，未经完整校验。</div>';
+    }
     html += '<div class="loop-question" id="loopQuestion">' + formatChoiceQuestion(q.content || '') + '</div>';
     html += '<div class="loop-time-box"><span style="color:#86868b;font-size:13px;">用时</span><span class="loop-timer" id="loopTimer">0.0s</span></div>';
     html += '<div class="loop-answer-box">';

@@ -271,6 +271,8 @@ def _solve_candidate(candidate: dict, teacher: str, on_phase=None) -> dict:
                 return result
             _add_usage(result["token_usage"], verified.get("token_usage"))
             final = _aggregate_from_chunks(question, verified["chunk_results"], result["token_usage"])
+            final["formatter_fallback"] = True
+            final["formatter_note"] = "Formatter 校验未通过，已用 Verifier 结果兜底，可能有错误"
             if not _is_well_formed_chunk_results(final.get("chunk_results")):
                 result["rejected_reason"] = "没有生成有效步骤，重跑 Verifier 后仍缺少完整步骤"
                 return result
@@ -335,6 +337,10 @@ def _save_accepted(reference: dict, result: dict) -> int:
     final["question_type"] = final.get("question_type") or first.get("chunk_type")
     final["source_type"] = "ai生成"
     final["source_meta"] = {"reference_id": str(reference["id"])}
+    if final.get("question_type") == "多选题" or looks_like_multi_choice_question(result["question"], final):
+        final["question_type"] = "多选题"
+        from backend.database import _ensure_multi_choice_marker
+        result["question"] = _ensure_multi_choice_marker(result["question"])
     return save_question(result["question"], final)
 
 
