@@ -82,6 +82,11 @@ body.theme-ji .teach-progress-stages .teach-stage.active .teach-stage-dot { back
 body.theme-ji .teach-stage.active .teach-stage-label { color:#16a34a; }
 body.theme-ji .teach-progress-pct { color:#16a34a; }
 body.theme-ji .teach-progress-timer { color:#16a34a; }
+body.teach-standalone .sidebar,
+body.teach-standalone .mobile-nav-toggle,
+body.teach-standalone .nav-expand-toggle { display:none !important; }
+body.teach-standalone .main-content { margin-left:0 !important; width:100%; padding:18px 20px 40px; }
+body.teach-standalone .teach-container { height: calc(100vh - 36px); }
 .teach-container { max-width: 100%; margin: 0 auto; display: flex; flex-direction: column; height: calc(100vh - 48px); }
 .teach-header { text-align: center; padding-bottom: 12px; flex-shrink: 0; }
 .teach-input-area { flex-shrink: 0; margin-bottom: 12px; }
@@ -194,6 +199,7 @@ body.theme-ji .teach-progress-timer { color:#16a34a; }
 <a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
 <a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
 <a href="loop.html?v=20260807" class="nav-item" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
+<a href="calendar.html?v=20260807" class="nav-item" data-page="calendar" title="巩固日历"><span class="nav-icon">📅</span><span class="nav-label">巩固日历</span></a>
 <a href="board.html?v=20260807" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
 <a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
 </nav>
@@ -817,12 +823,13 @@ function renderAiGenResult(d){
   }
 }
 
-function aiTeachNewQuestion(q){localStorage.setItem("_teach_question",q);window.open("teach.html","_blank");}
+function aiTeachNewQuestion(q){localStorage.setItem("_teach_question",q);window.open("teach.html?standalone=1","_blank");}
 
 function resetAll(){clearSavedSession();_sessionId=null;_teachQuestionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("quoteArea").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachQuestionInput").value="";document.getElementById("teachStartBtn").disabled=false;document.getElementById("teachLoading").style.display="none";}
 
 
 document.addEventListener("DOMContentLoaded",function(){
+  if(new URLSearchParams(location.search).get("standalone")==="1"){document.body.classList.add("teach-standalone");}
   // Initial random quote after DOM is ready
   setTimeout(function(){
     var qe=document.getElementById("quoteText");

@@ -55,6 +55,7 @@
 <a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
 <a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
 <a href="loop.html?v=20260807" class="nav-item active" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
+<a href="calendar.html?v=20260807" class="nav-item" data-page="calendar" title="巩固日历"><span class="nav-icon">📅</span><span class="nav-label">巩固日历</span></a>
 <a href="board.html?v=20260807" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
 <a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
         </nav>
@@ -383,7 +384,19 @@ function escJsStr(s) {
 
 function aiTeachNewQuestion(q) {
     localStorage.setItem('_teach_question', q);
-    window.open('teach.html', '_blank');
+    window.open('teach.html?standalone=1', '_blank');
+}
+
+function aiGenUpdateProgress(pct, stage, detail) {
+    var ct = document.getElementById('aiGenContent');
+    if (!ct) return;
+    var wrap = document.getElementById('aiGenProgressWrap');
+    var html = '<div id="aiGenProgressWrap">' + aiGenProgressHtml(pct, stage, detail) + '</div>';
+    if (wrap) {
+        wrap.outerHTML = html;
+    } else {
+        ct.insertAdjacentHTML('beforeend', html);
+    }
 }
 
 function renderAiGenResult(d) {
@@ -398,7 +411,7 @@ function renderAiGenResult(d) {
     if (!list.length) {
         html += '<div class="ai-gen-status">没有通过校验的题目，稍后再试一次。</div>';
         html += '<div class="ai-gen-actions"><button class="ai-gen-action ai-gen-action-primary" onclick="closeAiGenModal();loadLoop()">完成并刷新套路循环</button></div>';
-        ct.innerHTML = html;
+        ct.insertAdjacentHTML('beforeend', html);
         return;
     }
     for (var i = 0; i < list.length; i++) {
@@ -430,7 +443,7 @@ function renderAiGenResult(d) {
         html += '</div>';
     }
     html += '<div class="ai-gen-actions"><button class="ai-gen-action ai-gen-action-primary" onclick="closeAiGenModal();loadLoop()">完成并刷新套路循环</button></div>';
-    ct.innerHTML = html;
+    ct.insertAdjacentHTML('beforeend', html);
     if (window.renderMathInElement) {
         try { renderMathInElement(ct, {delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}], ignoredTags: ['script', 'style'] }); } catch (e) {}
     }
@@ -442,10 +455,28 @@ async function generateVariants() {
     if (!ov || !ct) return;
     _clearAiGenTimers();
     ov.style.display = 'flex';
-    ct.innerHTML = aiGenProgressHtml(6, 'generating', '正在启动变式生成...');
-    _aiGenTimers.push(setTimeout(function() { ct.innerHTML = aiGenProgressHtml(26, 'solver', 'AI 正在出题并解题...'); }, 2500));
-    _aiGenTimers.push(setTimeout(function() { ct.innerHTML = aiGenProgressHtml(68, 'verifier', '正在校验步骤...'); }, 8000));
-    _aiGenTimers.push(setTimeout(function() { ct.innerHTML = aiGenProgressHtml(90, 'formatter', '正在整理入库...'); }, 15000));
+    ct.innerHTML = '';
+    var pct = 4;
+    aiGenUpdateProgress(pct, 'generating', '正在启动变式生成...');
+    var timer = setInterval(function() {
+        pct = Math.min(90, pct + 1);
+        var stage, detail;
+        if (pct < 25) {
+            stage = 'generating';
+            detail = '正在准备 AI 出题...';
+        } else if (pct < 55) {
+            stage = 'solver';
+            detail = 'AI 正在出题并解题...';
+        } else if (pct < 78) {
+            stage = 'verifier';
+            detail = '正在校验步骤...';
+        } else {
+            stage = 'formatter';
+            detail = '正在整理入库...';
+        }
+        aiGenUpdateProgress(pct, stage, detail);
+    }, 500);
+    _aiGenTimers.push(timer);
     try {
         var d = await api('/patterns/' + state.patternId + '/ensure-variants', {
             method: 'POST',
@@ -454,14 +485,16 @@ async function generateVariants() {
         });
         _clearAiGenTimers();
         if (d.error) {
-            ct.innerHTML = aiGenErrorHtml(d.detail || d.error || '生成失败');
+            aiGenUpdateProgress(90, 'formatter', '生成失败');
+            ct.insertAdjacentHTML('beforeend', aiGenErrorHtml(d.detail || d.error || '生成失败'));
             return;
         }
-        ct.innerHTML = aiGenProgressHtml(100, 'done', '生成完成');
+        aiGenUpdateProgress(100, 'done', '生成完成');
         renderAiGenResult(d.result || {candidates: [], accepted: 0, rejected: 0});
     } catch (e) {
         _clearAiGenTimers();
-        ct.innerHTML = aiGenErrorHtml('请求失败：' + (e.message || '无法连接后端'));
+        aiGenUpdateProgress(90, 'formatter', '生成失败');
+        ct.insertAdjacentHTML('beforeend', aiGenErrorHtml('请求失败：' + (e.message || '无法连接后端')));
     }
 }
 
@@ -650,7 +683,7 @@ function retryQuestion() {
 function openTeach() {
     var q = state.currentQuestion;
     try { localStorage.setItem('_teach_question', q.content || ''); } catch (e) {}
-    document.getElementById('teachFrame').src = 'teach.html';
+    document.getElementById('teachFrame').src = 'teach.html?standalone=1';
     document.getElementById('teachModal').style.display = 'block';
 }
 
@@ -664,18 +697,22 @@ async function finishAllPassed() {
     if (state.allQuestionsPassed) return;
     state.allQuestionsPassed = true;
     clearDraft();
-    await api('/patterns/' + state.patternId + '/complete', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({passed: true})
-    });
-    var m = (state.data.pattern.mastery || {});
+    var d = null;
+    try {
+        d = await api('/patterns/' + state.patternId + '/complete', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({passed: true})
+        });
+    } catch (e) {}
+    var m = (d && d.state) ? d : (state.data.pattern.mastery || {});
     var isOnePass = !state.sessionFailed && state.queue.length <= 1;
-    var next = '已完成一轮套路循环';
     var html = '<div class="loop-card"><h2>' + (isOnePass ? '一遍过，直接通过' : '全部题目做对，套路通过') + '</h2>';
-    html += '<p style="color:#515154;">' + escapeHtml(next) + '</p>';
-    html += '<div class="loop-actions"><button class="loop-btn" onclick="loadLoop()">查看最新状态</button>';
-    html += '<button class="loop-btn secondary" onclick="pickPattern()">换一个套路</button></div></div>';
+    html += '<p style="color:#515154;margin-top:8px;">当前掌握状态：<span class="state-badge ' + stateClass(m.state) + '">' + escapeHtml(stateLabel(m.state)) + '</span></p>';
+    if (m.next_check_at) html += '<p style="color:#515154;margin-top:6px;">巩固时间：' + escapeHtml(m.next_check_at) + '</p>';
+    html += '<div class="loop-actions"><button class="loop-btn" onclick="loadLoop()">再来一轮</button>';
+    html += '<button class="loop-btn secondary" onclick="pickPattern()">换一个套路</button>';
+    html += '<button class="loop-btn secondary" onclick="window.open(\'board.html?v=20260807\', \'_blank\')">返回闯关地图</button></div></div>';
     document.getElementById('loopBody').innerHTML = html;
 }
 

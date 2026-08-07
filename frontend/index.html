@@ -12,7 +12,7 @@
 <script>
 function teachOpen(btn) {
     var q = btn.getAttribute('data-question');
-    if (q) { localStorage.setItem('_teach_question', q); window.open('teach.html', '_blank'); }
+    if (q) { localStorage.setItem('_teach_question', q); window.open('teach.html?standalone=1', '_blank'); }
 }
 function safeParseKps(kps){
     if(Array.isArray(kps)) return kps;
@@ -34,6 +34,7 @@ function safeParseKps(kps){
 <a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
 <a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
 <a href="loop.html?v=20260807" class="nav-item" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
+<a href="calendar.html?v=20260807" class="nav-item" data-page="calendar" title="巩固日历"><span class="nav-icon">📅</span><span class="nav-label">巩固日历</span></a>
 <a href="board.html?v=20260807" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
 <a href="index.html" class="nav-item active" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
 </nav>
@@ -204,7 +205,7 @@ var _selectedTeacher = "liangliang";
 
             // Teach button
             html += '<div style="text-align:center;margin-bottom:16px;">';
-            html += '<button onclick="localStorage.setItem(\'_teach_question\',document.getElementById(\'questionInput\').value||\'\');window.open(\'teach.html\',\'_blank\');" style="padding:8px 20px;background:#ca8a04;color:white;border:none;border-radius:10px;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">📖 手把手教学</button></div>';
+            html += '<button onclick="localStorage.setItem(\'_teach_question\',document.getElementById(\'questionInput\').value||\'\');window.open(\'teach.html?standalone=1\',\'_blank\');" style="padding:8px 20px;background:#ca8a04;color:white;border:none;border-radius:10px;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px;">📖 手把手教学</button></div>';
 
             // 雷达图容器
             html += '<div id="radarChart" style="display:flex;justify-content:center;margin-bottom:16px;"></div>';

@@ -391,6 +391,26 @@ def api_get_pattern_loop(pattern_id: int):
         return JSONResponse(status_code=404, content={"error": "not_found", "detail": str(e)})
 
 
+@app.get("/patterns/calendar")
+def api_pattern_calendar():
+    """套路巩固日历（UTC+8）"""
+    from backend.patterns import get_pattern_calendar
+    return get_pattern_calendar()
+
+
+@app.get("/patterns/calendar.ics")
+def api_pattern_calendar_ics():
+    """导出套路巩固安排为 .ics 日历文件"""
+    from fastapi.responses import Response
+    from backend.patterns import get_pattern_calendar_ics
+    content = get_pattern_calendar_ics()
+    return Response(
+        content=content,
+        media_type="text/calendar",
+        headers={"Content-Disposition": 'attachment; filename="math-review-calendar.ics"'},
+    )
+
+
 class PatternAttemptRequest(BaseModel):
     question_id: int
     role: str = Field(..., description="mother/variant1/variant2/variant3")

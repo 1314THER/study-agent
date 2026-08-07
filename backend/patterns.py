@@ -5,7 +5,7 @@ import os
 import re
 import sqlite3
 import uuid
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import yaml
 
@@ -214,6 +214,22 @@ def init_mastery_db() -> None:
         if "max_time_seconds" not in cols:
             conn.execute("ALTER TABLE patterns ADD COLUMN max_time_seconds INTEGER NOT NULL DEFAULT 120")
             conn.commit()
+        # 清理挂错板块的闯关节点：套路板块与地图板块不一致时移除
+        conn.execute("""
+            DELETE FROM board_nodes WHERE id IN (
+                SELECT bn.id FROM board_nodes bn
+                JOIN boards b ON b.id = bn.board_id
+                JOIN pattern_questions pq ON pq.question_id = bn.question_id AND pq.role = 'mother'
+                JOIN patterns p ON p.id = pq.pattern_id
+                WHERE p.category <> b.category
+            )
+        """)
+        conn.execute("""
+            DELETE FROM board_edges
+            WHERE from_question_id NOT IN (SELECT question_id FROM board_nodes)
+               OR to_question_id NOT IN (SELECT question_id FROM board_nodes)
+        """)
+        conn.commit()
     finally:
         conn.close()
 
@@ -664,6 +680,82 @@ def check_pattern_answer(pattern_id: int, question_id: int, user_answer: str,
     return result
 
 
+_TZ_CN = timezone(timedelta(hours=8))
+
+
+def _cn_now() -> datetime:
+    return datetime.now(_TZ_CN)
+
+
+def _parse_cn_time(text: str):
+    try:
+        return datetime.strptime(text, "%Y-%m-%d %H:%M:%S").replace(tzinfo=_TZ_CN)
+    except (TypeError, ValueError):
+        return None
+
+
+def get_pattern_calendar() -> dict:
+    """返回套路巩固日历：所有已安排复查的套路，时区固定为 UTC+8。"""
+    today = _cn_now().date()
+    items = []
+    for p in get_patterns():
+        m = p.get("mastery") or {}
+        due = m.get("next_check_at")
+        if not due or not m.get("need_check"):
+            continue
+        dt = _parse_cn_time(due)
+        if not dt:
+            continue
+        due_date = dt.date()
+        days_left = (due_date - today).days
+        items.append({
+            "pattern_id": p["id"],
+            "category": p["category"],
+            "name": p["name"],
+            "state": m.get("state", "never"),
+            "next_check_at": due,
+            "due_date": due_date.isoformat(),
+            "days_left": days_left,
+            "due": days_left <= 0,
+        })
+    items.sort(key=lambda x: (x["due_date"], x["category"], x["name"]))
+    today_items = [x for x in items if x["days_left"] <= 0]
+    return {
+        "timezone": "Asia/Shanghai",
+        "today": today.isoformat(),
+        "items": items,
+        "today_items": today_items,
+    }
+
+
+def get_pattern_calendar_ics() -> str:
+    """导出套路巩固安排为 iCal（.ics），供系统日历导入。"""
+    data = get_pattern_calendar()
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    lines = [
+        "BEGIN:VCALENDAR",
+        "VERSION:2.0",
+        "PRODID:-//Codex//Math Review Calendar//CN",
+        "CALSCALE:GREGORIAN",
+        "METHOD:PUBLISH",
+        "X-WR-CALNAME:数学套路巩固",
+        "X-WR-TIMEZONE:Asia/Shanghai",
+    ]
+    for it in data["items"]:
+        d = it["due_date"].replace("-", "")
+        lines.extend([
+            "BEGIN:VEVENT",
+            f"UID:pattern-{it['pattern_id']}-{d}@math-review",
+            f"DTSTAMP:{stamp}",
+            f"DTSTART;VALUE=DATE:{d}",
+            f"SUMMARY:巩固：{it['name']}",
+            f"DESCRIPTION:板块：{it['category']}；状态：{it['state']}",
+            "END:VEVENT",
+        ])
+    lines.append("END:VCALENDAR")
+    return "\r\n".join(lines) + "\r\n"
+
+
 def record_attempt(pattern_id: int, question_id: int, role: str,
                    correct: bool, is_first_try: bool = False,
                    duration_seconds: int = 0) -> int:
@@ -739,7 +831,7 @@ def get_boards() -> list:
         mrows = conn.execute(
             "SELECT pattern_id, state, need_check, next_check_at, last_completed_at FROM pattern_mastery"
         ).fetchall()
-        prow_rows = conn.execute("SELECT id, name FROM patterns").fetchall()
+        prow_rows = conn.execute("SELECT id, name, category FROM patterns").fetchall()
     finally:
         conn.close()
 
@@ -758,6 +850,9 @@ def get_boards() -> list:
             q = get_question_by_id(n["question_id"])
             links = pq_by_qid.get(n["question_id"], [])
             pattern_id = next((l["pattern_id"] for l in links if l["role"] == "mother"), None)
+            pat = pattern_info.get(pattern_id, {}) if pattern_id else {}
+            if not pat or pat.get("category") != b["category"]:
+                continue
             state = "never"
             if pattern_id and mastery.get(pattern_id):
                 state = mastery[pattern_id].get("state", "never")

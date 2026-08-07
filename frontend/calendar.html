@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>document.documentElement.classList.add("nav-init")</script>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>巩固日历 - 数学最强大脑</title>
+<link rel="stylesheet" href="style.css?v=20260807cal">
+<style>
+    .cal-wrap { max-width: 980px; margin: 0 auto; }
+    .cal-top { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
+    .cal-top h1 { font-size: 22px; font-weight: 700; color: #1d1d1f; margin: 0; }
+    .cal-btn { padding: 8px 14px; border: none; border-radius: 8px; font-size: 13px; font-weight: 600; cursor: pointer; background: #0071e3; color: white; text-decoration: none; display: inline-block; }
+    .cal-btn.secondary { background: #f5f5f7; color: #515154; }
+    .cal-btn.amber { background: #ca8a04; color: white; }
+    .cal-note { font-size: 12px; color: #86868b; }
+    .cal-month-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .cal-month-row h2 { font-size: 16px; font-weight: 700; color: #1d1d1f; margin: 0; min-width: 120px; }
+    .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; background: white; border: 1px solid #e5e5e7; border-radius: 12px; padding: 10px; }
+    .cal-weekday { font-size: 12px; font-weight: 600; color: #86868b; text-align: center; padding: 6px 0; }
+    .cal-day { min-height: 72px; border: 1px solid #e5e5e7; border-radius: 8px; padding: 6px; background: #fafafa; }
+    .cal-day.empty { background: transparent; border-color: transparent; }
+    .cal-day.today { border-color: #0071e3; box-shadow: inset 0 0 0 1px #0071e3; }
+    .cal-day.has { background: #fff7ed; border-color: #f59e0b; }
+    .cal-date { font-size: 13px; font-weight: 700; color: #1d1d1f; }
+    .cal-day.today .cal-date { color: #0071e3; }
+    .cal-count { font-size: 11px; color: #b45309; margin-top: 6px; line-height: 1.4; }
+    .cal-section { margin-top: 18px; }
+    .cal-section h2 { font-size: 16px; font-weight: 700; color: #1d1d1f; margin: 0 0 10px; }
+    .today-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: white; border: 1px solid #e5e5e7; border-radius: 10px; padding: 12px 14px; margin-bottom: 8px; }
+    .today-name { font-size: 14px; font-weight: 700; color: #1d1d1f; }
+    .today-meta { font-size: 12px; color: #86868b; margin-top: 4px; }
+    .today-side { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+    .today-days { font-size: 12px; font-weight: 600; color: #ca8a04; }
+    .today-days.over { color: #c62828; }
+    .cal-empty { padding: 24px; text-align: center; color: #86868b; background: white; border: 1px solid #e5e5e7; border-radius: 10px; }
+    .state-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; margin-left: 4px; }
+    .state-never { background: #f3f4f6; color: #6b7280; }
+    .state-first_pass { background: #fff7ed; color: #c2410c; }
+    .state-second_pass { background: #fef3c7; color: #b45309; }
+    .state-third_pass { background: #d1fae5; color: #047857; }
+    .state-again_wrong { background: #fee2e2; color: #b91c1c; }
+</style>
+</head>
+<body class="theme-liangliang">
+<div class="app-layout">
+    <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
+    <aside class="sidebar">
+        <button class="nav-expand-toggle" onclick="toggleNavExpand()" title="展开导航" aria-label="展开导航">☰</button>
+        <nav>
+<a href="multimodal.html?v=20260807" class="nav-item" data-page="multimodal" title="多模态解答"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
+<a href="teach.html" class="nav-item" data-page="teach" title="老师手把手教你做题"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
+<a href="exam.html?v=20260807" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
+<a href="history.html?v=20260807" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+<a href="mother.html?v=20260807" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
+<a href="loop.html?v=20260807" class="nav-item" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
+<a href="calendar.html?v=20260807" class="nav-item active" data-page="calendar" title="巩固日历"><span class="nav-icon">📅</span><span class="nav-label">巩固日历</span></a>
+<a href="board.html?v=20260807" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
+<a href="index.html?v=20260807" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
+        </nav>
+    </aside>
+    <main class="main-content">
+        <div class="cal-wrap">
+            <div class="cal-top">
+                <h1>巩固日历</h1>
+                <a class="cal-btn amber" href="http://127.0.0.1:8000/patterns/calendar.ics" download>下载 ICS 导入日历</a>
+                <span class="cal-note">时区：Asia/Shanghai（UTC+8）</span>
+            </div>
+            <div class="cal-month-row">
+                <button class="cal-btn secondary" onclick="prevMonth()">上一月</button>
+                <h2 id="calMonth"></h2>
+                <button class="cal-btn secondary" onclick="nextMonth()">下一月</button>
+                <button class="cal-btn secondary" onclick="goToday()">回到今天</button>
+            </div>
+            <div class="cal-grid" id="calGrid"></div>
+            <div class="cal-section">
+                <h2>今天需要巩固</h2>
+                <div id="todayList"><div class="cal-empty">加载中...</div></div>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="nav.js?v=20260731h"></script>
+<script>
+var _data = null;
+var _year = 0;
+var _month = 0;
+var _weekdays = ['一', '二', '三', '四', '五', '六', '日'];
+
+function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+async function api(path, opts) {
+    var r = await fetch('http://127.0.0.1:8000' + path, opts || {});
+    return r.json();
+}
+
+function stateLabel(s) {
+    return {never: '未挑战', first_pass: '第一次会', second_pass: '第二次会', third_pass: '已通关', again_wrong: '再次出错'}[s] || s || '未挑战';
+}
+
+function stateClass(s) {
+    return 'state-' + (s || 'never');
+}
+
+function openLoop(patternId) {
+    window.open('loop.html?v=20260807&pattern_id=' + patternId, '_blank');
+}
+
+function pad2(n) {
+    return String(n).padStart(2, '0');
+}
+
+async function loadData() {
+    try {
+        _data = await api('/patterns/calendar');
+        var p = String(_data.today).split('-').map(Number);
+        _year = p[0];
+        _month = p[1];
+        renderAll();
+    } catch (e) {
+        document.getElementById('calGrid').innerHTML = '<div class="cal-empty">日历加载失败</div>';
+    }
+}
+
+function renderAll() {
+    renderCalendar();
+    renderTodayList();
+}
+
+function renderCalendar() {
+    var titleEl = document.getElementById('calMonth');
+    if (titleEl) titleEl.textContent = _year + ' 年 ' + _month + ' 月';
+    var grid = document.getElementById('calGrid');
+    if (!grid || !_data) return;
+    var first = new Date(_year, _month - 1, 1);
+    var startWeekday = (first.getDay() + 6) % 7;
+    var daysInMonth = new Date(_year, _month, 0).getDate();
+    var html = '';
+    for (var w = 0; w < 7; w++) {
+        html += '<div class="cal-weekday">周' + _weekdays[w] + '</div>';
+    }
+    for (var i = 0; i < startWeekday; i++) {
+        html += '<div class="cal-day empty"></div>';
+    }
+    for (var d = 1; d <= daysInMonth; d++) {
+        var iso = _year + '-' + pad2(_month) + '-' + pad2(d);
+        var items = (_data.items || []).filter(function(x) { return x.due_date === iso; });
+        var cls = 'cal-day';
+        if (iso === _data.today) cls += ' today';
+        if (items.length) cls += ' has';
+        html += '<div class="' + cls + '"><div class="cal-date">' + d + '</div>';
+        if (items.length) {
+            html += '<div class="cal-count">' + items.length + ' 个套路巩固</div>';
+        }
+        html += '</div>';
+    }
+    grid.innerHTML = html;
+}
+
+function renderTodayList() {
+    var el = document.getElementById('todayList');
+    if (!el) return;
+    var items = (_data && _data.today_items) || [];
+    if (!items.length) {
+        el.innerHTML = '<div class="cal-empty">今天没有需要巩固的套路</div>';
+        return;
+    }
+    var html = '';
+    for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        var overdue = it.days_left < 0;
+        html += '<div class="today-card">';
+        html += '<div><div class="today-name">' + escapeHtml(it.name) + '<span class="state-badge ' + stateClass(it.state) + '">' + escapeHtml(stateLabel(it.state)) + '</span></div>';
+        html += '<div class="today-meta">' + escapeHtml(it.category) + ' · 巩固日 ' + escapeHtml(it.due_date) + '</div></div>';
+        html += '<div class="today-side">';
+        html += '<span class="today-days' + (overdue ? ' over' : '') + '">' + (overdue ? '逾期 ' + Math.abs(it.days_left) + ' 天' : '今天') + '</span>';
+        html += '<button class="cal-btn" onclick="openLoop(' + it.pattern_id + ')">去巩固</button>';
+        html += '</div></div>';
+    }
+    el.innerHTML = html;
+}
+
+function prevMonth() {
+    _month--;
+    if (_month < 1) { _month = 12; _year--; }
+    renderCalendar();
+}
+
+function nextMonth() {
+    _month++;
+    if (_month > 12) { _month = 1; _year++; }
+    renderCalendar();
+}
+
+function goToday() {
+    if (!_data) return;
+    var p = String(_data.today).split('-').map(Number);
+    _year = p[0];
+    _month = p[1];
+    renderCalendar();
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadData();
+});
+</script>
+</body>
+</html>
