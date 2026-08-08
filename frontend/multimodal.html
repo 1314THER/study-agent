@@ -679,7 +679,7 @@ function restoreState(){
 function renderQuestionList(){
     var c=document.getElementById('mmQuestionList');var html='';
     for(var i=0;i<_questions.length;i++){
-        var q=_questions[i];var dc=q.difficulty==='简单'?'tag-easy':q.difficulty==='中等'?'tag-medium':'tag-hard';
+        var q=_questions[i];var dc=(q.difficulty==='容易'||q.difficulty==='简单')?'tag-easy':q.difficulty==='中等'?'tag-medium':'tag-hard';
         html+='<div class="mm-qcard'+(i===_selectedIdx?' active':'')+'" data-idx="'+i+'" onclick="selectQuestion('+i+')">';
         html+='<div class="mm-qcard-header">';
         html+='<input type="checkbox" class="hc-checkbox" data-idx="'+i+'" onchange="updateBatchCount()" onclick="event.stopPropagation()">';
@@ -827,9 +827,9 @@ async function startSingleSolve(idx){
 
         // Step 3
         renderProgress(idx,91,'\u6b65\u9aa4 3/3: \u6b63\u5728\u68c0\u67e5...',d2.token_usage?.total_tokens);
-        var r3=await fetch('http://127.0.0.1:8000/solve/step3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,chunk_results:JSON.stringify(d2.chunk_results),teacher,save:false})});
+        var r3=await fetch('http://127.0.0.1:8000/solve/step3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,chunk_results:JSON.stringify(d2.chunk_results),teacher,save:false,content:d1.content,category:d1.category||null,question_type:''})});
         var d3=await r3.json();
-        if(d3.error)throw new Error('无法完成');
+        if(d3.error&&!d3.chunk_results)throw new Error('无法完成');
 
         renderProgress(idx,100,'\u5b8c\u6210');
         _sessions[idx].solving=false;_sessions[idx].done=true;_sessions[idx].data=d3;
@@ -888,11 +888,12 @@ function renderProgress(idx,pct,msg,tokens){
 function renderSessionResult(idx,data,autoSave,keepOpen){
     var q=_questions[idx];
     var html='<div class="mm-preview-rendered" style="margin-bottom:12px;background:#fff;border:1px solid #e0e0e0;border-radius:10px;">'+escapedLatex(q?q.latex:'')+'</div>';
+    if(data.formatter_fallback)html+='<div style="margin-bottom:12px;padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#9a3412;font-size:13px;line-height:1.6;">可能有错误：该题 Formatter 未通过校验，已保留 Verifier 结果，难度未知。</div>';
     html+='<div class="meta-bar">';
     if(data.knowledge_points&&data.knowledge_points.length>0)html+='<span class="tag tag-category">'+safeParseKps(data.knowledge_points).slice(0,3).join(' / ')+'</span>';
     var od=data.overall_difficulty;
     if(od&&od.level){
-        var dlc=od.level==='容易'?'tag-easy':od.level==='中等'?'tag-medium':od.level==='困难'?'tag-hard':'tag-extreme';
+        var dlc=od.level==='容易'?'tag-easy':od.level==='中等'?'tag-medium':od.level==='困难'?'tag-hard':od.level==='未知'?'tag-unknown':'tag-extreme';
         html+='<span class="tag '+dlc+'">'+escapeHtml(od.level)+'</span>';
     }
     if(q&&q.source_type){
@@ -905,8 +906,7 @@ function renderSessionResult(idx,data,autoSave,keepOpen){
         var srcMetaText=sourceMetaText(q.source_type,q.source_meta);
         if(srcMetaText)html+='<span class="tag tag-source-meta">'+escapeHtml(srcMetaText)+'</span>';
     }
-    if(od&&od.total_score!==undefined)html+='<span class="tag" style="background:#e8f0fe;color:#1565c0;">雪峰难度系数：'+od.total_score+'/15</span>';
-    if(data.step_difficulty_sum!==undefined)html+='<span class="tag" style="background:#fce4ec;color:#c62828;">武亮难度系数：'+data.step_difficulty_sum+'</span>';
+    if(od&&od.total_score!==undefined){var dlb=od.level==='未知'?'难度：待重评':'难度系数：'+od.total_score+'/15';html+='<span class="tag" style="background:#ede7f6;color:#5e35b1;">'+dlb+'</span>';}
     html+='</div><div id="radar_'+idx+'" style="display:flex;justify-content:center;margin-bottom:16px;"></div>';
 
     if(data.chunk_results&&data.chunk_results.length>0){
@@ -915,7 +915,7 @@ function renderSessionResult(idx,data,autoSave,keepOpen){
             html+='<div class="chunk-card"><div class="chunk-header"><span class="chunk-label">块'+cid+'</span>';
             if(cr.chunk_type)html+='<span class="tag tag-type">'+escapeHtml(cr.chunk_type)+'</span>';
             if(cat.level1)html+='<span class="chunk-cat">'+escapeHtml(cat.level1)+'</span>';
-            if(diff.level)html+='<span class="chunk-diff tag-'+(diff.level==='容易'?'easy':diff.level==='中等'?'medium':diff.level==='困难'?'hard':'extreme')+'">'+escapeHtml(diff.level)+'</span>';
+            if(diff.level)html+='<span class="chunk-diff tag-'+(diff.level==='容易'?'easy':diff.level==='中等'?'medium':diff.level==='困难'?'hard':diff.level==='未知'?'unknown':'extreme')+'">'+escapeHtml(diff.level)+'</span>';
             html+='</div>';
             if(cr.steps&&cr.steps.length>0){
                 html+='<div class="chunk-steps">';
@@ -960,7 +960,7 @@ function renderSessionResult(idx,data,autoSave,keepOpen){
         compactHtml+='<div style="flex:1;display:flex;gap:4px;flex-wrap:wrap;">';
         var od=data.overall_difficulty;
         if(od&&od.level){
-            var lc=od.level==='容易'?'tag-easy':od.level==='中等'?'tag-medium':od.level==='困难'?'tag-hard':'tag-extreme';
+            var lc=od.level==='容易'?'tag-easy':od.level==='中等'?'tag-medium':od.level==='困难'?'tag-hard':od.level==='未知'?'tag-unknown':'tag-extreme';
             compactHtml+='<span class="tag '+lc+'">'+od.level+'</span>';
         }
         if(data.knowledge_points)safeParseKps(data.knowledge_points).slice(0,3).forEach(function(kp){

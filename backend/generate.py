@@ -7,15 +7,14 @@ import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 
+from backend import difficulty as diff
 from backend.solver import (
     TEACHER_CONFIG,
-    _aggregate_from_chunks,
     _is_well_formed_chunk_results,
     call_deepseek,
     step_solver_only,
     step_verify_all,
     step_final_check,
-    _compute_overall_difficulty,
     _extract_json,
 )
 from backend.database import (
@@ -97,9 +96,16 @@ def _load_reference(qid: int) -> dict:
     elif question_type == "大题" and looks_like_choice_question(question.get("content", "")):
         question_type = "选择题"
 
-    difficulty = aj.get("overall_difficulty") or aj.get("difficulty")
-    if not isinstance(difficulty, dict) and aj.get("chunk_results"):
-        difficulty = _compute_overall_difficulty(aj["chunk_results"])
+    difficulty = aj.get("overall_difficulty") or aj.get("difficulty") or {}
+    if not isinstance(difficulty, dict):
+        difficulty = {}
+    chunk_results = aj.get("chunk_results")
+    if isinstance(chunk_results, list) and chunk_results and diff.has_step_dimensions(chunk_results):
+        _, overall = diff.aggregate_chunk_results(chunk_results)
+        difficulty = overall
+    elif isinstance(difficulty, dict):
+        dims = diff.normalize_dims(difficulty.get("dimensions"))
+        difficulty = diff.difficulty_from_dims(dims) if dims else {}
 
     step_index = {}
     steps = []
@@ -253,29 +259,18 @@ def _solve_candidate(candidate: dict, teacher: str, on_phase=None) -> dict:
             [],
             result["token_usage"],
             teacher=teacher,
+            solver_content=solver["content"],
+            verifier_category=solver.get("category"),
         )
         _phase("formatter")
-        if final.get("error"):
-            result["rejected_reason"] = final.get("detail") or final.get("reason") or "Formatter 判定题目有误"
-            return result
-        if not _is_well_formed_chunk_results(final.get("chunk_results")):
-            # Formatter 丢了步骤或把过程精简没了，重跑一次 Verifier 并用其完整结果兜底
-            verified = step_verify_all(
-                solver["content"],
-                question,
-                solver.get("category"),
-                teacher=teacher,
+        if final.get("error") or not _is_well_formed_chunk_results(final.get("chunk_results")):
+            result["rejected_reason"] = (
+                final.get("formatter_note")
+                or final.get("reason")
+                or final.get("detail")
+                or "Formatter 未通过校验"
             )
-            if verified.get("error"):
-                result["rejected_reason"] = verified.get("detail") or verified.get("status") or "Verifier 重试失败"
-                return result
-            _add_usage(result["token_usage"], verified.get("token_usage"))
-            final = _aggregate_from_chunks(question, verified["chunk_results"], result["token_usage"])
-            final["formatter_fallback"] = True
-            final["formatter_note"] = "Formatter 校验未通过，已用 Verifier 结果兜底，可能有错误"
-            if not _is_well_formed_chunk_results(final.get("chunk_results")):
-                result["rejected_reason"] = "没有生成有效步骤，重跑 Verifier 后仍缺少完整步骤"
-                return result
+            return result
 
         result["status"] = "accepted"
         result["result"] = final

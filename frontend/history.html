@@ -460,6 +460,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
                 if (q.difficulty_level === '\u4e2d\u7b49') diffClass = 'tag-medium';
                 else if (q.difficulty_level === '\u56f0\u96be') diffClass = 'tag-hard';
                 else if (q.difficulty_level === '\u6781\u96be') diffClass = 'tag-extreme';
+                else if (q.difficulty_level === '\u672a\u77e5') diffClass = 'tag-unknown';
 
                 // Source type tag
                 var srcTag = '';
@@ -717,7 +718,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
             var result = document.getElementById('detailResult');
             var html = '';
             if (data.formatter_fallback) {
-                html += '<div style="margin-bottom:12px;padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#9a3412;font-size:13px;line-height:1.6;">可能有错误：该题 Formatter 校验未通过，已用 Verifier 结果兜底。</div>';
+                html += '<div style="margin-bottom:12px;padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#9a3412;font-size:13px;line-height:1.6;">可能有错误：该题 Formatter 未通过校验，已保留 Verifier 结果，难度未知。</div>';
             }
             html += '<div class="meta-bar">';
             if (data.knowledge_points && data.knowledge_points.length > 0) {
@@ -739,10 +740,8 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
             }
             var od = data.overall_difficulty;
             if (od && od.total_score !== undefined) {
-                html += '<span class="tag" style="background:#e8f0fe;color:#1565c0;">\u96ea\u5cf0\u96be\u5ea6\u7cfb\u6570\uff1a' + od.total_score + '/15</span>';
-            }
-            if (data.step_difficulty_sum !== undefined) {
-                html += '<span class="tag" style="background:#fce4ec;color:#c62828;">\u6b66\u4eae\u96be\u5ea6\u7cfb\u6570\uff1a' + data.step_difficulty_sum + '</span>';
+                var diffLabel = od.level === '\u672a\u77e5' ? '\u96be\u5ea6\uff1a\u5f85\u91cd\u8bc4' : ('\u96be\u5ea6\u7cfb\u6570\uff1a' + od.total_score + '/15');
+                html += '<span class="tag" style="background:#ede7f6;color:#5e35b1;">' + diffLabel + '</span>';
             }
             html += '</div>';
 
@@ -917,8 +916,8 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
         }
 
         function levelClass(level) {
-            var map = { '\u5bb9\u6613': 'tag-easy', '\u4e2d\u7b49': 'tag-medium', '\u56f0\u96be': 'tag-hard', '\u6781\u96be': 'tag-extreme' };
-            return map[level] || 'tag-easy';
+            var map = { '\u5bb9\u6613': 'tag-easy', '\u4e2d\u7b49': 'tag-medium', '\u56f0\u96be': 'tag-hard', '\u6781\u96be': 'tag-extreme', '\u672a\u77e5': 'tag-unknown' };
+            return map[level] || 'tag-unknown';
         }
 
         // ---- Step Error Functions ----

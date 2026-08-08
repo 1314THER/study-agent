@@ -12,6 +12,7 @@ import re, sys
 import httpx
 from typing import Dict, Any, List, Optional
 
+from backend import difficulty as diff
 from backend.categories import CATEGORIES
 
 # ---------- 目录 ----------
@@ -56,7 +57,7 @@ STEP_DIFF_LEVEL_PATTERN = re.compile(r'^level\s*[：:]\s*(.+)$')
 STEP_DIFF_SCORE_PATTERN = re.compile(r'^score\s*[：:]\s*(\d+)$')
 STEP_KP_PATTERN = re.compile(r'^知识点\s*[：:]\s*(.*)$')
 CHUNK_META_LINE_PATTERN = re.compile(r'^(块类型|板块|块难度|块最终答案|块知识点)\s*[：:]\s*')
-DIMENSION_ALIASES = {"常规程度": "非常规程度", "涉及到的知识点数量": "知识点密度"}
+DIMENSION_ALIASES = dict(diff.DIM_ALIASES)
 
 
 def _strip_bullet(text: str) -> str:
@@ -107,7 +108,6 @@ _VERIFIER_OUTPUT_TEMPLATE = """## 输出格式（必须严格遵守，否则无�
 ### 块1
 块类型：选择题/填空题/多选题/子问/大题
 板块：<一级板块名>
-块难度：{"level": "容易/中等/困难/极难", "total_score": <0-15>, "dimensions": {"常规程度": <0-3>, "计算量": <0-3>, "理解难度": <0-3>, "分类讨论": <0-3>, "涉及到的知识点数量": <0-3>}}
 块最终答案：<该块的最终答案，多选题直接写 选 AB>
 块知识点：<知识点1>、<知识点2>
 
@@ -115,25 +115,14 @@ _VERIFIER_OUTPUT_TEMPLATE = """## 输出格式（必须严格遵守，否则无�
 二级步骤：<二级步骤名，没有就写 null>
 标准过程：<标准/简略过程>
 详细过程：<详细过程>
-步骤难度：{"level": "基础/容易/中等/困难", "score": <0-3>}
 知识点：<知识点1>、<知识点2>
 
 步骤2：<步骤名>
 ...（每个步骤都按同样结构）
 
----
-### 难度评分
-| 维度 | 分数 | 说明 |
-|------|------|------|
-| 常规程度 | 1 | 说明 |
-| 计算量 | 2 | 说明 |
-| 理解难度 | 1 | 说明 |
-| 分类讨论 | 0 | 说明 |
-| 涉及到的知识点数量 | 1 | 说明 |
-
 格式要求：
 1. 块与块之间用 `### 块N` 分隔，步骤与步骤之间用 `---` 分隔。
-2. `步骤难度：`、`知识点：` 只能放在各自字段里，不得写进标准过程或详细过程。
+2. `知识点：` 只能放在各自字段里，不得写进标准过程或详细过程。
 3. 不要修改或删除任何推导步骤；步骤名、标准过程、详细过程都必须完整。
 4. 多选题的原题开头必须带（多选），块最终答案直接写 `选 AB` 这种紧凑格式。"""
 
@@ -204,30 +193,6 @@ def _extract_json(text: str) -> str:
     if last >= 0:
         text = text[: last + 1]
     return text.strip()
-
-
-def _compute_overall_difficulty(chunk_results: list) -> dict:
-    """从各块难度计算整体题目难度：每维取最大值，再求和（5维 0-3，总分 0-15）"""
-    dim_keys = ["非常规程度", "计算量", "理解难度", "分类讨论", "知识点密度"]
-    max_dims = {k: 0 for k in dim_keys}
-    for cr in chunk_results:
-        dims = cr.get("difficulty", {}).get("dimensions", {})
-        if not isinstance(dims, dict):
-            continue
-        for k in dim_keys:
-            val = dims.get(k, 0)
-            if isinstance(val, (int, float)) and val > max_dims[k]:
-                max_dims[k] = val
-    total = sum(max_dims.values())
-    if total <= 2:
-        level = "容易"
-    elif total <= 4:
-        level = "中等"
-    elif total <= 6:
-        level = "困难"
-    else:
-        level = "极难"
-    return {"level": level, "total_score": total, "dimensions": max_dims}
 
 
 def _extract_solver_status(text: str) -> Optional[str]:
@@ -646,26 +611,6 @@ def _load_verifier_prompt(category: str) -> str:
     return prompt
 
 
-# ---------- 雪碧了 ----------
-def _recalc_difficulty(diff: dict) -> dict:
-    """确保 total_score 等于维度之和（5维 0-3，总分 0-15）"""
-    if not diff or not isinstance(diff, dict):
-        return {"level": "未知", "total_score": 0, "dimensions": {}}
-    dims = diff.get("dimensions", {})
-    if isinstance(dims, dict):
-        total = sum(v for v in dims.values() if isinstance(v, (int, float)))
-        diff["total_score"] = total
-        if total <= 2:
-            diff["level"] = "容易"
-        elif total <= 4:
-            diff["level"] = "中等"
-        elif total <= 6:
-            diff["level"] = "困难"
-        else:
-            diff["level"] = "极难"
-    return diff
-
-
 def _extract_verifier_status(text: str) -> Optional[str]:
     """提取 Verifier 输出第一行的状态标记"""
     first_line = text.strip().split("\n")[0].strip()
@@ -781,7 +726,7 @@ def step_verify_all(content: str, question: str, category: str = None, question_
                 "standard_writing": pc["content"],
                 "detailed_writing": pc["content"],
                 "knowledge_point": "",
-                "step_difficulty": {"level": "容易", "score": 1},
+                "step_difficulty": None,
             }]
         for step in steps:
             if not step.get("standard_writing"):
@@ -807,7 +752,7 @@ def step_verify_all(content: str, question: str, category: str = None, question_
             "chunk_id": pc["id"],
             "chunk_type": meta.get("chunk_type") or resolved_type or category or "整体",
             "category": {"level1": meta.get("category") or category or "整体", "level2": None},
-            "difficulty": _recalc_difficulty(meta.get("difficulty")),
+            "difficulty": dict(diff.UNKNOWN_DIFFICULTY),
             "steps": steps,
             "final_answer": meta.get("final_answer", ""),
             "knowledge_points": unique_kps,
@@ -822,7 +767,7 @@ def step_verify_all(content: str, question: str, category: str = None, question_
         _all_valid_kps.update(subs)
     for cr in chunk_results:
         cr["knowledge_points"] = [kp for kp in cr.get("knowledge_points", []) if kp in _all_valid_kps]
-    overall_diff = _compute_overall_difficulty(chunk_results)
+    overall_diff = dict(diff.UNKNOWN_DIFFICULTY)
     return {"chunk_results": chunk_results, "token_usage": v_usage, "overall_difficulty": overall_diff}
 
 
@@ -859,10 +804,9 @@ def _is_well_formed_chunk_results(chunk_results) -> bool:
 
 
 def _aggregate_from_chunks(question: str, chunk_results: list, token_total: dict) -> dict:
-    """聚合 Verifier 输出为最终 JSON（当 Formatter 失败时的兜底）"""
+    """聚合 Verifier 输出为最终 JSON（Formatter 两次都失败时的兜底）。"""
     kps = set()
     answers = []
-    step_sum = 0
     for cr in chunk_results:
         for kp in cr.get("knowledge_points", []):
             kps.add(kp)
@@ -874,27 +818,15 @@ def _aggregate_from_chunks(question: str, chunk_results: list, token_total: dict
                     part = part.strip()
                     if part:
                         kps.add(part)
-            sd = step.get("step_difficulty", {})
-            step_sum += sd.get("score", 0) if isinstance(sd, dict) else 0
-    overall = _compute_overall_difficulty(chunk_results)
+        cr["difficulty"] = dict(diff.UNKNOWN_DIFFICULTY)
     return {
         "status": "可解",
         "chunk_results": chunk_results,
         "final_answer": " | ".join(answers) if len(answers) > 1 else (answers[0] if answers else ""),
         "knowledge_points": list(kps),
-        "step_difficulty_sum": step_sum,
-        "overall_difficulty": overall,
+        "overall_difficulty": dict(diff.UNKNOWN_DIFFICULTY),
         "token_usage": {k: token_total.get(k, 0) for k in token_total},
     }
-
-
-def _mark_formatter_fallback(result: dict) -> dict:
-    result["formatter_fallback"] = True
-    result.setdefault(
-        "formatter_note",
-        "Formatter 校验未通过，已用 Verifier 结果兜底，可能有错误",
-    )
-    return result
 
 
 def _collect_kps_from_steps(chunk_results: list) -> list:
@@ -915,8 +847,8 @@ def _collect_kps_from_steps(chunk_results: list) -> list:
     return out
 
 
-def step_final_check(question: str, chunk_results: list, chunks_raw: list, token_total: dict, teacher: str = None) -> dict:
-    """全局校验 + 聚合（如果 Formatter 输出雪碧了，兜底用 Verifier 的结果）"""
+def _call_formatter(question: str, chunk_results: list, token_total: dict, teacher: str):
+    """调用 Formatter 补齐步骤五维，返回 (result, reason)。result 为 None 表示失败。"""
     config = TEACHER_CONFIG.get(teacher or "liangliang", TEACHER_CONFIG["liangliang"])
     f_cfg = config["formatter"]
     input_data = {
@@ -932,21 +864,58 @@ def step_final_check(question: str, chunk_results: list, chunks_raw: list, token
         token_total[k] += usage.get(k, 0)
     try:
         result = json.loads(_extract_json(formatted))
-        if "error" in result:
-            return _mark_formatter_fallback(_aggregate_from_chunks(question, chunk_results, token_total))
-        if not _is_well_formed_chunk_results(result.get("chunk_results")):
-            return _mark_formatter_fallback(_aggregate_from_chunks(question, chunk_results, token_total))
-        if not result.get("knowledge_points"):
-            result["knowledge_points"] = _collect_kps_from_steps(chunk_results)
-        # 计算武亮难度系数（步骤难度之和）
-        step_sum = 0
-        for cr in chunk_results:
-            for step in cr.get("steps", []):
-                sd = step.get("step_difficulty", {})
-                step_sum += sd.get("score", 0) if isinstance(sd, dict) else 0
-        result["step_difficulty_sum"] = step_sum
-        result["overall_difficulty"] = _compute_overall_difficulty(chunk_results)
-        result["token_usage"] = {k: token_total.get(k, 0) for k in token_total}
-        return result
     except (json.JSONDecodeError, ValueError):
-        return _mark_formatter_fallback(_aggregate_from_chunks(question, chunk_results, token_total))
+        return None, "Formatter 输出不是合法 JSON"
+    if not isinstance(result, dict):
+        return None, "Formatter 输出结构异常"
+    if "error" in result:
+        return None, str(result.get("reason") or result.get("error") or "Formatter 判定题目有误")
+    crs = result.get("chunk_results")
+    if not _is_well_formed_chunk_results(crs):
+        return None, "Formatter 输出缺少完整步骤"
+    if not diff.has_step_dimensions(crs):
+        return None, "Formatter 未给每个步骤输出五维难度"
+    try:
+        _, overall = diff.aggregate_chunk_results(crs)
+    except Exception as e:
+        return None, f"难度聚合失败: {str(e)[:100]}"
+    result["overall_difficulty"] = overall
+    result["chunk_results"] = crs
+    if not result.get("knowledge_points"):
+        result["knowledge_points"] = _collect_kps_from_steps(crs)
+    result["token_usage"] = {k: token_total.get(k, 0) for k in token_total}
+    return result, None
+
+
+def step_final_check(question: str, chunk_results: list, chunks_raw: list, token_total: dict, teacher: str = None,
+                     solver_content: str = None, verifier_category: str = None, question_type: str = None) -> dict:
+    """Formatter 评分 + 聚合；失败时重跑一次 Verifier 再试，仍失败则报错并保留新 Verifier 结果。"""
+    result, reason = _call_formatter(question, chunk_results, token_total, teacher)
+    if result:
+        return result
+
+    retried = None
+    if solver_content:
+        try:
+            retried = step_verify_all(
+                solver_content, question, verifier_category,
+                question_type=question_type, teacher=teacher,
+            )
+        except Exception as e:
+            print(f"[Formatter] Verifier 重跑失败: {str(e)[:200]}", file=sys.stderr)
+            retried = None
+        if retried and not retried.get("error"):
+            result, reason2 = _call_formatter(question, retried["chunk_results"], token_total, teacher)
+            if result:
+                return result
+            reason = reason2 or reason
+
+    fallback_crs = retried["chunk_results"] if retried else chunk_results
+    fallback = _aggregate_from_chunks(question, fallback_crs, token_total)
+    fallback["error"] = "formatter_failed"
+    fallback["formatter_fallback"] = True
+    fallback["formatter_note"] = (
+        "Formatter 未通过校验，已保留 Verifier 结果，难度未知，可能有错误。"
+        f"原因：{reason}"
+    )
+    return fallback

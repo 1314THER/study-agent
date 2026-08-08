@@ -174,7 +174,11 @@ var _selectedTeacher = "liangliang";
 
         function displayResult(data, totalTokens) {
             var result = document.getElementById('result');
-            var html = '<div class="meta-bar">';
+            var html = '';
+            if (data.formatter_fallback) {
+                html += '<div style="margin-bottom:12px;padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#9a3412;font-size:13px;line-height:1.6;">可能有错误：该题 Formatter 未通过校验，已保留 Verifier 结果，难度未知。</div>';
+            }
+            html += '<div class="meta-bar">';
             // 知识点标签（仅大题有）
             if (data.knowledge_points && data.knowledge_points.length > 0) {
                 html += '<span class="tag tag-category">' + safeParseKps(data.knowledge_points).slice(0,3).join(' / ') + '</span>';
@@ -195,11 +199,8 @@ var _selectedTeacher = "liangliang";
                 html += sourceMetaLink(data.source_type, data.source_meta);
             }
             if (od && od.total_score !== undefined) {
-                html += '<span class="tag" style="background:#e8f0fe;color:#1565c0;">雪峰难度系数：' + od.total_score + '/15</span>';
-            }
-            // 武亮难度系数
-            if (data.step_difficulty_sum !== undefined) {
-                html += '<span class="tag" style="background:#fce4ec;color:#c62828;">武亮难度系数：' + data.step_difficulty_sum + '</span>';
+                var diffLabel = od.level === '未知' ? '难度：待重评' : ('难度系数：' + od.total_score + '/15');
+                html += '<span class="tag" style="background:#ede7f6;color:#5e35b1;">' + diffLabel + '</span>';
             }
             html += '</div>';
 
@@ -226,7 +227,7 @@ var _selectedTeacher = "liangliang";
                         html += '<span class="tag ' + tc + '">' + cr.chunk_type + '</span>';
                     }
                     if (cat.level1) html += '<span class="chunk-cat">' + cat.level1 + '</span>';
-                    if (diff.level) html += '<span class="chunk-diff ' + (diff.level === '容易' ? 'tag-easy' : diff.level === '中等' ? 'tag-medium' : diff.level === '困难' ? 'tag-hard' : 'tag-extreme') + '">' + diff.level + '</span>';
+                    if (diff.level) html += '<span class="chunk-diff ' + levelClass(diff.level) + '">' + diff.level + '</span>';
                     html += '</div>';
 
                     if (cr.steps && cr.steps.length > 0) {
@@ -339,8 +340,8 @@ var _selectedTeacher = "liangliang";
             }
         }
         function levelClass(level) {
-            var map = { '容易': 'tag-easy', '中等': 'tag-medium', '困难': 'tag-hard', '极难': 'tag-extreme' };
-            return map[level] || 'tag-easy';
+            var map = { '容易': 'tag-easy', '中等': 'tag-medium', '困难': 'tag-hard', '极难': 'tag-extreme', '未知': 'tag-unknown' };
+            return map[level] || 'tag-unknown';
         }
 
         var _stepTimer = null;
@@ -432,14 +433,14 @@ var _selectedTeacher = "liangliang";
                 const r3 = await fetch('http://127.0.0.1:8000/solve/step3', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question: question, chunk_results: JSON.stringify(d2.chunk_results), teacher: _selectedTeacher, save: document.getElementById('saveToggle').checked })
+                    body: JSON.stringify({ question: question, chunk_results: JSON.stringify(d2.chunk_results), teacher: _selectedTeacher, save: document.getElementById('saveToggle').checked, content: d1.content, category: d1.category || null, question_type: _selectedType || null })
                 });
                 const d3 = await r3.json();
                 totalTokens += (d3.token_usage?.total_tokens || 0);
 
                 stopStepTimer();
                 setProgress(100, '完成', totalTokens);
-                if (d3.error) { displayXuebile(d3); return; }
+                if (d3.error && !d3.chunk_results) { displayXuebile(d3); return; }
                 _lastResult = d3;
                 document.getElementById('saveAfterArea').style.display = 'block';
                 document.getElementById('saveAfterBtn').textContent = '加入个人题库';

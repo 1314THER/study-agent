@@ -71,6 +71,9 @@ class Step3Request(BaseModel):
     chunk_results: str = Field(..., description="Verifier 输出的各块结果 JSON")
     teacher: Optional[str] = Field(None, description="老师（可选）")
     save: bool = False
+    content: Optional[str] = Field(None, description="Solver 原始解答，Formatter 失败时用于重跑 Verifier")
+    category: Optional[str] = Field(None, description="板块（可选）")
+    question_type: Optional[str] = Field(None, description="题型（可选）")
 
 # ---------- 错因标定 ----------
 _VALID_MISTAKE_TYPES = {"符号错误", "计算错误", "公式记错",
@@ -129,7 +132,16 @@ def api_step3(req: Step3Request):
     import json
     chunk_results = json.loads(req.chunk_results)
     token_total = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
-    final = step_final_check(req.question, chunk_results, [], token_total, teacher=req.teacher)
+    final = step_final_check(
+        req.question,
+        chunk_results,
+        [],
+        token_total,
+        teacher=req.teacher,
+        solver_content=req.content,
+        verifier_category=req.category,
+        question_type=req.question_type,
+    )
 
     if req.save:
         from backend.database import save_question
@@ -139,7 +151,10 @@ def api_step3(req: Step3Request):
         final["question_type"] = first.get("chunk_type")
         try:
             from backend.database import save_question as _save_q3
-            saved_qid = _save_q3(req.question, final)
+            save_aj = dict(final)
+            save_aj.pop("error", None)
+            save_aj.pop("formatter_note", None)
+            saved_qid = _save_q3(req.question, save_aj)
             final["saved_question_id"] = saved_qid
         except Exception as e:
             print(f"[Warn] 保存到数据库失败: {e}")

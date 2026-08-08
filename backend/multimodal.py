@@ -180,9 +180,11 @@ def _post_process(questions: list) -> list:
             continue
         latex = q.get("latex", q.get("content", q.get("text", "")))
         difficulty = q.get("difficulty", "中等")
-        if difficulty not in ("简单", "中等", "困难"):
+        if difficulty in ("简单", "容易"):
+            difficulty = "容易"
+        if difficulty not in ("容易", "中等", "困难"):
             difficulty = "中等"
-        teacher_map = {"简单": "liangliang", "中等": "liangliang", "困难": "taotao"}
+        teacher_map = {"容易": "liangliang", "中等": "liangliang", "困难": "taotao"}
         question_type = q.get("type", q.get("question_type", ""))
         if question_type not in ("选择题", "多选题", "填空题", "大题"):
             question_type = ""

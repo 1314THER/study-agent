@@ -1,5 +1,11 @@
 import json, os, re
-from backend.solver import TEACHER_CONFIG, call_deepseek, step_solver_only, step_verify_all
+from backend.solver import (
+    TEACHER_CONFIG,
+    call_deepseek,
+    step_final_check,
+    step_solver_only,
+    step_verify_all,
+)
 from backend.database import find_question, save_question as db_save_question
 
 PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
@@ -140,13 +146,20 @@ def teach_start(question, teacher=None):
                          teacher=teacher)
     if vr.get("error"):
         return vr
-    cr = vr["chunk_results"]
+    final = step_final_check(
+        question, vr["chunk_results"], [], {},
+        teacher=teacher, solver_content=sr["content"], verifier_category=sr.get("category"),
+    )
+    cr = final.get("chunk_results") or vr["chunk_results"]
     steps, _ = _bs(cr)
     steps = _fs(steps, teacher)
     cr = _mg(cr, steps)
-    aj = {"chunk_results": cr,
-          "overall_difficulty": vr.get("overall_difficulty"),
-          "knowledge_points": [], "final_answer": ""}
+    aj = dict(final)
+    aj.pop("error", None)
+    aj.pop("formatter_note", None)
+    aj["chunk_results"] = cr
+    aj.setdefault("knowledge_points", [])
+    aj.setdefault("final_answer", "")
     for c in cr:
         if c.get("final_answer"):
             aj["final_answer"] += (" | " if aj["final_answer"] else "") + c["final_answer"]
@@ -161,7 +174,8 @@ def teach_start(question, teacher=None):
     return {"question": question, "category": sr.get("category"),
             "steps": steps, "total_steps": len(steps),
             "chunk_results": cr,
-            "overall_difficulty": vr.get("overall_difficulty"),
+            "overall_difficulty": final.get("overall_difficulty") or vr.get("overall_difficulty"),
+            "formatter_fallback": final.get("formatter_fallback", False),
             "from_db": False}
 
 def teach_check(question, step_prompt, step_answer, user_answer, teacher=None):
@@ -199,17 +213,25 @@ class TeachSessionManager:
             cr = r["chunk_results"]
         else:
             # 走完整解题流水线
-            from backend.solver import step_solver_only, step_verify_all
+            from backend.solver import step_final_check, step_solver_only, step_verify_all
             sr = step_solver_only(question, teacher=teacher)
             if sr.get("error"):
                 return {"error": sr.get("error"), "detail": sr.get("detail", "")}
             vr = step_verify_all(sr["content"], question, sr.get("category"), teacher=teacher)
             if vr.get("error"):
                 return {"error": vr.get("error"), "detail": vr.get("detail", "")}
-            cr = vr["chunk_results"]
+            final = step_final_check(
+                question, vr["chunk_results"], [], {},
+                teacher=teacher, solver_content=sr["content"], verifier_category=sr.get("category"),
+            )
+            cr = final.get("chunk_results") or vr["chunk_results"]
             # 入库
-            aj = {"chunk_results": cr, "overall_difficulty": vr.get("overall_difficulty"),
-                  "knowledge_points": [], "final_answer": ""}
+            aj = dict(final)
+            aj.pop("error", None)
+            aj.pop("formatter_note", None)
+            aj.setdefault("knowledge_points", [])
+            aj.setdefault("final_answer", "")
+            aj["chunk_results"] = cr
             for c in cr:
                 if c.get("final_answer"):
                     aj["final_answer"] += (" | " if aj["final_answer"] else "") + c["final_answer"]
@@ -259,12 +281,12 @@ class TeachSessionManager:
         # 先入库基本数据（无论是否有 prompts）
         save_aj = dict(r) if r else {}
         save_aj["chunk_results"] = cr
-        if not save_aj.get("overall_difficulty") and 'aj' in dir():
-            save_aj["overall_difficulty"] = aj.get("overall_difficulty")
-        if not save_aj.get("knowledge_points") and 'aj' in dir():
-            save_aj["knowledge_points"] = aj.get("knowledge_points", [])
-        if not save_aj.get("final_answer") and 'aj' in dir():
-            save_aj["final_answer"] = aj.get("final_answer", "")
+        if 'aj' in dir():
+            for key in ("overall_difficulty", "knowledge_points", "final_answer", "formatter_fallback"):
+                if aj.get(key):
+                    save_aj[key] = aj[key]
+        save_aj.pop("error", None)
+        save_aj.pop("formatter_note", None)
         try:
             saved_qid_first = db_save_question(question, save_aj)
         except Exception as e:

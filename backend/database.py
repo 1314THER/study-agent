@@ -9,13 +9,14 @@ import os
 import random
 import re
 import sqlite3
+from backend import difficulty as diff
 from backend.categories import CATEGORIES
 from backend.steps import _load_steps
 
 # 结构化字段的合法值（写死，不依赖模型输出）
 _VALID_CATEGORIES = set(CATEGORIES.keys())
-_VALID_DIFFICULTY_LEVELS = {"容易", "中等", "困难", "极难"}
-_VALID_DIMENSION_KEYS = {"非常规程度", "计算量", "理解难度", "分类讨论", "知识点密度"}
+_VALID_DIFFICULTY_LEVELS = {"容易", "中等", "困难", "极难", "未知"}
+_VALID_DIMENSION_KEYS = set(diff.DIM_KEYS)
 _VALID_SOURCE_TYPES = {"ai生成", "高考题", "模拟题", "精选母题"}
 
 # 每种来源允许的二级标签字段，入库时只保留这些键
@@ -25,10 +26,7 @@ _SOURCE_META_FIELDS = {
     "ai生成": {"reference_id"},
     "精选母题": {"owner", "mother_id", "category", "pattern"},
 }
-_DIMENSION_ALIASES = {
-    "常规程度": "非常规程度",
-    "涉及到的知识点数量": "知识点密度",
-}
+_DIMENSION_ALIASES = dict(diff.DIM_ALIASES)
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), "study_agent.db")
 
@@ -341,9 +339,9 @@ def init_db():
             category_level2 TEXT,
 
             -- 难度（拆成独立字段，方便查询和展示）
-            difficulty_level TEXT,          -- 容易/中等/困难/极难
-            difficulty_score INTEGER,       -- 0-12
-            difficulty_dimensions TEXT,      -- 六维度得分 JSON
+            difficulty_level TEXT,          -- 容易/中等/困难/极难/未知
+            difficulty_score INTEGER,       -- 0-15
+            difficulty_dimensions TEXT,      -- 五维难度 JSON
 
             -- 常见错误
             common_mistakes TEXT,
@@ -609,14 +607,7 @@ def _sanitize_difficulty(diff) -> tuple:
 
 def _normalize_dimension_keys(dims: dict) -> dict:
     """把旧版维度名映射到新版五维字段，并过滤未知字段。"""
-    if not isinstance(dims, dict):
-        return {}
-    out = {}
-    for k, v in dims.items():
-        key = _DIMENSION_ALIASES.get(k, k)
-        if key in _VALID_DIMENSION_KEYS:
-            out[key] = v
-    return out
+    return diff.normalize_dims(dims)
 
 
 def _build_l3_to_l2_map() -> dict:
@@ -663,6 +654,21 @@ def save_question(question_text: str, answer_dict: dict):
     category = answer_dict.get("category", {})
     category_level1, category_level2 = _sanitize_category(category)
 
+    # 难度唯一标准：有步骤五维就从 chunk_results 重算，否则视为未知
+    chunk_results = answer_dict.get("chunk_results", [])
+    if isinstance(chunk_results, list) and chunk_results:
+        if diff.has_step_dimensions(chunk_results):
+            _, overall = diff.aggregate_chunk_results(chunk_results)
+            answer_dict["overall_difficulty"] = overall
+        else:
+            old_od = answer_dict.get("overall_difficulty") or answer_dict.get("difficulty") or {}
+            if isinstance(old_od, dict) and old_od and old_od != diff.UNKNOWN_DIFFICULTY:
+                answer_dict.setdefault("legacy_difficulty", old_od)
+            answer_dict["overall_difficulty"] = dict(diff.UNKNOWN_DIFFICULTY)
+            for cr in chunk_results:
+                if isinstance(cr, dict):
+                    cr["difficulty"] = dict(diff.UNKNOWN_DIFFICULTY)
+
     # 处理 difficulty（清洗）
     difficulty = answer_dict.get("overall_difficulty") or answer_dict.get("difficulty", {})
     difficulty_level, difficulty_score, difficulty_dimensions = _sanitize_difficulty(difficulty)
@@ -676,7 +682,6 @@ def save_question(question_text: str, answer_dict: dict):
             pass
 
     # 处理 knowledge_points（清洗；顶层为空时从步骤级补）
-    chunk_results = answer_dict.get("chunk_results", [])
     raw_kps = answer_dict.get("knowledge_points", [])
     if not isinstance(raw_kps, list):
         raw_kps = []
