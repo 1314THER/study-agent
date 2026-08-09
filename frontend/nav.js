@@ -44,7 +44,7 @@
         if (window.AgentGlobal || document.getElementById('agentScript')) return;
         var s = document.createElement('script');
         s.id = 'agentScript';
-        s.src = 'agent.js?v=20260809e';
+        s.src = 'agent.js?v=20260809g';
         document.head.appendChild(s);
     }
 

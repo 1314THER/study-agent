@@ -1,13 +1,14 @@
-"""全局智能体：把自然语言指令转成前端可执行的标准化动作。"""
+"""全局智能体：把自然语言指令转成标准化动作，并支持多步工具循环。"""
 
 import json
 import re
+import time
 
 import httpx
 
 from backend.categories import CATEGORIES
-from backend.database import MISTAKE_TYPES, get_connection, search_questions
-from backend.patterns import get_pattern_calendar, get_patterns
+from backend.database import MISTAKE_TYPES
+from backend.agent_tools import agent_context, run_tool, tool_descriptions
 import backend.settings as runtime_settings
 
 
@@ -68,7 +69,26 @@ _TYPE_ALIASES = {
     "解答题": "大题",
     "大题": "大题",
 }
-_ACTION_TYPES = ("navigate", "search_questions", "open_question", "teach", "solve", "grade", "add_to_cart", "context")
+_ACTION_TYPES = (
+    "navigate", "search_questions", "open_question", "teach", "solve", "grade",
+    "add_to_cart", "context",
+    "solve_question", "teach_question", "grade_answer", "plan_study", "get_context",
+)
+_SERVER_TOOLS = {
+    "search_questions", "solve_question", "teach_question",
+    "grade_answer", "plan_study", "get_context",
+}
+_FRONTEND_ACTIONS = {"navigate", "open_question", "add_to_cart", "context", "teach", "solve", "grade"}
+_TOOL_LABELS = {
+    "search_questions": "搜索题目",
+    "solve_question": "解题",
+    "teach_question": "准备教学",
+    "grade_answer": "批改作答",
+    "plan_study": "生成复习规划",
+    "get_context": "读取学情",
+}
+_MAX_TOOL_ROUNDS = 4
+_MAX_HISTORY_MESSAGES = 20
 
 
 def _detect_navigation(message):
@@ -278,53 +298,332 @@ def _validate_action(action):
         return {"type": "grade", "params": {"question_id": qid}}
     if atype == "context":
         return {"type": "context"}
+    if atype in ("solve_question", "teach_question"):
+        question = str(action.get("question") or "").strip()
+        if not question:
+            return None
+        out = {"type": atype, "question": question}
+        for key in ("question_type", "teacher"):
+            if action.get(key):
+                out[key] = action[key]
+        if atype == "solve_question" and action.get("save") is not None:
+            out["save"] = bool(action.get("save"))
+        return out
+    if atype == "grade_answer":
+        qid = action.get("question_id")
+        try:
+            qid = int(qid)
+        except (TypeError, ValueError):
+            qid = None
+        question = str(action.get("question") or "").strip()
+        student_answer = str(action.get("student_answer") or "").strip()
+        if not student_answer or (qid is None and not question):
+            return None
+        out = {"type": "grade_answer", "student_answer": student_answer}
+        if qid is not None:
+            out["question_id"] = qid
+        if question:
+            out["question"] = question
+        for key in ("question_type", "full_score", "teacher"):
+            if action.get(key) is not None:
+                out[key] = action[key]
+        return out
+    if atype == "plan_study":
+        out = {"type": "plan_study"}
+        for key in ("template", "start_date"):
+            if action.get(key):
+                out[key] = str(action[key])
+        try:
+            per_day = max(1, min(int(action.get("per_day")), 10))
+        except (TypeError, ValueError):
+            per_day = None
+        if per_day is not None:
+            out["per_day"] = per_day
+        cats = action.get("categories") or []
+        if isinstance(cats, str):
+            cats = [c.strip() for c in cats.split(",") if c.strip()]
+        elif isinstance(cats, list):
+            cats = [str(c).strip() for c in cats if str(c).strip()]
+        if cats:
+            out["categories"] = cats
+        if action.get("apply") is not None:
+            out["apply"] = bool(action.get("apply"))
+        return out
+    if atype == "get_context":
+        return {"type": "get_context"}
     return None
 
 
-def _llm_plan(message):
-    system = (
-        "你是数学学习系统的全局教练。请把用户一句话转成 JSON："
-        "{\"reply\":\"给学生的中文回复\",\"actions\":[...]}。\n"
-        "动作类型只能是：navigate / search_questions / open_question / teach / solve / grade / add_to_cart / context。\n"
+def _action_args(action):
+    args = {k: v for k, v in action.items() if k != "type"}
+    if action.get("type") == "search_questions":
+        filters = args.get("filters") or {}
+        if isinstance(filters, dict):
+            for key in ("category", "question_type", "difficulty", "error_type", "source_type"):
+                if not args.get(key) and filters.get(key):
+                    args[key] = filters[key]
+    return args
+
+
+def _normalize_history(history):
+    """保留最近 10 轮（20 条）user/assistant 消息。"""
+    if not isinstance(history, list):
+        return []
+    out = []
+    for item in history:
+        if not isinstance(item, dict):
+            continue
+        role = item.get("role")
+        content = item.get("content")
+        if role not in ("user", "assistant"):
+            continue
+        content = str(content or "").strip()
+        if content:
+            out.append({"role": role, "content": content[:4000]})
+    return out[-_MAX_HISTORY_MESSAGES:]
+
+
+def _agent_system_prompt():
+    return (
+        "你是高中数学学习系统的全局教练，通过工具完成搜索、解题、教学、改卷、规划等任务。\n"
+        "请只返回一个 JSON：{\"reply\":\"给学生的中文回复\",\"actions\":[{\"type\":\"工具名\",\"参数\":...}]}。\n"
+        "不要 Markdown 代码块，不要输出其他文字。\n\n"
+        "可用工具：\n"
+        + tool_descriptions()
+        + "\n\n"
+        "动作类型只能是：search_questions / solve_question / teach_question / grade_answer / plan_study / get_context / navigate / open_question / add_to_cart。\n"
         "navigate 的 page 只能是：home/solve/multimodal/teach/history/exam/grade/settings/mother/loop/calendar/board。\n"
-        "search_questions 返回 {\"type\":\"search_questions\",\"query\":\"关键词\","
-        "\"filters\":{\"category\":\"\",\"question_type\":\"\",\"difficulty\":\"\",\"error_type\":\"\",\"source_type\":\"\"},\"limit\":5}。\n"
-        "add_to_cart 用于把刚才搜到的题加入组卷：{\"type\":\"add_to_cart\",\"source\":\"search\",\"ids\":[],\"limit\":5}。\n"
         "行为规则：\n"
-        "1. 学生想练习/复习/巩固某个板块或知识点时，优先用 search_questions，"
-        "filters.category 填题库板块名，limit 默认 5，回复里说明帮他找了几道什么题。\n"
-        "2. 学生给出一段题面并要求解答或教学时，用 solve 或 teach，question 填题面原文。\n"
-        "3. 学生提到具体题号如“第3题”时，用 open_question。\n"
-        "4. 学生问学情或建议时，用 context。\n"
-        "5. 需要组卷时，先 search_questions，再 add_to_cart，再 navigate exam。\n"
-        "6. 学生想上传手写作答到教学或改卷时，用 navigate 到 teach 或 grade，params 里 mode 填 handwriting。\n"
-        "只返回 JSON，不要 Markdown 代码块，不要输出其他文字。"
+        "1. 学生想练习/复习/巩固某个板块或知识点时，用 search_questions，limit 默认 5。\n"
+        "2. 学生给出一段题面并要求解答时，用 solve_question，question 填题面原文；要求手把手教学时用 teach_question。\n"
+        "3. 学生给出作答并要求批改时，用 grade_answer，question_id 或 question 必须能定位题目，student_answer 填学生作答。\n"
+        "4. 学生问学情或建议时，用 get_context。\n"
+        "5. 需要制定复习计划时，用 plan_study；学生明确说安排到日历/写入日历时 apply 设为 true。\n"
+        "6. 需要组卷时，先 search_questions，再 add_to_cart。\n"
+        "7. 学生只想打开某个页面时，用 navigate。\n"
+        "8. 工具会在服务端执行并把结果回传。需要多步时（如先搜题再解题、先看学情再规划）可以连续返回多个动作，"
+        "执行结果会追加到对话里，请根据结果继续；任务完成时返回空 actions。\n"
+        "9. 回复简洁自然，1-3 句话，基于工具结果给出结论，不要复述 JSON 字段。"
     )
-    ctx = agent_context()
-    user = (
+
+
+def _tool_result_text(name, result):
+    text = json.dumps(result, ensure_ascii=False, default=str)
+    return text[:6000]
+
+
+def _tool_block(name, result):
+    if not isinstance(result, dict):
+        return None
+    if name == "search_questions":
+        items = result.get("items") or []
+        if not items:
+            return {"type": "search", "title": "搜索结果", "items": [], "empty": True}
+        return {
+            "type": "search",
+            "title": f"找到 {result.get('count', len(items))} 道题",
+            "items": items,
+        }
+    if name == "solve_question":
+        if result.get("error"):
+            return {"type": "solve_error", "title": "解题失败", "detail": result.get("detail") or result.get("error")}
+        return {
+            "type": "solve",
+            "title": "解题结果",
+            "question": result.get("question"),
+            "qid": result.get("saved_id"),
+            "final_answer": result.get("final_answer"),
+            "knowledge_points": result.get("knowledge_points"),
+            "category": result.get("category"),
+            "difficulty_level": result.get("difficulty_level"),
+            "chunks": result.get("chunks"),
+        }
+    if name == "teach_question":
+        if result.get("error"):
+            return {"type": "solve_error", "title": "教学准备失败", "detail": result.get("detail") or result.get("error")}
+        return {
+            "type": "teach",
+            "title": "手把手教学已准备好",
+            "session_id": result.get("session_id"),
+            "question": result.get("question"),
+            "teacher": result.get("teacher"),
+            "message": result.get("message"),
+            "total_steps": result.get("total_steps"),
+            "step_titles": result.get("step_titles") or [],
+            "chunks": result.get("chunks") or [],
+        }
+    if name == "grade_answer":
+        if result.get("error"):
+            return {"type": "solve_error", "title": "批改失败", "detail": result.get("detail") or result.get("error")}
+        return {"type": "grade", "title": "批改结果", "result": result}
+    if name == "plan_study":
+        if result.get("error"):
+            return {"type": "solve_error", "title": "规划失败", "detail": result.get("detail") or result.get("error")}
+        return {"type": "plan", "title": "复习规划", "plan": result}
+    return None
+
+
+def _run_agent_loop_gen(message, history=None):
+    """多步工具循环：yield 进度字符串，最后 yield 结果 dict。"""
+    hist = _normalize_history(history)
+    try:
+        ctx = agent_context()
+    except Exception:
+        ctx = {}
+    user_prompt = (
         f"用户指令：{message}\n\n"
         f"题库板块：{'、'.join(CATEGORIES)}\n"
-        f"当前学情：个人题库 {ctx['total_questions']} 道，错题标记 {ctx['wrong_questions']} 道，"
-        f"今日待复习 {ctx['due_reviews']} 个，套路掌握 {ctx['patterns_mastered']}/{ctx['patterns_total']}。"
+        f"当前学情：个人题库 {ctx.get('total_questions', 0)} 道，错题标记 {ctx.get('wrong_questions', 0)} 道，"
+        f"今日待复习 {ctx.get('due_reviews', 0)} 个，套路掌握 {ctx.get('patterns_mastered', 0)}/{ctx.get('patterns_total', 0)}。"
     )
-    try:
-        content = _call_agent_llm(system, user)
+    messages = [
+        {"role": "system", "content": _agent_system_prompt()},
+        *hist,
+        {"role": "user", "content": user_prompt},
+    ]
+    blocks = []
+    final_actions = []
+    final_reply = ""
+    executed_context = False
+
+    yield "正在理解你的需求…"
+    for _round in range(_MAX_TOOL_ROUNDS):
+        content = _call_llm_messages(messages, temperature=0.4)
         if not content:
-            return None
-        data = json.loads(_extract_json(content))
-        reply = "好的，我来安排。"
-        if isinstance(data, dict):
-            reply = str(data.get("reply") or reply).strip()
-            actions = data.get("actions")
+            yield None
+            return
+        try:
+            data = json.loads(_extract_json(content))
+            if isinstance(data, dict):
+                reply = str(data.get("reply") or "").strip() or "好的，我来安排。"
+                raw_actions = data.get("actions")
+            else:
+                reply = "好的，我来安排。"
+                raw_actions = data if isinstance(data, list) else []
+        except Exception:
+            yield None
+            return
+
+        actions = [_validate_action(a) for a in raw_actions if isinstance(a, dict)]
+        actions = [a for a in actions if a]
+        if reply:
+            final_reply = reply
+        if not actions:
+            break
+
+        ran_tool = False
+        for action in actions:
+            atype = action["type"]
+            if atype in _SERVER_TOOLS:
+                yield f"正在调用：{_TOOL_LABELS.get(atype, atype)}…"
+                result = run_tool(atype, _action_args(action))
+                block = _tool_block(atype, result)
+                if block:
+                    blocks.append(block)
+                messages.append({
+                    "role": "user",
+                    "content": f"工具 {atype} 的结果：\n{_tool_result_text(atype, result)}",
+                })
+                if atype == "get_context":
+                    executed_context = True
+                ran_tool = True
+            elif atype in _FRONTEND_ACTIONS:
+                final_actions.append(action)
+
+        if not ran_tool:
+            break
+    else:
+        final_reply = final_reply or "好的，已完成。"
+
+    result = {"reply": final_reply, "actions": final_actions, "blocks": blocks}
+    if executed_context:
+        try:
+            result["context"] = agent_context()
+        except Exception:
+            pass
+    yield result
+
+
+def _fast_path(message):
+    if _is_stats(message):
+        ctx = agent_context()
+        return {"reply": _stats_reply(ctx), "actions": [{"type": "context"}], "context": ctx}
+    nav = _detect_navigation(message)
+    if nav:
+        return {"reply": f"好的，带你打开{PAGES[nav]['name']}。", "actions": [{"type": "navigate", "page": nav, "params": {}}]}
+    open_id = _detect_open_question(message)
+    if open_id:
+        return {"reply": f"好的，打开题目 #{open_id} 的详情。", "actions": [{"type": "open_question", "id": open_id}]}
+    if "手写" in message:
+        if any(w in message for w in ("教学", "教我", "手把手")):
+            return {
+                "reply": "好的，打开手把手教学页，上传手写过程即可。",
+                "actions": [{"type": "navigate", "page": "teach", "params": {"mode": "handwriting"}}],
+            }
+        if any(w in message for w in ("改卷", "判分", "批改")):
+            return {
+                "reply": "好的，打开 AI 改卷页，上传手写作答即可。",
+                "actions": [{"type": "navigate", "page": "grade", "params": {"mode": "handwriting"}}],
+            }
+    return None
+
+
+def _fallback_path(message):
+    """LLM/工具循环不可用时的规则兜底，保持原有前端动作。"""
+    if _is_teach(message):
+        question = _extract_question(message)
+        if question:
+            return {"reply": "好的，去手把手教学页带你做这道题。", "actions": [{"type": "teach", "question": question}]}
+        return {"reply": "好的，打开手把手教学。", "actions": [{"type": "navigate", "page": "teach", "params": {}}]}
+    if _is_solve(message):
+        question = _extract_question(message)
+        if question:
+            return {"reply": "好的，去单题解答页做这道题。", "actions": [{"type": "solve", "question": question}]}
+        return {"reply": "好的，打开单题解答。", "actions": [{"type": "navigate", "page": "solve", "params": {}}]}
+    if _is_grade(message):
+        qid = _detect_qid(message)
+        return {"reply": "好的，打开 AI 改卷。", "actions": [{"type": "grade", "params": {"question_id": qid}}]}
+    search = _detect_search(message)
+    if search is not None:
+        actions = [{
+            "type": "search_questions",
+            "query": search["query"],
+            "filters": search["filters"],
+            "limit": search["limit"],
+        }]
+        if _is_cart(message):
+            actions.append({"type": "add_to_cart", "source": "search", "ids": [], "limit": search["limit"]})
+            actions.append({"type": "navigate", "page": "exam", "params": {}})
+        return {"reply": _search_reply(search), "actions": actions}
+    if _is_cart(message):
+        return {"reply": "好的，打开组卷页。", "actions": [{"type": "navigate", "page": "exam", "params": {}}]}
+    return {
+        "reply": "我可以帮你打开页面、拿题、教学、改卷。试试：打开题库、拿3道解析几何大题、我该学什么、打开组卷。",
+        "actions": [],
+    }
+
+
+def _agent_flow(message, history=None):
+    """统一处理入口：yield progress dicts，最后 yield result dict。"""
+    message = (message or "").strip()
+    if not message:
+        yield {"type": "result", "result": {"reply": "请告诉我你想做什么。", "actions": []}}
+        return
+    fast = _fast_path(message)
+    if fast is not None:
+        yield {"type": "progress", "message": "好的，马上安排。"}
+        yield {"type": "result", "result": fast}
+        return
+    result = None
+    for item in _run_agent_loop_gen(message, history):
+        if isinstance(item, str):
+            yield {"type": "progress", "message": item}
         else:
-            actions = data
-        if not isinstance(actions, list):
-            actions = [data]
-        valid = [_validate_action(a) for a in actions]
-        valid = [a for a in valid if a]
-        return {"reply": reply, "actions": valid} if valid else None
-    except Exception:
-        return None
+            result = item
+    if result is None:
+        yield {"type": "result", "result": _fallback_path(message)}
+        return
+    yield {"type": "result", "result": result}
 
 
 def _extract_json(text):
@@ -341,7 +640,7 @@ def _extract_json(text):
     return text.strip()
 
 
-def _call_agent_llm(system_prompt, user_prompt):
+def _call_llm_messages(messages, temperature=0.4):
     try:
         api_key = runtime_settings.get_api_key("deepseek")
     except ValueError:
@@ -356,11 +655,8 @@ def _call_agent_llm(system_prompt, user_prompt):
     max_tokens = min(int(runtime_settings.get_limits().get("api_max_tokens", 32000)), 2000)
     body = {
         "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt},
-            {"role": "user", "content": user_prompt},
-        ],
-        "temperature": 0.1,
+        "messages": messages,
+        "temperature": temperature,
         "max_tokens": max_tokens,
     }
     try:
@@ -375,33 +671,6 @@ def _call_agent_llm(system_prompt, user_prompt):
         return resp.json()["choices"][0]["message"]["content"]
     except Exception:
         return None
-
-
-def agent_context():
-    """首页与教练共享的学情快照。"""
-    conn = get_connection()
-    try:
-        total = conn.execute("SELECT COUNT(*) FROM questions").fetchone()[0]
-        wrong = conn.execute("SELECT COUNT(DISTINCT question_id) FROM step_errors").fetchone()[0]
-        practice = conn.execute("SELECT COUNT(*) FROM practice_records").fetchone()[0]
-    finally:
-        conn.close()
-    patterns = get_patterns()
-    mastered = sum(1 for p in patterns if (p.get("mastery") or {}).get("state") == "third_pass")
-    calendar = get_pattern_calendar()
-    recent_wrong = search_questions(error_type="errors", limit=5)
-    if isinstance(recent_wrong, dict):
-        recent_wrong = recent_wrong.get("data", [])
-    return {
-        "total_questions": total,
-        "wrong_questions": wrong,
-        "practice_records": practice,
-        "patterns_total": len(patterns),
-        "patterns_mastered": mastered,
-        "due_reviews": len(calendar.get("today_items", [])),
-        "recent_wrong": recent_wrong,
-        "categories": list(CATEGORIES.keys()),
-    }
 
 
 def _stats_reply(ctx):
@@ -434,72 +703,38 @@ def _search_reply(search):
     return f"好，帮你找 {search['limit']} 道{desc}的题。"
 
 
-def agent_act(message):
-    message = (message or "").strip()
-    if not message:
-        return {"reply": "请告诉我你想做什么。", "actions": []}
+def _chunk_reply(text, size=6):
+    if not text:
+        return
+    for i in range(0, len(text), size):
+        yield text[i:i + size]
 
-    if _is_stats(message):
-        ctx = agent_context()
-        return {"reply": _stats_reply(ctx), "actions": [{"type": "context"}], "context": ctx}
 
-    nav = _detect_navigation(message)
-    if nav:
-        return {"reply": f"好的，带你打开{PAGES[nav]['name']}。", "actions": [{"type": "navigate", "page": nav, "params": {}}]}
+def agent_act(message, history=None, on_progress=None):
+    """同步入口：返回最终 result dict。"""
+    result = None
+    for ev in _agent_flow(message, history):
+        if ev["type"] == "progress":
+            if on_progress:
+                on_progress(ev["message"])
+        elif ev["type"] == "result":
+            result = ev["result"]
+    return result or {"reply": "连接失败，请稍后再试。", "actions": []}
 
-    open_id = _detect_open_question(message)
-    if open_id:
-        return {"reply": f"好的，打开题目 #{open_id} 的详情。", "actions": [{"type": "open_question", "id": open_id}]}
 
-    if "手写" in message:
-        if any(w in message for w in ("教学", "教我", "手把手")):
-            return {
-                "reply": "好的，打开手把手教学页，上传手写过程即可。",
-                "actions": [{"type": "navigate", "page": "teach", "params": {"mode": "handwriting"}}],
-            }
-        if any(w in message for w in ("改卷", "判分", "批改")):
-            return {
-                "reply": "好的，打开 AI 改卷页，上传手写作答即可。",
-                "actions": [{"type": "navigate", "page": "grade", "params": {"mode": "handwriting"}}],
-            }
-
-    llm_result = _llm_plan(message)
-    if llm_result and llm_result.get("actions"):
-        return llm_result
-
-    if _is_teach(message):
-        question = _extract_question(message)
-        if question:
-            return {"reply": "好的，去手把手教学页带你做这道题。", "actions": [{"type": "teach", "question": question}]}
-        return {"reply": "好的，打开手把手教学。", "actions": [{"type": "navigate", "page": "teach", "params": {}}]}
-
-    if _is_solve(message):
-        question = _extract_question(message)
-        if question:
-            return {"reply": "好的，去单题解答页做这道题。", "actions": [{"type": "solve", "question": question}]}
-        return {"reply": "好的，打开单题解答。", "actions": [{"type": "navigate", "page": "solve", "params": {}}]}
-
-    if _is_grade(message):
-        qid = _detect_qid(message)
-        return {"reply": "好的，打开 AI 改卷。", "actions": [{"type": "grade", "params": {"question_id": qid}}]}
-
-    search = _detect_search(message)
-    if search is not None:
-        actions = [{
-            "type": "search_questions",
-            "query": search["query"],
-            "filters": search["filters"],
-            "limit": search["limit"],
-        }]
-        if _is_cart(message):
-            actions.append({"type": "add_to_cart", "source": "search", "ids": [], "limit": search["limit"]})
-            actions.append({"type": "navigate", "page": "exam", "params": {}})
-        return {"reply": _search_reply(search), "actions": actions}
-
-    if _is_cart(message):
-        return {"reply": "好的，打开组卷页。", "actions": [{"type": "navigate", "page": "exam", "params": {}}]}
-
-    return {
-        "reply": "我可以帮你打开页面、拿题、教学、改卷。试试：打开题库、拿3道解析几何大题、我该学什么、打开组卷。",
-        "actions": [],
-    }
+def agent_act_stream(message, history=None):
+    """流式入口：yield NDJSON 事件 dict（progress/token/done）。"""
+    result = None
+    for ev in _agent_flow(message, history):
+        if ev["type"] == "progress":
+            yield ev
+        elif ev["type"] == "result":
+            result = ev["result"]
+    if result is None:
+        result = {"reply": "连接失败，请稍后再试。", "actions": []}
+    yield {"type": "progress", "message": "正在组织回复…"}
+    reply = result.get("reply") or ""
+    for chunk in _chunk_reply(reply):
+        yield {"type": "token", "text": chunk}
+        time.sleep(0.012)
+    yield {"type": "done", "result": result}

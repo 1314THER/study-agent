@@ -502,3 +502,41 @@
         width: min(420px, calc(100vw - 40px));
     }
 }
+
+/* 工具结果块 */
+.agent-block-label {
+    display: inline-block;
+    margin-right: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #515154;
+}
+
+.agent-solve-answer {
+    margin-top: 8px;
+    padding: 8px 10px;
+    background: #f8fafc;
+    border: 1px solid #e3e3e8;
+    border-radius: 7px;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.agent-solve-kps {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #515154;
+    line-height: 1.5;
+}
+
+.agent-teach-steps {
+    margin-top: 8px;
+    max-height: 120px;
+    overflow: auto;
+    font-size: 12px;
+    color: #515154;
+    line-height: 1.6;
+    white-space: pre-wrap;
+}

@@ -10,6 +10,8 @@
     var CART_KEY = 'exam_cart';
     var KATEX_VERSION = '0.16.9';
     var state = { busy: false };
+    var chatHistory = [];
+    var MAX_HISTORY = 20; // 10 轮对话
     var lastSearch = [];
     var hostEl = null;
     var messagesEl = null;
@@ -20,7 +22,7 @@
         if (document.querySelector('link[data-agent-css]')) return;
         var link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = 'agent.css?v=20260809e';
+        link.href = 'agent.css?v=20260809g';
         link.setAttribute('data-agent-css', '1');
         document.head.appendChild(link);
     }
@@ -86,7 +88,12 @@
         box.className = 'agent-msg agent-msg-' + role;
         var bubble = document.createElement('div');
         bubble.className = 'agent-bubble';
-        bubble.textContent = text;
+        if (role === 'agent') {
+            bubble.innerHTML = escapeHtml(String(text == null ? '' : text));
+            ensureKatex(function () { renderMath(bubble); });
+        } else {
+            bubble.textContent = text;
+        }
         box.appendChild(bubble);
         messagesEl.appendChild(box);
         messagesEl.scrollTop = messagesEl.scrollHeight;
@@ -312,26 +319,226 @@
         if (cartEl) cartEl.textContent = readCart().length;
     }
 
+    function pushHistory(role, content) {
+        content = String(content == null ? '' : content).trim();
+        if (!content) return;
+        chatHistory.push({ role: role, content: content });
+        if (chatHistory.length > MAX_HISTORY) chatHistory.splice(0, chatHistory.length - MAX_HISTORY);
+    }
+
+    function renderSolveBlock(block, body) {
+        var card = document.createElement('div');
+        card.className = 'agent-qcard';
+        var html = '<div class="agent-qmeta">' +
+            escapeHtml(block.category || '') +
+            (block.difficulty_level ? ' · ' + escapeHtml(block.difficulty_level) : '') +
+            '</div>';
+        html += '<div class="agent-qtext">' + escapeHtml(block.question || '') + '</div>';
+        if (block.final_answer) {
+            html += '<div class="agent-solve-answer"><span class="agent-block-label">答案</span><div>' +
+                escapeHtml(block.final_answer) + '</div></div>';
+        }
+        if (block.knowledge_points && block.knowledge_points.length) {
+            html += '<div class="agent-solve-kps"><span class="agent-block-label">知识点</span> ' +
+                block.knowledge_points.map(escapeHtml).join('、') + '</div>';
+        }
+        if (block.qid) {
+            html += '<div class="agent-qactions"><button type="button" data-agent-open="' + block.qid + '">查看完整解析</button></div>';
+        }
+        card.innerHTML = html;
+        var btn = card.querySelector('button[data-agent-open]');
+        if (btn) {
+            btn.addEventListener('click', function () { openQuestion(block.qid); });
+        }
+        body.appendChild(card);
+        ensureKatex(function () { renderMath(card); });
+    }
+
+    function renderTeachBlock(block, body) {
+        var card = document.createElement('div');
+        card.className = 'agent-qcard';
+        var html = '<div class="agent-qmeta">共 ' + (block.total_steps || 0) + ' 步</div>';
+        html += '<div class="agent-qtext">' + escapeHtml(block.message || '') + '</div>';
+        var titles = (block.step_titles || []).map(function (t) { return '· ' + t; }).join('\n');
+        if (titles) html += '<div class="agent-teach-steps">' + escapeHtml(titles) + '</div>';
+        html += '<div class="agent-qactions"><button type="button" data-agent-teach="1">进入教学页继续</button></div>';
+        card.innerHTML = html;
+        var btn = card.querySelector('button[data-agent-teach]');
+        if (btn) {
+            btn.addEventListener('click', function () { startTeachSession(block); });
+        }
+        body.appendChild(card);
+        ensureKatex(function () { renderMath(card); });
+    }
+
+    function renderGradeBlock(block, body) {
+        var r = block.result || {};
+        var card = document.createElement('div');
+        card.className = 'agent-qcard';
+        var score = '';
+        if (r.earned_score != null && r.full_score != null) score = '得分 ' + r.earned_score + ' / ' + r.full_score;
+        var html = '<div class="agent-qmeta">' + escapeHtml(r.question_type || '') +
+            (score ? ' · ' + escapeHtml(score) : '') + '</div>';
+        html += '<div class="agent-qtext">' + escapeHtml(r.feedback || (r.is_correct ? '回答正确。' : '回答有误。')) + '</div>';
+        if (r.expected_answer) {
+            html += '<div class="agent-solve-answer"><span class="agent-block-label">参考答案</span><div>' +
+                escapeHtml(r.expected_answer) + '</div></div>';
+        }
+        if (r.step_results && r.step_results.length) {
+            html += '<div class="agent-teach-steps">' + r.step_results.map(function (s) {
+                var mark = s.is_correct ? '✓' : (s.is_partial ? '△' : '✗');
+                return mark + ' ' + escapeHtml(s.title || ('步骤 ' + s.step_number));
+            }).join('\n') + '</div>';
+        }
+        card.innerHTML = html;
+        body.appendChild(card);
+        ensureKatex(function () { renderMath(card); });
+    }
+
+    function renderPlanBlock(block, body) {
+        var plan = block.plan || {};
+        var card = document.createElement('div');
+        card.className = 'agent-qcard';
+        var meta = '共 ' + plan.total_patterns + ' 个套路 · 每天 ' + plan.per_day + ' 个 · ' + plan.days + ' 天';
+        if (plan.applied_count != null) meta += ' · 已写入日历 ' + plan.applied_count + ' 个';
+        var html = '<div class="agent-qmeta">' + escapeHtml(meta) + '</div>';
+        var preview = (plan.preview || []).map(function (d) {
+            return d.date + '：' + (d.patterns || []).join('、');
+        }).join('\n');
+        html += '<div class="agent-qtext">' + escapeHtml(preview || '暂时没有可规划的套路。') + '</div>';
+        html += '<div class="agent-qactions"><button type="button" data-agent-cal="1">打开巩固日历</button></div>';
+        card.innerHTML = html;
+        var btn = card.querySelector('button[data-agent-cal]');
+        if (btn) {
+            btn.addEventListener('click', function () { location.href = 'calendar.html'; });
+        }
+        body.appendChild(card);
+    }
+
+    function renderBlocks(blocks) {
+        if (!blocks || !blocks.length) return;
+        blocks.forEach(function (block) {
+            if (!block || !block.type) return;
+            var box = addActionBlock(block.title || '', '');
+            var emptyBubble = box.box.querySelector('.agent-bubble');
+            if (emptyBubble && !emptyBubble.textContent.trim()) emptyBubble.style.display = 'none';
+            if (block.type === 'search') {
+                if (block.empty) {
+                    box.body.textContent = '没有找到符合条件的题目。';
+                } else {
+                    renderQuestionCards(block.items || [], box.body);
+                }
+            } else if (block.type === 'solve') {
+                renderSolveBlock(block, box.body);
+            } else if (block.type === 'teach') {
+                renderTeachBlock(block, box.body);
+            } else if (block.type === 'grade') {
+                renderGradeBlock(block, box.body);
+            } else if (block.type === 'plan') {
+                renderPlanBlock(block, box.body);
+            } else if (block.type === 'solve_error') {
+                box.body.textContent = block.detail || block.title || '执行失败';
+            }
+        });
+    }
+
+    function startTeachSession(block) {
+        try {
+            var steps = (block.step_titles || []).map(function (title, i) {
+                return {
+                    chunk_id: 1,
+                    chunk_type: '',
+                    category: '',
+                    step_number: i + 1,
+                    title: title || '步骤 ' + (i + 1),
+                    standard_writing: '',
+                    detailed_writing: '',
+                    knowledge_point: '',
+                    step_answer: '',
+                    step_prompt: i === 0 ? (block.message || '') : ''
+                };
+            });
+            localStorage.setItem('_teach_session_v2', JSON.stringify({
+                session_id: block.session_id,
+                question: block.question || '',
+                teacher: block.teacher || 'liangliang',
+                messages: block.message ? [{ role: 'teacher', content: block.message }] : [],
+                stats: { correct: 0, wrong: 0, skipped: 0 },
+                current_step: 0,
+                total_steps: block.total_steps || 0,
+                steps: steps,
+                chunk_results: [],
+                step_errors: {}
+            }));
+        } catch (e) {}
+        location.href = 'teach.html';
+    }
+
     function sendMessage(text) {
         if (state.busy || !text.trim()) return;
         state.busy = true;
         if (sendBtn) sendBtn.disabled = true;
         addMessage('user', text.trim());
+        pushHistory('user', text.trim());
         var wait = addMessage('agent', '正在处理…');
+        var bubble = wait.querySelector('.agent-bubble');
+        var started = false;
+
+        function handleItem(item) {
+            if (!item) return;
+            if (item.type === 'progress') {
+                if (!started) bubble.textContent = item.message || '正在处理…';
+            } else if (item.type === 'token') {
+                var chunk = item.text || '';
+                if (!started) {
+                    bubble.textContent = chunk;
+                    started = true;
+                } else {
+                    bubble.textContent += chunk;
+                }
+                messagesEl.scrollTop = messagesEl.scrollHeight;
+            } else if (item.type === 'done' && item.result) {
+                var data = item.result;
+                var reply = data.reply || '好的';
+                bubble.textContent = reply;
+                bubble.innerHTML = escapeHtml(reply);
+                ensureKatex(function () { renderMath(bubble); });
+                pushHistory('assistant', reply);
+                renderBlocks(data.blocks || []);
+                if (data.context) updateHomeStats(data.context);
+                if (data.actions && data.actions.length) runActions(data.actions);
+            }
+        }
+
         fetch(API_BASE + '/agent/act', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text.trim() })
+            body: JSON.stringify({ message: text.trim(), history: chatHistory.slice(0, -1).slice(-MAX_HISTORY) })
         })
-            .then(function (r) { return r.json(); })
-            .then(async function (data) {
-                var bubble = wait.querySelector('.agent-bubble');
-                bubble.textContent = data.reply || '好的';
-                if (data.actions && data.actions.length) await runActions(data.actions);
-                if (data.context) updateHomeStats(data.context);
+            .then(function (r) {
+                if (!r.ok || !r.body) throw new Error('bad response');
+                var reader = r.body.getReader();
+                var decoder = new TextDecoder('utf-8');
+                var buf = '';
+                function pump() {
+                    return reader.read().then(function (res) {
+                        if (res.done) return;
+                        buf += decoder.decode(res.value, { stream: true });
+                        var lines = buf.split('\n');
+                        buf = lines.pop();
+                        lines.forEach(function (line) {
+                            line = line.trim();
+                            if (!line) return;
+                            try {
+                                handleItem(JSON.parse(line));
+                            } catch (e) {}
+                        });
+                        return pump();
+                    });
+                }
+                return pump();
             })
             .catch(function () {
-                var bubble = wait.querySelector('.agent-bubble');
                 bubble.textContent = '连接后端失败，请确认服务已启动。';
             })
             .finally(function () {

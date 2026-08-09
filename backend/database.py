@@ -731,8 +731,18 @@ def _sanitize_knowledge_points(level1: str, points: list) -> list:
 def save_question(question_text: str, answer_dict: dict):
     """从 answer_dict 提取各字段，分别存入数据库（入库前清洗，保证字段来自字典）"""
 
-    # 处理 category（清洗）
-    category = answer_dict.get("category", {})
+    # 处理 category（清洗）；顶层缺失时从第一个块补齐一级板块
+    category = answer_dict.get("category")
+    if not category:
+        chunk_results = answer_dict.get("chunk_results", [])
+        if isinstance(chunk_results, list) and chunk_results:
+            first_cat = chunk_results[0].get("category")
+            if isinstance(first_cat, dict):
+                category = {"level1": first_cat.get("level1"), "level2": first_cat.get("level2")}
+            elif first_cat:
+                category = {"level1": first_cat, "level2": ""}
+        if not category:
+            category = {}
     category_level1, category_level2 = _sanitize_category(category)
 
     # 难度唯一标准：有步骤五维就从 chunk_results 重算，否则视为未知

@@ -1,6 +1,8 @@
+import json
+
 from fastapi import FastAPI, UploadFile, Query
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, StreamingResponse
 
 from pydantic import BaseModel, Field
 from typing import Optional, List
@@ -182,6 +184,7 @@ def home():
 
 class AgentActRequest(BaseModel):
     message: str = Field(..., min_length=1, max_length=2000)
+    history: List[dict] = Field(default_factory=list, description="最近对话历史（最多 10 轮）")
 
 
 @app.get("/agent/context")
@@ -193,9 +196,18 @@ def agent_context_api():
 
 @app.post("/agent/act")
 def agent_act_api(req: AgentActRequest):
-    """全局教练：指令 → 结构化动作。"""
-    from backend.agent import agent_act
-    return agent_act(req.message)
+    """全局教练：指令 → 工具循环 → NDJSON 流式返回。"""
+    from backend.agent import agent_act_stream
+
+    def generate():
+        for item in agent_act_stream(req.message, req.history):
+            yield json.dumps(item, ensure_ascii=False) + "\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="application/x-ndjson",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
 
 
 class PlannerPlanRequest(BaseModel):

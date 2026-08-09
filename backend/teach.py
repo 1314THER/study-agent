@@ -107,6 +107,21 @@ def _fs(steps, teacher=None):
         ns.append(ss)
     return ns
 
+
+def _set_category_from_chunks(aj):
+    """入库前从第一个块补一级板块，避免新题按板块搜索不到。"""
+    if aj.get("category"):
+        return
+    cr = aj.get("chunk_results") or []
+    if not cr:
+        return
+    first_cat = cr[0].get("category")
+    if isinstance(first_cat, dict):
+        aj["category"] = {"level1": first_cat.get("level1"), "level2": first_cat.get("level2")}
+    elif first_cat:
+        aj["category"] = {"level1": first_cat, "level2": ""}
+
+
 def _mg(cr, ts):
     si = 0
     for cr_ in cr:
@@ -161,6 +176,7 @@ def teach_start(question, teacher=None):
     aj["chunk_results"] = cr
     aj.setdefault("knowledge_points", [])
     aj.setdefault("final_answer", "")
+    _set_category_from_chunks(aj)
     for c in cr:
         if c.get("final_answer"):
             aj["final_answer"] += (" | " if aj["final_answer"] else "") + c["final_answer"]
@@ -233,6 +249,7 @@ class TeachSessionManager:
             aj.setdefault("knowledge_points", [])
             aj.setdefault("final_answer", "")
             aj["chunk_results"] = cr
+            _set_category_from_chunks(aj)
             for c in cr:
                 if c.get("final_answer"):
                     aj["final_answer"] += (" | " if aj["final_answer"] else "") + c["final_answer"]
@@ -282,6 +299,7 @@ class TeachSessionManager:
         # 先入库基本数据（无论是否有 prompts）
         save_aj = dict(r) if r else {}
         save_aj["chunk_results"] = cr
+        _set_category_from_chunks(save_aj)
         if 'aj' in dir():
             for key in ("overall_difficulty", "knowledge_points", "final_answer", "formatter_fallback"):
                 if aj.get(key):
