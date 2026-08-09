@@ -88,6 +88,21 @@ def _ensure_pattern_mastery(conn, pattern_id: int) -> None:
     )
 
 
+def set_pattern_schedule(pattern_id: int, next_check_at: str, need_check: int = 1) -> None:
+    """把某个套路写入巩固日历（或清除），供一键规划使用。"""
+    init_mastery_db()
+    conn = _get_conn()
+    try:
+        _ensure_pattern_mastery(conn, pattern_id)
+        conn.execute(
+            "UPDATE pattern_mastery SET need_check = ?, next_check_at = ?, updated_at = CURRENT_TIMESTAMP WHERE pattern_id = ?",
+            (1 if need_check else 0, next_check_at or None, pattern_id),
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+
 def _recalc_category_mastery(conn, category: str) -> None:
     rows = conn.execute("SELECT id FROM patterns WHERE category = ?", (category,)).fetchall()
     total = len(rows)

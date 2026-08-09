@@ -197,6 +197,62 @@ def agent_act_api(req: AgentActRequest):
     from backend.agent import agent_act
     return agent_act(req.message)
 
+
+class PlannerPlanRequest(BaseModel):
+    template: Optional[str] = Field(None, description="预设模板：daily1/daily2/daily3")
+    per_day: Optional[int] = Field(None, ge=1, le=10, description="自定义每天数量")
+    start_date: Optional[str] = Field(None, description="开始日期 YYYY-MM-DD，默认明天")
+    categories: Optional[List[str]] = Field(None, description="只规划这些板块")
+
+
+@app.post("/planner/plan")
+def planner_plan_api(req: PlannerPlanRequest):
+    """一键规划：生成未掌握套路的日历安排预览，不写库。"""
+    from backend.planner import build_plan
+    return build_plan(
+        template=req.template,
+        per_day=req.per_day,
+        start_date=req.start_date,
+        categories=req.categories,
+    )
+
+
+@app.post("/planner/apply")
+def planner_apply_api(req: PlannerPlanRequest):
+    """一键规划：生成并写入巩固日历。"""
+    from backend.planner import apply_plan, build_plan
+    plan = build_plan(
+        template=req.template,
+        per_day=req.per_day,
+        start_date=req.start_date,
+        categories=req.categories,
+    )
+    result = apply_plan(plan)
+    result.update({
+        "template": plan["template"],
+        "per_day": plan["per_day"],
+        "start_date": plan["start_date"],
+        "total_patterns": plan["total_patterns"],
+        "days": plan["days"],
+        "plan": plan["plan"],
+    })
+    return result
+
+
+@app.get("/planner/board-order")
+def planner_board_order_api():
+    """读取板块顺序配置（含板内精确关卡顺序）。"""
+    from backend.planner import get_board_order_config
+    return get_board_order_config()
+
+
+@app.put("/planner/board-order")
+def planner_save_board_order_api(payload: dict):
+    """保存板块顺序配置，供母题看板编辑使用。"""
+    from backend.planner import save_board_order_config
+    return save_board_order_config(payload.get("board_order") or [])
+
+
 @app.get("/questions")
 def list_questions():
     return get_all_questions()
