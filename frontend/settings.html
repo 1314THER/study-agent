@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>document.documentElement.classList.add("nav-init")</script>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统设置 - 数学最强大脑</title>
+    <link rel="stylesheet" href="style.css?v=20260808">
+    <script src="dimchart.js?v=1"></script>
+    <style>
+        .settings-wrap { max-width: 1000px; margin: 0 auto; }
+        .settings-section { margin-bottom: 30px; }
+        .section-head {
+            display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+        .section-head h2 { font-size: 20px; color: #1d1d1f; margin: 0; }
+        .section-hint { font-size: 12px; color: #86868b; }
+        .settings-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+            gap: 14px;
+        }
+        .settings-card {
+            background: #fff; border: 1px solid #e5e5e7; border-radius: 8px;
+            padding: 16px 18px;
+        }
+        .settings-card h3 { font-size: 15px; color: #1d1d1f; margin: 0 0 12px; }
+        .input-row {
+            display: grid; grid-template-columns: 110px 1fr;
+            gap: 8px 12px; align-items: center; margin-bottom: 8px;
+        }
+        .input-row label { font-size: 13px; color: #636366; text-align: right; }
+        .input-row input, .input-row select {
+            width: 100%; padding: 8px 10px; border: 1px solid #c7c7cc;
+            border-radius: 6px; font-size: 14px; outline: none;
+            background: #fff; color: #1d1d1f;
+        }
+        .input-row input:focus, .input-row select:focus { border-color: #0071e3; }
+        .input-row input[disabled] { background: #f2f2f4; color: #86868b; }
+        .formula-box {
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            font-size: 13px; background: #f5f5f7; border-radius: 6px;
+            padding: 10px 12px; margin-bottom: 12px; color: #1d1d1f;
+            overflow-x: auto; white-space: nowrap;
+        }
+        .preview-row {
+            display: flex; align-items: center; gap: 12px;
+            padding: 6px 0; border-bottom: 1px dashed #ececf0;
+        }
+        .preview-row:last-child { border-bottom: none; }
+        .preview-label { width: 76px; flex-shrink: 0; font-size: 12px; color: #636366; }
+        .preview-bars { flex: 1; min-width: 0; }
+        .preview-bars .dim-bars { margin: 0; max-width: none; }
+        .preview-score {
+            width: 72px; flex-shrink: 0; font-size: 12px; font-weight: 600;
+            color: #1d1d1f; text-align: right;
+        }
+        .principle-card {
+            background: #f8f8fa; border: 1px solid #e5e5e7; border-left: 3px solid #0071e3;
+            border-radius: 8px; padding: 14px 16px; margin-top: 14px;
+        }
+        .principle-card h3 { font-size: 14px; margin: 0 0 8px; color: #1d1d1f; }
+        .principle-card p { font-size: 13px; color: #515154; line-height: 1.7; margin-bottom: 6px; }
+        .principle-card p:last-child { margin-bottom: 0; }
+        .principle-card strong { color: #1d1d1f; }
+        .teacher-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+        .teacher-card {
+            background: #fff; border: 1px solid #e5e5e7; border-radius: 8px; padding: 14px 16px;
+        }
+        .teacher-card h3 {
+            display: flex; align-items: baseline; gap: 8px;
+            font-size: 15px; margin: 0 0 10px;
+        }
+        .teacher-card .t-desc { font-size: 11px; color: #86868b; font-weight: 400; }
+        .teacher-stage { margin-bottom: 8px; padding-bottom: 8px; border-bottom: 1px dashed #ececf0; }
+        .teacher-stage:last-of-type { border-bottom: none; margin-bottom: 0; padding-bottom: 0; }
+        .teacher-stage label { display: block; font-size: 12px; color: #86868b; margin-bottom: 4px; }
+        .stage-row { display: grid; grid-template-columns: 1fr 110px; gap: 8px; }
+        .stage-row input, .stage-row select {
+            padding: 7px 9px; border: 1px solid #c7c7cc; border-radius: 6px;
+            font-size: 13px; outline: none; background: #fff; color: #1d1d1f; width: 100%;
+        }
+        .stage-row input:focus, .stage-row select:focus { border-color: #0071e3; }
+        .settings-btn {
+            margin-top: 10px; padding: 7px 14px; border: 1px solid #c7c7cc;
+            background: #fff; color: #1d1d1f; border-radius: 6px;
+            font-size: 13px; cursor: pointer;
+        }
+        .settings-btn:hover { border-color: #0071e3; color: #0071e3; }
+        .settings-actions {
+            display: flex; gap: 12px; align-items: center;
+            padding: 18px 0 40px; position: sticky; bottom: 0;
+            background: linear-gradient(to bottom, rgba(245,245,247,0), #f5f5f7 30%);
+        }
+        .save-btn {
+            padding: 11px 30px; background: #0071e3; color: #fff; border: none;
+            border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer;
+        }
+        .save-btn:hover { background: #0062c4; }
+        .reset-btn {
+            padding: 11px 20px; background: #fff; color: #636366; border: 1px solid #c7c7cc;
+            border-radius: 8px; font-size: 14px; cursor: pointer;
+        }
+        .reset-btn:hover { border-color: #ff3b30; color: #ff3b30; }
+        .settings-status {
+            min-height: 20px; margin: 4px 0 14px; font-size: 13px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .settings-status.ok { color: #1a7f37; }
+        .settings-status.err { color: #d93025; }
+        .settings-status.busy { color: #e08600; }
+        .key-status {
+            grid-column: 2; font-size: 12px; color: #86868b;
+            min-height: 16px; margin-top: -4px; margin-bottom: 4px;
+        }
+        .key-status.has { color: #1a7f37; }
+        .modal-mask {
+            position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+            display: flex; align-items: center; justify-content: center;
+            z-index: 2000; padding: 20px;
+        }
+        .modal-box {
+            background: #fff; border-radius: 10px; width: min(760px, 96vw);
+            max-height: 88vh; display: flex; flex-direction: column;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+        }
+        .modal-head {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 20px; border-bottom: 1px solid #e5e5e7;
+        }
+        .modal-head h2 { font-size: 17px; margin: 0; }
+        .modal-close {
+            border: none; background: #f5f5f7; width: 30px; height: 30px;
+            border-radius: 6px; font-size: 16px; cursor: pointer; color: #636366;
+        }
+        .provider-tabs { display: flex; gap: 8px; padding: 12px 20px 0; }
+        .provider-tab {
+            padding: 8px 16px; border: 1px solid #c7c7cc; border-radius: 8px;
+            background: #fff; font-size: 14px; cursor: pointer; color: #1d1d1f;
+        }
+        .provider-tab.active { border-color: #0071e3; color: #0071e3; background: #e8f0fe; font-weight: 600; }
+        .provider-panel { padding: 14px 20px; overflow-y: auto; flex: 1; }
+        .pv-note {
+            background: #f8f8fa; border-radius: 6px; padding: 8px 10px;
+            font-size: 12px; color: #636366; line-height: 1.6; margin-top: 10px;
+        }
+        .json-area {
+            width: 100%; min-height: 130px; margin-top: 10px; padding: 10px;
+            border: 1px solid #c7c7cc; border-radius: 6px; font-size: 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+            color: #1d1d1f; resize: vertical; outline: none; background: #fafafa;
+        }
+        .json-area:focus { border-color: #0071e3; }
+        .modal-foot {
+            display: flex; gap: 10px; justify-content: flex-end;
+            padding: 14px 20px; border-top: 1px solid #e5e5e7;
+        }
+        .modal-foot .save-btn { padding: 9px 22px; font-size: 14px; }
+        .modal-foot .reset-btn { padding: 9px 16px; font-size: 13px; }
+        @media (max-width: 760px) {
+            .settings-grid, .teacher-grid { grid-template-columns: 1fr; }
+            .input-row { grid-template-columns: 92px 1fr; }
+        }
+    </style>
+</head>
+<body class="theme-liangliang">
+    <div class="app-layout">
+        <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
+        <aside class="sidebar">
+            <button class="nav-expand-toggle" onclick="toggleNavExpand()" title="展开导航" aria-label="展开导航">☰</button>
+            <nav>
+<a href="multimodal.html" class="nav-item" data-page="multimodal" title="多模态解答"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
+<a href="teach.html" class="nav-item" data-page="teach" title="老师手把手教你做题"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
+<a href="exam.html" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
+<a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+<a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
+<a href="loop.html?v=20260807" class="nav-item" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
+<a href="calendar.html?v=20260807" class="nav-item" data-page="calendar" title="巩固日历"><span class="nav-icon">📅</span><span class="nav-label">巩固日历</span></a>
+<a href="board.html?v=20260807" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
+<a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
+<a href="settings.html" class="nav-item active" data-page="settings" title="系统设置"><span class="nav-icon">⚙️</span><span class="nav-label">系统设置</span></a>
+            </nav>
+        </aside>
+        <main class="main-content">
+            <div class="settings-wrap">
+                <h1>系统设置</h1>
+                <p class="subtitle">难度评分公式 · 老师模型 · API 密钥</p>
+                <div id="statusBar" class="settings-status"></div>
+
+                <section class="settings-section">
+                    <div class="section-head">
+                        <h2>难度评分公式</h2>
+                        <span class="section-hint">保存后热生效；存量题目需要重跑才会用新公式</span>
+                    </div>
+                    <div class="settings-grid">
+                        <div class="settings-card">
+                            <h3>分值权重与等级</h3>
+                            <div class="formula-box" id="formulaText">总分 = min(cap, w1×#1 + w2×#2 + w3×#3)</div>
+                            <div class="input-row">
+                                <label>0 分权重</label>
+                                <input id="w0" type="number" value="0" disabled>
+                                <label>1 分权重</label>
+                                <input id="w1" type="number" min="0" max="50" step="1" oninput="recomputePreview()">
+                                <label>2 分权重</label>
+                                <input id="w2" type="number" min="0" max="50" step="1" oninput="recomputePreview()">
+                                <label>3 分权重</label>
+                                <input id="w3" type="number" min="0" max="50" step="1" oninput="recomputePreview()">
+                                <label>总分封顶</label>
+                                <input id="cap" type="number" min="1" max="50" step="1" oninput="recomputePreview()">
+                            </div>
+                            <div class="input-row">
+                                <label>容易 ≤</label>
+                                <input id="t1" type="number" min="0" max="50" step="1" oninput="recomputePreview()">
+                                <label>中等 ≤</label>
+                                <input id="t2" type="number" min="0" max="50" step="1" oninput="recomputePreview()">
+                                <label>困难 ≤</label>
+                                <input id="t3" type="number" min="0" max="50" step="1" oninput="recomputePreview()">
+                            </div>
+                        </div>
+                        <div class="settings-card">
+                            <h3>公式预览</h3>
+                            <div id="previewList"></div>
+                        </div>
+                    </div>
+                    <div class="principle-card">
+                        <h3>原理</h3>
+                        <p><strong>步骤五维 → 块/整题五维（固定聚合）</strong>：每个维度取该维的峰值 + floor(0.5 × 非零均值 × 覆盖率)，封顶 3。只做轻微升级，重复出现 1 不会抬分，重复 2 才可能升到 3。</p>
+                        <p><strong>总分</strong>：五个维度各自按权重累加后封顶。1 分权重小表示“有一点负担但不明显”，2/3 分权重大，且 2/3 越多总分越高。</p>
+                        <p><strong>等级</strong>：得分 ≤ 容易上限为“容易”，≤ 中等上限为“中等”，≤ 困难上限为“困难”，更高为“极难”。三个上限应保持递增。</p>
+                        <p><strong>校准原则</strong>：Formatter 被要求“0 是默认、1 是少数、2/3 是例外”，所以 1 的权重不需要给大；想让难度分布更集中在容易/中等，就把 2/3 权重调小。</p>
+                    </div>
+                </section>
+
+                <section class="settings-section">
+                    <div class="section-head">
+                        <h2>老师模型</h2>
+                        <span class="section-hint">三阶段分别配置模型与思考强度，保存后立即生效</span>
+                    </div>
+                    <div class="teacher-grid" id="teacherGrid"></div>
+                </section>
+
+                <section class="settings-section">
+                    <div class="section-head">
+                        <h2>API 接口</h2>
+                        <span class="section-hint">密钥留空表示保留现有值；明文保存在 backend/settings.json，请勿提交到 Git</span>
+                        <button class="settings-btn" onclick="openProviderModal()">服务商切换（CC Switch 风格）</button>
+                    </div>
+                    <div class="settings-grid">
+                        <div class="settings-card">
+                            <h3>老师解答 / 对话（DeepSeek，可切换 Qwen / 豆包）</h3>
+                            <div class="input-row">
+                                <label>接口地址</label>
+                                <input id="dsBase" type="text" spellcheck="false">
+                                <label>API Key</label>
+                                <input id="dsKey" type="password" placeholder="未配置" autocomplete="off">
+                                <span id="dsKeyStatus" class="key-status"></span>
+                            </div>
+                            <button class="settings-btn" onclick="testApi('deepseek')">测试连接</button>
+                        </div>
+                        <div class="settings-card">
+                            <h3>切题 / 多模态（DashScope 通义 Qwen-VL）</h3>
+                            <div class="input-row">
+                                <label>接口地址</label>
+                                <input id="dsScopeBase" type="text" spellcheck="false">
+                                <label>模型</label>
+                                <input id="dsScopeModel" type="text" spellcheck="false">
+                                <label>API Key</label>
+                                <input id="dsScopeKey" type="password" placeholder="未配置" autocomplete="off">
+                                <span id="dsScopeKeyStatus" class="key-status"></span>
+                            </div>
+                            <button class="settings-btn" onclick="testApi('dashscope')">测试连接</button>
+                        </div>
+                    </div>
+                </section>
+
+                <div class="settings-actions">
+                    <button class="save-btn" onclick="saveSettings()">保存设置</button>
+                    <button class="reset-btn" onclick="resetSettings()">恢复默认</button>
+                </div>
+            </div>
+        </main>
+    </div>
+    <div id="providerModal" class="modal-mask" style="display:none">
+        <div class="modal-box">
+            <div class="modal-head">
+                <h2>服务商切换</h2>
+                <button class="modal-close" onclick="closeProviderModal()" aria-label="关闭">×</button>
+            </div>
+            <div class="provider-tabs" id="providerTabs"></div>
+            <div class="provider-panel" id="providerPanel"></div>
+            <div class="modal-foot">
+                <button class="reset-btn" onclick="restoreProviderPreset()">恢复内置默认</button>
+                <button class="save-btn" onclick="applyProvider()">应用并保存</button>
+            </div>
+        </div>
+    </div>
+    <script src="nav.js?v=20260731h"></script>
+    <script>
+        var TEACHER_META = {
+            liangliang: { name: "梁梁", desc: "快速，可能出错" },
+            taotao: { name: "韬韬", desc: "更慢但更聪明" },
+            xuefeng: { name: "雪峰", desc: "每一步考虑更多" },
+            ji: { name: "鸡", desc: "每一步都想半天" }
+        };
+        var STAGES = [
+            ["solver", "Solver 解题"],
+            ["verifier", "Verifier 分块"],
+            ["formatter", "Formatter 评分"]
+        ];
+        var EFFORT_OPTIONS = [["", "无"], ["low", "low"], ["medium", "medium"], ["high", "high"]];
+        var EXAMPLES = [
+            { label: "全 0", vals: [0, 0, 0, 0, 0] },
+            { label: "一个 1", vals: [1, 0, 0, 0, 0] },
+            { label: "五个 1", vals: [1, 1, 1, 1, 1] },
+            { label: "两个 2", vals: [0, 2, 2, 0, 0] },
+            { label: "一个 3", vals: [3, 0, 0, 0, 0] },
+            { label: "两个 3", vals: [3, 0, 3, 0, 0] },
+            { label: "2 + 3", vals: [2, 0, 3, 0, 0] },
+            { label: "三个 3", vals: [3, 3, 3, 0, 0] }
+        ];
+
+        function val(id) { return (document.getElementById(id).value || "").trim(); }
+        function num(id) {
+            var n = parseInt(document.getElementById(id).value, 10);
+            return isNaN(n) ? 0 : n;
+        }
+        function setStatus(msg, cls) {
+            var el = document.getElementById("statusBar");
+            el.className = "settings-status " + (cls || "");
+            el.textContent = msg || "";
+        }
+
+        function computeScore(vals) {
+            var w = [num("w0"), num("w1"), num("w2"), num("w3")];
+            var cap = num("cap");
+            var total = 0;
+            vals.forEach(function (v) {
+                if (v >= 0 && v < w.length) total += w[v];
+            });
+            return Math.min(cap, total);
+        }
+
+        function computeLevel(score) {
+            var t1 = num("t1"), t2 = num("t2"), t3 = num("t3");
+            if (score <= t1) return "容易";
+            if (score <= t2) return "中等";
+            if (score <= t3) return "困难";
+            return "极难";
+        }
+
+        function recomputePreview() {
+            var formula = document.getElementById("formulaText");
+            var cap = num("cap");
+            formula.textContent = "总分 = min(" + cap + ", " + num("w1") + "×#1 + " + num("w2") + "×#2 + " + num("w3") + "×#3)";
+            var box = document.getElementById("previewList");
+            box.innerHTML = "";
+            EXAMPLES.forEach(function (ex) {
+                var score = computeScore(ex.vals);
+                var level = computeLevel(score);
+                var row = document.createElement("div");
+                row.className = "preview-row";
+                var label = document.createElement("span");
+                label.className = "preview-label";
+                label.textContent = ex.label;
+                var bars = document.createElement("div");
+                bars.className = "preview-bars";
+                bars.innerHTML = window.renderDimBarsFromValues(ex.vals, true);
+                var res = document.createElement("span");
+                res.className = "preview-score";
+                res.textContent = score + " · " + level;
+                row.appendChild(label);
+                row.appendChild(bars);
+                row.appendChild(res);
+                box.appendChild(row);
+            });
+        }
+
+        function buildTeacherGrid(teachers) {
+            var box = document.getElementById("teacherGrid");
+            box.innerHTML = "";
+            Object.keys(TEACHER_META).forEach(function (name) {
+                var meta = TEACHER_META[name];
+                var cfg = (teachers || {})[name] || {};
+                var card = document.createElement("div");
+                card.className = "teacher-card";
+                var h = document.createElement("h3");
+                h.innerHTML = "<span>" + meta.name + "</span><span class=\"t-desc\">" + meta.desc + "</span>";
+                card.appendChild(h);
+                STAGES.forEach(function (pair) {
+                    var stage = pair[0], stageName = pair[1];
+                    var sc = cfg[stage] || {};
+                    var wrap = document.createElement("div");
+                    wrap.className = "teacher-stage";
+                    var lab = document.createElement("label");
+                    lab.textContent = stageName;
+                    wrap.appendChild(lab);
+                    var row = document.createElement("div");
+                    row.className = "stage-row";
+                    var modelInput = document.createElement("input");
+                    modelInput.type = "text";
+                    modelInput.value = sc.model || "";
+                    modelInput.setAttribute("data-t", name);
+                    modelInput.setAttribute("data-s", stage);
+                    modelInput.setAttribute("data-f", "model");
+                    modelInput.spellcheck = false;
+                    var effortSelect = document.createElement("select");
+                    EFFORT_OPTIONS.forEach(function (opt) {
+                        var o = document.createElement("option");
+                        o.value = opt[0];
+                        o.textContent = opt[1];
+                        if (String(sc.reasoning_effort || "") === opt[0]) o.selected = true;
+                        effortSelect.appendChild(o);
+                    });
+                    effortSelect.setAttribute("data-t", name);
+                    effortSelect.setAttribute("data-s", stage);
+                    effortSelect.setAttribute("data-f", "reasoning_effort");
+                    row.appendChild(modelInput);
+                    row.appendChild(effortSelect);
+                    wrap.appendChild(row);
+                    card.appendChild(wrap);
+                });
+                box.appendChild(card);
+            });
+        }
+
+        async function loadSettings() {
+            setStatus("正在读取设置…", "busy");
+            try {
+                var res = await fetch("/settings");
+                var data = await res.json();
+                var sc = data.scoring || {};
+                var w = sc.weights || [0, 1, 2, 4];
+                document.getElementById("w0").value = w[0] || 0;
+                document.getElementById("w1").value = w[1] || 0;
+                document.getElementById("w2").value = w[2] || 0;
+                document.getElementById("w3").value = w[3] || 0;
+                document.getElementById("cap").value = sc.cap || 15;
+                var th = sc.thresholds || [];
+                document.getElementById("t1").value = th[0] ? (th[0].limit || 3) : 3;
+                document.getElementById("t2").value = th[1] ? (th[1].limit || 6) : 6;
+                document.getElementById("t3").value = th[2] ? (th[2].limit || 9) : 9;
+                buildTeacherGrid(data.teachers || {});
+                var api = data.api || {};
+                var ds = api.deepseek || {};
+                var scope = api.dashscope || {};
+                document.getElementById("dsBase").value = ds.base_url || "";
+                document.getElementById("dsKey").placeholder = ds.has_key ? "已配置（留空保留）" : "未配置";
+                document.getElementById("dsScopeBase").value = scope.base_url || "";
+                document.getElementById("dsScopeModel").value = scope.model || "";
+                document.getElementById("dsScopeKey").placeholder = scope.has_key ? "已配置（留空保留）" : "未配置";
+                setKeyStatus("dsKeyStatus", ds);
+                setKeyStatus("dsScopeKeyStatus", scope);
+                recomputePreview();
+                setStatus("设置已加载", "ok");
+            } catch (e) {
+                setStatus("读取设置失败：" + (e.message || e), "err");
+            }
+        }
+
+        function setKeyStatus(id, cfg) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            if (cfg && cfg.has_key) {
+                var source = cfg.key_source === "settings" ? "系统设置" : ".env";
+                el.className = "key-status has";
+                el.textContent = "已配置（" + source + "）：" + (cfg.api_key || "");
+            } else {
+                el.className = "key-status";
+                el.textContent = "未配置，将无法调用该接口";
+            }
+        }
+
+        function collectSettings() {
+            var payload = {
+                scoring: {
+                    weights: [num("w0"), num("w1"), num("w2"), num("w3")],
+                    cap: num("cap"),
+                    thresholds: [
+                        { limit: num("t1"), level: "容易" },
+                        { limit: num("t2"), level: "中等" },
+                        { limit: num("t3"), level: "困难" }
+                    ]
+                },
+                teachers: {},
+                api: {
+                    deepseek: { base_url: val("dsBase") },
+                    dashscope: { base_url: val("dsScopeBase"), model: val("dsScopeModel") }
+                }
+            };
+            document.querySelectorAll("[data-t]").forEach(function (el) {
+                var t = el.getAttribute("data-t");
+                var s = el.getAttribute("data-s");
+                var f = el.getAttribute("data-f");
+                if (!payload.teachers[t]) payload.teachers[t] = { solver: {}, verifier: {}, formatter: {} };
+                payload.teachers[t][s][f] = el.value;
+            });
+            var dsKey = val("dsKey");
+            if (dsKey) payload.api.deepseek.api_key = dsKey;
+            var scopeKey = val("dsScopeKey");
+            if (scopeKey) payload.api.dashscope.api_key = scopeKey;
+            return payload;
+        }
+
+        async function saveSettings() {
+            setStatus("正在保存…", "busy");
+            try {
+                var res = await fetch("/settings", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(collectSettings())
+                });
+                var data = await res.json();
+                if (!res.ok || data.error) {
+                    setStatus("保存失败：" + (data.detail || data.error || res.status), "err");
+                    return;
+                }
+                document.getElementById("dsKey").value = "";
+                document.getElementById("dsScopeKey").value = "";
+                setStatus("设置已保存并热生效", "ok");
+                loadSettings();
+            } catch (e) {
+                setStatus("保存失败：" + (e.message || e), "err");
+            }
+        }
+
+        async function resetSettings() {
+            if (!confirm("确认恢复全部默认设置？")) return;
+            setStatus("正在恢复默认…", "busy");
+            try {
+                var res = await fetch("/settings/reset", { method: "POST" });
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                document.getElementById("dsKey").value = "";
+                document.getElementById("dsScopeKey").value = "";
+                await loadSettings();
+                setStatus("已恢复默认设置", "ok");
+            } catch (e) {
+                setStatus("恢复失败：" + (e.message || e), "err");
+            }
+        }
+
+        async function testApi(provider) {
+            setStatus(provider === "deepseek" ? "正在测试 DeepSeek…" : "正在测试 DashScope…", "busy");
+            try {
+                var res = await fetch("/settings/test", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ provider: provider })
+                });
+                var data = await res.json();
+                if (data.ok) {
+                    setStatus((provider === "deepseek" ? "DeepSeek" : "DashScope") + " 连接正常", "ok");
+                } else {
+                    setStatus("测试失败：" + (data.error || "未知错误"), "err");
+                }
+            } catch (e) {
+                setStatus("测试失败：" + (e.message || e), "err");
+            }
+        }
+
+        // ---------- 服务商切换（CC Switch 风格） ----------
+        var PROVIDER_DEFAULTS = {
+            deepseek: {
+                name: "DeepSeek",
+                role: "对话解题",
+                base_url: "https://api.deepseek.com/v1",
+                models: { solver: "deepseek-v4-pro", verifier: "deepseek-v4-flash", formatter: "deepseek-v4-flash" },
+                note: "DeepSeek 官方兼容接口，密钥在 platform.deepseek.com 创建。"
+            },
+            qwen: {
+                name: "Qwen 通义",
+                role: "对话解题 + 切题",
+                base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1",
+                models: { solver: "qwen-plus", verifier: "qwen-plus", formatter: "qwen-plus" },
+                extract_model: "qwen-vl-max",
+                note: "阿里云百炼 DashScope 兼容接口，密钥在百炼控制台创建。应用后同时切换对话解题和切题模型。"
+            },
+            doubao: {
+                name: "豆包 火山方舟",
+                role: "对话解题",
+                base_url: "https://ark.cn-beijing.volces.com/api/v3",
+                models: { solver: "doubao-seed-1-6-250615", verifier: "doubao-seed-1-6-250615", formatter: "doubao-seed-1-6-250615" },
+                note: "火山方舟 Ark 兼容接口，密钥在火山引擎控制台创建。模型可填母模型名（如 doubao-seed-1-6-250615）或控制台创建的接入点 ID（ep-...）。"
+            }
+        };
+        var PROVIDER_KEYS = ["deepseek", "qwen", "doubao"];
+        var _currentProvider = "deepseek";
+        var _presets = null;
+        var _pvSyncing = false;
+
+        function getPresets() {
+            if (_presets) return _presets;
+            var saved = {};
+            try { saved = JSON.parse(localStorage.getItem("provider_presets_v1") || "{}") || {}; } catch (e) { saved = {}; }
+            _presets = {};
+            PROVIDER_KEYS.forEach(function (k) {
+                _presets[k] = Object.assign({}, PROVIDER_DEFAULTS[k], saved[k] || {});
+                _presets[k].models = Object.assign({}, PROVIDER_DEFAULTS[k].models, (saved[k] || {}).models || {});
+            });
+            return _presets;
+        }
+
+        function savePresetsCache() {
+            try { localStorage.setItem("provider_presets_v1", JSON.stringify(_presets)); } catch (e) {}
+        }
+
+        function cachedProviderKey(k) {
+            try { return localStorage.getItem("provider_key_" + k) || ""; } catch (e) { return ""; }
+        }
+
+        function openProviderModal() {
+            _currentProvider = "deepseek";
+            getPresets();
+            renderProviderTabs();
+            renderProviderPanel();
+            document.getElementById("providerModal").style.display = "flex";
+        }
+
+        function closeProviderModal() {
+            document.getElementById("providerModal").style.display = "none";
+        }
+
+        function renderProviderTabs() {
+            var box = document.getElementById("providerTabs");
+            box.innerHTML = "";
+            PROVIDER_KEYS.forEach(function (k) {
+                var btn = document.createElement("button");
+                btn.className = "provider-tab" + (k === _currentProvider ? " active" : "");
+                btn.textContent = getPresets()[k].name;
+                btn.onclick = function () { selectProviderTab(k); };
+                box.appendChild(btn);
+            });
+        }
+
+        function selectProviderTab(k) {
+            _currentProvider = k;
+            renderProviderTabs();
+            renderProviderPanel();
+        }
+
+        function buildProviderPayload(pre) {
+            var payload = {
+                api: {
+                    deepseek: { base_url: pre.base_url },
+                    dashscope: {}
+                },
+                teachers: {}
+            };
+            ["liangliang", "taotao", "xuefeng", "ji"].forEach(function (t) {
+                payload.teachers[t] = {
+                    solver: { model: pre.models.solver },
+                    verifier: { model: pre.models.verifier },
+                    formatter: { model: pre.models.formatter }
+                };
+            });
+            if (_currentProvider === "qwen") {
+                payload.api.dashscope = { base_url: pre.base_url, model: pre.extract_model };
+            }
+            return payload;
+        }
+
+        function renderProviderPanel() {
+            var pre = getPresets()[_currentProvider];
+            var cachedKey = cachedProviderKey(_currentProvider);
+            var box = document.getElementById("providerPanel");
+            var html = "";
+            html += '<div class="input-row"><label>API Key</label><input id="pvKey" type="password" value="" placeholder="' + (cachedKey ? "已缓存（留空沿用）" : "未配置") + '" autocomplete="off"></div>';
+            html += '<div class="input-row"><label>接口地址</label><input id="pvBase" type="text" value="' + pre.base_url + '" spellcheck="false"></div>';
+            html += '<div class="input-row"><label>Solver 模型</label><input id="pvModelSolver" type="text" value="' + pre.models.solver + '" spellcheck="false"></div>';
+            html += '<div class="input-row"><label>Verifier 模型</label><input id="pvModelVerifier" type="text" value="' + pre.models.verifier + '" spellcheck="false"></div>';
+            html += '<div class="input-row"><label>Formatter 模型</label><input id="pvModelFormatter" type="text" value="' + pre.models.formatter + '" spellcheck="false"></div>';
+            if (_currentProvider === "qwen") {
+                html += '<div class="input-row"><label>切题模型</label><input id="pvExtractModel" type="text" value="' + (pre.extract_model || "qwen-vl-max") + '" spellcheck="false"></div>';
+            }
+            html += '<div class="pv-note">' + pre.note + '</div>';
+            html += '<textarea id="pvJson" class="json-area" spellcheck="false"></textarea>';
+            box.innerHTML = html;
+            box.querySelectorAll("input").forEach(function (el) {
+                el.addEventListener("input", function () { if (!_pvSyncing) syncProviderJson(); });
+            });
+            var ta = document.getElementById("pvJson");
+            ta.addEventListener("input", parseProviderJson);
+            syncProviderJson();
+        }
+
+        function collectProviderInputs() {
+            var pre = getPresets()[_currentProvider];
+            pre.base_url = document.getElementById("pvBase").value.trim();
+            pre.models.solver = document.getElementById("pvModelSolver").value.trim();
+            pre.models.verifier = document.getElementById("pvModelVerifier").value.trim();
+            pre.models.formatter = document.getElementById("pvModelFormatter").value.trim();
+            if (_currentProvider === "qwen") {
+                pre.extract_model = document.getElementById("pvExtractModel").value.trim();
+            }
+            return pre;
+        }
+
+        function syncProviderJson() {
+            var pre = collectProviderInputs();
+            var key = document.getElementById("pvKey").value.trim();
+            var payload = buildProviderPayload(pre);
+            if (key) {
+                payload.api.deepseek.api_key = key;
+                if (_currentProvider === "qwen" && payload.api.dashscope) payload.api.dashscope.api_key = key;
+            }
+            document.getElementById("pvJson").value = JSON.stringify(payload, null, 2);
+        }
+
+        function parseProviderJson() {
+            if (_pvSyncing) return;
+            var raw = document.getElementById("pvJson").value;
+            var obj = null;
+            try { obj = JSON.parse(raw); } catch (e) { return; }
+            var pre = getPresets()[_currentProvider];
+            _pvSyncing = true;
+            try {
+                if (obj.api && obj.api.deepseek) {
+                    var ds = obj.api.deepseek;
+                    if (ds.base_url) pre.base_url = ds.base_url;
+                    if (ds.api_key) document.getElementById("pvKey").value = ds.api_key;
+                    document.getElementById("pvBase").value = pre.base_url;
+                }
+                if (obj.teachers) {
+                    var first = obj.teachers[Object.keys(obj.teachers)[0]];
+                    if (first) {
+                        pre.models.solver = (first.solver && first.solver.model) || pre.models.solver;
+                        pre.models.verifier = (first.verifier && first.verifier.model) || pre.models.verifier;
+                        pre.models.formatter = (first.formatter && first.formatter.model) || pre.models.formatter;
+                        document.getElementById("pvModelSolver").value = pre.models.solver;
+                        document.getElementById("pvModelVerifier").value = pre.models.verifier;
+                        document.getElementById("pvModelFormatter").value = pre.models.formatter;
+                    }
+                }
+                if (obj.api && obj.api.dashscope) {
+                    pre.extract_model = obj.api.dashscope.model || pre.extract_model;
+                    var em = document.getElementById("pvExtractModel");
+                    if (em) em.value = pre.extract_model;
+                }
+            } finally {
+                _pvSyncing = false;
+            }
+        }
+
+        function restoreProviderPreset() {
+            _presets[_currentProvider] = Object.assign({}, PROVIDER_DEFAULTS[_currentProvider]);
+            _presets[_currentProvider].models = Object.assign({}, PROVIDER_DEFAULTS[_currentProvider].models);
+            savePresetsCache();
+            renderProviderPanel();
+        }
+
+        async function applyProvider() {
+            var pre = collectProviderInputs();
+            var payload = null;
+            try { payload = JSON.parse(document.getElementById("pvJson").value); } catch (e) {}
+            if (!payload || !payload.api || !payload.api.deepseek) {
+                setStatus("服务商配置 JSON 无效", "err");
+                return;
+            }
+            var key = document.getElementById("pvKey").value.trim();
+            if (key) {
+                payload.api.deepseek.api_key = key;
+                if (_currentProvider === "qwen" && payload.api.dashscope) payload.api.dashscope.api_key = key;
+                try { localStorage.setItem("provider_key_" + _currentProvider, key); } catch (e) {}
+            }
+            savePresetsCache();
+            setStatus("正在应用服务商配置…", "busy");
+            try {
+                var res = await fetch("/settings", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(payload)
+                });
+                var data = await res.json();
+                if (!res.ok || data.error) {
+                    setStatus("应用失败：" + (data.detail || data.error || res.status), "err");
+                    return;
+                }
+                document.getElementById("dsKey").value = "";
+                document.getElementById("dsScopeKey").value = "";
+                await loadSettings();
+                setStatus("已切换服务商并保存", "ok");
+                closeProviderModal();
+            } catch (e) {
+                setStatus("应用失败：" + (e.message || e), "err");
+            }
+        }
+
+        document.getElementById("providerModal").addEventListener("click", function (e) {
+            if (e.target.id === "providerModal") closeProviderModal();
+        });
+
+        document.addEventListener("DOMContentLoaded", loadSettings);
+    </script>
+</body>
+</html>

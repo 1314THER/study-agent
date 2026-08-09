@@ -8,6 +8,7 @@ import uuid
 from concurrent.futures import ThreadPoolExecutor
 
 from backend import difficulty as diff
+import backend.settings as runtime_settings
 from backend.solver import (
     TEACHER_CONFIG,
     _is_well_formed_chunk_results,
@@ -175,7 +176,7 @@ def _parse_candidates(content: str, count: int) -> list:
 
 
 def _call_generation(reference: dict, count: int, teacher: str) -> list:
-    config = TEACHER_CONFIG.get(teacher, TEACHER_CONFIG["liangliang"])
+    config = runtime_settings.get_teacher_config(teacher)
 
     def request_once(temperature):
         content, _ = call_deepseek(

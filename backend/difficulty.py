@@ -3,12 +3,12 @@
 口径：
 - 每个步骤由 Formatter 输出五维（0-3 整数）：
   非常规程度 / 计算量 / 分类讨论 / 知识广度 / 条件转化难度
-- 块/整题五维 = 对步骤五维逐维做“峰值 + 均值×覆盖率”聚合（0-3）
-- 总分 = 五维幂均值（p=3）映射到 0-15
+- 块/整题五维 = 对步骤五维逐维做“峰值 + 0.5×非零均值×覆盖率（向下取整）”聚合（0-3）
+- 总分 = 五维加权累加（默认：0 不计分，1 记 1 分，2 记 2 分，3 记 4 分，封顶 15），权重/封顶/等级可在设置页调整
 - 等级：0-3 容易 | 4-6 中等 | 7-9 困难 | >=10 极难
 """
 
-import math
+import backend.settings as runtime_settings
 
 DIM_KEYS = ["非常规程度", "计算量", "分类讨论", "知识广度", "条件转化难度"]
 DIM_ALIASES = {
@@ -19,7 +19,10 @@ DIM_ALIASES = {
     "知识点数量": "知识广度",
 }
 
-POWER = 3
+# 各分值对总分的权重：1 分只记很少的分，2/3 分权重更大，2/3 越多总分越高
+SCORE_WEIGHTS = {0: 0, 1: 1, 2: 2, 3: 4}
+SCORE_CAP = 15
+
 LEVEL_THRESHOLDS = [
     (3, "容易"),
     (6, "中等"),
@@ -29,8 +32,21 @@ LEVEL_THRESHOLDS = [
 UNKNOWN_DIFFICULTY = {"level": "未知", "total_score": 0, "dimensions": {}}
 
 
-def _half_up(x: float) -> int:
-    return math.floor(x + 0.5)
+def _scoring():
+    """运行时评分配置：设置文件优先，代码常量兜底。"""
+    cfg = runtime_settings.get_scoring()
+    weights = cfg.get("weights") or SCORE_WEIGHTS
+    cap = cfg.get("cap") or SCORE_CAP
+    thresholds = cfg.get("thresholds") or LEVEL_THRESHOLDS
+    return weights, cap, thresholds
+
+
+def _weight_for(weights, value: int) -> int:
+    if isinstance(weights, dict):
+        return int(weights.get(str(value), weights.get(value, 0)) or 0)
+    if isinstance(weights, (list, tuple)) and 0 <= value < len(weights):
+        return int(weights[value] or 0)
+    return 0
 
 
 def normalize_dims(dims) -> dict:
@@ -65,7 +81,10 @@ def has_step_dimensions(chunk_results) -> bool:
 
 
 def aggregate_dims(step_vectors: list) -> dict:
-    """步骤五维 -> 块/整题五维：max + mean(非零) × coverage，封顶 3。"""
+    """步骤五维 -> 块/整题五维：峰值 + 0.5×非零均值×覆盖率（向下取整），封顶 3。
+
+    覆盖率项只做轻微升级：重复出现 1 分不会抬分，重复出现 2 分才可能升到 3。
+    """
     n = len(step_vectors)
     result = {}
     for key in DIM_KEYS:
@@ -80,17 +99,18 @@ def aggregate_dims(step_vectors: list) -> dict:
         peak = max(nonzero)
         mean = sum(nonzero) / len(nonzero)
         coverage = len(nonzero) / n if n else 0.0
-        result[key] = min(3, _half_up(peak + mean * coverage))
+        result[key] = min(3, peak + int(0.5 * mean * coverage))
     return result
 
 
-def score_from_dims(dims, p: float = POWER) -> int:
-    """五维 -> 0-15：幂均值（默认 p=3），突出最大值对结果的影响。"""
+def score_from_dims(dims) -> int:
+    """五维 -> 0-cap：按设置里的权重加权累加（默认 0/1/2/4），封顶 cap。"""
     normalized = normalize_dims(dims)
-    if not normalized or all(v == 0 for v in normalized.values()):
+    if not normalized:
         return 0
-    mean_power = sum((v / 3.0) ** p for v in normalized.values()) / len(DIM_KEYS)
-    return _half_up(15.0 * (mean_power ** (1.0 / p)))
+    weights, cap, _ = _scoring()
+    score = sum(_weight_for(weights, v) for v in normalized.values())
+    return min(int(cap or SCORE_CAP), score)
 
 
 def level_from_score(score) -> str:
@@ -98,8 +118,13 @@ def level_from_score(score) -> str:
         score = max(0, int(score))
     except (TypeError, ValueError):
         return "未知"
-    for limit, level in LEVEL_THRESHOLDS:
-        if score <= limit:
+    _, _, thresholds = _scoring()
+    for item in thresholds or LEVEL_THRESHOLDS:
+        if isinstance(item, dict):
+            limit, level = item.get("limit"), item.get("level")
+        else:
+            limit, level = item
+        if score <= int(limit):
             return level
     return "极难"
 

@@ -1,4 +1,6 @@
 .env
+backend/settings.json
+backend/settings.json.tmp
 node modules/
 study_agent.db
 *.db

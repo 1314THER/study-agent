@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<script src="dimchart.js?v=1"></script>
 <style>
 /* Quote area */
 .quote-area { text-align: center; padding: 8px 0 28px; max-width: 640px; margin: 0 auto; }
@@ -202,6 +203,7 @@ body.teach-standalone .teach-container { height: calc(100vh - 36px); }
 <a href="calendar.html?v=20260807" class="nav-item" data-page="calendar" title="巩固日历"><span class="nav-icon">📅</span><span class="nav-label">巩固日历</span></a>
 <a href="board.html?v=20260807" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
 <a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
+<a href="settings.html" class="nav-item" data-page="settings" title="系统设置"><span class="nav-icon">⚙️</span><span class="nav-label">系统设置</span></a>
 </nav>
 </aside>
 <main class="main-content">
@@ -440,6 +442,7 @@ function updateInfoPanel(){
     var dl=(s.step_difficulty&&s.step_difficulty.level)||"";
     var dh=dl?"<span class=\"info-step-diff diff-"+(dl==="\u56F0\u96BE"?"hard":(dl==="\u4E2D\u7B49"?"medium":"easy"))+"\">"+dl+"</span>":"";
     h+="<div class=\u0022"+cls+"\u0022><div class=\u0022info-step-header\u0022><span class=\u0022info-step-icon\u0022>"+ic+"</span><span class=\u0022info-step-title\u0022>"+escapeHtml(isF?"\u6700\u7EC8\u7B54\u6848":(s.title||"\u6B65\u9AA4 "+(i+1)))+"</span>"+dh+"</div>";
+    if(window.renderDimBarsHtml&&s.step_difficulty&&s.step_difficulty.dimensions)h+=window.renderDimBarsHtml(s.step_difficulty.dimensions);
     if(com){
       h+="<div class=\u0022info-step-body\u0022>";
       h+="<div style=\u0022font-size:13px;color:#515154;margin-bottom:4px;\u0022>"+escapeHtml(s.standard_writing||"")+"</div>";

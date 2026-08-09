@@ -13,6 +13,7 @@ import httpx
 from typing import Dict, Any, List, Optional
 
 from backend import difficulty as diff
+import backend.settings as runtime_settings
 from backend.categories import CATEGORIES
 
 # ---------- 目录 ----------
@@ -129,22 +130,18 @@ _VERIFIER_OUTPUT_TEMPLATE = """## 输出格式（必须严格遵守，否则无�
 
 # ---------- API Key ----------
 def get_api_key() -> str:
-    key = os.environ.get("DEEPSEEK_API_KEY")
-    if key:
-        return key
-    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
-    if os.path.exists(env_path):
-        with open(env_path) as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("DEEPSEEK_API_KEY="):
-                    return line.split("=", 1)[1]
-    raise ValueError("未找到 DEEPSEEK_API_KEY")
+    key = runtime_settings.get_api_key("deepseek")
+    if not key:
+        raise ValueError("未找到 DEEPSEEK_API_KEY，请在系统设置页配置")
+    return key
 
 
 # ---------- 调用 DeepSeek ----------
 def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3, model: str = "deepseek-chat", reasoning_effort: str = None):
     api_key = get_api_key()
+    api_cfg = runtime_settings.get_api().get("deepseek") or {}
+    base_url = (api_cfg.get("base_url") or "https://api.deepseek.com/v1").rstrip("/")
+    endpoint = base_url if base_url.endswith("/chat/completions") else base_url + "/chat/completions"
     # 自动注入全局 LaTeX 格式要求
     full_system = system_prompt + "\n\n" + _LATEX_RULES if _LATEX_RULES else system_prompt
     body = {
@@ -161,7 +158,7 @@ def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3
         body["thinking"] = {"type": "enabled"}
     try:
         resp = httpx.post(
-            "https://api.deepseek.com/v1/chat/completions",
+            endpoint,
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json=body,
             timeout=300,
@@ -634,7 +631,7 @@ def _xuebile(status: str, detail: str = "") -> dict:
 # ---------- Solver 步 ----------
 def step_solver_only(question: str, question_type: str = None, teacher: str = None) -> dict:
     """Solver：解答 + 输出板块"""
-    config = TEACHER_CONFIG.get(teacher or "liangliang", TEACHER_CONFIG["liangliang"])
+    config = runtime_settings.get_teacher_config(teacher)
     prompt = SOLVER_PROMPT
     if question_type:
         prompt += f"\n\n注意：已知本题为{question_type}。"
@@ -688,7 +685,7 @@ def _validate_step_names(verifier_cat: str, steps: list) -> list:
 
 def step_verify_all(content: str, question: str, category: str = None, question_type: str = None, teacher: str = None) -> dict:
     """一次 Verifier：将完整解答切成大块/小块 + 归类知识点 + 打分"""
-    config = TEACHER_CONFIG.get(teacher or "liangliang", TEACHER_CONFIG["liangliang"])
+    config = runtime_settings.get_teacher_config(teacher)
     resolved_type = _resolve_question_type(question, content, question_type)
     if resolved_type in ("选择题", "填空题", "多选题"):
         verifier_cat = resolved_type
@@ -849,7 +846,7 @@ def _collect_kps_from_steps(chunk_results: list) -> list:
 
 def _call_formatter(question: str, chunk_results: list, token_total: dict, teacher: str):
     """调用 Formatter 补齐步骤五维，返回 (result, reason)。result 为 None 表示失败。"""
-    config = TEACHER_CONFIG.get(teacher or "liangliang", TEACHER_CONFIG["liangliang"])
+    config = runtime_settings.get_teacher_config(teacher)
     f_cfg = config["formatter"]
     input_data = {
         "question": question,

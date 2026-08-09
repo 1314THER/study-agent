@@ -10,23 +10,18 @@ import base64
 import httpx
 from typing import Optional
 
+import backend.settings as runtime_settings
+
 # ---------- API ----------
 DASHSCOPE_BASE = "https://ws-1b3ikgt2q6ybkzos.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
 MODEL = "qwen-vl-max"
 
 
 def _get_api_key() -> str:
-    key = os.environ.get("DASHSCOPE_API_KEY")
-    if key:
-        return key
-    env_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), ".env")
-    if os.path.exists(env_path):
-        with open(env_path) as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("DASHSCOPE_API_KEY="):
-                    return line.split("=", 1)[1]
-    raise ValueError("未找到 DASHSCOPE_API_KEY，请在 .env 中设置")
+    key = runtime_settings.get_api_key("dashscope")
+    if not key:
+        raise ValueError("未找到 DASHSCOPE_API_KEY，请在系统设置页配置")
+    return key
 
 
 # ---------- 文件解析 ----------
@@ -81,6 +76,9 @@ _EXTRACTION_PROMPT = _read_extraction_prompt()
 def _call_qwen_vl(image_base64: Optional[str] = None, text: Optional[str] = None) -> str:
     """调用 Qwen-VL-Plus，返回原始回复文本"""""
     api_key = _get_api_key()
+    api_cfg = runtime_settings.get_api().get("dashscope") or {}
+    base_url = (api_cfg.get("base_url") or DASHSCOPE_BASE).rstrip("/")
+    model = api_cfg.get("model") or MODEL
     messages = [{"role": "user", "content": []}]
     
     if image_base64:
@@ -95,14 +93,14 @@ def _call_qwen_vl(image_base64: Optional[str] = None, text: Optional[str] = None
     })
     
     body = {
-        "model": MODEL,
+        "model": model,
         "messages": messages,
         "max_tokens": 16384,
     }
     
     try:
         resp = httpx.post(
-            f"{DASHSCOPE_BASE}/chat/completions",
+            base_url + "/chat/completions",
             headers={
                 "Authorization": f"Bearer {api_key}",
                 "Content-Type": "application/json"

@@ -16,6 +16,7 @@ from backend.database import (
 )
 from backend.categories import get_all_categories
 from backend.steps import get_step_structure, get_all_question_types
+import backend.settings as runtime_settings
 
 app = FastAPI(title="你好，我是张雪峰老师")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -875,6 +876,124 @@ def api_update_source_type(qid: int, req: SourceTypeRequest):
     if not ok:
         return {"error": "update_failed"}
     return {"ok": True, "source_type": req.source_type, "source_meta": req.source_meta}
+
+
+# ---------- 系统设置 ----------
+class SettingsTestRequest(BaseModel):
+    provider: str = Field(..., description="deepseek / dashscope")
+
+
+def _sanitize_settings_patch(patch):
+    out = {}
+    if not isinstance(patch, dict):
+        return out
+    for key in ("scoring", "teachers", "api"):
+        if key in patch and isinstance(patch[key], dict):
+            out[key] = patch[key]
+
+    scoring = out.get("scoring")
+    if scoring:
+        weights = scoring.get("weights")
+        if isinstance(weights, list):
+            cleaned = []
+            for value in weights[:4]:
+                try:
+                    cleaned.append(max(0, min(50, int(value))))
+                except (TypeError, ValueError):
+                    cleaned.append(0)
+            while len(cleaned) < 4:
+                cleaned.append(0)
+            scoring["weights"] = cleaned
+        cap = scoring.get("cap")
+        if cap is not None:
+            try:
+                scoring["cap"] = max(1, min(50, int(cap)))
+            except (TypeError, ValueError):
+                scoring.pop("cap", None)
+        thresholds = scoring.get("thresholds")
+        if isinstance(thresholds, list):
+            cleaned = []
+            for item in thresholds[:3]:
+                if isinstance(item, dict) and item.get("limit") is not None:
+                    try:
+                        cleaned.append({
+                            "limit": max(0, min(50, int(item["limit"]))),
+                            "level": str(item.get("level") or "容易"),
+                        })
+                    except (TypeError, ValueError):
+                        pass
+            if cleaned:
+                scoring["thresholds"] = cleaned
+
+    api = out.get("api")
+    if api:
+        for provider in ("deepseek", "dashscope"):
+            cfg = api.get(provider)
+            if isinstance(cfg, dict) and not cfg.get("api_key"):
+                cfg.pop("api_key", None)
+    return out
+
+
+def _public_settings(data: dict) -> dict:
+    import copy
+    out = copy.deepcopy(data)
+    api = out.get("api") or {}
+    for provider in ("deepseek", "dashscope"):
+        cfg = api.get(provider)
+        if not isinstance(cfg, dict):
+            continue
+        stored = (data.get("api") or {}).get(provider, {}).get("api_key") or ""
+        resolved = runtime_settings.get_api_key(provider)
+        cfg["api_key"] = runtime_settings.mask_key(resolved)
+        cfg["has_key"] = bool(resolved)
+        cfg["key_source"] = "settings" if stored else ("env" if resolved else "")
+    return out
+
+
+@app.get("/settings")
+def api_get_settings():
+    """读取系统设置，API Key 只返回掩码。"""
+    return _public_settings(runtime_settings.get_settings())
+
+
+@app.put("/settings")
+def api_update_settings(payload: dict):
+    """保存系统设置；API Key 留空表示保持原值。"""
+    data = runtime_settings.save_settings(_sanitize_settings_patch(payload))
+    return _public_settings(data)
+
+
+@app.post("/settings/reset")
+def api_reset_settings():
+    return _public_settings(runtime_settings.reset_settings())
+
+
+@app.post("/settings/test")
+def api_test_settings(req: SettingsTestRequest):
+    """用当前保存的地址与密钥测试 API 连通性。"""
+    import httpx
+    if req.provider not in ("deepseek", "dashscope"):
+        return {"ok": False, "error": "未知 provider"}
+    api = runtime_settings.get_api()
+    cfg = api.get(req.provider) or {}
+    key = runtime_settings.get_api_key(req.provider)
+    base_url = str(cfg.get("base_url") or "").rstrip("/")
+    if not key:
+        return {"ok": False, "error": "未配置 API Key"}
+    if not base_url:
+        return {"ok": False, "error": "未配置 API 地址"}
+    try:
+        resp = httpx.get(
+            base_url + "/models",
+            headers={"Authorization": f"Bearer {key}"},
+            timeout=15,
+        )
+        if resp.status_code == 200:
+            return {"ok": True, "provider": req.provider}
+        return {"ok": False, "error": f"HTTP {resp.status_code}: {resp.text[:120]}"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:150]}
+
 
 # ---- Static files: serve frontend (must be last) ----
 

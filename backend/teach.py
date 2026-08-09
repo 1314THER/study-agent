@@ -1,4 +1,5 @@
 import json, os, re
+import backend.settings as runtime_settings
 from backend.solver import (
     TEACHER_CONFIG,
     call_deepseek,
@@ -74,7 +75,7 @@ def _fs(steps, teacher=None):
         "knowledge_point": s.get("knowledge_point", ""),
         "standard_writing": s.get("standard_writing", ""),
     } for s in tg]
-    cfg = TEACHER_CONFIG.get(teacher or "liangliang", TEACHER_CONFIG["liangliang"])
+    cfg = runtime_settings.get_teacher_config(teacher)
     try:
         c, _ = call_deepseek(TF, json.dumps(inp, ensure_ascii=False, indent=2),
                              temperature=0.3,
@@ -180,7 +181,7 @@ def teach_start(question, teacher=None):
 
 def teach_check(question, step_prompt, step_answer, user_answer, teacher=None):
     up = f"原题：{question}\n当前步骤引导问题：{step_prompt}\n参考答案：{step_answer}\n学生回答：{user_answer}"
-    cfg = TEACHER_CONFIG.get(teacher or "liangliang", TEACHER_CONFIG["liangliang"])
+    cfg = runtime_settings.get_teacher_config(teacher)
     c, _ = call_deepseek(TC, up, temperature=0.2,
                          model=cfg.get("verifier", {}).get("model", "deepseek-v4-flash"),
                          reasoning_effort=cfg.get("verifier", {}).get("reasoning_effort"))
@@ -447,7 +448,7 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
     # 情况 C：有学生消息且未被跳过/提示/答案拦截 → 用 teach_check 做比对
     if student_message:
         up = f"原题：{sess['question']}\n当前步骤引导问题：{step.get('step_prompt', '')}\n参考答案：{step.get('step_answer', step.get('standard_writing', ''))}\n学生回答：{student_message}"
-        cfg = TEACHER_CONFIG.get(sess["teacher"], TEACHER_CONFIG["liangliang"])
+        cfg = runtime_settings.get_teacher_config(sess.get("teacher"))
 
         try:
             c, _ = call_deepseek(TC, up, temperature=0.2,

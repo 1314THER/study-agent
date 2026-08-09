@@ -12,10 +12,7 @@
     key: pat-06dace51fe
     description: ''
     mother_id: 2
-    variant_ids:
-    - 18
-    - 19
-    - 20
+    variant_ids: []
   剩余类描述集合1:同一剩余类:
     key: pat-3bebbd69a0
     description: ''
@@ -35,7 +32,4 @@
     key: pat-74a8382628
     description: ''
     mother_id: 1
-    variant_ids:
-    - 15
-    - 17
-    - 16
+    variant_ids: []

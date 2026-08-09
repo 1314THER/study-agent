@@ -21,6 +21,7 @@ function safeParseKps(kps){
 </script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
     <script src="radar.js?v=20260731"></script>
+    <script src="dimchart.js?v=1"></script>
 </head>
 <body class="theme-liangliang">
     <div class="app-layout">
@@ -37,6 +38,7 @@ function safeParseKps(kps){
 <a href="calendar.html?v=20260807" class="nav-item" data-page="calendar" title="巩固日历"><span class="nav-icon">📅</span><span class="nav-label">巩固日历</span></a>
 <a href="board.html?v=20260807" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
 <a href="index.html" class="nav-item active" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
+<a href="settings.html" class="nav-item" data-page="settings" title="系统设置"><span class="nav-icon">⚙️</span><span class="nav-label">系统设置</span></a>
 </nav>
         </aside>
         <main class="main-content">
@@ -157,6 +159,9 @@ var _selectedTeacher = "liangliang";
                     html += '<span class="step-diff-tag">' + step.step_difficulty.level + ' (' + step.step_difficulty.score + '分)</span>';
                 }
                 html += '</div>';
+                if (window.renderDimBarsHtml && step.step_difficulty) {
+                    html += window.renderDimBarsHtml(step.step_difficulty.dimensions);
+                }
                 html += '<div class="step-content">' + escapeHtml(step.standard_writing || '') + '</div>';
                 if (step.detailed_writing) {
                     html += '<div class="detail-toggle" onclick="toggleDetail(this)">展开详细过程 ▸</div>';
@@ -244,6 +249,9 @@ var _selectedTeacher = "liangliang";
                                 html += '<span class="step-diff-tag">' + step.step_difficulty.level + ' (' + step.step_difficulty.score + '分)</span>';
                             }
                             html += '</div>';
+                            if (window.renderDimBarsHtml && step.step_difficulty) {
+                                html += window.renderDimBarsHtml(step.step_difficulty.dimensions);
+                            }
                             html += '<div class="step-content">' + escapeHtml(step.standard_writing || '') + '</div>';
                             if (step.detailed_writing) {
                                 html += '<div class="detail-toggle" onclick="toggleDetail(this)">展开详细过程 ▸</div>';

@@ -18,6 +18,9 @@ _VALID_CATEGORIES = set(CATEGORIES.keys())
 _VALID_DIFFICULTY_LEVELS = {"容易", "中等", "困难", "极难", "未知"}
 _VALID_DIMENSION_KEYS = set(diff.DIM_KEYS)
 _VALID_SOURCE_TYPES = {"ai生成", "高考题", "模拟题", "精选母题"}
+_CATEGORY_ALIASES = {
+    "集合与常用逻辑用语": "集合与逻辑用语",
+}
 
 # 每种来源允许的二级标签字段，入库时只保留这些键
 _SOURCE_META_FIELDS = {
@@ -582,6 +585,8 @@ def _sanitize_category(cat: dict) -> tuple:
         return None, None
     level1 = cat.get("level1")
     level2 = cat.get("level2")
+    if level1 in _CATEGORY_ALIASES:
+        level1 = _CATEGORY_ALIASES[level1]
     if level1 not in _VALID_CATEGORIES:
         level1 = None
     if not level1:
@@ -688,6 +693,8 @@ def save_question(question_text: str, answer_dict: dict):
     if not raw_kps:
         raw_kps = _collect_step_knowledge_points(chunk_results)
     clean_kps = _sanitize_knowledge_points(category_level1, raw_kps)
+    # 把清洗后的知识点写回 answer_json，保证详情页与库字段一致
+    answer_dict["knowledge_points"] = clean_kps
 
     # 提取 question_type（从 chunk_results[0].chunk_type 或 answer_dict 顶层）
     question_type = answer_dict.get("question_type")

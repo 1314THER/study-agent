@@ -5,6 +5,7 @@ import json
 import os
 import sys
 import threading
+import time
 from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -70,6 +71,7 @@ def main() -> None:
     parser.add_argument("--teacher", default="taotao", help="老师配置名，默认 taotao")
     parser.add_argument("--ids", default="", help="只重跑指定 ID，逗号分隔；留空表示全部")
     parser.add_argument("--concurrency", type=int, default=4, help="并发重跑数量，默认 4")
+    parser.add_argument("--force", action="store_true", help="忽略已有五维，强制重跑")
     args = parser.parse_args()
 
     conn = get_connection()
@@ -93,7 +95,7 @@ def main() -> None:
         except (json.JSONDecodeError, TypeError):
             aj = {}
         crs = aj.get("chunk_results") if isinstance(aj, dict) else None
-        if isinstance(crs, list) and crs and diff.has_step_dimensions(crs):
+        if not args.force and isinstance(crs, list) and crs and diff.has_step_dimensions(crs):
             print(f"跳过 #{row['id']}：已有新五维难度", flush=True)
             continue
         todo.append(row)
@@ -105,7 +107,19 @@ def main() -> None:
     def work(index: int, row) -> None:
         qid = row["id"]
         print(f"[{index}/{len(todo)}] 开始重跑 #{qid} ...", flush=True)
-        result = rescore_question(row["content"], row["question_type"] or "", args.teacher)
+        result = None
+        last_err = None
+        for attempt in range(1, 4):
+            try:
+                result = rescore_question(row["content"], row["question_type"] or "", args.teacher)
+                break
+            except Exception as e:
+                last_err = e
+                print(f"[{index}/{len(todo)}] #{qid} 第 {attempt} 次调用异常：{str(e)[:120]}，重试", flush=True)
+                time.sleep(2 * attempt)
+        if result is None:
+            print(f"[{index}/{len(todo)}] #{qid} 失败：{str(last_err)[:200]}", flush=True)
+            return
         if result["status"] == "failed":
             print(f"[{index}/{len(todo)}] #{qid} 失败：{result['rejected_reason']}", flush=True)
             return
