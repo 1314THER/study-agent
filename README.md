@@ -46,7 +46,7 @@
 | 个人题库 | `frontend/history.html` | 题目列表 + 详情（含雷达图）+ 题单 + 购物车 |
 | 组卷 | `frontend/exam.html` | 从购物车组卷 + 排序 + 双模式 + 导出 PDF |
 | AI 改卷 | `frontend/grade.html` | 选择题/填空题直接判答案，大题按标准步骤 AI 判分，记录作答来源与防欺骗信号 |
-| 系统设置 | `frontend/settings.html` | 难度评分公式、老师模型、API 密钥与服务商切换 |
+| 系统设置 | `frontend/settings.html` | 难度评分公式、老师模型、API 密钥与服务商切换、性能与并发限制 |
 
 所有页面共享 `frontend/style.css`、`frontend/radar.js`、`frontend/dimchart.js`、`frontend/nav.js`，左侧导航支持展开/收起和移动端抽屉。
 

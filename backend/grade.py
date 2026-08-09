@@ -188,6 +188,7 @@ def _sanitize_ai_grade(data: dict, steps: list, full_score) -> dict:
             "chunk_id": std["chunk_id"],
             "step_number": std["step_number"],
             "title": std["title"],
+            "standard_writing": std.get("standard_writing") or "",
             "status": status,
             "comment": str(match.get("comment") or ""),
             "error_types": error_types,
@@ -333,6 +334,7 @@ def grade_text(question_id=None, question=None, student_answer="",
         "skipped": bool(skipped),
         "duration_seconds": duration_seconds,
     }
+    standard_steps = _collect_steps(answer_json)
 
     if resolved_type in ("选择题", "多选题", "填空题"):
         if resolved_type == "填空题":
@@ -357,12 +359,13 @@ def grade_text(question_id=None, question=None, student_answer="",
             "missing_steps": [],
             "not_rigorous_steps": [],
             "error_suggestions": [],
+            "standard_steps": standard_steps,
             "feedback": "回答正确。" if correct else "回答错误，请核对答案。",
             "suggested_approach": "",
             "anti_cheat": anti_cheat,
         }
     else:
-        steps = _collect_steps(answer_json)
+        steps = standard_steps
         if not steps:
             return {"error": "no_steps", "detail": "题目没有标准步骤，无法按步骤批改"}
         try:
@@ -386,6 +389,7 @@ def grade_text(question_id=None, question=None, student_answer="",
             "missing_steps": ai["missing_steps"],
             "not_rigorous_steps": ai["not_rigorous_steps"],
             "error_suggestions": ai["error_suggestions"],
+            "standard_steps": steps,
             "feedback": ai["feedback"] or "批改完成。",
             "suggested_approach": ai["suggested_approach"],
             "anti_cheat": anti_cheat,

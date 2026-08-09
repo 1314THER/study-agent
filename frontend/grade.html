@@ -66,6 +66,8 @@
     .err-status { padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
     .err-status.partial { background: #fff8e1; color: #b45309; }
     .err-status.missing { background: #fff5f5; color: #c62828; }
+    .err-status.pending { background: #eff6ff; color: #1e40af; }
+    .err-step-body { font-size: 12px; color: #86868b; line-height: 1.7; margin: 2px 0 6px; white-space: pre-wrap; }
     .err-row { display: grid; grid-template-columns: 150px 1fr 30px; gap: 8px; margin-top: 8px; align-items: center; }
     .err-row select, .err-row input { width: 100%; padding: 7px 9px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 13px; box-sizing: border-box; font-family: inherit; }
     .err-remove { width: 30px; height: 30px; border: none; border-radius: 8px; background: #f5f5f7; color: #86868b; font-size: 16px; cursor: pointer; }
@@ -272,7 +274,7 @@ function toggleQuestionMode() {
 }
 
 function statusLabel(s) {
-    return {correct: '正确', partial: '部分正确', missing: '缺失', not_applicable: '不适用'}[s] || s || '未知';
+    return {correct: '正确', partial: '部分正确', missing: '缺失', pending: '待标注', not_applicable: '不适用'}[s] || s || '未知';
 }
 
 function renderResult(d) {
@@ -338,6 +340,25 @@ function renderResult(d) {
 
 function buildErrorSteps(d, existing) {
     if (d.mode === 'answer_match') {
+        var stdSteps = d.standard_steps || [];
+        if (stdSteps.length) {
+            return stdSteps.map(function(s) {
+                var tags = (existing || []).filter(function(e) {
+                    return e.chunk_id === s.chunk_id && e.step_number === s.step_number;
+                }).map(function(e) {
+                    return {mistake_type: e.mistake_type, mistake_detail: e.mistake_detail};
+                });
+                if (!tags.length) tags = [{mistake_type: '', mistake_detail: ''}];
+                return {
+                    chunk_id: s.chunk_id,
+                    step_number: s.step_number,
+                    title: '第 ' + s.step_number + ' 步 · ' + (s.title || '步骤'),
+                    status: 'pending',
+                    standard_writing: s.standard_writing || '',
+                    tags: tags
+                };
+            });
+        }
         var tags = (existing || []).filter(function(e) {
             return e.chunk_id === 1 && e.step_number === 1;
         }).map(function(e) {
@@ -348,7 +369,8 @@ function buildErrorSteps(d, existing) {
             chunk_id: 1,
             step_number: 1,
             title: '整题（无过程）',
-            status: 'missing',
+            status: 'pending',
+            standard_writing: '',
             tags: tags
         }];
     }
@@ -375,6 +397,7 @@ function buildErrorSteps(d, existing) {
             step_number: s.step_number,
             title: '第 ' + s.step_number + ' 步 · ' + (s.title || '步骤'),
             status: status,
+            standard_writing: s.standard_writing || '',
             tags: tags
         });
     });
@@ -399,6 +422,7 @@ function renderErrorRows(steps) {
         var st = steps[i];
         html += '<div class="err-step" data-chunk="' + st.chunk_id + '" data-step="' + st.step_number + '">';
         html += '<div class="err-step-head">' + escapeHtml(st.title) + '<span class="err-status ' + escapeHtml(st.status) + '">' + escapeHtml(statusLabel(st.status)) + '</span></div>';
+        if (st.standard_writing) html += '<div class="err-step-body">' + escapeHtml(st.standard_writing) + '</div>';
         html += '<div class="err-rows">';
         for (var j = 0; j < st.tags.length; j++) {
             html += errorRowHtml(st.chunk_id, st.step_number, st.tags[j]);
@@ -435,6 +459,7 @@ async function openErrorModal() {
     } catch (e) {}
     var body = document.getElementById('errorModalBody');
     body.innerHTML = renderErrorRows(buildErrorSteps(_gradeState, existing));
+    renderMath(body);
     document.getElementById('errorModal').style.display = 'flex';
 }
 
