@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, Query
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import HTMLResponse
+from fastapi.responses import RedirectResponse
 
 from pydantic import BaseModel, Field
 from typing import Optional, List
@@ -175,9 +175,27 @@ def api_step3(req: Step3Request):
     return final
 
 
-@app.get("/")
+@app.get("/", include_in_schema=False)
 def home():
-    return HTMLResponse("""<html><head><script>location.href="/index.html"</script></head><body><a href="/index.html">进入数学最强大脑</a></body></html>""")
+    return RedirectResponse("/home.html")
+
+
+class AgentActRequest(BaseModel):
+    message: str = Field(..., min_length=1, max_length=2000)
+
+
+@app.get("/agent/context")
+def agent_context_api():
+    """首页与教练共享的学情快照。"""
+    from backend.agent import agent_context
+    return agent_context()
+
+
+@app.post("/agent/act")
+def agent_act_api(req: AgentActRequest):
+    """全局教练：指令 → 结构化动作。"""
+    from backend.agent import agent_act
+    return agent_act(req.message)
 
 @app.get("/questions")
 def list_questions():

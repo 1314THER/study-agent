@@ -515,6 +515,10 @@ async function saveAfterSolve() {
     document.getElementById('saveToggle').addEventListener('change', function() {
         localStorage.setItem('solve_save', this.checked);
     });
+    var urlAuto = new URLSearchParams(location.search).get('auto') === '1';
+    if (urlAuto) {
+        localStorage.removeItem('solve_result');
+    }
     var savedResult = localStorage.getItem('solve_result');
     if (savedResult) {
         try {
@@ -525,6 +529,9 @@ async function saveAfterSolve() {
         } catch(e) {
             localStorage.removeItem('solve_result');
         }
+    }
+    if (urlAuto && savedInput) {
+        setTimeout(function() { solveQuestion(); }, 350);
     }
 });
 
@@ -1059,6 +1066,6 @@ document.getElementById('searchBtn').addEventListener('click', function() {
     </div>
 </div>
 
-<script src="nav.js?v=20260731h"></script>
+<script src="nav.js?v=20260809"></script>
 </body>
 </html>

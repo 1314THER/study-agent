@@ -28,6 +28,26 @@
     window.toggleMobileNav = toggleMobileNav;
     window.toggleNavExpand = toggleNavExpand;
 
+    function injectHomeNav() {
+        var nav = document.querySelector('nav');
+        if (!nav || document.querySelector('nav a[data-page="home"]')) return;
+        var a = document.createElement('a');
+        a.href = 'home.html';
+        a.className = 'nav-item';
+        a.setAttribute('data-page', 'home');
+        a.title = '首页';
+        a.innerHTML = '<span class="nav-icon">🏠</span><span class="nav-label">首页</span>';
+        nav.insertBefore(a, nav.firstChild);
+    }
+
+    function loadAgent() {
+        if (window.AgentGlobal || document.getElementById('agentScript')) return;
+        var s = document.createElement('script');
+        s.id = 'agentScript';
+        s.src = 'agent.js?v=20260809';
+        document.head.appendChild(s);
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         try {
             var saved = localStorage.getItem('nav_expanded');
@@ -39,6 +59,8 @@
                 document.body.classList.remove('nav-expanded');
             }
         } catch (e) {}
+        injectHomeNav();
+        loadAgent();
         requestAnimationFrame(function () {
             requestAnimationFrame(function () {
                 document.documentElement.classList.remove('nav-init');
@@ -54,4 +76,6 @@
     document.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') closeMobileNav();
     });
+
+    loadAgent();
 })();

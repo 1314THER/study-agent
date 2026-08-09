@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>document.documentElement.classList.add("nav-init")</script>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学习教练台</title>
+    <link rel="stylesheet" href="style.css?v=20260809home">
+    <link rel="stylesheet" href="agent.css?v=20260809">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+</head>
+<body>
+    <div class="app-layout">
+        <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
+        <aside class="sidebar">
+            <button class="nav-expand-toggle" onclick="toggleNavExpand()" title="展开导航" aria-label="展开导航">☰</button>
+            <nav>
+<a href="home.html" class="nav-item active" data-page="home" title="首页"><span class="nav-icon">🏠</span><span class="nav-label">首页</span></a>
+<a href="multimodal.html" class="nav-item" data-page="multimodal" title="多模态解答"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
+<a href="teach.html" class="nav-item" data-page="teach" title="老师手把手教你做题"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
+<a href="exam.html" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
+<a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+<a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
+<a href="loop.html?v=20260807" class="nav-item" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
+<a href="calendar.html?v=20260807" class="nav-item" data-page="calendar" title="巩固日历"><span class="nav-icon">📅</span><span class="nav-label">巩固日历</span></a>
+<a href="board.html?v=20260807" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
+<a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
+<a href="grade.html" class="nav-item" data-page="grade" title="AI 改卷"><span class="nav-icon">✅</span><span class="nav-label">AI 改卷</span></a>
+<a href="settings.html" class="nav-item" data-page="settings" title="系统设置"><span class="nav-icon">⚙️</span><span class="nav-label">系统设置</span></a>
+</nav>
+        </aside>
+        <main class="main-content">
+            <div class="container home-container">
+                <h1 class="home-title">学习教练台</h1>
+                <p class="subtitle" id="homeDate">今天也一起进步</p>
+
+                <div class="home-stats">
+                    <div class="stat-card"><div class="stat-num" id="statQuestions">-</div><div class="stat-label">题库题目</div></div>
+                    <div class="stat-card"><div class="stat-num" id="statWrong">-</div><div class="stat-label">错题标记</div></div>
+                    <div class="stat-card"><div class="stat-num" id="statMastered">-</div><div class="stat-label">掌握套路</div></div>
+                    <div class="stat-card"><div class="stat-num" id="statDue">-</div><div class="stat-label">今日待复习</div></div>
+                    <div class="stat-card"><div class="stat-num" id="statCart">-</div><div class="stat-label">组卷篮子</div></div>
+                </div>
+
+                <div class="home-quick">
+                    <a class="quick-btn" href="index.html"><span class="quick-icon">🔍</span>单题解答</a>
+                    <a class="quick-btn" href="multimodal.html"><span class="quick-icon">📎</span>多模态切题</a>
+                    <a class="quick-btn" href="teach.html"><span class="quick-icon">📖</span>手把手教学</a>
+                    <a class="quick-btn" href="history.html"><span class="quick-icon">📋</span>个人题库</a>
+                    <a class="quick-btn" href="exam.html"><span class="quick-icon">📝</span>组卷</a>
+                    <a class="quick-btn" href="grade.html"><span class="quick-icon">✅</span>AI 改卷</a>
+                    <a class="quick-btn" href="calendar.html"><span class="quick-icon">📅</span>巩固日历</a>
+                    <a class="quick-btn" href="board.html"><span class="quick-icon">🗺️</span>闯关地图</a>
+                </div>
+
+                <div class="home-panels">
+                    <div class="home-panel">
+                        <div class="home-panel-title">最近错题</div>
+                        <div class="home-recent" id="homeRecent"><div class="home-recent-empty">正在加载…</div></div>
+                    </div>
+                    <div class="home-panel">
+                        <div class="home-panel-title">全局教练</div>
+                        <div id="agentHome"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <script src="nav.js?v=20260809home"></script>
+    <script src="agent.js?v=20260809" id="agentScript"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            var dateEl = document.getElementById('homeDate');
+            if (dateEl) {
+                try {
+                    dateEl.textContent = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
+                } catch (e) {}
+            }
+            fetch('/agent/context')
+                .then(function (r) { return r.json(); })
+                .then(function (ctx) {
+                    var statIds = ['statQuestions', 'statWrong', 'statDue'];
+                    var keys = ['total_questions', 'wrong_questions', 'due_reviews'];
+                    for (var i = 0; i < statIds.length; i++) {
+                        var el = document.getElementById(statIds[i]);
+                        if (el && ctx[keys[i]] !== undefined) el.textContent = ctx[keys[i]];
+                    }
+                    var masteredEl = document.getElementById('statMastered');
+                    if (masteredEl && ctx.patterns_mastered !== undefined) {
+                        masteredEl.textContent = ctx.patterns_mastered + ' / ' + (ctx.patterns_total || 0);
+                    }
+                    var cartEl = document.getElementById('statCart');
+                    if (cartEl) {
+                        try { cartEl.textContent = JSON.parse(localStorage.getItem('exam_cart') || '[]').length; } catch (e) { cartEl.textContent = 0; }
+                    }
+                    var recentEl = document.getElementById('homeRecent');
+                    if (recentEl) {
+                        if (ctx.recent_wrong && ctx.recent_wrong.length && window.AgentGlobal) {
+                            recentEl.innerHTML = '';
+                            window.AgentGlobal.renderQuestions(ctx.recent_wrong, recentEl);
+                        } else {
+                            recentEl.innerHTML = '<div class="home-recent-empty">还没有带错因标记的题目</div>';
+                        }
+                    }
+                })
+                .catch(function () {
+                    var recentEl = document.getElementById('homeRecent');
+                    if (recentEl) recentEl.innerHTML = '<div class="home-recent-empty">后端未启动，暂时无法加载学情</div>';
+                });
+        });
+    </script>
+</body>
+</html>
