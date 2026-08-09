@@ -586,6 +586,20 @@ class AiAssembleRequest(BaseModel):
     query: str
 
 
+class GradeRequest(BaseModel):
+    input_type: str = Field("text", description="作答类型：text（当前），image（后续手写识别）")
+    question_id: Optional[int] = Field(None, description="题库题目 ID（与 question 二选一）")
+    question: Optional[str] = Field(None, description="题干（与 question_id 二选一）")
+    student_answer: str = Field(..., description="学生文字作答")
+    question_type: Optional[str] = Field(None, description="题型：选择题/多选题/填空题/大题")
+    full_score: Optional[float] = Field(None, ge=0, le=1000, description="题目满分")
+    teacher: Optional[str] = Field(None, description="老师（可选）")
+    source: Optional[str] = Field(None, description="作答来源：首次/重做/变式/复习/试卷")
+    duration_seconds: Optional[int] = Field(None, ge=0, description="作答用时（秒）")
+    viewed_answer: bool = Field(False, description="是否看过答案")
+    skipped: bool = Field(False, description="是否跳过")
+
+
 @app.post("/exam/ai-assemble")
 def api_ai_assemble(req: AiAssembleRequest):
     """AI 一键组卷（预留）"""
@@ -750,6 +764,27 @@ def api_teach_get_session(session_id: str):
         return {"error": "session_not_found", "detail": "会话不存在"}
     return result
 
+
+
+# ---------- AI 改题 ----------
+@app.post("/grade")
+@app.post("/grade/text")
+def api_grade(req: GradeRequest):
+    """AI 改题：文字作答判分。选择/填空直接判答案，大题按标准步骤 AI 判分。"""
+    from backend.grade import grade_text
+    return grade_text(
+        question_id=req.question_id,
+        question=req.question,
+        student_answer=req.student_answer,
+        question_type=req.question_type,
+        full_score=req.full_score,
+        teacher=req.teacher,
+        source=req.source,
+        duration_seconds=req.duration_seconds,
+        viewed_answer=req.viewed_answer,
+        skipped=req.skipped,
+        input_type=req.input_type,
+    )
 
 
 # ---------- 题单管理 ----------

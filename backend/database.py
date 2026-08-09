@@ -369,6 +369,11 @@ def init_db():
             question_id INTEGER NOT NULL REFERENCES questions(id),
             correct INTEGER NOT NULL,
             duration_seconds INTEGER,
+            source_type TEXT,
+            student_answer TEXT,
+            grade_json TEXT,
+            viewed_answer INTEGER NOT NULL DEFAULT 0,
+            skipped INTEGER NOT NULL DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
@@ -403,6 +408,20 @@ def init_db():
         );
     """)
     conn.commit()
+    # 迁移：practice_records 记录作答来源、原文与防欺骗信号（旧库补列）
+    for col, decl in (
+        ("source_type", "TEXT"),
+        ("student_answer", "TEXT"),
+        ("grade_json", "TEXT"),
+        ("viewed_answer", "INTEGER NOT NULL DEFAULT 0"),
+        ("skipped", "INTEGER NOT NULL DEFAULT 0"),
+    ):
+        try:
+            conn.execute(f"ALTER TABLE practice_records ADD COLUMN {col} {decl}")
+            conn.commit()
+            print(f"[Database] practice_records 新增 {col} 列")
+        except sqlite3.OperationalError:
+            pass
     _ensure_system_lists(conn)
     # 回填：将已有题目加入 "全部" 题单（仅在新装时执行一次）
     all_id = _SYSTEM_LIST_IDS.get("全部")
@@ -577,6 +596,54 @@ def find_question(question_text: str):
     if row:
         return json.loads(row[0])
     return None
+
+
+def find_question_id(question_text: str):
+    """按题干找题目 ID，规则与 find_question 一致。"""
+    conn = get_connection()
+    q = question_text.strip()
+    row = conn.execute(
+        "SELECT id FROM questions WHERE content = ?",
+        (q,)
+    ).fetchone()
+    if not row:
+        norm_q = _normalize_question(q)
+        rows = conn.execute("SELECT id, content FROM questions").fetchall()
+        for r in rows:
+            if _normalize_question(r["content"]) == norm_q:
+                row = r
+                break
+    conn.close()
+    return row["id"] if row else None
+
+
+def add_practice_record(question_id: int, correct: bool,
+                        duration_seconds=None, source_type=None,
+                        student_answer=None, grade_json=None,
+                        viewed_answer=False, skipped=False) -> int:
+    """写入一次练习/判分记录，返回记录 ID。"""
+    conn = get_connection()
+    try:
+        cur = conn.execute(
+            """INSERT INTO practice_records
+               (question_id, correct, duration_seconds, source_type,
+                student_answer, grade_json, viewed_answer, skipped)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                int(question_id),
+                1 if correct else 0,
+                int(duration_seconds) if duration_seconds is not None else None,
+                source_type,
+                student_answer,
+                json.dumps(grade_json, ensure_ascii=False) if grade_json is not None else None,
+                1 if viewed_answer else 0,
+                1 if skipped else 0,
+            ),
+        )
+        conn.commit()
+        return cur.lastrowid
+    finally:
+        conn.close()
 
 
 def _sanitize_category(cat: dict) -> tuple:

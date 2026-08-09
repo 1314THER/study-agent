@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<script>document.documentElement.classList.add("nav-init")</script>
+<meta charset="UTF-8">
+<meta http-equiv="Cache-Control" content="no-cache">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 改卷 - 数学最强大脑</title>
+<link rel="stylesheet" href="style.css?v=20260809grade">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+<style>
+    body { background: #f5f5f7; }
+    .grade-wrap { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
+    .grade-header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+    .grade-header h1 { font-size: 22px; font-weight: 700; color: #1d1d1f; margin: 0; }
+    .grade-card { background: white; border: 1px solid #e5e5e7; border-radius: 12px; padding: 20px 22px; margin-bottom: 14px; }
+    .grade-card h2 { font-size: 15px; font-weight: 600; color: #1d1d1f; margin: 0 0 12px; }
+    .grade-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+    .grade-grid label, .grade-field label { display: block; font-size: 12px; color: #86868b; margin-bottom: 4px; font-weight: 500; }
+    .grade-grid select, .grade-grid input, .grade-field input, .grade-field select, .grade-field textarea {
+        width: 100%; padding: 8px 10px; border: 1px solid #c7c7cc; border-radius: 8px;
+        font-size: 14px; box-sizing: border-box; font-family: inherit; background: white;
+    }
+    .grade-grid select:focus, .grade-grid input:focus, .grade-field input:focus, .grade-field select:focus, .grade-field textarea:focus {
+        outline: none; border-color: #0071e3;
+    }
+    .grade-checks { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 12px; font-size: 13px; color: #515154; }
+    .grade-checks label { display: flex; align-items: center; gap: 6px; cursor: pointer; }
+    .grade-field { margin-top: 12px; }
+    .grade-field textarea { min-height: 96px; resize: vertical; line-height: 1.7; }
+    .grade-actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+    .grade-btn { padding: 10px 24px; border: none; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; background: #0071e3; color: white; }
+    .grade-btn.secondary { background: #f5f5f7; color: #515154; }
+    .grade-btn:disabled { opacity: 0.5; cursor: default; }
+    .grade-status { margin-top: 10px; font-size: 14px; color: #86868b; min-height: 20px; line-height: 1.6; }
+    .result-banner { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 12px; margin-bottom: 14px; font-weight: 600; font-size: 15px; }
+    .result-banner.ok { background: #f0fdf4; border: 1px solid #b7e4c7; color: #166534; }
+    .result-banner.bad { background: #fff5f5; border: 1px solid #ffcdd2; color: #991b1b; }
+    .result-score { margin-left: auto; font-size: 18px; }
+    .result-feedback { background: #fafafa; border: 1px solid #eeeef0; border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.8; color: #1d1d1f; white-space: pre-wrap; margin-bottom: 12px; }
+    .step-row { display: grid; grid-template-columns: 86px 1fr; gap: 10px; padding: 10px 0; border-bottom: 1px solid #f0f0f0; align-items: start; }
+    .step-row:last-child { border-bottom: none; }
+    .step-status { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 12px; font-weight: 600; text-align: center; white-space: nowrap; }
+    .step-status.correct { background: #e8f5e9; color: #2e7d32; }
+    .step-status.partial { background: #fff8e1; color: #b45309; }
+    .step-status.missing { background: #fff5f5; color: #c62828; }
+    .step-status.not_applicable { background: #f0f0f0; color: #86868b; }
+    .step-comment { font-size: 13px; line-height: 1.7; color: #515154; }
+    .result-meta { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .result-meta .tag { font-size: 12px; }
+    .result-block { margin-bottom: 12px; }
+    .result-block h3 { font-size: 13px; font-weight: 600; color: #1d1d1f; margin-bottom: 6px; }
+    .result-block p { font-size: 13px; line-height: 1.7; color: #515154; }
+    .suggest-approach { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.8; color: #1e3a8a; margin-top: 12px; }
+    .question-preview { background: #fafafa; border: 1px solid #eeeef0; border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.8; color: #1d1d1f; white-space: pre-line; margin-top: 12px; }
+</style>
+</head>
+<body class="theme-liangliang">
+<div class="app-layout">
+    <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
+    <aside class="sidebar">
+        <button class="nav-expand-toggle" onclick="toggleNavExpand()" title="展开导航" aria-label="展开导航">☰</button>
+        <nav>
+<a href="multimodal.html" class="nav-item" data-page="multimodal" title="多模态解答"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
+<a href="teach.html" class="nav-item" data-page="teach" title="老师手把手教你做题"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
+<a href="exam.html" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
+<a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+<a href="grade.html" class="nav-item active" data-page="grade" title="AI 改卷"><span class="nav-icon">✅</span><span class="nav-label">AI 改卷</span></a>
+<a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
+<a href="loop.html?v=20260807" class="nav-item" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
+<a href="calendar.html?v=20260807" class="nav-item" data-page="calendar" title="巩固日历"><span class="nav-icon">📅</span><span class="nav-label">巩固日历</span></a>
+<a href="board.html?v=20260807" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
+<a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
+<a href="settings.html" class="nav-item" data-page="settings" title="系统设置"><span class="nav-icon">⚙️</span><span class="nav-label">系统设置</span></a>
+        </nav>
+    </aside>
+    <main class="main-content">
+        <div class="grade-wrap">
+            <div class="grade-header">
+                <h1>AI 改卷</h1>
+            </div>
+            <div class="grade-card">
+                <div class="grade-grid">
+                    <div>
+                        <label for="qSelect">题目</label>
+                        <select id="qSelect" onchange="toggleQuestionMode()">
+                            <option value="">手动输入题目</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="qType">题型</label>
+                        <select id="qType">
+                            <option value="">自动识别</option>
+                            <option value="选择题">选择题</option>
+                            <option value="多选题">多选题</option>
+                            <option value="填空题">填空题</option>
+                            <option value="大题">大题</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="fullScore">满分</label>
+                        <input id="fullScore" type="number" min="0" step="0.5" placeholder="可选">
+                    </div>
+                    <div>
+                        <label for="source">作答来源</label>
+                        <select id="source">
+                            <option value="首次作答">首次作答</option>
+                            <option value="重做">重做</option>
+                            <option value="变式">变式</option>
+                            <option value="复习">复习</option>
+                            <option value="试卷">试卷</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="duration">用时（秒）</label>
+                        <input id="duration" type="number" min="0" placeholder="可选">
+                    </div>
+                    <div>
+                        <label for="teacher">老师</label>
+                        <select id="teacher">
+                            <option value="liangliang">梁梁</option>
+                            <option value="taotao">韬韬</option>
+                            <option value="xuefeng">雪峰</option>
+                            <option value="ji">鸡</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="grade-checks">
+                    <label><input type="checkbox" id="viewedAnswer"> 看过答案</label>
+                    <label><input type="checkbox" id="skipped"> 跳过</label>
+                </div>
+                <div class="grade-field" id="manualQuestionField">
+                    <label for="questionInput">题干</label>
+                    <textarea id="questionInput" placeholder="支持 LaTeX 语法"></textarea>
+                </div>
+                <div class="grade-field">
+                    <label for="answerInput">学生作答</label>
+                    <textarea id="answerInput" placeholder="支持 LaTeX 语法"></textarea>
+                </div>
+                <div class="grade-actions">
+                    <button class="grade-btn" id="gradeBtn" onclick="doGrade()">开始判分</button>
+                </div>
+                <div class="grade-status" id="gradeStatus"></div>
+            </div>
+            <div id="gradeResult"></div>
+        </div>
+    </main>
+</div>
+<script src="nav.js?v=20260731h"></script>
+<script>
+var _teacher = localStorage.getItem('teacher') || 'liangliang';
+document.body.classList.remove('theme-liangliang', 'theme-xuefeng', 'theme-taotao', 'theme-ji');
+document.body.classList.add('theme-' + _teacher);
+
+function escapeHtml(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function renderMath(el) {
+    if (!el || !window.renderMathInElement) return;
+    try {
+        renderMathInElement(el, {delimiters: [
+            {left: '$$', right: '$$', display: true},
+            {left: '$', right: '$', display: false}
+        ], ignoredTags: ['script', 'style']});
+    } catch (e) {}
+}
+
+async function api(path, opts) {
+    var r = await fetch('http://127.0.0.1:8000' + path, opts || {});
+    return r.json();
+}
+
+async function loadQuestions() {
+    try {
+        var list = await api('/questions');
+        var sel = document.getElementById('qSelect');
+        for (var i = 0; i < list.length; i++) {
+            var q = list[i];
+            var text = String(q.content || '').replace(/\s+/g, ' ').trim();
+            if (text.length > 46) text = text.slice(0, 46) + '…';
+            var opt = document.createElement('option');
+            opt.value = q.id;
+            opt.textContent = '#' + q.id + ' · ' + (q.question_type || '大题') + ' · ' + text;
+            sel.appendChild(opt);
+        }
+    } catch (e) {
+        var sel = document.getElementById('qSelect');
+        var opt = document.createElement('option');
+        opt.value = '';
+        opt.textContent = '题库加载失败';
+        sel.appendChild(opt);
+    }
+}
+
+function toggleQuestionMode() {
+    var manual = document.getElementById('manualQuestionField');
+    var sel = document.getElementById('qSelect');
+    manual.style.display = sel.value ? 'none' : 'block';
+}
+
+function statusLabel(s) {
+    return {correct: '正确', partial: '部分正确', missing: '缺失', not_applicable: '不适用'}[s] || s || '未知';
+}
+
+function renderResult(d) {
+    var box = document.getElementById('gradeResult');
+    if (!d) {
+        box.innerHTML = '';
+        return;
+    }
+    if (d.error) {
+        box.innerHTML = '<div class="grade-card"><div class="result-banner bad"><span>判分失败</span></div><p style="font-size:14px;color:#515154;">' + escapeHtml(d.detail || d.error) + '</p></div>';
+        return;
+    }
+    var cls = d.is_correct ? 'ok' : 'bad';
+    var label = d.is_correct ? '正确' : '错误';
+    var scoreHtml = '';
+    if (d.earned_score !== null && d.earned_score !== undefined && d.full_score !== null && d.full_score !== undefined) {
+        scoreHtml = '<span class="result-score">' + d.earned_score + ' / ' + d.full_score + ' 分</span>';
+    }
+    var html = '<div class="grade-card">';
+    html += '<div class="result-banner ' + cls + '"><span>' + label + '</span>' + scoreHtml + '</div>';
+    html += '<div class="result-meta">';
+    html += '<span class="tag tag-type">' + escapeHtml(d.question_type || '大题') + '</span>';
+    html += '<span class="tag tag-type-simple">' + (d.mode === 'answer_match' ? '答案比对' : '步骤判分') + '</span>';
+    if (d.anti_cheat) {
+        if (d.anti_cheat.viewed_answer) html += '<span class="tag tag-type-special">看过答案</span>';
+        if (d.anti_cheat.skipped) html += '<span class="tag tag-type-special">跳过</span>';
+    }
+    html += '</div>';
+    if (d.feedback) html += '<div class="result-feedback">' + escapeHtml(d.feedback) + '</div>';
+    if (d.suggested_approach) html += '<div class="suggest-approach">' + escapeHtml(d.suggested_approach) + '</div>';
+    if (d.expected_answer) {
+        html += '<div class="result-block"><h3>参考答案</h3><p>' + escapeHtml(d.expected_answer) + '</p></div>';
+    }
+    if (d.step_results && d.step_results.length) {
+        html += '<div class="result-block"><h3>步骤判分</h3>';
+        for (var i = 0; i < d.step_results.length; i++) {
+            var s = d.step_results[i];
+            html += '<div class="step-row">';
+            html += '<span class="step-status ' + escapeHtml(s.status) + '">' + escapeHtml(statusLabel(s.status)) + '</span>';
+            html += '<div class="step-comment"><strong>第 ' + s.step_number + ' 步</strong>（' + escapeHtml(s.id) + '）';
+            if (s.comment) html += '<br>' + escapeHtml(s.comment);
+            html += '</div></div>';
+        }
+        html += '</div>';
+    }
+    if (d.missing_steps && d.missing_steps.length) {
+        html += '<div class="result-block"><h3>缺失步骤</h3><p>' + escapeHtml(d.missing_steps.join('、')) + '</p></div>';
+    }
+    if (d.not_rigorous_steps && d.not_rigorous_steps.length) {
+        html += '<div class="result-block"><h3>不够严谨</h3><p>' + escapeHtml(d.not_rigorous_steps.join('、')) + '</p></div>';
+    }
+    if (d.student_answer) {
+        html += '<div class="result-block"><h3>学生作答</h3><div class="question-preview">' + escapeHtml(d.student_answer) + '</div></div>';
+    }
+    html += '</div>';
+    box.innerHTML = html;
+    renderMath(box);
+}
+
+async function doGrade() {
+    var btn = document.getElementById('gradeBtn');
+    var statusEl = document.getElementById('gradeStatus');
+    var sel = document.getElementById('qSelect');
+    var qid = sel.value ? parseInt(sel.value) : null;
+    var question = document.getElementById('questionInput').value.trim();
+    var answer = document.getElementById('answerInput').value.trim();
+    if (!qid && !question) {
+        statusEl.innerHTML = '<span style="color:#c62828;">请选择题目或输入题干。</span>';
+        return;
+    }
+    if (!answer) {
+        statusEl.innerHTML = '<span style="color:#c62828;">请填写学生作答。</span>';
+        return;
+    }
+    var fullScore = document.getElementById('fullScore').value;
+    var duration = document.getElementById('duration').value;
+    var payload = {
+        question_id: qid,
+        question: qid ? null : question,
+        student_answer: answer,
+        question_type: document.getElementById('qType').value || null,
+        full_score: fullScore === '' ? null : parseFloat(fullScore),
+        teacher: document.getElementById('teacher').value,
+        source: document.getElementById('source').value,
+        duration_seconds: duration === '' ? null : parseInt(duration),
+        viewed_answer: document.getElementById('viewedAnswer').checked,
+        skipped: document.getElementById('skipped').checked
+    };
+    statusEl.innerHTML = 'AI 正在判分，请稍候...';
+    btn.disabled = true;
+    try {
+        var d = await api('/grade', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(payload)
+        });
+        renderResult(d);
+        if (d.error) {
+            statusEl.innerHTML = '<span style="color:#c62828;">' + escapeHtml(d.detail || d.error) + '</span>';
+        } else {
+            statusEl.innerHTML = '';
+        }
+    } catch (e) {
+        statusEl.innerHTML = '<span style="color:#c62828;">请求失败：' + escapeHtml(e.message || '无法连接后端') + '</span>';
+    } finally {
+        btn.disabled = false;
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadQuestions();
+    var teacherSel = document.getElementById('teacher');
+    if (teacherSel) teacherSel.value = _teacher;
+    toggleQuestionMode();
+});
+</script>
+</body>
+</html>

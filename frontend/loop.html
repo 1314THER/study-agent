@@ -58,6 +58,7 @@
 <a href="calendar.html?v=20260807" class="nav-item" data-page="calendar" title="巩固日历"><span class="nav-icon">📅</span><span class="nav-label">巩固日历</span></a>
 <a href="board.html?v=20260807" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
 <a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
+<a href="grade.html" class="nav-item" data-page="grade" title="AI 改卷"><span class="nav-icon">✅</span><span class="nav-label">AI 改卷</span></a>
 <a href="settings.html" class="nav-item" data-page="settings" title="系统设置"><span class="nav-icon">⚙️</span><span class="nav-label">系统设置</span></a>
 </nav>
     </aside>
@@ -608,7 +609,7 @@ async function submitAnswer() {
     }
     stopTimer();
     state.questionAttempts++;
-    if (statusEl) statusEl.innerHTML = 'AI 正在比对答案，请稍候...';
+    if (statusEl) statusEl.innerHTML = 'AI 正在判分，请稍候...';
     if (doneBtn) doneBtn.disabled = true;
     var maxT = state.data.pattern.max_time_seconds || 120;
     if (state.timerElapsed > maxT) {
@@ -618,17 +619,22 @@ async function submitAnswer() {
         return;
     }
     try {
-        var d = await api('/patterns/' + state.patternId + '/check', {
+        var d = await api('/grade', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({
                 question_id: q.question_id,
-                user_answer: userAnswer,
-                teacher: localStorage.getItem('teacher') || 'liangliang'
+                student_answer: userAnswer,
+                question_type: q.question_type || null,
+                teacher: localStorage.getItem('teacher') || 'liangliang',
+                source: state.questionAttempts === 1 ? '首次作答' : '重做',
+                duration_seconds: Math.round(state.timerElapsed),
+                viewed_answer: false,
+                skipped: false
             })
         });
         if (d.error) {
-            if (statusEl) statusEl.innerHTML = '<span style="color:#c62828;">无法比对：' + escapeHtml(d.detail || d.error) + '</span>';
+            if (statusEl) statusEl.innerHTML = '<span style="color:#c62828;">判分失败：' + escapeHtml(d.detail || d.error) + '</span>';
             if (doneBtn) doneBtn.disabled = false;
             startTimer();
             return;
@@ -642,7 +648,8 @@ async function submitAnswer() {
         await recordAttempt(false);
         await markPatternWrong();
         var msg = d.feedback || '答案不对，再试一次。';
-        if (d.is_partial) msg = '答案还不完整：' + msg;
+        var hasPartial = (d.step_results || []).some(function(s) { return s.status === 'partial'; });
+        if (hasPartial) msg = '答案还不完整：' + msg;
         renderFailActions(msg);
     } catch (e) {
         if (statusEl) statusEl.innerHTML = '<span style="color:#c62828;">请求失败：' + escapeHtml(e.message || '无法连接后端') + '</span>';

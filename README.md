@@ -1,6 +1,6 @@
 # 成为数学高手 — AI 学习伴侣
 
-> 当前版本：v0.8.1.1（2026-08-03）
+> 当前版本：v0.9.1（2026-08-09）
 
 面向高中生的 AI 数学学习系统。基于 DeepSeek V4 多老师路由与 Solver → Verifier → Formatter 三段流水线，同时提供多模态切题、手把手教学、AI 仿题、个人题库、题单、错题与组卷系统。完整开发路线见 [ROADMAP.md](ROADMAP.md)。
 
@@ -14,7 +14,7 @@
   → Solver：解答 + 板块分类 + 雪碧了检测
   → Verifier：分块 + 标准过程 + 详细过程 + 步骤难度 + 知识点
   → Formatter：一致性校验 + LaTeX 检查 + 聚合
-  → 前端展示（步骤卡片 + 雷达图 + 整体难度）
+  → 前端展示（步骤卡片 + 步骤五维柱状图 + 整题雷达图 + 整体难度）
   → 保存到个人题库（自动 / 手动）
   → 题单 / 错题 / 组卷购物车 / 手把手教学
 ```
@@ -32,6 +32,8 @@
 
 老师选择通过 `teacher` 参数传给解题与教学接口，进度消息显示对应老师名称，前端主题色跟随老师切换。
 
+> 表格为默认配置；四老师的模型与思考强度可以在「系统设置」页热修改，保存后立即生效。
+
 ---
 
 ## 前端页面
@@ -43,8 +45,10 @@
 | 老师手把手教你做题 | `frontend/teach.html` | 对话式分步教学 + 跳过/看答案 + 错因标记 |
 | 个人题库 | `frontend/history.html` | 题目列表 + 详情（含雷达图）+ 题单 + 购物车 |
 | 组卷 | `frontend/exam.html` | 从购物车组卷 + 排序 + 双模式 + 导出 PDF |
+| AI 改卷 | `frontend/grade.html` | 选择题/填空题直接判答案，大题按标准步骤 AI 判分，记录作答来源与防欺骗信号 |
+| 系统设置 | `frontend/settings.html` | 难度评分公式、老师模型、API 密钥与服务商切换 |
 
-所有页面共享 `frontend/style.css`、`frontend/radar.js`、`frontend/nav.js`，左侧导航支持展开/收起和移动端抽屉。
+所有页面共享 `frontend/style.css`、`frontend/radar.js`、`frontend/dimchart.js`、`frontend/nav.js`，左侧导航支持展开/收起和移动端抽屉。
 
 ### 主要特性
 
@@ -57,17 +61,20 @@
 - **题单**：系统题单「全部 / 母题 / 高考题」+ 动态「错题」+ 用户自建题单；题目可加入多个题单
 - **来源标签**：`ai生成 / 高考题 / 模拟题 / 精选母题`，可带卷名、题号、参考题 ID、母题 ID 等二级信息
 - **AI 仿题**：从题目详情、错题列表或教学总结页触发，基于原题与错因生成 3 道变式题，并发跑三步解题校验后自动入库
+- **AI 改题（文字）**：选择题/多选题/填空题直接判答案；大题按标准步骤 AI 判分，不严谨但无缺步只提醒，思路不同时独立判分并给出新思路；每次作答与防欺骗信号写入 `practice_records`
 - **筛选搜索**：关键词（空格 AND）+ 板块 + 题型 + 难度 + 来源 + 错因 + 分页
 - **页面记忆**：localStorage 持久化老师选择、输入、保存开关、导航状态、教学会话、多模态会话、组卷购物车
 - **时区**：时间显示 UTC+8
 - **KaTeX 渲染**：列表预览、详情、教学会话中的 LaTeX 公式自动渲染
 - **组卷**：购物车选题目 → 排序 → 学生版/教师版预览 → 导出 PDF
+- **步骤五维柱状图**：每一步的难度标签旁显示五维横向柱状图，颜色随分值 0/1/2/3 变化
+- **系统设置**：运行时调整难度评分权重、总分封顶与等级阈值，四个老师的三阶段模型与思考强度，DeepSeek / Qwen / 豆包 API 密钥与地址；CC Switch 风格弹窗一键切换服务商，保存即热生效
 
 ---
 
 ## 路线图
 
-当前处于 v0.8.1.1（AI 仿题已上线）。接下来的产品路线以两套学习系统为主线：母题计划（覆盖高考 130+ 分套路题）与个人错题本；以 AI 改题/改卷和 OCR 作答识别为两大能力，最终由全局智能体总控。
+当前处于 v0.9.1（AI 仿题、难度评分收敛、系统设置与服务商切换已上线）。接下来的产品路线以两套学习系统为主线：母题计划（覆盖高考 130+ 分套路题）与个人错题本；以 AI 改题/改卷和 OCR 作答识别为两大能力，最终由全局智能体总控。
 
 | 版本 | 主题 | 重点 |
 |------|------|------|
@@ -127,6 +134,8 @@
 
 Formatter 校验失败时自动重跑一次 Verifier 再试；仍失败则返回报错，同时保留新 Verifier 结果，难度标记为未知。
 
+评分权重（默认 `[0, 1, 2, 4]`）、总分封顶（默认 15）与三个等级上限（默认 `3 / 6 / 9`）都可在「系统设置」页运行时调整，保存后无需重启即热生效。Formatter 提示词对 2/3 分设了硬门槛：选择题/填空题原则上不允许 2 分及以上，大题也只有真正达到压轴程度（构造思路、7 步以上大计算、四分类或嵌套讨论、三个以上板块综合、隐蔽条件需构造性转化）才允许出现。
+
 ---
 
 ## 组卷系统
@@ -153,14 +162,17 @@ Formatter 校验失败时自动重跑一次 Verifier 再试；仍失败则返回
 study-agent/
 ├── backend/
 │   ├── main.py              # FastAPI 服务器（路由 + 静态文件服务）
+│   ├── settings.py          # 运行时设置：评分公式 / 老师模型 / API 密钥（settings.json 热加载）
 │   ├── solver.py            # TEACHER_CONFIG + 三阶流水线 + 解析/清洗/校验
 │   ├── teach.py             # 手把手教学：步骤生成、逐题检查、对话式会话
+│   ├── grade.py             # AI 改题：文字作答判分（答案比对 + 步骤判分）
 │   ├── multimodal.py        # 多模态切题：PDF/图片/docx/txt → Qwen-VL-Max
 │   ├── database.py          # SQLite：题库、错因、题单、来源、时间追踪
 │   ├── categories.py        # categories.yaml 的 Python 接口
 │   ├── categories.yaml      # 知识点单一数据源（板块→二级→三级）
 │   ├── steps.py             # steps.yaml 的 Python 接口
 │   ├── steps.yaml           # 题型步骤表（一级步骤→二级步骤）
+│   ├── settings.json        # 运行时设置（保存后生成，已 .gitignore，优先级高于 .env）
 │   └── prompts/
 │       ├── solver.md        # Solver 提示词
 │       ├── formatter.md     # Formatter 提示词
@@ -169,16 +181,19 @@ study-agent/
 │       ├── teach_check.md   # 步骤对错检查提示词
 │       ├── teach_format.md  # 步骤转引导问题提示词
 │       ├── teach_chat.md    # 对话式教学提示词
+│       ├── grade.md         # 大题改题判分提示词
 │       └── verifiers/       # 分板块/分题型 Verifier 提示词
 ├── frontend/
 │   ├── style.css            # 公共样式
 │   ├── radar.js             # 公共雷达图
+│   ├── dimchart.js          # 公共步骤五维柱状图
 │   ├── nav.js               # 公共导航（展开/收起/移动端抽屉）
 │   ├── index.html           # 单题解答
 │   ├── multimodal.html      # 多模态解答
 │   ├── teach.html           # 手把手教学
 │   ├── history.html         # 个人题库 + 题单
-│   └── exam.html            # 组卷 + PDF 导出
+│   ├── exam.html            # 组卷 + PDF 导出
+│   └── settings.html        # 系统设置：评分公式 / 老师模型 / API 密钥 / 服务商切换
 ├── study_agent.db           # SQLite（自动创建）
 ├── requirements.txt
 ├── .env                     # DEEPSEEK_API_KEY / DASHSCOPE_API_KEY（已 .gitignore）
@@ -198,6 +213,8 @@ study-agent/
 | POST | `/solve/step1` | Solver：解答 + 板块提取 + 雪碧了检测 |
 | POST | `/solve/step2` | Verifier：分块 + 标准/详细过程 + 步骤难度 + 知识点 |
 | POST | `/solve/step3` | Formatter：全局校验 + 聚合 + 可选入库 |
+| POST | `/grade` | AI 改题：文字作答判分（`input_type` 预留手写统一入口） |
+| POST | `/grade/text` | 同上，文字判分专用别名 |
 | POST | `/questions/save` | 保存题目（去重，已有则返回 ID），可带来源标签 |
 | GET | `/questions` | 题目列表（摘要 + 分类 + 难度 + 来源） |
 | GET | `/questions/search` | 搜索：关键词 + 板块 + 题型 + 难度 + 来源 + 错因 + 分页 |
@@ -212,6 +229,10 @@ study-agent/
 | GET | `/generate-jobs/{job_id}` | 查询 AI 仿题任务进度与结果 |
 | GET | `/categories` | 知识点分类（categories.yaml 动态加载） |
 | GET | `/steps` | 所有题型的两级步骤结构 |
+| GET | `/settings` | 读取系统设置（API Key 掩码返回，含来源 settings/env） |
+| PUT | `/settings` | 保存系统设置：评分公式、老师模型、API 地址与密钥 |
+| POST | `/settings/reset` | 恢复默认设置 |
+| POST | `/settings/test` | 测试 DeepSeek / DashScope 连接 |
 | POST | `/questions/ai-search` | AI 语义搜索（预留，当前返回空列表） |
 | POST | `/exam/ai-assemble` | AI 一键组卷（预留，当前返回开发中提示） |
 | POST | `/multimodal/parse` | 上传文件并切题为题目列表 |
@@ -315,6 +336,8 @@ pip install -r requirements.txt
 # .env 中配置：
 # DEEPSEEK_API_KEY=sk-xxx
 # DASHSCOPE_API_KEY=sk-xxx（多模态切题用）
+# 密钥也可以在网页「系统设置」里配置并持久化到 backend/settings.json
+# （该文件优先级高于 .env，已 .gitignore；支持 DeepSeek / Qwen / 豆包一键切换）
 uvicorn backend.main:app --host 127.0.0.1 --port 8000
 ```
 
@@ -328,6 +351,8 @@ uvicorn backend.main:app --host 127.0.0.1 --port 8000
 | 多模态解答 | `http://127.0.0.1:8000/multimodal.html` |
 | 手把手教学 | `http://127.0.0.1:8000/teach.html` |
 | 个人题库 | `http://127.0.0.1:8000/history.html` |
+| AI 改卷 | `http://127.0.0.1:8000/grade.html` |
+| 系统设置 | `http://127.0.0.1:8000/settings.html` |
 | 组卷 | `http://127.0.0.1:8000/exam.html` |
 
 ---
