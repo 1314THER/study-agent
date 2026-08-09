@@ -249,7 +249,7 @@
                     </div>
                     <div class="settings-grid">
                         <div class="settings-card">
-                            <h3>老师解答 / 对话（DeepSeek，可切换 Qwen / 豆包）</h3>
+                            <h3>老师解答 / 对话 / AI 改卷（DeepSeek，可切换 Qwen / 豆包）</h3>
                             <div class="input-row">
                                 <label>接口地址</label>
                                 <input id="dsBase" type="text" spellcheck="false">
@@ -271,6 +271,50 @@
                                 <span id="dsScopeKeyStatus" class="key-status"></span>
                             </div>
                             <button class="settings-btn" onclick="testApi('dashscope')">测试连接</button>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="settings-section">
+                    <div class="section-head">
+                        <h2>性能与并发</h2>
+                        <span class="section-hint">请求超时、最大输出、批量并发与默认数量，保存后热生效</span>
+                    </div>
+                    <div class="settings-grid">
+                        <div class="settings-card">
+                            <h3>AI 请求</h3>
+                            <div class="input-row">
+                                <label>单次请求超时（秒）</label>
+                                <input id="limApiTimeout" type="number" min="10" max="600" step="1">
+                                <label>最大输出 Token</label>
+                                <input id="limApiMaxTokens" type="number" min="1000" max="100000" step="1000">
+                                <label>切题请求超时（秒）</label>
+                                <input id="limMmTimeout" type="number" min="10" max="600" step="1">
+                                <label>切题最大 Token</label>
+                                <input id="limMmMaxTokens" type="number" min="1000" max="100000" step="1000">
+                            </div>
+                        </div>
+                        <div class="settings-card">
+                            <h3>批量与数量</h3>
+                            <div class="input-row">
+                                <label>多模态批量并发</label>
+                                <input id="limMmConcurrency" type="number" min="1" max="20" step="1">
+                                <label>AI 仿题并发</label>
+                                <input id="limGenConcurrency" type="number" min="1" max="20" step="1">
+                                <label>AI 仿题默认数量</label>
+                                <input id="limGenCount" type="number" min="1" max="10" step="1">
+                                <label>套路默认限时（秒）</label>
+                                <input id="limPatternTime" type="number" min="10" max="3600" step="10">
+                            </div>
+                        </div>
+                        <div class="settings-card">
+                            <h3>列表与搜索</h3>
+                            <div class="input-row">
+                                <label>搜索默认上限</label>
+                                <input id="limSearchLimit" type="number" min="10" max="1000" step="10">
+                                <label>AI 语义搜索上限</label>
+                                <input id="limAiSearchLimit" type="number" min="5" max="100" step="1">
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -307,7 +351,8 @@
         var STAGES = [
             ["solver", "Solver 解题"],
             ["verifier", "Verifier 分块"],
-            ["formatter", "Formatter 评分"]
+            ["formatter", "Formatter 评分"],
+            ["grade", "AI 改卷"]
         ];
         var EFFORT_OPTIONS = [["", "无"], ["low", "low"], ["medium", "medium"], ["high", "high"]];
         var EXAMPLES = [
@@ -325,6 +370,10 @@
         function num(id) {
             var n = parseInt(document.getElementById(id).value, 10);
             return isNaN(n) ? 0 : n;
+        }
+        function limNum(id, fallback) {
+            var n = parseInt(document.getElementById(id).value, 10);
+            return (isNaN(n) || n <= 0) ? fallback : n;
         }
         function setStatus(msg, cls) {
             var el = document.getElementById("statusBar");
@@ -452,6 +501,17 @@
                 document.getElementById("dsScopeKey").placeholder = scope.has_key ? "已配置（留空保留）" : "未配置";
                 setKeyStatus("dsKeyStatus", ds);
                 setKeyStatus("dsScopeKeyStatus", scope);
+                var lim = data.limits || {};
+                document.getElementById("limApiTimeout").value = lim.api_timeout_seconds || 300;
+                document.getElementById("limApiMaxTokens").value = lim.api_max_tokens || 32000;
+                document.getElementById("limMmTimeout").value = lim.multimodal_timeout_seconds || 180;
+                document.getElementById("limMmMaxTokens").value = lim.multimodal_max_tokens || 16384;
+                document.getElementById("limMmConcurrency").value = lim.multimodal_concurrency || 7;
+                document.getElementById("limGenConcurrency").value = lim.generate_concurrency || 5;
+                document.getElementById("limGenCount").value = lim.generate_count || 3;
+                document.getElementById("limPatternTime").value = lim.pattern_default_max_time_seconds || 120;
+                document.getElementById("limSearchLimit").value = lim.search_default_limit || 200;
+                document.getElementById("limAiSearchLimit").value = lim.ai_search_limit || 20;
                 recomputePreview();
                 setStatus("设置已加载", "ok");
             } catch (e) {
@@ -487,13 +547,25 @@
                 api: {
                     deepseek: { base_url: val("dsBase") },
                     dashscope: { base_url: val("dsScopeBase"), model: val("dsScopeModel") }
+                },
+                limits: {
+                    api_timeout_seconds: limNum("limApiTimeout", 300),
+                    api_max_tokens: limNum("limApiMaxTokens", 32000),
+                    multimodal_timeout_seconds: limNum("limMmTimeout", 180),
+                    multimodal_max_tokens: limNum("limMmMaxTokens", 16384),
+                    multimodal_concurrency: limNum("limMmConcurrency", 7),
+                    generate_concurrency: limNum("limGenConcurrency", 5),
+                    generate_count: limNum("limGenCount", 3),
+                    pattern_default_max_time_seconds: limNum("limPatternTime", 120),
+                    search_default_limit: limNum("limSearchLimit", 200),
+                    ai_search_limit: limNum("limAiSearchLimit", 20)
                 }
             };
             document.querySelectorAll("[data-t]").forEach(function (el) {
                 var t = el.getAttribute("data-t");
                 var s = el.getAttribute("data-s");
                 var f = el.getAttribute("data-f");
-                if (!payload.teachers[t]) payload.teachers[t] = { solver: {}, verifier: {}, formatter: {} };
+                if (!payload.teachers[t]) payload.teachers[t] = { solver: {}, verifier: {}, formatter: {}, grade: {} };
                 payload.teachers[t][s][f] = el.value;
             });
             var dsKey = val("dsKey");
@@ -565,23 +637,23 @@
                 name: "DeepSeek",
                 role: "对话解题",
                 base_url: "https://api.deepseek.com/v1",
-                models: { solver: "deepseek-v4-pro", verifier: "deepseek-v4-flash", formatter: "deepseek-v4-flash" },
+                models: { solver: "deepseek-v4-pro", verifier: "deepseek-v4-flash", formatter: "deepseek-v4-flash", grade: "deepseek-v4-flash" },
                 note: "DeepSeek 官方兼容接口，密钥在 platform.deepseek.com 创建。"
             },
             qwen: {
                 name: "Qwen 通义",
                 role: "对话解题 + 切题",
                 base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-                models: { solver: "qwen-plus", verifier: "qwen-plus", formatter: "qwen-plus" },
+                models: { solver: "qwen-plus", verifier: "qwen-plus", formatter: "qwen-plus", grade: "qwen-plus" },
                 extract_model: "qwen-vl-max",
-                note: "阿里云百炼 DashScope 兼容接口，密钥在百炼控制台创建。应用后同时切换对话解题和切题模型。"
+                note: "阿里云百炼 DashScope OpenAI 兼容接口：https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions，密钥在百炼控制台创建。应用后同时切换对话解题、AI 改卷和切题模型。"
             },
             doubao: {
                 name: "豆包 火山方舟",
                 role: "对话解题",
                 base_url: "https://ark.cn-beijing.volces.com/api/v3",
-                models: { solver: "doubao-seed-1-6-250615", verifier: "doubao-seed-1-6-250615", formatter: "doubao-seed-1-6-250615" },
-                note: "火山方舟 Ark 兼容接口，密钥在火山引擎控制台创建。模型可填母模型名（如 doubao-seed-1-6-250615）或控制台创建的接入点 ID（ep-...）。"
+                models: { solver: "doubao-seed-2-1-pro-260628", verifier: "doubao-seed-2-1-pro-260628", formatter: "doubao-seed-2-1-pro-260628", grade: "doubao-seed-2-1-pro-260628" },
+                note: "火山方舟 Ark OpenAI 兼容接口：https://ark.cn-beijing.volces.com/api/v3/chat/completions，密钥（ARK_API_KEY）在火山引擎控制台创建。模型填方舟 Model ID（如 doubao-seed-2-1-pro-260628）或接入点 ID（ep-...）。"
             }
         };
         var PROVIDER_KEYS = ["deepseek", "qwen", "doubao"];
@@ -651,7 +723,8 @@
                 payload.teachers[t] = {
                     solver: { model: pre.models.solver },
                     verifier: { model: pre.models.verifier },
-                    formatter: { model: pre.models.formatter }
+                    formatter: { model: pre.models.formatter },
+                    grade: { model: pre.models.grade }
                 };
             });
             if (_currentProvider === "qwen") {
@@ -670,6 +743,7 @@
             html += '<div class="input-row"><label>Solver 模型</label><input id="pvModelSolver" type="text" value="' + pre.models.solver + '" spellcheck="false"></div>';
             html += '<div class="input-row"><label>Verifier 模型</label><input id="pvModelVerifier" type="text" value="' + pre.models.verifier + '" spellcheck="false"></div>';
             html += '<div class="input-row"><label>Formatter 模型</label><input id="pvModelFormatter" type="text" value="' + pre.models.formatter + '" spellcheck="false"></div>';
+            html += '<div class="input-row"><label>AI 改卷模型</label><input id="pvModelGrade" type="text" value="' + (pre.models.grade || pre.models.verifier) + '" spellcheck="false"></div>';
             if (_currentProvider === "qwen") {
                 html += '<div class="input-row"><label>切题模型</label><input id="pvExtractModel" type="text" value="' + (pre.extract_model || "qwen-vl-max") + '" spellcheck="false"></div>';
             }
@@ -690,6 +764,7 @@
             pre.models.solver = document.getElementById("pvModelSolver").value.trim();
             pre.models.verifier = document.getElementById("pvModelVerifier").value.trim();
             pre.models.formatter = document.getElementById("pvModelFormatter").value.trim();
+            pre.models.grade = document.getElementById("pvModelGrade").value.trim() || pre.models.verifier;
             if (_currentProvider === "qwen") {
                 pre.extract_model = document.getElementById("pvExtractModel").value.trim();
             }
@@ -727,9 +802,12 @@
                         pre.models.solver = (first.solver && first.solver.model) || pre.models.solver;
                         pre.models.verifier = (first.verifier && first.verifier.model) || pre.models.verifier;
                         pre.models.formatter = (first.formatter && first.formatter.model) || pre.models.formatter;
+                        pre.models.grade = (first.grade && first.grade.model) || (first.verifier && first.verifier.model) || pre.models.grade;
                         document.getElementById("pvModelSolver").value = pre.models.solver;
                         document.getElementById("pvModelVerifier").value = pre.models.verifier;
                         document.getElementById("pvModelFormatter").value = pre.models.formatter;
+                        var pvGrade = document.getElementById("pvModelGrade");
+                        if (pvGrade) pvGrade.value = pre.models.grade;
                     }
                 }
                 if (obj.api && obj.api.dashscope) {

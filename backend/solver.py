@@ -79,21 +79,25 @@ TEACHER_CONFIG = {
         "solver": {"model": "deepseek-v4-flash", "reasoning_effort": None},
         "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
         "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
+        "grade": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
     },
     "taotao": {
         "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "low"},
         "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
         "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
+        "grade": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
     },
     "xuefeng": {
         "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
         "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
         "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
+        "grade": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
     },
     "ji": {
         "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
         "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "high"},
         "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "high"},
+        "grade": {"model": "deepseek-v4-flash", "reasoning_effort": "high"},
     },
 }
 
@@ -140,6 +144,8 @@ def get_api_key() -> str:
 def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3, model: str = "deepseek-chat", reasoning_effort: str = None):
     api_key = get_api_key()
     api_cfg = runtime_settings.get_api().get("deepseek") or {}
+    limits = runtime_settings.get_limits()
+    timeout_seconds = limits.get("api_timeout_seconds", 300)
     base_url = (api_cfg.get("base_url") or "https://api.deepseek.com/v1").rstrip("/")
     endpoint = base_url if base_url.endswith("/chat/completions") else base_url + "/chat/completions"
     # 自动注入全局 LaTeX 格式要求
@@ -151,7 +157,7 @@ def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3
             {"role": "user", "content": user_prompt},
         ],
         "temperature": temperature,
-        "max_tokens": 32000,
+        "max_tokens": limits.get("api_max_tokens", 32000),
     }
     if reasoning_effort:
         body["reasoning_effort"] = reasoning_effort
@@ -161,14 +167,14 @@ def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3
             endpoint,
             headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
             json=body,
-            timeout=300,
+            timeout=timeout_seconds,
         )
         if resp.status_code != 200:
             raise Exception(f"状态码 {resp.status_code}: {resp.text[:200]}")
         data = resp.json()
         content = data["choices"][0]["message"]["content"]
     except httpx.TimeoutException:
-        raise Exception("API 请求超时（300s）")
+        raise Exception(f"API 请求超时（{timeout_seconds}s）")
     except httpx.ConnectError:
         raise Exception("无法连接到 API 服务器")
     except (httpx.HTTPError, KeyError, json.JSONDecodeError) as e:

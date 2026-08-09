@@ -213,6 +213,19 @@ var _selectedIdx = -1;
 var _errorDialogState = {};
 var MAX_CONCURRENT = 7;
 var _sessionTimers = {};
+
+async function applyLimits() {
+    try {
+        var r = await fetch('http://127.0.0.1:8000/settings');
+        var d = await r.json();
+        var lim = (d && d.limits) || {};
+        if (lim.multimodal_concurrency) {
+            var n = parseInt(lim.multimodal_concurrency, 10);
+            if (!isNaN(n)) MAX_CONCURRENT = Math.max(1, Math.min(20, n));
+        }
+    } catch (e) {}
+}
+
 var _teacherGradients = {
     liangliang:'linear-gradient(90deg,#ca8a04,#fbbf24)',
     taotao:'linear-gradient(90deg,#db2777,#f472b6)',
@@ -1310,6 +1323,7 @@ async function batchSolve(){
 
 // ---- Init ----
 document.addEventListener('DOMContentLoaded',function(){
+    applyLimits();
     document.addEventListener('dragover',function(e){if(dragHasFiles(e))e.preventDefault();});
     document.addEventListener('drop',function(e){if(dragHasFiles(e))e.preventDefault();});
     if(!restoreState()){document.getElementById('fileInput').value='';}

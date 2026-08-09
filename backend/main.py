@@ -9,6 +9,7 @@ from backend.solver import step_solver_only, step_verify_all, step_final_check, 
 from backend.teach import teach_start, teach_check, teach_find_or_format, teach_session_start, teach_session_chat, teach_get_session
 from backend.multimodal import parse_file, get_supported_extensions
 from backend.database import (
+    MISTAKE_TYPES,
     init_db, get_all_questions, search_questions, delete_question,
     get_question_lists, create_question_list, delete_question_list,
     rename_question_list, add_question_to_lists, remove_question_from_list,
@@ -77,8 +78,7 @@ class Step3Request(BaseModel):
     question_type: Optional[str] = Field(None, description="题型（可选）")
 
 # ---------- 错因标定 ----------
-_VALID_MISTAKE_TYPES = {"符号错误", "计算错误", "公式记错",
-                        "知识性错误", "审题错误", "思路错误", "其他"}
+_VALID_MISTAKE_TYPES = set(MISTAKE_TYPES)
 
 class StepErrorRequest(BaseModel):
     step_number: int = Field(..., ge=1, description="步骤编号")
@@ -86,6 +86,18 @@ class StepErrorRequest(BaseModel):
     mistake_type: str = Field(..., description="错因类型")
     mistake_detail: str = Field("", description="错因详细说明")
     student_input: Optional[str] = Field(None, description="学生当时的错误作答")
+
+
+class StepErrorTagRequest(BaseModel):
+    step_number: int = Field(..., ge=1, description="步骤编号")
+    chunk_id: int = Field(..., ge=1, description="块编号")
+    mistake_type: str = Field("", description="错因类型")
+    mistake_detail: str = Field("", description="错因详细说明")
+    student_input: str = Field("", description="学生当时的错误作答")
+
+
+class StepErrorBatchRequest(BaseModel):
+    tags: List[StepErrorTagRequest] = Field(default_factory=list, description="错因标签列表")
 
 @app.post("/solve/step1")
 def api_step1(req: Step1Request):
@@ -178,7 +190,7 @@ def api_search_questions(
     category: str = "",
     difficulty: str = "",
     question_type: str = "",
-    limit: int = 200,
+    limit: Optional[int] = Query(None, ge=1, le=1000),
     mode: str = "content",
     error_type: str = "",
     page: int = 1,
@@ -198,6 +210,8 @@ def api_search_questions(
     et = error_type if error_type else None
     ps = page_size if page_size > 0 else None
     st = source_type if source_type else None
+    if limit is None:
+        limit = int(runtime_settings.get_limits().get("search_default_limit", 200))
     return search_questions(keywords, categories, difficulties, types, limit=limit, mode=mode, error_type=et, page=page, page_size=ps, source_type=st)
 
 
@@ -267,6 +281,35 @@ def api_delete_step_error(qid: int, eid: int):
     if not ok:
         return {"deleted": False, "message": "未找到该错因记录"}
     return {"deleted": True, "id": eid}
+
+
+@app.post("/questions/{qid}/step-errors/batch")
+def api_save_step_errors_batch(qid: int, req: StepErrorBatchRequest):
+    """批量保存某题指定步骤的错因（先替换这些步骤的旧标签，再写入新标签）。"""
+    tags = [
+        {
+            "step_number": t.step_number,
+            "chunk_id": t.chunk_id,
+            "mistake_type": t.mistake_type.strip(),
+            "mistake_detail": t.mistake_detail,
+            "student_input": t.student_input,
+        }
+        for t in req.tags
+    ]
+    bad = [t["mistake_type"] for t in tags if t["mistake_type"] and t["mistake_type"] not in _VALID_MISTAKE_TYPES]
+    if bad:
+        return {
+            "error": "invalid_mistake_type",
+            "detail": f"无效错因: {', '.join(bad)}",
+            "valid_types": list(_VALID_MISTAKE_TYPES),
+        }
+    from backend.database import replace_step_errors, update_question_time
+    try:
+        update_question_time(qid, "last_edited_at")
+        count = replace_step_errors(qid, tags)
+        return {"saved": count, "question_id": qid}
+    except Exception as e:
+        return {"error": "save_failed", "detail": str(e)[:200]}
 
 
 @app.get("/categories")
@@ -394,6 +437,32 @@ def api_sync_patterns():
     """把题库里的精选母题同步为母题看板套路"""
     from backend.patterns import sync_mother_questions
     return sync_mother_questions()
+
+
+class WrongQuestionMatchRequest(BaseModel):
+    question_id: int
+
+
+@app.post("/patterns/match-wrong")
+def api_match_wrong_question(req: WrongQuestionMatchRequest):
+    """错题入库后自动匹配题库中的套路。"""
+    from backend.patterns import match_mother_for_wrong_question
+    return match_mother_for_wrong_question(req.question_id)
+
+
+class MarkPatternWrongRequest(BaseModel):
+    question_id: Optional[int] = Field(None, description="触发标记的错题 ID")
+
+
+@app.post("/patterns/{pattern_id}/wrong")
+def api_mark_pattern_wrong(pattern_id: int, req: MarkPatternWrongRequest):
+    """确认错题关联某套路后，标记套路再次出错并同步巩固日历。"""
+    from backend.patterns import mark_pattern_wrong
+    try:
+        return mark_pattern_wrong(pattern_id, req.question_id)
+    except ValueError as e:
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=404, content={"error": "not_found", "detail": str(e)})
 
 
 @app.get("/patterns/{pattern_id}/loop")
@@ -534,11 +603,11 @@ def api_save_board_layout(board_id: int, req: BoardLayoutRequest):
 
 class AiSearchRequest(BaseModel):
     query: str
-    limit: int = 20
+    limit: Optional[int] = Field(None, ge=1, le=100)
 
 
 class GenerateVariantsRequest(BaseModel):
-    count: int = Field(3, ge=1, le=5, description="生成数量")
+    count: Optional[int] = Field(None, ge=1, le=10, description="生成数量，留空用系统设置默认值")
     teacher: Optional[str] = Field("liangliang", description="生成与校验老师")
 
 
@@ -579,7 +648,10 @@ def api_get_generate_job(job_id: str):
 def api_ai_search_questions(req: AiSearchRequest):
     """AI 语义搜索（预留）"""
     from backend.database import ai_search_questions
-    return ai_search_questions(req.query, req.limit)
+    limit = req.limit
+    if limit is None:
+        limit = int(runtime_settings.get_limits().get("ai_search_limit", 20))
+    return ai_search_questions(req.query, limit)
 
 
 class AiAssembleRequest(BaseModel):
@@ -918,11 +990,25 @@ class SettingsTestRequest(BaseModel):
     provider: str = Field(..., description="deepseek / dashscope")
 
 
+_LIMIT_RANGES = {
+    "api_max_tokens": (1000, 100000),
+    "api_timeout_seconds": (10, 600),
+    "multimodal_max_tokens": (1000, 100000),
+    "multimodal_timeout_seconds": (10, 600),
+    "multimodal_concurrency": (1, 20),
+    "generate_concurrency": (1, 20),
+    "generate_count": (1, 10),
+    "pattern_default_max_time_seconds": (10, 3600),
+    "search_default_limit": (10, 1000),
+    "ai_search_limit": (5, 100),
+}
+
+
 def _sanitize_settings_patch(patch):
     out = {}
     if not isinstance(patch, dict):
         return out
-    for key in ("scoring", "teachers", "api"):
+    for key in ("scoring", "teachers", "api", "limits"):
         if key in patch and isinstance(patch[key], dict):
             out[key] = patch[key]
 
@@ -966,6 +1052,17 @@ def _sanitize_settings_patch(patch):
             cfg = api.get(provider)
             if isinstance(cfg, dict) and not cfg.get("api_key"):
                 cfg.pop("api_key", None)
+
+    limits = out.get("limits")
+    if limits:
+        cleaned = {}
+        for key, (lo, hi) in _LIMIT_RANGES.items():
+            if key in limits:
+                try:
+                    cleaned[key] = max(lo, min(hi, int(limits[key])))
+                except (TypeError, ValueError):
+                    continue
+        out["limits"] = cleaned
     return out
 
 

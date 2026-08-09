@@ -55,6 +55,33 @@
     .result-block p { font-size: 13px; line-height: 1.7; color: #515154; }
     .suggest-approach { background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.8; color: #1e3a8a; margin-top: 12px; }
     .question-preview { background: #fafafa; border: 1px solid #eeeef0; border-radius: 10px; padding: 12px 14px; font-size: 14px; line-height: 1.8; color: #1d1d1f; white-space: pre-line; margin-top: 12px; }
+    .grade-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 1000; padding: 16px; }
+    .grade-modal { background: white; border-radius: 12px; max-width: 720px; width: 100%; max-height: 86vh; display: flex; flex-direction: column; overflow: hidden; }
+    .grade-modal-head { padding: 16px 20px; font-size: 16px; font-weight: 700; color: #1d1d1f; border-bottom: 1px solid #eeeef0; }
+    .grade-modal-body { padding: 16px 20px; overflow-y: auto; }
+    .grade-modal-actions { display: flex; justify-content: flex-end; gap: 10px; padding: 14px 20px; border-top: 1px solid #eeeef0; background: #fafafa; }
+    .err-step { margin-bottom: 16px; }
+    .err-step:last-child { margin-bottom: 0; }
+    .err-step-head { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: #1d1d1f; margin-bottom: 6px; }
+    .err-status { padding: 2px 8px; border-radius: 6px; font-size: 11px; font-weight: 600; }
+    .err-status.partial { background: #fff8e1; color: #b45309; }
+    .err-status.missing { background: #fff5f5; color: #c62828; }
+    .err-row { display: grid; grid-template-columns: 150px 1fr 30px; gap: 8px; margin-top: 8px; align-items: center; }
+    .err-row select, .err-row input { width: 100%; padding: 7px 9px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 13px; box-sizing: border-box; font-family: inherit; }
+    .err-remove { width: 30px; height: 30px; border: none; border-radius: 8px; background: #f5f5f7; color: #86868b; font-size: 16px; cursor: pointer; }
+    .grade-btn.small { padding: 6px 12px; font-size: 12px; border-radius: 8px; }
+    .pattern-note { font-size: 13px; color: #515154; line-height: 1.7; margin-bottom: 12px; }
+    .pattern-choice { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid #e5e5e7; border-radius: 10px; margin-bottom: 8px; cursor: pointer; }
+    .pattern-choice:hover { border-color: #0071e3; }
+    .pattern-choice input { margin-top: 3px; }
+    .pattern-choice-name { font-size: 14px; font-weight: 600; color: #1d1d1f; }
+    .pattern-choice-meta { font-size: 12px; color: #86868b; margin-top: 3px; line-height: 1.6; }
+    .pattern-score { margin-left: auto; font-size: 12px; font-weight: 700; color: #0071e3; white-space: nowrap; }
+    .new-pattern-box { background: #fafafa; border: 1px solid #eeeef0; border-radius: 10px; padding: 12px 14px; margin-top: 10px; }
+    .new-pattern-box label { display: block; font-size: 12px; color: #86868b; margin: 8px 0 4px; font-weight: 500; }
+    .new-pattern-box input, .new-pattern-box select, .new-pattern-box textarea { width: 100%; padding: 8px 10px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 14px; box-sizing: border-box; font-family: inherit; }
+    .new-pattern-box textarea { min-height: 64px; resize: vertical; }
+    .pattern-result-ok { margin-top: 12px; padding: 10px 12px; background: #f0fdf4; border: 1px solid #b7e4c7; border-radius: 10px; color: #166534; font-size: 13px; }
 </style>
 </head>
 <body class="theme-liangliang">
@@ -67,12 +94,12 @@
 <a href="teach.html" class="nav-item" data-page="teach" title="老师手把手教你做题"><span class="nav-icon">📖</span><span class="nav-label">老师手把手教你做题</span></a>
 <a href="exam.html" class="nav-item" data-page="exam" title="组卷"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
 <a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
-<a href="grade.html" class="nav-item active" data-page="grade" title="AI 改卷"><span class="nav-icon">✅</span><span class="nav-label">AI 改卷</span></a>
 <a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
 <a href="loop.html?v=20260807" class="nav-item" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
 <a href="calendar.html?v=20260807" class="nav-item" data-page="calendar" title="巩固日历"><span class="nav-icon">📅</span><span class="nav-label">巩固日历</span></a>
 <a href="board.html?v=20260807" class="nav-item" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
 <a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
+<a href="grade.html" class="nav-item active" data-page="grade" title="AI 改卷"><span class="nav-icon">✅</span><span class="nav-label">AI 改卷</span></a>
 <a href="settings.html" class="nav-item" data-page="settings" title="系统设置"><span class="nav-icon">⚙️</span><span class="nav-label">系统设置</span></a>
         </nav>
     </aside>
@@ -148,14 +175,43 @@
         </div>
     </main>
 </div>
+<div class="grade-modal-overlay" id="errorModal">
+    <div class="grade-modal">
+        <div class="grade-modal-head">错因标注</div>
+        <div class="grade-modal-body" id="errorModalBody"></div>
+        <div class="grade-modal-actions">
+            <button class="grade-btn secondary" onclick="closeErrorModal()">取消</button>
+            <button class="grade-btn" onclick="confirmErrorTags()">保存错因</button>
+        </div>
+    </div>
+</div>
+<div class="grade-modal-overlay" id="patternModal">
+    <div class="grade-modal">
+        <div class="grade-modal-head">错题入库 · 套路匹配</div>
+        <div class="grade-modal-body" id="patternModalBody"></div>
+        <div class="grade-modal-actions">
+            <button class="grade-btn secondary" onclick="closePatternModal()">暂不关联</button>
+            <button class="grade-btn" onclick="confirmPatternMatch()">确认关联</button>
+        </div>
+    </div>
+</div>
 <script src="nav.js?v=20260731h"></script>
 <script>
 var _teacher = localStorage.getItem('teacher') || 'liangliang';
 document.body.classList.remove('theme-liangliang', 'theme-xuefeng', 'theme-taotao', 'theme-ji');
 document.body.classList.add('theme-' + _teacher);
+var _gradeState = null;
+var _patternMatch = null;
+var _categories = [];
+var _loadedQuestions = [];
+var MISTAKE_TYPES = ['符号错误', '计算错误', '公式记错', '知识性错误', '审题错误', '思路错误', '其他'];
 
 function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function qs(name) {
+    return new URLSearchParams(location.search).get(name);
 }
 
 function renderMath(el) {
@@ -176,6 +232,7 @@ async function api(path, opts) {
 async function loadQuestions() {
     try {
         var list = await api('/questions');
+        _loadedQuestions = list;
         var sel = document.getElementById('qSelect');
         for (var i = 0; i < list.length; i++) {
             var q = list[i];
@@ -185,6 +242,19 @@ async function loadQuestions() {
             opt.value = q.id;
             opt.textContent = '#' + q.id + ' · ' + (q.question_type || '大题') + ' · ' + text;
             sel.appendChild(opt);
+        }
+        var preset = qs('question_id');
+        if (preset) {
+            sel.value = String(preset);
+            var q = null;
+            for (var j = 0; j < list.length; j++) {
+                if (String(list[j].id) === String(preset)) { q = list[j]; break; }
+            }
+            if (q && q.question_type) {
+                var typeSel = document.getElementById('qType');
+                typeSel.value = q.question_type;
+            }
+            toggleQuestionMode();
         }
     } catch (e) {
         var sel = document.getElementById('qSelect');
@@ -215,6 +285,7 @@ function renderResult(d) {
         box.innerHTML = '<div class="grade-card"><div class="result-banner bad"><span>判分失败</span></div><p style="font-size:14px;color:#515154;">' + escapeHtml(d.detail || d.error) + '</p></div>';
         return;
     }
+    _gradeState = d;
     var cls = d.is_correct ? 'ok' : 'bad';
     var label = d.is_correct ? '正确' : '错误';
     var scoreHtml = '';
@@ -257,9 +328,263 @@ function renderResult(d) {
     if (d.student_answer) {
         html += '<div class="result-block"><h3>学生作答</h3><div class="question-preview">' + escapeHtml(d.student_answer) + '</div></div>';
     }
+    if (!d.is_correct && d.question_id && (d.mode === 'answer_match' || d.mode === 'step_ai')) {
+        html += '<div class="grade-actions"><button class="grade-btn" onclick="openErrorModal()">' + (d.mode === 'step_ai' ? '编辑错因' : '标记错因') + '</button></div>';
+    }
     html += '</div>';
     box.innerHTML = html;
     renderMath(box);
+}
+
+function buildErrorSteps(d, existing) {
+    if (d.mode === 'answer_match') {
+        var tags = (existing || []).filter(function(e) {
+            return e.chunk_id === 1 && e.step_number === 1;
+        }).map(function(e) {
+            return {mistake_type: e.mistake_type, mistake_detail: e.mistake_detail};
+        });
+        if (!tags.length) tags = [{mistake_type: '', mistake_detail: ''}];
+        return [{
+            chunk_id: 1,
+            step_number: 1,
+            title: '整题（无过程）',
+            status: 'missing',
+            tags: tags
+        }];
+    }
+    var out = [];
+    var notRigorous = {};
+    (d.not_rigorous_steps || []).forEach(function(id) { notRigorous[id] = true; });
+    (d.step_results || []).forEach(function(s) {
+        var status = s.status;
+        if (notRigorous[s.id] && status === 'correct') status = 'partial';
+        if (status !== 'partial' && status !== 'missing') return;
+        var tags = (existing || []).filter(function(e) {
+            return e.chunk_id === s.chunk_id && e.step_number === s.step_number;
+        }).map(function(e) {
+            return {mistake_type: e.mistake_type, mistake_detail: e.mistake_detail};
+        });
+        if (!tags.length) {
+            tags = (s.error_types || []).map(function(t) {
+                return {mistake_type: t, mistake_detail: s.error_detail || ''};
+            });
+            if (!tags.length) tags = [{mistake_type: '', mistake_detail: ''}];
+        }
+        out.push({
+            chunk_id: s.chunk_id,
+            step_number: s.step_number,
+            title: '第 ' + s.step_number + ' 步 · ' + (s.title || '步骤'),
+            status: status,
+            tags: tags
+        });
+    });
+    return out;
+}
+
+function errorRowHtml(chunk, step, tag) {
+    var options = '<option value="">选择错因</option>';
+    for (var i = 0; i < MISTAKE_TYPES.length; i++) {
+        var t = MISTAKE_TYPES[i];
+        options += '<option value="' + t + '"' + (tag && tag.mistake_type === t ? ' selected' : '') + '>' + t + '</option>';
+    }
+    return '<div class="err-row" data-chunk="' + chunk + '" data-step="' + step + '">' +
+        '<select class="err-type">' + options + '</select>' +
+        '<input class="err-detail" placeholder="具体错误说明（可选）" value="' + escapeHtml((tag && tag.mistake_detail) || '') + '">' +
+        '<button class="err-remove" onclick="removeErrorRow(this)" title="删除">×</button></div>';
+}
+
+function renderErrorRows(steps) {
+    var html = '';
+    for (var i = 0; i < steps.length; i++) {
+        var st = steps[i];
+        html += '<div class="err-step" data-chunk="' + st.chunk_id + '" data-step="' + st.step_number + '">';
+        html += '<div class="err-step-head">' + escapeHtml(st.title) + '<span class="err-status ' + escapeHtml(st.status) + '">' + escapeHtml(statusLabel(st.status)) + '</span></div>';
+        html += '<div class="err-rows">';
+        for (var j = 0; j < st.tags.length; j++) {
+            html += errorRowHtml(st.chunk_id, st.step_number, st.tags[j]);
+        }
+        html += '</div>';
+        html += '<button class="grade-btn small secondary" onclick="addErrorRow(' + st.chunk_id + ',' + st.step_number + ')">添加一条</button>';
+        html += '</div>';
+    }
+    return html;
+}
+
+function addErrorRow(chunk, step) {
+    var stepEl = document.querySelector('.err-step[data-chunk="' + chunk + '"][data-step="' + step + '"]');
+    if (!stepEl) return;
+    stepEl.querySelector('.err-rows').insertAdjacentHTML('beforeend', errorRowHtml(chunk, step, {mistake_type: '', mistake_detail: ''}));
+}
+
+function removeErrorRow(btn) {
+    var row = btn.closest('.err-row');
+    if (row) row.remove();
+}
+
+function closeErrorModal() {
+    document.getElementById('errorModal').style.display = 'none';
+}
+
+async function openErrorModal() {
+    if (!_gradeState || !_gradeState.question_id) return;
+    var qid = _gradeState.question_id;
+    var existing = [];
+    try {
+        var q = await api('/questions/' + qid);
+        existing = q.step_errors || [];
+    } catch (e) {}
+    var body = document.getElementById('errorModalBody');
+    body.innerHTML = renderErrorRows(buildErrorSteps(_gradeState, existing));
+    document.getElementById('errorModal').style.display = 'flex';
+}
+
+async function confirmErrorTags() {
+    if (!_gradeState || !_gradeState.question_id) return;
+    var tags = [];
+    document.querySelectorAll('#errorModalBody .err-step').forEach(function(stepEl) {
+        var chunk = parseInt(stepEl.getAttribute('data-chunk'), 10);
+        var step = parseInt(stepEl.getAttribute('data-step'), 10);
+        stepEl.querySelectorAll('.err-row').forEach(function(row) {
+            var type = row.querySelector('.err-type').value.trim();
+            var detail = row.querySelector('.err-detail').value.trim();
+            tags.push({step_number: step, chunk_id: chunk, mistake_type: type, mistake_detail: detail, student_input: ''});
+        });
+    });
+    var qid = _gradeState.question_id;
+    var statusEl = document.getElementById('gradeStatus');
+    try {
+        var d = await api('/questions/' + qid + '/step-errors/batch', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({tags: tags})
+        });
+        if (d.error) throw new Error(d.detail || d.error);
+        closeErrorModal();
+        if (statusEl) statusEl.innerHTML = '<span style="color:#166534;">错因已保存，正在匹配套路...</span>';
+        await openPatternMatch(qid);
+    } catch (e) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:#c62828;">保存错因失败：' + escapeHtml(e.message || '请求失败') + '</span>';
+    }
+}
+
+function patternStateLabel(s) {
+    return {never: '未挑战', first_pass: '第一次会', second_pass: '第二次会', third_pass: '已通关', again_wrong: '再次出错'}[s] || s || '未挑战';
+}
+
+function togglePatternForm() {
+    var box = document.getElementById('newPatternBox');
+    if (!box) return;
+    var sel = document.querySelector('input[name="patternChoice"]:checked');
+    box.style.display = sel && sel.value === 'new' ? 'block' : 'none';
+}
+
+async function loadPatternCategories(prefill) {
+    try {
+        var data = await api('/categories');
+        _categories = (data || []).map(function(x) { return x.level1; });
+    } catch (e) {
+        _categories = [];
+    }
+    var sel = document.getElementById('newPatternCategory');
+    if (!sel) return;
+    var html = '<option value="">请选择板块</option>';
+    for (var i = 0; i < _categories.length; i++) {
+        html += '<option value="' + escapeHtml(_categories[i]) + '">' + escapeHtml(_categories[i]) + '</option>';
+    }
+    sel.innerHTML = html;
+    if (prefill && _categories.indexOf(prefill) >= 0) sel.value = prefill;
+}
+
+function renderPatternModal(data) {
+    var html = '';
+    var matches = data.matches || [];
+    if (matches.length) {
+        html += '<div class="pattern-note">自动匹配到 ' + matches.length + ' 个套路，选择要把这道错题关联到哪个套路：</div>';
+        for (var i = 0; i < matches.length; i++) {
+            var m = matches[i];
+            html += '<label class="pattern-choice"><input type="radio" name="patternChoice" value="' + m.pattern_id + '"' + (i === 0 ? ' checked' : '') + '><span><div class="pattern-choice-name">' + escapeHtml(m.name) + '</div><div class="pattern-choice-meta">' + escapeHtml(m.category) + ' · ' + patternStateLabel(m.state) + ' · ' + escapeHtml(m.reason) + '</div></span><span class="pattern-score">' + m.score + ' 分</span></label>';
+        }
+    } else {
+        html += '<div class="pattern-note">题库里还没有匹配到现有套路，可以新建一个套路，把这道错题作为母题。</div>';
+    }
+    html += '<label class="pattern-choice"><input type="radio" name="patternChoice" value="new"' + (matches.length ? '' : ' checked') + '><span><div class="pattern-choice-name">新建套路</div><div class="pattern-choice-meta">以这道错题为母题，逻辑与母题看板的“新建套路”一致</div></span></label>';
+    html += '<div class="new-pattern-box" id="newPatternBox" style="display:' + (matches.length ? 'none' : 'block') + ';">';
+    html += '<label>所属板块</label><select id="newPatternCategory"></select>';
+    html += '<label>套路名</label><input id="newPatternName" placeholder="如：直线与圆锥曲线联立">';
+    html += '<label>套路说明</label><textarea id="newPatternDesc" placeholder="这个套路考什么、怎么破题"></textarea>';
+    html += '</div>';
+    html += '<label class="pattern-choice"><input type="radio" name="patternChoice" value="none"><span><div class="pattern-choice-name">暂不关联</div><div class="pattern-choice-meta">保留错题标签，稍后再到母题看板处理</div></span></label>';
+    document.getElementById('patternModalBody').innerHTML = html;
+    document.querySelectorAll('input[name="patternChoice"]').forEach(function(r) { r.addEventListener('change', togglePatternForm); });
+    loadPatternCategories(data.question && data.question.category);
+}
+
+async function openPatternMatch(qid) {
+    try {
+        var d = await api('/patterns/match-wrong', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({question_id: qid})
+        });
+        if (d.error) throw new Error(d.detail || d.error);
+        _patternMatch = d;
+        renderPatternModal(d);
+        document.getElementById('patternModal').style.display = 'flex';
+    } catch (e) {
+        var statusEl = document.getElementById('gradeStatus');
+        if (statusEl) statusEl.innerHTML = '<span style="color:#c62828;">套路匹配失败：' + escapeHtml(e.message || '请求失败') + '</span>';
+    }
+}
+
+function closePatternModal() {
+    document.getElementById('patternModal').style.display = 'none';
+}
+
+async function confirmPatternMatch() {
+    var sel = document.querySelector('input[name="patternChoice"]:checked');
+    var statusEl = document.getElementById('gradeStatus');
+    if (!sel) return;
+    if (sel.value === 'none') {
+        closePatternModal();
+        if (statusEl) statusEl.innerHTML = '<span style="color:#166534;">错因已保存，暂未关联套路。</span>';
+        return;
+    }
+    try {
+        if (sel.value === 'new') {
+            var name = document.getElementById('newPatternName').value.trim();
+            var category = document.getElementById('newPatternCategory').value;
+            var desc = document.getElementById('newPatternDesc').value.trim();
+            if (!category || !name) {
+                if (statusEl) statusEl.innerHTML = '<span style="color:#c62828;">请选择板块并填写套路名。</span>';
+                return;
+            }
+            var d = await api('/patterns/mother', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({question_id: _patternMatch.question_id, category: category, name: name, description: desc})
+            });
+            if (d.error) throw new Error(d.detail || d.error);
+            await api('/patterns/' + d.pattern_id + '/wrong', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({question_id: _patternMatch.question_id})
+            });
+            closePatternModal();
+            if (statusEl) statusEl.innerHTML = '<span style="color:#166534;">已新建套路「' + escapeHtml(name) + '」并加入巩固日历。</span>';
+        } else {
+            var pid = parseInt(sel.value, 10);
+            var d2 = await api('/patterns/' + pid + '/wrong', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({question_id: _patternMatch.question_id})
+            });
+            if (d2.error) throw new Error(d2.detail || d2.error);
+            closePatternModal();
+            if (statusEl) statusEl.innerHTML = '<span style="color:#166534;">已关联套路并加入巩固日历。</span>';
+        }
+    } catch (e) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:#c62828;">关联套路失败：' + escapeHtml(e.message || '请求失败') + '</span>';
+    }
 }
 
 async function doGrade() {
@@ -300,6 +625,9 @@ async function doGrade() {
             body: JSON.stringify(payload)
         });
         renderResult(d);
+        if (!d.error && d.is_correct === false && d.question_id && d.mode === 'step_ai') {
+            setTimeout(openErrorModal, 250);
+        }
         if (d.error) {
             statusEl.innerHTML = '<span style="color:#c62828;">' + escapeHtml(d.detail || d.error) + '</span>';
         } else {

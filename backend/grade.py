@@ -12,6 +12,7 @@ from fractions import Fraction
 import backend.settings as runtime_settings
 from backend.solver import call_deepseek, _extract_json
 from backend.database import (
+    MISTAKE_TYPES,
     add_practice_record,
     find_question,
     find_question_id,
@@ -174,12 +175,23 @@ def _sanitize_ai_grade(data: dict, steps: list, full_score) -> dict:
         status = match.get("status")
         if status not in valid_statuses:
             status = "missing"
+        error_types = [
+            t for t in (match.get("error_types") or []) if t in MISTAKE_TYPES
+        ][:3]
+        if status == "missing" and not error_types:
+            error_types = ["思路错误"]
+        elif status == "partial" and not error_types:
+            error_types = ["其他"]
+        error_detail = str(match.get("error_detail") or "")
         step_results.append({
             "id": std["id"],
             "chunk_id": std["chunk_id"],
             "step_number": std["step_number"],
+            "title": std["title"],
             "status": status,
             "comment": str(match.get("comment") or ""),
+            "error_types": error_types,
+            "error_detail": error_detail,
         })
 
     def _ids(key: str) -> list:
@@ -207,12 +219,27 @@ def _sanitize_ai_grade(data: dict, steps: list, full_score) -> dict:
     if approach == "different" and suggested:
         feedback = (feedback + "\n\n" if feedback else "") + f"你可以参考我的新思路：{suggested}"
 
+    error_suggestions = []
+    for sr in step_results:
+        if sr["status"] not in ("partial", "missing"):
+            continue
+        for et in sr["error_types"]:
+            error_suggestions.append({
+                "chunk_id": sr["chunk_id"],
+                "step_number": sr["step_number"],
+                "step_id": sr["id"],
+                "title": sr["title"],
+                "mistake_type": et,
+                "mistake_detail": sr["error_detail"],
+            })
+
     return {
         "approach": approach,
         "result_matched": _as_bool(data.get("result_matched")),
         "steps": step_results,
         "missing_steps": _ids("missing_steps"),
         "not_rigorous_steps": _ids("not_rigorous_steps"),
+        "error_suggestions": error_suggestions,
         "is_correct": is_correct,
         "earned_score": earned_score,
         "feedback": feedback,
@@ -230,12 +257,15 @@ def _ai_grade_essay(question: str, student_answer: str, steps: list,
         "full_score": full_score,
     }
     cfg = runtime_settings.get_teacher_config(teacher)
+    grade_cfg = cfg.get("grade") or {}
+    grade_model = grade_cfg.get("model") or cfg.get("verifier", {}).get("model", "deepseek-v4-flash")
+    grade_effort = grade_cfg.get("reasoning_effort") or cfg.get("verifier", {}).get("reasoning_effort")
     content, _ = call_deepseek(
         GRADE_PROMPT,
         json.dumps(payload, ensure_ascii=False, indent=2),
         temperature=0.2,
-        model=cfg.get("verifier", {}).get("model", "deepseek-v4-flash"),
-        reasoning_effort=cfg.get("verifier", {}).get("reasoning_effort"),
+        model=grade_model,
+        reasoning_effort=grade_effort,
     )
     data = json.loads(_extract_json(content))
     return _sanitize_ai_grade(data, steps, full_score)
@@ -326,6 +356,7 @@ def grade_text(question_id=None, question=None, student_answer="",
             "step_results": [],
             "missing_steps": [],
             "not_rigorous_steps": [],
+            "error_suggestions": [],
             "feedback": "回答正确。" if correct else "回答错误，请核对答案。",
             "suggested_approach": "",
             "anti_cheat": anti_cheat,
@@ -354,6 +385,7 @@ def grade_text(question_id=None, question=None, student_answer="",
             "step_results": ai["steps"],
             "missing_steps": ai["missing_steps"],
             "not_rigorous_steps": ai["not_rigorous_steps"],
+            "error_suggestions": ai["error_suggestions"],
             "feedback": ai["feedback"] or "批改完成。",
             "suggested_approach": ai["suggested_approach"],
             "anti_cheat": anti_cheat,

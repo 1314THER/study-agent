@@ -18,6 +18,15 @@ _VALID_CATEGORIES = set(CATEGORIES.keys())
 _VALID_DIFFICULTY_LEVELS = {"容易", "中等", "困难", "极难", "未知"}
 _VALID_DIMENSION_KEYS = set(diff.DIM_KEYS)
 _VALID_SOURCE_TYPES = {"ai生成", "高考题", "模拟题", "精选母题"}
+MISTAKE_TYPES = (
+    "符号错误",
+    "计算错误",
+    "公式记错",
+    "知识性错误",
+    "审题错误",
+    "思路错误",
+    "其他",
+)
 _CATEGORY_ALIASES = {
     "集合与常用逻辑用语": "集合与逻辑用语",
 }
@@ -1118,6 +1127,50 @@ def add_step_error(question_id: int, step_number: int, chunk_id: int,
     eid = cur.lastrowid
     conn.close()
     return eid
+
+
+def replace_step_errors(question_id: int, tags: list) -> int:
+    """批量替换指定步骤的错因记录，返回写入条数。"""
+    conn = get_connection()
+    try:
+        keys = set()
+        for tag in tags:
+            keys.add((int(tag["chunk_id"]), int(tag["step_number"])))
+        for chunk_id, step_number in keys:
+            conn.execute(
+                "DELETE FROM step_errors WHERE question_id = ? AND chunk_id = ? AND step_number = ?",
+                (question_id, chunk_id, step_number),
+            )
+        count = 0
+        seen = set()
+        for tag in tags:
+            mistake_type = str(tag.get("mistake_type") or "").strip()
+            if not mistake_type:
+                continue
+            chunk_id = int(tag["chunk_id"])
+            step_number = int(tag["step_number"])
+            key = (chunk_id, step_number, mistake_type)
+            if key in seen:
+                continue
+            seen.add(key)
+            conn.execute(
+                """INSERT INTO step_errors
+                   (question_id, step_number, chunk_id, mistake_type, mistake_detail, student_input)
+                   VALUES (?, ?, ?, ?, ?, ?)""",
+                (
+                    question_id,
+                    step_number,
+                    chunk_id,
+                    mistake_type,
+                    str(tag.get("mistake_detail") or ""),
+                    str(tag.get("student_input") or ""),
+                ),
+            )
+            count += 1
+        conn.commit()
+        return count
+    finally:
+        conn.close()
 
 
 def get_step_errors(question_id: int) -> list:

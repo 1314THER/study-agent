@@ -752,7 +752,7 @@ async function startAiGenJob(qid){
   ov.style.display="flex";
   ct.innerHTML=aiGenProgressHtml(0,"generating","正在启动 AI 仿题");
   try{
-    var r=await fetch("http://127.0.0.1:8000/questions/"+qid+"/generate/async",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({count:3,teacher:"liangliang"})});
+    var r=await fetch("http://127.0.0.1:8000/questions/"+qid+"/generate/async",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({count:null,teacher:"liangliang"})});
     var sj=await r.json();
     if(sj.error||!sj.job_id){ct.innerHTML=aiGenErrorHtml(sj.detail||sj.error||"启动生成任务失败");return;}
     var jobId=sj.job_id;

@@ -1778,7 +1778,10 @@ body.theme-ji .history-list-item.active { color: #16a34a; background: #f0fdf4; b
 }
 .nav-init .sidebar,
 .nav-init .main-content,
-.nav-init .exam-layout {
+.nav-init .exam-layout,
+.nav-init .nav-item,
+.nav-init .nav-expand-toggle,
+.nav-init .mobile-nav-toggle {
     transition: none !important;
 }
 .mobile-nav-toggle {

@@ -13,7 +13,7 @@ from typing import Optional
 import backend.settings as runtime_settings
 
 # ---------- API ----------
-DASHSCOPE_BASE = "https://ws-1b3ikgt2q6ybkzos.cn-beijing.maas.aliyuncs.com/compatible-mode/v1"
+DASHSCOPE_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
 MODEL = "qwen-vl-max"
 
 
@@ -77,6 +77,8 @@ def _call_qwen_vl(image_base64: Optional[str] = None, text: Optional[str] = None
     """调用 Qwen-VL-Plus，返回原始回复文本"""""
     api_key = _get_api_key()
     api_cfg = runtime_settings.get_api().get("dashscope") or {}
+    limits = runtime_settings.get_limits()
+    timeout_seconds = limits.get("multimodal_timeout_seconds", 180)
     base_url = (api_cfg.get("base_url") or DASHSCOPE_BASE).rstrip("/")
     model = api_cfg.get("model") or MODEL
     messages = [{"role": "user", "content": []}]
@@ -95,7 +97,7 @@ def _call_qwen_vl(image_base64: Optional[str] = None, text: Optional[str] = None
     body = {
         "model": model,
         "messages": messages,
-        "max_tokens": 16384,
+        "max_tokens": limits.get("multimodal_max_tokens", 16384),
     }
     
     try:
@@ -106,7 +108,7 @@ def _call_qwen_vl(image_base64: Optional[str] = None, text: Optional[str] = None
                 "Content-Type": "application/json"
             },
             json=body,
-            timeout=180,
+            timeout=timeout_seconds,
         )
         if resp.status_code != 200:
             raise Exception(f"Qwen API 错误 {resp.status_code}: {resp.text[:200]}")
@@ -114,7 +116,7 @@ def _call_qwen_vl(image_base64: Optional[str] = None, text: Optional[str] = None
         content = data["choices"][0]["message"]["content"]
         return content
     except httpx.TimeoutException:
-        raise Exception("Qwen API 请求超时（180s）")
+        raise Exception(f"Qwen API 请求超时（{timeout_seconds}s）")
     except httpx.ConnectError:
         raise Exception("无法连接到 Qwen API 服务器")
     except (KeyError, json.JSONDecodeError, IndexError) as e:

@@ -6,6 +6,7 @@ import re
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from typing import Optional
 
 from backend import difficulty as diff
 import backend.settings as runtime_settings
@@ -340,8 +341,11 @@ def _save_accepted(reference: dict, result: dict) -> int:
     return save_question(result["question"], final)
 
 
-def generate_variants(qid: int, count: int = 3, teacher: str = "liangliang",
+def generate_variants(qid: int, count: Optional[int] = None, teacher: str = "liangliang",
                       progress_callback=None) -> dict:
+    if count is None:
+        count = int(runtime_settings.get_limits().get("generate_count", 3))
+    count = max(1, min(10, int(count)))
     reference = _load_reference(qid)
     reference["chunk_results"] = (reference.get("answer_json") or {}).get("chunk_results", [])
     candidates = _call_generation(reference, count, teacher)
@@ -362,7 +366,8 @@ def generate_variants(qid: int, count: int = 3, teacher: str = "liangliang",
 
     total_usage = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
     solved = []
-    with ThreadPoolExecutor(max_workers=min(len(candidates), 5)) as pool:
+    workers = int(runtime_settings.get_limits().get("generate_concurrency", 5))
+    with ThreadPoolExecutor(max_workers=max(1, min(len(candidates), workers))) as pool:
         futures = [pool.submit(_solve_candidate, cand, teacher, on_phase=progress_callback) for cand in candidates]
         solved = [f.result() for f in futures]
 
@@ -424,9 +429,12 @@ def _progress_text(phase: str, done: int, total: int) -> str:
     return ""
 
 
-def start_generate_job(qid: int, count: int = 3, teacher: str = "liangliang") -> dict:
+def start_generate_job(qid: int, count: Optional[int] = None, teacher: str = "liangliang") -> dict:
     if not get_question_by_id(qid):
         raise ValueError(f"题目不存在: {qid}")
+    if count is None:
+        count = int(runtime_settings.get_limits().get("generate_count", 3))
+    count = max(1, min(10, int(count)))
     job_id = uuid.uuid4().hex
     job = {
         "job_id": job_id,

@@ -11,6 +11,7 @@ import yaml
 
 from backend.categories import CATEGORIES
 from backend.database import get_question_by_id, update_question_source
+import backend.settings as runtime_settings
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PATTERNS_YAML = os.path.join(os.path.dirname(os.path.abspath(__file__)), "patterns.yaml")
@@ -290,6 +291,7 @@ def add_mother_question(question_id: int, category: str, name: str,
     init_mastery_db()
     conn = _get_conn()
     try:
+        new_pattern = False
         row = None
         if key:
             row = conn.execute("SELECT * FROM patterns WHERE yaml_key = ?", (key,)).fetchone()
@@ -306,6 +308,13 @@ def add_mother_question(question_id: int, category: str, name: str,
         else:
             yaml_key = key or f"pat-{uuid.uuid4().hex[:10]}"
             pattern_id = _ensure_pattern_row(conn, yaml_key, category, name, description)
+            new_pattern = True
+        if new_pattern:
+            default_max = int(runtime_settings.get_limits().get("pattern_default_max_time_seconds", 120))
+            conn.execute(
+                "UPDATE patterns SET max_time_seconds = ? WHERE id = ?",
+                (max(10, default_max), pattern_id),
+            )
         _ensure_pattern_mastery(conn, pattern_id)
         _link_question(conn, pattern_id, question_id, "mother")
         _recalc_category_mastery(conn, category)
@@ -518,9 +527,178 @@ def complete_pattern_loop(pattern_id: int, passed: bool) -> dict:
         conn.close()
 
 
+def _match_tokens(text) -> set:
+    if not text:
+        return set()
+    t = str(text).lower()
+    t = re.sub(r"\\[a-zA-Z]+", " ", t)
+    t = re.sub(r"[{}()\[\]=\+\-*/<>,.;:!?|$^_&%#@~`]", " ", t)
+    parts = re.findall(r"[a-z0-9]+|[\u4e00-\u9fff]+", t)
+    out = set()
+    for part in parts:
+        if len(part) == 1:
+            out.add(part)
+        else:
+            for i in range(len(part) - 1):
+                out.add(part[i:i + 2])
+    return out
+
+
+def _match_similarity(a, b) -> float:
+    ta, tb = _match_tokens(a), _match_tokens(b)
+    if not ta or not tb:
+        return 0.0
+    return len(ta & tb) / len(ta | tb)
+
+
+def _question_kps(q) -> set:
+    kps = set()
+    if not q:
+        return kps
+    for kp in (q.get("knowledge_points") or []):
+        if isinstance(kp, str) and kp.strip():
+            kps.add(kp.strip())
+    aj = q.get("answer_json") or {}
+    if not isinstance(aj, dict):
+        return kps
+    for cr in aj.get("chunk_results") or []:
+        if not isinstance(cr, dict):
+            continue
+        for kp in (cr.get("knowledge_points") or []):
+            if isinstance(kp, str) and kp.strip():
+                kps.add(kp.strip())
+        for step in cr.get("steps") or []:
+            if not isinstance(step, dict):
+                continue
+            raw = step.get("knowledge_point") or step.get("knowledge_points")
+            if isinstance(raw, str):
+                raw = re.split(r"[、,，;；]+", raw)
+            if isinstance(raw, list):
+                for kp in raw:
+                    if isinstance(kp, str) and kp.strip():
+                        kps.add(kp.strip())
+    return kps
+
+
 def match_mother_for_wrong_question(question_id: int):
-    """错题匹配母题接口，当前为预留实现，返回 None。"""
-    return None
+    """错题入库后自动匹配题库中的套路，按板块、题干相似度、知识点综合打分。"""
+    init_mastery_db()
+    question = get_question_by_id(question_id)
+    if not question:
+        return {"error": "not_found", "detail": f"题目不存在: {question_id}"}
+
+    q_content = question.get("content") or ""
+    q_type = question.get("question_type") or ""
+    q_cat = question.get("category_level1") or ""
+    q_kps = _question_kps(question)
+    matches = []
+
+    for p in get_patterns():
+        score = 0.0
+        reasons = []
+        if p.get("category") == q_cat:
+            score += 25
+            reasons.append("板块一致")
+        qids = []
+        if p.get("mother_id"):
+            qids.append(p["mother_id"])
+        qids.extend(p.get("variant_ids") or [])
+        candidates = [get_question_by_id(qid) for qid in qids]
+        candidates = [c for c in candidates if c]
+        if question_id in qids:
+            score += 100
+            reasons.append("该题已是此套路题目")
+        sims = [_match_similarity(q_content, c.get("content") or "") for c in candidates]
+        best_sim = max(sims) if sims else 0.0
+        score += round(best_sim * 60, 1)
+        if best_sim >= 0.3:
+            reasons.append(f"题干相似度 {round(best_sim * 100)}%")
+        if candidates and candidates[0].get("question_type") == q_type:
+            score += 4
+            reasons.append("题型一致")
+
+        p_kps = set()
+        for c in candidates:
+            p_kps |= _question_kps(c)
+        matched_kps = q_kps & p_kps
+        if matched_kps:
+            score += min(15.0, 5.0 * len(matched_kps))
+            reasons.append("知识点：" + "、".join(sorted(matched_kps)[:3]))
+        name_kps = [
+            kp for kp in q_kps
+            if kp and (kp in (p.get("name") or "") or kp in (p.get("description") or ""))
+        ]
+        if name_kps:
+            score += min(10.0, 5.0 * len(name_kps))
+            reasons.append("套路名/说明命中")
+
+        score = round(score, 1)
+        if score >= 25:
+            matches.append({
+                "pattern_id": p["id"],
+                "name": p.get("name"),
+                "category": p.get("category"),
+                "state": (p.get("mastery") or {}).get("state", "never"),
+                "need_check": bool((p.get("mastery") or {}).get("need_check")),
+                "mother_id": p.get("mother_id"),
+                "variant_count": len(p.get("variant_ids") or []),
+                "score": score,
+                "reason": "；".join(dict.fromkeys(reasons)) or "无明显特征",
+                "already_linked": question_id in qids,
+            })
+
+    matches.sort(key=lambda m: m["score"], reverse=True)
+    best = next((m for m in matches if m["score"] >= 40), None)
+    return {
+        "question_id": question_id,
+        "question": {
+            "id": question_id,
+            "category": q_cat,
+            "question_type": q_type,
+            "content_preview": (q_content[:120] + "…") if len(q_content) > 120 else q_content,
+        },
+        "matches": matches[:8],
+        "has_match": best is not None,
+        "best": best,
+    }
+
+
+def mark_pattern_wrong(pattern_id: int, question_id: int = None) -> dict:
+    """错题确认关联某套路后，把套路标记为再次出错并同步到巩固日历。"""
+    init_mastery_db()
+    conn = _get_conn()
+    try:
+        pat = conn.execute("SELECT id FROM patterns WHERE id = ?", (pattern_id,)).fetchone()
+        if not pat:
+            raise ValueError(f"套路不存在: {pattern_id}")
+        _ensure_pattern_mastery(conn, pattern_id)
+        next_check = _now_str()
+        conn.execute(
+            """INSERT INTO pattern_mastery
+               (pattern_id, state, need_check, next_check_at, last_completed_at, updated_at)
+               VALUES (?, ?, 1, ?, ?, CURRENT_TIMESTAMP)
+               ON CONFLICT(pattern_id) DO UPDATE SET
+                 state = excluded.state,
+                 need_check = 1,
+                 next_check_at = excluded.next_check_at,
+                 last_completed_at = excluded.last_completed_at,
+                 updated_at = CURRENT_TIMESTAMP""",
+            (pattern_id, STATE_AGAIN_WRONG, next_check, _now_str()),
+        )
+        cat_row = conn.execute("SELECT category FROM patterns WHERE id = ?", (pattern_id,)).fetchone()
+        if cat_row:
+            _recalc_category_mastery(conn, cat_row["category"])
+        conn.commit()
+        return {
+            "pattern_id": pattern_id,
+            "state": STATE_AGAIN_WRONG,
+            "need_check": 1,
+            "next_check_at": next_check,
+            "calendar_synced": True,
+            "question_id": question_id,
+        }
+    finally:
+        conn.close()
 
 
 def delete_question_links(question_id: int) -> None:

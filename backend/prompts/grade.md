@@ -20,14 +20,15 @@
    - `partial`：学生写到了这一步，但缺关键结果，或只写思路没写结果。
    - `missing`：学生作答完全没有该步内容。
    - `not_applicable`：该步与学生不同思路无关（只在 `approach=different` 时使用）。
-3. 严格性处理：
+3. 错因标注：`partial` / `missing` 的步骤必须给出 `error_types`，从 `符号错误 / 计算错误 / 公式记错 / 知识性错误 / 审题错误 / 思路错误 / 其他` 中选 1-2 项；`error_detail` 用一句话说明学生具体错在哪，不要写空数组。
+4. 严格性处理：
    - 某一步存在且数学上成立，但表述不严谨（例如没写定义域、没说明为什么能消去、漏了限定条件），只要没有缺失关键步骤，该步仍判 `correct`，同时把步骤 id 写入 `not_rigorous_steps`，最后在 `overall.feedback` 中简短提醒。
    - 缺失关键步骤的大题不能判为完全正确；只写最终答案不写过程的大题不能判为完全正确。
-4. 结果判定：
+5. 结果判定：
    - `result_matched`：学生最终答案与标准最终答案数学等价。
    - `overall.is_correct`：整题判为正确。思路一致时要求所有关键步骤都正确（允许不严谨但无缺失）；思路不同时按独立判断给出。
    - 若 `full_score` 为 null，`earned_score` 必须为 null；否则按步骤重要程度给出 0 到 full_score 的数字。
-5. feedback 用中文，口语化、具体，指出对在哪、错在哪，不把“基本正确”当结论。
+6. feedback 用中文，口语化、具体，指出对在哪、错在哪，不把“基本正确”当结论。
 
 ## 输出
 
@@ -38,7 +39,8 @@
   "approach": "same",
   "result_matched": true,
   "steps": [
-    {"id": "1-1", "chunk_id": 1, "step_number": 1, "status": "correct", "comment": "这一步的关键等式写对了。"}
+    {"id": "1-1", "chunk_id": 1, "step_number": 1, "status": "correct", "comment": "这一步的关键等式写对了。"},
+    {"id": "1-2", "chunk_id": 1, "step_number": 2, "status": "partial", "comment": "只写了思路，没算到最后。", "error_types": ["计算错误"], "error_detail": "化简时丢了负号，导致后续结果不一致。"}
   ],
   "missing_steps": [],
   "not_rigorous_steps": ["1-2"],

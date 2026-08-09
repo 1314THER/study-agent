@@ -26,21 +26,25 @@ DEFAULTS = {
             "solver": {"model": "deepseek-v4-flash", "reasoning_effort": None},
             "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
             "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
+            "grade": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
         },
         "taotao": {
             "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "low"},
             "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
             "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
+            "grade": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
         },
         "xuefeng": {
             "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
             "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
             "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
+            "grade": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
         },
         "ji": {
             "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
             "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "high"},
             "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "high"},
+            "grade": {"model": "deepseek-v4-flash", "reasoning_effort": "high"},
         },
     },
     "api": {
@@ -49,10 +53,22 @@ DEFAULTS = {
             "api_key": "",
         },
         "dashscope": {
-            "base_url": "https://ws-1b3ikgt2q6ybkzos.cn-beijing.maas.aliyuncs.com/compatible-mode/v1",
+            "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
             "model": "qwen-vl-max",
             "api_key": "",
         },
+    },
+    "limits": {
+        "api_max_tokens": 32000,
+        "api_timeout_seconds": 300,
+        "multimodal_max_tokens": 16384,
+        "multimodal_timeout_seconds": 180,
+        "multimodal_concurrency": 7,
+        "generate_concurrency": 5,
+        "generate_count": 3,
+        "pattern_default_max_time_seconds": 120,
+        "search_default_limit": 200,
+        "ai_search_limit": 20,
     },
 }
 
@@ -133,6 +149,10 @@ def get_teacher_config(teacher: str) -> dict:
 
 def get_api() -> dict:
     return get_settings().get("api") or DEFAULTS["api"]
+
+
+def get_limits() -> dict:
+    return get_settings().get("limits") or DEFAULTS["limits"]
 
 
 def _read_env_key(name: str) -> str:
