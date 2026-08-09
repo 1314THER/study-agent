@@ -20,7 +20,7 @@
         if (document.querySelector('link[data-agent-css]')) return;
         var link = document.createElement('link');
         link.rel = 'stylesheet';
-        link.href = 'agent.css?v=20260809';
+        link.href = 'agent.css?v=20260809e';
         link.setAttribute('data-agent-css', '1');
         document.head.appendChild(link);
     }
@@ -405,10 +405,16 @@
         }
 
         if (floating) {
+            var backdrop = document.createElement('div');
+            backdrop.className = 'agent-backdrop';
+            host.appendChild(backdrop);
+            backdrop.addEventListener('click', function () {
+                host.classList.remove('agent-open');
+            });
             var launcher = document.createElement('button');
             launcher.type = 'button';
             launcher.className = 'agent-launcher';
-            launcher.innerHTML = '<span class="agent-launcher-dot"></span>AI 教练';
+            launcher.innerHTML = '<span class="agent-launcher-label">AI 教练</span>';
             host.appendChild(launcher);
             launcher.addEventListener('click', function () {
                 host.classList.toggle('agent-open');

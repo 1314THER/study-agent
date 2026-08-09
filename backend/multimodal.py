@@ -72,6 +72,14 @@ def _read_extraction_prompt() -> str:
 
 _EXTRACTION_PROMPT = _read_extraction_prompt()
 
+_ANSWER_OCR_PROMPT = (
+    "你是一个数学手写作答识别助手。请把图片中的手写数学过程和答案完整识别出来。\n"
+    "要求：\n"
+    "1. 保留数学符号与公式，可用 LaTeX 表示，例如 $x^2$、$\\frac{1}{2}$。\n"
+    "2. 中文按原文保留，明显的错别字按上下文修正。\n"
+    "3. 只输出识别出的作答文本，不要解释，不要加标题。"
+)
+
 
 def _call_qwen_vl(image_base64: Optional[str] = None, text: Optional[str] = None) -> str:
     """调用 Qwen-VL-Plus，返回原始回复文本"""""
@@ -244,3 +252,21 @@ def parse_file(file_path: str, original_filename: str = "") -> list:
 
 def get_supported_extensions() -> list:
     return [".pdf", ".jpg", ".jpeg", ".png", ".docx", ".txt"]
+
+
+def recognize_answer_image(file_path: str) -> dict:
+    """识别手写作答图片，返回 {text, confidence}"""
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext not in (".jpg", ".jpeg", ".png"):
+        raise ValueError("仅支持 JPG/PNG 图片")
+    b64 = image_to_base64(file_path)
+    raw = _call_qwen_vl(image_base64=b64, text=_ANSWER_OCR_PROMPT)
+    text = (raw or "").strip()
+    has_cjk = any("\u4e00" <= ch <= "\u9fff" for ch in text)
+    if len(text) >= 10 and has_cjk:
+        confidence = "high"
+    elif len(text) >= 2:
+        confidence = "medium"
+    else:
+        confidence = "low"
+    return {"text": text, "confidence": confidence}

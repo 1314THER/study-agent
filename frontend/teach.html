@@ -306,6 +306,8 @@ body.teach-standalone .teach-container { height: calc(100vh - 36px); }
                 <button id="skipBtn" onclick="skipStep()" disabled style="padding:6px 14px;border:1px solid #c7c7cc;border-radius:8px;font-size:13px;background:white;cursor:pointer;color:#515154;">跳过此步 →</button>
                 <button id="showAnswerBtn" onclick="showAnswer()" disabled style="padding:6px 14px;border:1px solid #ca8a04;border-radius:8px;font-size:13px;background:white;cursor:pointer;color:#ca8a04;">直接看答案</button>
                 <button id="understandBtn" onclick="understoodStep()" style="display:none;padding:6px 14px;border:1px solid #ca8a04;border-radius:8px;font-size:13px;background:#ca8a04;cursor:pointer;color:white;">看懂了 ✓</button>
+                <button id="teachOcrBtn" onclick="document.getElementById('teachOcrInput').click()" disabled style="padding:6px 14px;border:1px solid #16a34a;border-radius:8px;font-size:13px;background:white;cursor:pointer;color:#16a34a;">上传手写过程</button>
+                <input type="file" id="teachOcrInput" accept=".jpg,.jpeg,.png" style="display:none" onchange="uploadTeachHandwriting()">
                 <button onclick="cancelTeaching()" style="padding:6px 14px;border:1px solid #c7c7cc;border-radius:8px;font-size:13px;background:white;cursor:pointer;color:#991b1b;">取消</button>
               </div>
               <div class="teach-bottom-inner">
@@ -422,7 +424,7 @@ function addChatMessage(role,content,meta){
 }
 function addLoadingMessage(){var c=document.getElementById("teachChat");var d=document.createElement("div");d.className="chat-msg teacher";d.id="chatLoading";d.innerHTML='<div class="chat-avatar">\uD83D\uDC69</div><div class="chat-bubble"><span class="typing-dots"><span></span><span></span><span></span></span></div>';c.appendChild(d);scrollChat();}
 function removeLoadingMessage(){var e=document.getElementById("chatLoading");if(e)e.remove();}
-function setInputEnabled(e){var i=document.getElementById("teachChatInput");var b=document.getElementById("teachSendBtn");i.disabled=!e;b.disabled=!e;document.getElementById("skipBtn").disabled=!e;var sab=document.getElementById("showAnswerBtn");if(sab)sab.disabled=!e;if(e)i.focus();}
+function setInputEnabled(e){var i=document.getElementById("teachChatInput");var b=document.getElementById("teachSendBtn");i.disabled=!e;b.disabled=!e;document.getElementById("skipBtn").disabled=!e;var sab=document.getElementById("showAnswerBtn");if(sab)sab.disabled=!e;var ob=document.getElementById("teachOcrBtn");if(ob)ob.disabled=!e;if(e)i.focus();}
 function updateProgress(){var p=_totalSteps>0?Math.round((_currentStepIndex/_totalSteps)*100):0;var pctEl=document.getElementById("teachProgressPct");if(pctEl)pctEl.textContent=p+"%";var tEl=document.getElementById("teachProgressText");if(tEl)tEl.textContent="第 "+Math.min(_currentStepIndex+1,_totalSteps)+" / "+_totalSteps+" 步";}
 
 function toggleDetail(el){
@@ -644,6 +646,33 @@ async function sendMessage(){
     }
     saveSession();
   }catch(e){removeLoadingMessage();addChatMessage("teacher","\u7F51\u7EDC\u9519\u8BEF\uFF0C\u8BF7\u91CD\u8BD5\u3002");_isWaiting=false;setInputEnabled(true);}
+}
+
+async function uploadTeachHandwriting(){
+  var input=document.getElementById("teachOcrInput");
+  if(!input||!input.files||!input.files.length)return;
+  var ta=document.getElementById("teachChatInput");
+  if(!ta||ta.disabled){alert("\u8BF7\u5148\u8FDB\u5165\u7B54\u9898\u6B65\u9AA4\uFF0C\u518D\u4E0A\u4F20\u624B\u5199\u8FC7\u7A0B");return;}
+  var btn=document.getElementById("teachOcrBtn");
+  var oldText=btn?btn.textContent:"";
+  if(btn){btn.disabled=true;btn.textContent="\u8BC6\u522B\u4E2D\u2026";}
+  var fd=new FormData();
+  fd.append("file",input.files[0]);
+  try{
+    var r=await fetch("http://127.0.0.1:8000/ocr/answer",{method:"POST",body:fd});
+    var d=await r.json();
+    if(d.error){alert("\u8BC6\u522B\u5931\u8D25\uFF1A"+(d.detail||d.error||"\u672A\u77E5\u9519\u8BEF"));return;}
+    ta.value=d.text||"";
+    ta.style.height="auto";
+    if(typeof autoResize==="function")autoResize(ta);
+    ta.focus();
+    addChatMessage("teacher","\u5DF2\u8BC6\u522B\u624B\u5199\u5185\u5BB9\uFF0C\u53EF\u4EE5\u7F16\u8F91\u540E\u53D1\u9001\u3002");
+  }catch(e){
+    alert("\u8BC6\u522B\u5931\u8D25\uFF0C\u8BF7\u786E\u8BA4\u540E\u7AEF\u5DF2\u542F\u52A8");
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent=oldText||"\u4E0A\u4F20\u624B\u5199\u8FC7\u7A0B";}
+    input.value="";
+  }
 }
 
 function skipStep(){
@@ -868,6 +897,6 @@ document.addEventListener("DOMContentLoaded",function(){
 });
 
 </script>
-<script src="nav.js?v=20260809"></script>
+<script src="nav.js?v=20260809e"></script>
 </body>
 </html>

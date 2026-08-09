@@ -56,7 +56,18 @@ _STATS_WORDS = ("我该学什么", "今天学什么", "学情", "学习情况", 
 _TEACH_WORDS = ("教我做", "手把手", "教学", "教我", "讲解一下")
 _SOLVE_WORDS = ("解题", "帮我解", "帮我做", "解一下", "做一下", "求解", "解答")
 _GRADE_WORDS = ("改卷", "判分", "批改", "改题", "改一下")
-_SEARCH_VERBS = ("拿", "找", "搜", "出", "查", "列", "选", "组")
+_SEARCH_VERBS = ("拿", "找", "搜", "出", "查", "列", "选", "组", "练习", "复习", "巩固", "想练", "想学")
+_TYPE_ALIASES = {
+    "选择": "选择题",
+    "选择题": "选择题",
+    "多选": "多选题",
+    "多选题": "多选题",
+    "填空": "填空题",
+    "填空题": "填空题",
+    "解答": "大题",
+    "解答题": "大题",
+    "大题": "大题",
+}
 _ACTION_TYPES = ("navigate", "search_questions", "open_question", "teach", "solve", "grade", "add_to_cart", "context")
 
 
@@ -99,7 +110,8 @@ def _extract_question(message):
 
 def _detect_search(message):
     has_verb = any(v in message for v in _SEARCH_VERBS)
-    has_subject = "题" in message or "卷" in message
+    has_category = any(alias in message for alias in _CATEGORY_ALIASES)
+    has_subject = "题" in message or "卷" in message or has_category
     if not (has_verb or "错题" in message) or not has_subject:
         return None
 
@@ -155,7 +167,7 @@ def _detect_search(message):
         message = re.sub(r"错题|错因", " ", message)
 
     residual = re.sub(r"[帮我麻烦请一下看看找拿搜出查来点列选给想要]|[：:，,。.！!？?]", " ", message)
-    residual = re.sub(r"卷子|试卷|道|题|卷|套|张|份|个|组|的", " ", residual)
+    residual = re.sub(r"卷子|试卷|道|题|卷|套|张|份|个|组|的|练习|复习|巩固|相关|部分", " ", residual)
     residual = re.sub(r"\d+", " ", residual)
     residual = re.sub(r"\s+", " ", residual).strip()
     has_cjk = any("\u4e00" <= ch <= "\u9fff" for ch in residual)
@@ -232,6 +244,12 @@ def _validate_action(action):
                 safe[key] = val.strip()
             else:
                 safe[key] = ""
+        if safe.get("category"):
+            cats = [c.strip() for c in safe["category"].split(",") if c.strip()]
+            safe["category"] = ",".join(_CATEGORY_ALIASES.get(c, c) for c in cats)
+        if safe.get("question_type"):
+            types = [t.strip() for t in safe["question_type"].split(",") if t.strip()]
+            safe["question_type"] = ",".join(_TYPE_ALIASES.get(t, t) for t in types)
         try:
             limit = max(1, min(int(action.get("limit") or 5), 30))
         except (TypeError, ValueError):
@@ -265,24 +283,46 @@ def _validate_action(action):
 
 def _llm_plan(message):
     system = (
-        "你是数学学习系统的全局教练。请把用户指令转成 JSON 动作数组，动作类型只能是："
-        "navigate / search_questions / open_question / teach / solve / grade / add_to_cart / context。\n"
+        "你是数学学习系统的全局教练。请把用户一句话转成 JSON："
+        "{\"reply\":\"给学生的中文回复\",\"actions\":[...]}。\n"
+        "动作类型只能是：navigate / search_questions / open_question / teach / solve / grade / add_to_cart / context。\n"
         "navigate 的 page 只能是：home/solve/multimodal/teach/history/exam/grade/settings/mother/loop/calendar/board。\n"
-        "search_questions 返回 {\"type\":\"search_questions\",\"query\":\"关键词\",\"filters\":{\"category\":\"\",\"question_type\":\"\",\"difficulty\":\"\",\"error_type\":\"\",\"source_type\":\"\"},\"limit\":5}。\n"
+        "search_questions 返回 {\"type\":\"search_questions\",\"query\":\"关键词\","
+        "\"filters\":{\"category\":\"\",\"question_type\":\"\",\"difficulty\":\"\",\"error_type\":\"\",\"source_type\":\"\"},\"limit\":5}。\n"
         "add_to_cart 用于把刚才搜到的题加入组卷：{\"type\":\"add_to_cart\",\"source\":\"search\",\"ids\":[],\"limit\":5}。\n"
-        "只返回 JSON，不要输出任何其他文字。"
+        "行为规则：\n"
+        "1. 学生想练习/复习/巩固某个板块或知识点时，优先用 search_questions，"
+        "filters.category 填题库板块名，limit 默认 5，回复里说明帮他找了几道什么题。\n"
+        "2. 学生给出一段题面并要求解答或教学时，用 solve 或 teach，question 填题面原文。\n"
+        "3. 学生提到具体题号如“第3题”时，用 open_question。\n"
+        "4. 学生问学情或建议时，用 context。\n"
+        "5. 需要组卷时，先 search_questions，再 add_to_cart，再 navigate exam。\n"
+        "6. 学生想上传手写作答到教学或改卷时，用 navigate 到 teach 或 grade，params 里 mode 填 handwriting。\n"
+        "只返回 JSON，不要 Markdown 代码块，不要输出其他文字。"
+    )
+    ctx = agent_context()
+    user = (
+        f"用户指令：{message}\n\n"
+        f"题库板块：{'、'.join(CATEGORIES)}\n"
+        f"当前学情：个人题库 {ctx['total_questions']} 道，错题标记 {ctx['wrong_questions']} 道，"
+        f"今日待复习 {ctx['due_reviews']} 个，套路掌握 {ctx['patterns_mastered']}/{ctx['patterns_total']}。"
     )
     try:
-        content = _call_agent_llm(system, f"用户指令：{message}\n\n题库板块：{'、'.join(CATEGORIES)}")
+        content = _call_agent_llm(system, user)
         if not content:
             return None
         data = json.loads(_extract_json(content))
-        actions = data.get("actions") if isinstance(data, dict) else data
+        reply = "好的，我来安排。"
+        if isinstance(data, dict):
+            reply = str(data.get("reply") or reply).strip()
+            actions = data.get("actions")
+        else:
+            actions = data
         if not isinstance(actions, list):
             actions = [data]
         valid = [_validate_action(a) for a in actions]
         valid = [a for a in valid if a]
-        return valid or None
+        return {"reply": reply, "actions": valid} if valid else None
     except Exception:
         return None
 
@@ -411,6 +451,22 @@ def agent_act(message):
     if open_id:
         return {"reply": f"好的，打开题目 #{open_id} 的详情。", "actions": [{"type": "open_question", "id": open_id}]}
 
+    if "手写" in message:
+        if any(w in message for w in ("教学", "教我", "手把手")):
+            return {
+                "reply": "好的，打开手把手教学页，上传手写过程即可。",
+                "actions": [{"type": "navigate", "page": "teach", "params": {"mode": "handwriting"}}],
+            }
+        if any(w in message for w in ("改卷", "判分", "批改")):
+            return {
+                "reply": "好的，打开 AI 改卷页，上传手写作答即可。",
+                "actions": [{"type": "navigate", "page": "grade", "params": {"mode": "handwriting"}}],
+            }
+
+    llm_result = _llm_plan(message)
+    if llm_result and llm_result.get("actions"):
+        return llm_result
+
     if _is_teach(message):
         question = _extract_question(message)
         if question:
@@ -442,10 +498,6 @@ def agent_act(message):
 
     if _is_cart(message):
         return {"reply": "好的，打开组卷页。", "actions": [{"type": "navigate", "page": "exam", "params": {}}]}
-
-    actions = _llm_plan(message)
-    if actions:
-        return {"reply": "好的，我来安排。", "actions": actions}
 
     return {
         "reply": "我可以帮你打开页面、拿题、教学、改卷。试试：打开题库、拿3道解析几何大题、我该学什么、打开组卷。",

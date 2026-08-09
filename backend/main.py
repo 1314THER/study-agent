@@ -719,6 +719,28 @@ async def api_multimodal_parse(file: UploadFile):
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
+@app.post("/ocr/answer")
+async def api_ocr_answer(file: UploadFile):
+    """识别手写作答图片，返回识别文本与置信度。"""
+    import tempfile, os, shutil
+
+    ext = os.path.splitext(file.filename or "upload")[1].lower()
+    if ext not in (".jpg", ".jpeg", ".png"):
+        return {"error": "unsupported", "detail": "仅支持 JPG/PNG 图片", "supported": [".jpg", ".jpeg", ".png"]}
+
+    tmp_dir = tempfile.mkdtemp()
+    tmp_path = os.path.join(tmp_dir, f"answer{ext}")
+    try:
+        with open(tmp_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+        from backend.multimodal import recognize_answer_image
+        return recognize_answer_image(tmp_path)
+    except Exception as e:
+        return {"error": "ocr_failed", "detail": str(e)}
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
 
 @app.get("/steps")
 def api_steps():

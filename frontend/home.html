@@ -7,7 +7,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>学习教练台</title>
     <link rel="stylesheet" href="style.css?v=20260809home">
-    <link rel="stylesheet" href="agent.css?v=20260809">
+    <link rel="stylesheet" href="agent.css?v=20260809e">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
@@ -35,14 +35,14 @@
         <main class="main-content">
             <div class="container home-container">
                 <h1 class="home-title">学习教练台</h1>
-                <p class="subtitle" id="homeDate">今天也一起进步</p>
+                <p class="subtitle home-subtitle" id="homeDate">今天也一起进步</p>
 
                 <div class="home-stats">
-                    <div class="stat-card"><div class="stat-num" id="statQuestions">-</div><div class="stat-label">题库题目</div></div>
-                    <div class="stat-card"><div class="stat-num" id="statWrong">-</div><div class="stat-label">错题标记</div></div>
-                    <div class="stat-card"><div class="stat-num" id="statMastered">-</div><div class="stat-label">掌握套路</div></div>
-                    <div class="stat-card"><div class="stat-num" id="statDue">-</div><div class="stat-label">今日待复习</div></div>
-                    <div class="stat-card"><div class="stat-num" id="statCart">-</div><div class="stat-label">组卷篮子</div></div>
+                    <div class="stat-card" style="--accent:#0071e3"><div class="stat-num" id="statQuestions">-</div><div class="stat-label">题库题目</div></div>
+                    <div class="stat-card" style="--accent:#db2777"><div class="stat-num" id="statWrong">-</div><div class="stat-label">错题标记</div></div>
+                    <div class="stat-card" style="--accent:#16a34a"><div class="stat-num" id="statMastered">-</div><div class="stat-label">掌握套路</div></div>
+                    <div class="stat-card" style="--accent:#f59e0b"><div class="stat-num" id="statDue">-</div><div class="stat-label">今日待复习</div></div>
+                    <div class="stat-card" style="--accent:#7c3aed"><div class="stat-num" id="statCart">-</div><div class="stat-label">组卷篮子</div></div>
                 </div>
 
                 <div class="home-quick">
@@ -56,21 +56,21 @@
                     <a class="quick-btn" href="board.html"><span class="quick-icon">🗺️</span>闯关地图</a>
                 </div>
 
-                <div class="home-panels">
-                    <div class="home-panel">
-                        <div class="home-panel-title">最近错题</div>
-                        <div class="home-recent" id="homeRecent"><div class="home-recent-empty">正在加载…</div></div>
+                <section class="home-todo">
+                    <div class="home-todo-head">
+                        <span class="home-todo-title">今日待办</span>
+                        <span class="home-todo-count" id="todoCount">0</span>
+                        <a class="home-todo-more" href="calendar.html" style="margin-left:auto;font-size:12px;color:#0071e3;text-decoration:none;">查看巩固日历 →</a>
                     </div>
-                    <div class="home-panel">
-                        <div class="home-panel-title">全局教练</div>
-                        <div id="agentHome"></div>
-                    </div>
-                </div>
+                    <div class="home-todo-list" id="homeTodo"><div class="todo-empty">正在加载…</div></div>
+                </section>
+
+                <div id="agentHome"></div>
             </div>
         </main>
     </div>
-    <script src="nav.js?v=20260809home"></script>
-    <script src="agent.js?v=20260809" id="agentScript"></script>
+    <script src="nav.js?v=20260809ehome"></script>
+    <script src="agent.js?v=20260809e" id="agentScript"></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             var dateEl = document.getElementById('homeDate');
@@ -79,6 +79,7 @@
                     dateEl.textContent = new Date().toLocaleDateString('zh-CN', { month: 'long', day: 'numeric', weekday: 'long' });
                 } catch (e) {}
             }
+
             fetch('/agent/context')
                 .then(function (r) { return r.json(); })
                 .then(function (ctx) {
@@ -96,21 +97,49 @@
                     if (cartEl) {
                         try { cartEl.textContent = JSON.parse(localStorage.getItem('exam_cart') || '[]').length; } catch (e) { cartEl.textContent = 0; }
                     }
-                    var recentEl = document.getElementById('homeRecent');
-                    if (recentEl) {
-                        if (ctx.recent_wrong && ctx.recent_wrong.length && window.AgentGlobal) {
-                            recentEl.innerHTML = '';
-                            window.AgentGlobal.renderQuestions(ctx.recent_wrong, recentEl);
-                        } else {
-                            recentEl.innerHTML = '<div class="home-recent-empty">还没有带错因标记的题目</div>';
-                        }
-                    }
+                })
+                .catch(function () {});
+
+            fetch('/patterns/calendar')
+                .then(function (r) { return r.json(); })
+                .then(function (cal) {
+                    var items = (cal && cal.today_items) || [];
+                    renderTodo(items);
                 })
                 .catch(function () {
-                    var recentEl = document.getElementById('homeRecent');
-                    if (recentEl) recentEl.innerHTML = '<div class="home-recent-empty">后端未启动，暂时无法加载学情</div>';
+                    var el = document.getElementById('homeTodo');
+                    if (el) el.innerHTML = '<div class="todo-empty">后端未启动，暂时无法加载今日待办</div>';
                 });
         });
+
+        function renderTodo(items) {
+            var countEl = document.getElementById('todoCount');
+            if (countEl) countEl.textContent = items.length;
+            var el = document.getElementById('homeTodo');
+            if (!el) return;
+            if (!items.length) {
+                el.innerHTML = '<div class="todo-empty">今天没有到期待办，去巩固日历看看</div>';
+                return;
+            }
+            var html = '';
+            items.forEach(function (item) {
+                html += '<a class="todo-item" href="loop.html?v=20260807&pattern_id=' + item.pattern_id + '">' +
+                    '<span class="todo-cat">' + escapeHtml(String(item.category || '套路')) + '</span>' +
+                    '<span class="todo-name">' + escapeHtml(String(item.name || '待复习套路')) + '</span>' +
+                    '<span class="todo-due">今天</span>' +
+                    '</a>';
+            });
+            el.innerHTML = html;
+        }
+
+        function escapeHtml(s) {
+            return String(s == null ? '' : s)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
     </script>
 </body>
 </html>

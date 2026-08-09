@@ -167,6 +167,11 @@
                 <div class="grade-field">
                     <label for="answerInput">学生作答</label>
                     <textarea id="answerInput" placeholder="支持 LaTeX 语法"></textarea>
+                    <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <button type="button" id="gradeOcrBtn" onclick="document.getElementById('gradeOcrInput').click()" style="padding:6px 14px;border:1px solid #16a34a;border-radius:8px;font-size:13px;background:white;cursor:pointer;color:#16a34a;">上传手写作答</button>
+                        <input type="file" id="gradeOcrInput" accept=".jpg,.jpeg,.png" style="display:none" onchange="uploadGradeHandwriting()">
+                        <span id="gradeOcrStatus" style="font-size:12px;color:#86868b;"></span>
+                    </div>
                 </div>
                 <div class="grade-actions">
                     <button class="grade-btn" id="gradeBtn" onclick="doGrade()">开始判分</button>
@@ -197,7 +202,7 @@
         </div>
     </div>
 </div>
-<script src="nav.js?v=20260809"></script>
+<script src="nav.js?v=20260809e"></script>
 <script>
 var _teacher = localStorage.getItem('teacher') || 'liangliang';
 document.body.classList.remove('theme-liangliang', 'theme-xuefeng', 'theme-taotao', 'theme-ji');
@@ -229,6 +234,37 @@ function renderMath(el) {
 async function api(path, opts) {
     var r = await fetch('http://127.0.0.1:8000' + path, opts || {});
     return r.json();
+}
+
+async function uploadGradeHandwriting() {
+    var input = document.getElementById('gradeOcrInput');
+    if (!input || !input.files || !input.files.length) return;
+    var btn = document.getElementById('gradeOcrBtn');
+    var statusEl = document.getElementById('gradeOcrStatus');
+    var oldText = btn ? btn.textContent : '';
+    if (btn) { btn.disabled = true; btn.textContent = '识别中…'; }
+    if (statusEl) statusEl.textContent = '正在识别手写内容…';
+    var fd = new FormData();
+    fd.append('file', input.files[0]);
+    try {
+        var r = await fetch('http://127.0.0.1:8000/ocr/answer', { method: 'POST', body: fd });
+        var d = await r.json();
+        if (d.error) {
+            if (statusEl) statusEl.textContent = '识别失败：' + (d.detail || d.error || '未知错误');
+            return;
+        }
+        var ta = document.getElementById('answerInput');
+        if (ta) {
+            ta.value = d.text || '';
+            ta.focus();
+        }
+        if (statusEl) statusEl.textContent = '已识别，可修改后判分。';
+    } catch (e) {
+        if (statusEl) statusEl.textContent = '识别失败，请确认后端已启动。';
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = oldText || '上传手写作答'; }
+        input.value = '';
+    }
 }
 
 async function loadQuestions() {
