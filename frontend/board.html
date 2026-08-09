@@ -64,6 +64,22 @@
     .state-second_pass { background: #fef3c7; color: #b45309; }
     .state-third_pass { background: #d1fae5; color: #047857; }
     .state-again_wrong { background: #fee2e2; color: #b91c1c; }
+    .level-seq { font-size: 12px; color: #86868b; font-weight: 500; margin-left: 6px; }
+    .level-rename { display: none; gap: 6px; margin: 0 0 8px; }
+    .level-rename input { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid #c7c7cc; border-radius: 6px; font-size: 12px; box-sizing: border-box; }
+    .level-rename button { border: none; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; background: #2e7d32; color: white; }
+    .stage-item { border: 1px solid #e5e5e7; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; cursor: pointer; background: #fafafa; }
+    .stage-item:hover { background: #f0f7ff; }
+    .stage-head { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+    .stage-name { font-size: 13px; font-weight: 600; color: #1d1d1f; word-break: break-word; }
+    .stage-status { font-size: 11px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+    .stage-status.open { background: #e8f4ff; color: #0071e3; }
+    .stage-status.locked { background: #f3f4f6; color: #9ca3af; }
+    .stage-status.done { background: #d1fae5; color: #047857; }
+    .stage-kps { font-size: 11px; color: #86868b; line-height: 1.5; margin-top: 4px; word-break: break-word; }
+    .stage-actions { display: flex; gap: 6px; margin-top: 6px; }
+    .stage-actions button { border: none; border-radius: 6px; font-size: 11px; padding: 3px 8px; cursor: pointer; background: #f0f0f0; color: #1d1d1f; }
+    .stage-actions button:disabled { opacity: 0.5; cursor: default; }
 </style>
 </head>
 <body class="theme-liangliang">
@@ -97,6 +113,10 @@
                 <div class="board-side">
                     <h2>板块地图</h2>
                     <div id="boardList"></div>
+                    <div id="stageSection" style="margin-top:14px;display:none;">
+                        <h2>阶段</h2>
+                        <div id="stageList"></div>
+                    </div>
                     <div class="board-hint" style="margin-top:12px;">按关卡布置套路：一关里可以放多个套路，后一关需要前一关全部通关后解锁。</div>
                     <div class="board-hint">状态：已通关 / 进行中 / 未解锁 / 未挑战</div>
                 </div>
@@ -108,6 +128,7 @@
     </main>
 </div>
 <script src="nav.js?v=20260809e"></script>
+<script src="question-search.js?v=20260809"></script>
 <script>
 var boards = [];
 var currentBoard = null;
@@ -191,9 +212,11 @@ function selectBoard(id) {
     if (currentBoard) {
         currentBoard.nodes = (currentBoard.nodes || []).filter(function(n) { return n.pattern_id; });
         currentBoard.edges = currentBoard.edges || [];
+        currentBoard.levels = currentBoard.levels || [];
     }
     renderBoardList();
     renderLevels();
+    renderStageList();
 }
 
 function stateLabel(s) {
@@ -218,6 +241,24 @@ function getLevels() {
     return keys.map(function(k) {
         return {index: k, patterns: map[k].slice().sort(function(a, b) { return (a.y || 0) - (b.y || 0); })};
     });
+}
+
+function getLevelData(levelIndex) {
+    var lvs = (currentBoard && currentBoard.levels) || [];
+    for (var i = 0; i < lvs.length; i++) {
+        if (Number(lvs[i].level_index) === Number(levelIndex)) return lvs[i];
+    }
+    return null;
+}
+
+function getLevelName(levelIndex) {
+    var lv = getLevelData(levelIndex);
+    return (lv && lv.name) || '';
+}
+
+function getLevelKps(levelIndex) {
+    var lv = getLevelData(levelIndex);
+    return (lv && lv.knowledge_points) || [];
 }
 
 function levelLocked(levels, seq) {
@@ -256,8 +297,9 @@ function renderLevels() {
 }
 
 function renderLevelBand(level, seq, locked, allDone, isNext) {
-    var html = '<div class="level-band">';
-    html += '<div class="level-head"><span class="level-title">第 ' + (seq + 1) + ' 关</span>';
+    var lvName = getLevelName(level.index);
+    var html = '<div class="level-band" id="level_band_' + seq + '">';
+    html += '<div class="level-head"><span class="level-title">' + escapeHtml(lvName || ('第 ' + (seq + 1) + ' 关')) + (lvName ? '<span class="level-seq">第 ' + (seq + 1) + ' 关</span>' : '') + '</span>';
     if (isNext) {
         html += '<span class="level-status open">空关卡</span>';
     } else {
@@ -265,9 +307,16 @@ function renderLevelBand(level, seq, locked, allDone, isNext) {
         html += '<span class="level-status ' + (locked ? 'locked' : 'open') + '">' + lvLabel + '</span>';
     }
     if (!isNext && level.patterns.length) {
-        html += '<button class="board-btn danger" style="padding:5px 10px;font-size:12px;margin-left:auto;" onclick="removeLevel(' + seq + ')">删除本关</button>';
+        html += '<button class="board-btn secondary" style="padding:5px 10px;font-size:12px;margin-left:auto;" onclick="toggleLevelRename(' + level.index + ')">改名</button>';
+        html += '<button class="board-btn danger" style="padding:5px 10px;font-size:12px;" onclick="removeLevel(' + seq + ')">删除本关</button>';
     }
     html += '</div>';
+    if (!isNext && level.patterns.length) {
+        html += '<div class="level-rename" id="levelRename_' + level.index + '">';
+        html += '<input id="levelNameInput_' + level.index + '" value="' + escapeHtml(lvName) + '" placeholder="输入关卡名">';
+        html += '<button onclick="saveLevelName(' + level.index + ')">保存</button>';
+        html += '</div>';
+    }
     html += '<div class="level-patterns">';
     for (var j = 0; j < level.patterns.length; j++) {
         html += renderPatternCard(level.patterns[j], patternStatus(level.patterns[j], locked));
@@ -315,7 +364,7 @@ function renderLevelAdd(seq) {
     html += '<button class="new-pattern-toggle" onclick="toggleNewPattern(' + seq + ')">新建套路</button>';
     html += '<span class="new-pattern-box" id="newPatternBox_' + seq + '" style="display:none;">';
     html += '<input id="newPatternName_' + seq + '" type="text" placeholder="套路名">';
-    html += '<input id="newPatternQid_' + seq + '" type="number" min="1" placeholder="母题ID">';
+    html += '<span class="question-search-wrap"><input id="newPatternSearch_' + seq + '" type="text" class="question-search-input" data-target-id="newPatternQid_' + seq + '" data-results-id="newPatternResults_' + seq + '" placeholder="搜索母题..." autocomplete="off"><input type="hidden" id="newPatternQid_' + seq + '"><div id="newPatternResults_' + seq + '" class="question-search-results"></div></span>';
     html += '<button class="cancel" onclick="createPatternAndAdd(' + seq + ')">创建并添加</button>';
     html += '</span>';
     html += '</div>';
@@ -332,6 +381,82 @@ function toggleNewPattern(seq) {
     var box = document.getElementById('newPatternBox_' + seq);
     if (!box) return;
     box.style.display = box.style.display === 'inline-flex' ? 'none' : 'inline-flex';
+}
+
+function toggleLevelRename(levelIndex) {
+    var box = document.getElementById('levelRename_' + levelIndex);
+    if (!box) return;
+    box.style.display = box.style.display === 'flex' ? 'none' : 'flex';
+}
+
+async function saveLevelName(levelIndex) {
+    var input = document.getElementById('levelNameInput_' + levelIndex);
+    var name = input ? input.value.trim() : '';
+    currentBoard.levels = currentBoard.levels || [];
+    var lv = getLevelData(levelIndex);
+    if (lv) {
+        lv.name = name;
+    } else {
+        currentBoard.levels.push({level_index: levelIndex, name: name, knowledge_points: []});
+    }
+    await saveBoard();
+}
+
+function renderStageList() {
+    var el = document.getElementById('stageList');
+    var section = document.getElementById('stageSection');
+    if (!el) return;
+    if (!currentBoard) {
+        if (section) section.style.display = 'none';
+        el.innerHTML = '';
+        return;
+    }
+    var levels = getLevels();
+    if (!levels.length) {
+        if (section) section.style.display = 'none';
+        el.innerHTML = '<div class="empty-board">还没有关卡</div>';
+        return;
+    }
+    if (section) section.style.display = 'block';
+    var html = '';
+    for (var i = 0; i < levels.length; i++) {
+        var locked = levelLocked(levels, i);
+        var allDone = levels[i].patterns.length && levels[i].patterns.every(function(n) { return n.state === 'third_pass'; });
+        var status = locked ? '未解锁' : (allDone ? '已通关' : '待挑战');
+        var name = getLevelName(levels[i].index) || ('第 ' + (i + 1) + ' 关');
+        var kps = getLevelKps(levels[i].index);
+        html += '<div class="stage-item" onclick="scrollToLevel(' + i + ')">';
+        html += '<div class="stage-head"><span class="stage-name">' + escapeHtml(name) + '</span><span class="stage-status ' + (locked ? 'locked' : (allDone ? 'done' : 'open')) + '">' + escapeHtml(status) + '</span></div>';
+        if (kps.length) {
+            html += '<div class="stage-kps">' + escapeHtml(kps.join('、')) + '</div>';
+        }
+        html += '<div class="stage-actions">';
+        html += '<button onclick="event.stopPropagation();moveLevel(' + i + ',-1)"' + (i === 0 ? ' disabled' : '') + '>上移</button>';
+        html += '<button onclick="event.stopPropagation();moveLevel(' + i + ',1)"' + (i === levels.length - 1 ? ' disabled' : '') + '>下移</button>';
+        html += '</div></div>';
+    }
+    el.innerHTML = html;
+}
+
+function scrollToLevel(seq) {
+    var el = document.getElementById('level_band_' + seq);
+    if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'});
+}
+
+async function moveLevel(seq, dir) {
+    var levels = getLevels();
+    var target = seq + dir;
+    if (target < 0 || target >= levels.length) return;
+    var a = levels[seq], b = levels[target];
+    for (var i = 0; i < a.patterns.length; i++) a.patterns[i].x = b.index;
+    for (var j = 0; j < b.patterns.length; j++) b.patterns[j].x = a.index;
+    currentBoard.levels = currentBoard.levels || [];
+    var la = getLevelData(a.index), lb = getLevelData(b.index);
+    if (!la) { la = {level_index: a.index, name: '', knowledge_points: []}; currentBoard.levels.push(la); }
+    if (!lb) { lb = {level_index: b.index, name: '', knowledge_points: []}; currentBoard.levels.push(lb); }
+    var tmpName = la.name; la.name = lb.name; lb.name = tmpName;
+    var tmpKps = la.knowledge_points; la.knowledge_points = lb.knowledge_points; lb.knowledge_points = tmpKps;
+    await saveBoard();
 }
 
 async function saveRename(pid) {
@@ -387,7 +512,7 @@ async function createPatternAndAdd(seq) {
     var qidInput = document.getElementById('newPatternQid_' + seq);
     var name = nameInput ? nameInput.value.trim() : '';
     var qid = qidInput ? parseInt(qidInput.value) : 0;
-    if (!name || !qid) { setBoardStatus('请填写套路名和母题 ID', true); return; }
+    if (!name || !qid) { setBoardStatus('请填写套路名并搜索选择母题', true); return; }
     try {
         var r = await fetch('http://127.0.0.1:8000/patterns/mother', {
             method: 'POST',
@@ -426,11 +551,24 @@ async function removeLevel(seq) {
 
 function renumberLevels() {
     var levels = getLevels();
+    var oldLevels = currentBoard.levels || [];
+    var nameByIndex = {};
+    for (var k = 0; k < oldLevels.length; k++) {
+        nameByIndex[Number(oldLevels[k].level_index)] = oldLevels[k];
+    }
+    var nextLevels = [];
     for (var i = 0; i < levels.length; i++) {
         for (var j = 0; j < levels[i].patterns.length; j++) {
             levels[i].patterns[j].x = i;
         }
+        var old = nameByIndex[levels[i].index] || {};
+        nextLevels.push({
+            level_index: i,
+            name: old.name || '',
+            knowledge_points: old.knowledge_points || []
+        });
     }
+    currentBoard.levels = nextLevels;
 }
 
 async function saveBoard() {
@@ -439,7 +577,10 @@ async function saveBoard() {
         nodes: currentBoard.nodes.map(function(n) {
             return {question_id: n.question_id, x: Math.round(n.x || 0), y: Math.round(n.y || 0)};
         }),
-        edges: []
+        edges: [],
+        levels: (currentBoard.levels || []).map(function(l) {
+            return {level_index: l.level_index, name: l.name || ''};
+        })
     };
     try {
         var d = await api('/boards/' + currentBoard.id, {

@@ -28,8 +28,18 @@
     description: ''
     mother_id: 5
     variant_ids: []
+  区分集合是点集还是数集:
+    key: pat-a55870ef8f
+    description: ''
+    mother_id: 46
+    variant_ids: []
   直接提问集合的性质:
     key: pat-74a8382628
     description: ''
     mother_id: 1
+    variant_ids: []
+  集合表示二元方程组的解:
+    key: pat-ca51e7ec2d
+    description: ''
+    mother_id: 45
     variant_ids: []

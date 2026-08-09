@@ -372,6 +372,18 @@ uvicorn backend.main:app --host 127.0.0.1 --port 8000
 
 > 注：docx 解析需要 `python-docx`，若当前环境未安装可执行 `pip install python-docx`。
 
+### 日志
+
+后端运行日志统一写入项目根目录的 `logs/`，按天滚动，自动保留最近 14 天：
+
+```bash
+tail -f logs/app.log   # 实时查看当前日志
+```
+
+- `logs/app.log` 始终是当天的日志，跨天会自动生成 `app.log.2026-08-09` 这类历史文件，旧的超过 14 天后自动清理。
+- 终端输出和日志文件会同时保留；接口访问、数据库初始化、AI 调用失败等关键信息都会记录。
+- `logs/` 已加入 `.gitignore`，不会提交到代码仓库。
+
 浏览器打开：
 
 | 页面 | 地址 |

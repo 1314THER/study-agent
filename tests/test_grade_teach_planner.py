@@ -216,6 +216,17 @@ class PlannerTest(unittest.TestCase):
         }
         self.assertEqual(_topo_order(board), [1, 2, 3])
 
+    def test_topo_order_uses_board_x_when_no_edges(self):
+        board = {
+            "nodes": [
+                {"pattern_id": 3, "question_id": 13, "x": 2, "y": 0},
+                {"pattern_id": 1, "question_id": 11, "x": 0, "y": 0},
+                {"pattern_id": 2, "question_id": 12, "x": 1, "y": 0},
+            ],
+            "edges": [],
+        }
+        self.assertEqual(_topo_order(board), [1, 2, 3])
+
     def test_ordered_patterns_falls_back_to_category_order(self):
         patterns = [
             {"id": 1, "category": "数列", "name": "A", "mother_id": 11, "mastery": {"state": "never"}},

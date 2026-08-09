@@ -448,7 +448,7 @@ function updateInfoPanel(){
     if(window.renderDimBarsHtml&&s.step_difficulty&&s.step_difficulty.dimensions)h+=window.renderDimBarsHtml(s.step_difficulty.dimensions);
     if(com){
       h+="<div class=\u0022info-step-body\u0022>";
-      h+="<div style=\u0022font-size:13px;color:#515154;margin-bottom:4px;\u0022>"+escapeHtml(s.standard_writing||"")+"</div>";
+      h+="<div style=\u0022font-size:13px;color:#515154;margin-bottom:4px;white-space:pre-wrap;word-break:break-word;\u0022>"+escapeHtml(s.standard_writing||"")+"</div>";
       if(s.detailed_writing&&s.detailed_writing!==s.standard_writing){
         h+="<div class=\u0022detail-toggle\u0022 onclick=\u0022toggleDetail(this)\u0022>\u5C55\u5F00\u8BE6\u7EC6\u8FC7\u7A0B \u25B8</div>";
         h+="<div class=\u0022detail-content\u0022>"+escapeHtml(s.detailed_writing)+"</div>";

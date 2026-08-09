@@ -1,6 +1,7 @@
 """AI 仿题：基于题库原题与学生错因生成变式题，并并发跑完整解题流水线。"""
 
 import json
+import logging
 import os
 import re
 import threading
@@ -27,6 +28,8 @@ from backend.database import (
     looks_like_multi_choice_question,
     save_question,
 )
+
+logger = logging.getLogger(__name__)
 
 PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
 
@@ -172,7 +175,7 @@ def _parse_candidates(content: str, count: int) -> list:
     ]
     if not candidates:
         raise ValueError("AI 没有返回任何有效题目")
-    print(f"[Generate] 拿到 {len(candidates)} 个候选（期望 {count}）")
+    logger.info("拿到 %s 个候选（期望 %s）", len(candidates), count)
     return candidates[:count]
 
 
@@ -391,9 +394,9 @@ def generate_variants(qid: int, count: Optional[int] = None, teacher: str = "lia
         else:
             rejected.append(cand)
 
-    print(f"[Generate] 参考题 #{qid}: 候选 {len(solved)} 道，通过 {len(accepted)} 道，淘汰 {len(rejected)} 道")
+    logger.info("参考题 #%s: 候选 %s 道，通过 %s 道，淘汰 %s 道", qid, len(solved), len(accepted), len(rejected))
     for cand in rejected:
-        print(f"[Generate] 淘汰原因: {cand.get('rejected_reason')}")
+        logger.info("淘汰原因: %s", cand.get("rejected_reason"))
 
     accepted.sort(key=lambda c: c.get("fit_score", 0), reverse=True)
     return {

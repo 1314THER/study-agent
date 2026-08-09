@@ -420,7 +420,7 @@ function renderPreview() {
                         var ch = cr[ci], st = ch.steps || [];
                         for (var si = 0; si < st.length; si++) {
                             var sw = st[si].standard_writing || '';
-                            var stepHtml = '<div class="teacher-process"><div>' + sw + '</div></div>';
+                            var stepHtml = '<div class="teacher-process"><div>' + escapeHtml(sw) + '</div></div>';
                             if (st[si].knowledge_point && s.showKnowledgePoints) {
                                 stepHtml += '<div class="teacher-kp">知识点：' + escapeHtml(st[si].knowledge_point) + '</div>';
                             }

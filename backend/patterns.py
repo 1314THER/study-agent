@@ -223,6 +223,16 @@ def init_mastery_db() -> None:
                 UNIQUE(board_id, from_question_id, to_question_id)
             );
             CREATE INDEX IF NOT EXISTS idx_board_edges_board ON board_edges(board_id);
+
+            CREATE TABLE IF NOT EXISTS board_levels (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                board_id INTEGER NOT NULL REFERENCES boards(id),
+                level_index INTEGER NOT NULL,
+                name TEXT DEFAULT '',
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(board_id, level_index)
+            );
+            CREATE INDEX IF NOT EXISTS idx_board_levels_board ON board_levels(board_id);
         """)
         conn.commit()
         # 迁移：patterns 增加 max_time_seconds
@@ -1019,6 +1029,7 @@ def get_boards() -> list:
         board_rows = conn.execute("SELECT * FROM boards ORDER BY category").fetchall()
         node_rows = conn.execute("SELECT * FROM board_nodes ORDER BY id").fetchall()
         edge_rows = conn.execute("SELECT * FROM board_edges ORDER BY id").fetchall()
+        level_rows = conn.execute("SELECT board_id, level_index, name FROM board_levels ORDER BY level_index").fetchall()
         pq_rows = conn.execute(
             "SELECT pattern_id, question_id, role FROM pattern_questions"
         ).fetchall()
@@ -1034,6 +1045,9 @@ def get_boards() -> list:
     pq_by_qid = {}
     for pq in pq_rows:
         pq_by_qid.setdefault(pq["question_id"], []).append(dict(pq))
+    level_names = {}
+    for lv in level_rows:
+        level_names.setdefault(lv["board_id"], {})[lv["level_index"]] = lv["name"]
 
     boards = []
     for b in board_rows:
@@ -1057,9 +1071,28 @@ def get_boards() -> list:
                 "y": n["y"],
                 "content": (q.get("content", "") if q else "")[:120],
                 "question_type": (q.get("question_type", "") if q else ""),
+                "knowledge_points": (q.get("knowledge_points") or []) if q else [],
                 "pattern_id": pattern_id,
                 "name": pattern_info.get(pattern_id, {}).get("name", "") if pattern_id else "",
                 "state": state,
+            })
+        levels = []
+        by_level = {}
+        for n in nodes:
+            idx = int(round(n.get("x") or 0))
+            by_level.setdefault(idx, []).append(n)
+        for idx in sorted(by_level):
+            kps = []
+            seen = set()
+            for n in by_level[idx]:
+                for kp in n.get("knowledge_points") or []:
+                    if kp and kp not in seen:
+                        seen.add(kp)
+                        kps.append(kp)
+            levels.append({
+                "level_index": idx,
+                "name": (level_names.get(b["id"]) or {}).get(idx, ""),
+                "knowledge_points": kps,
             })
         edges = [
             {"from_question_id": e["from_question_id"], "to_question_id": e["to_question_id"]}
@@ -1071,12 +1104,13 @@ def get_boards() -> list:
             "name": b["name"],
             "nodes": nodes,
             "edges": edges,
+            "levels": levels,
         })
     return boards
 
 
-def save_board_layout(board_id: int, nodes: list, edges: list) -> dict:
-    """整体替换某板块地图的节点与连线。nodes 含 question_id/x/y，edges 含 from/to question_id。"""
+def save_board_layout(board_id: int, nodes: list, edges: list, levels: list = None) -> dict:
+    """整体替换某板块地图的节点、连线与关卡名。nodes 含 question_id/x/y，edges 含 from/to question_id。"""
     conn = _get_conn()
     try:
         board = conn.execute("SELECT * FROM boards WHERE id = ?", (board_id,)).fetchone()
@@ -1101,6 +1135,19 @@ def save_board_layout(board_id: int, nodes: list, edges: list) -> dict:
                 "INSERT INTO board_edges (board_id, from_question_id, to_question_id) VALUES (?, ?, ?)",
                 (board_id, fq, tq),
             )
+        if levels is not None:
+            conn.execute("DELETE FROM board_levels WHERE board_id = ?", (board_id,))
+            for lv in levels or []:
+                try:
+                    idx = int(round(float(lv.get("level_index") or 0)))
+                except (TypeError, ValueError):
+                    continue
+                name = str(lv.get("name") or "").strip()
+                if name:
+                    conn.execute(
+                        "INSERT INTO board_levels (board_id, level_index, name) VALUES (?, ?, ?)",
+                        (board_id, idx, name),
+                    )
         conn.execute("UPDATE boards SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (board_id,))
         conn.commit()
     finally:

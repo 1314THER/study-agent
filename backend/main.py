@@ -1,4 +1,5 @@
 import json
+import logging
 
 from fastapi import FastAPI, UploadFile, Query
 from fastapi.staticfiles import StaticFiles
@@ -20,6 +21,11 @@ from backend.database import (
 from backend.categories import get_all_categories
 from backend.steps import get_step_structure, get_all_question_types
 import backend.settings as runtime_settings
+from backend.logging_conf import setup_logging
+
+setup_logging()
+
+logger = logging.getLogger("backend.main")
 
 app = FastAPI(title="你好，我是张雪峰老师")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -38,6 +44,7 @@ async def no_cache_html(request, call_next):
 async def global_exception_handler(request, exc):
     from fastapi.responses import JSONResponse
     from starlette import status
+    logger.error("未处理异常 %s %s: %s", request.method, request.url.path, exc, exc_info=True)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"error": "server_error", "detail": str(exc)[:200]},
@@ -172,7 +179,7 @@ def api_step3(req: Step3Request):
             saved_qid = _save_q3(req.question, save_aj)
             final["saved_question_id"] = saved_qid
         except Exception as e:
-            print(f"[Warn] 保存到数据库失败: {e}")
+            logger.warning("保存到数据库失败: %s", e)
 
     return final
 
@@ -413,7 +420,7 @@ def api_delete_question(qid: int):
         from backend.patterns import delete_question_links
         delete_question_links(qid)
     except Exception as e:
-        print(f"[Warn] 清理母题库关联失败: {e}")
+        logger.warning("清理母题库关联失败: %s", e)
     return {"deleted": True, "id": qid, "message": "已删除"}
 
 
@@ -667,9 +674,15 @@ class BoardEdgePayload(BaseModel):
     to_question_id: int
 
 
+class BoardLevelPayload(BaseModel):
+    level_index: float = 0
+    name: str = ""
+
+
 class BoardLayoutRequest(BaseModel):
     nodes: List[BoardNodePayload] = []
     edges: List[BoardEdgePayload] = []
+    levels: List[BoardLevelPayload] = []
 
 
 @app.put("/boards/{board_id}")
@@ -681,6 +694,7 @@ def api_save_board_layout(board_id: int, req: BoardLayoutRequest):
             board_id,
             [{"question_id": n.question_id, "x": n.x, "y": n.y} for n in req.nodes],
             [{"from_question_id": e.from_question_id, "to_question_id": e.to_question_id} for e in req.edges],
+            [{"level_index": lv.level_index, "name": lv.name} for lv in req.levels],
         )
     except ValueError as e:
         from fastapi.responses import JSONResponse

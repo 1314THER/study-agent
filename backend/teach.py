@@ -1,4 +1,7 @@
-import json, os, re
+import json
+import logging
+import os
+import re
 import backend.settings as runtime_settings
 from backend.solver import (
     TEACHER_CONFIG,
@@ -8,6 +11,8 @@ from backend.solver import (
     step_verify_all,
 )
 from backend.database import find_question, save_question as db_save_question
+
+logger = logging.getLogger(__name__)
 
 PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
 
@@ -83,7 +88,7 @@ def _fs(steps, teacher=None):
                              reasoning_effort=cfg.get("verifier", {}).get("reasoning_effort"))
         rl = json.loads(_ej(c))
     except Exception as e:
-        print(f"[Warn] _fs AI call or parse failed: {e}")
+        logger.warning("_fs AI call or parse failed: %s", e)
         rl = None
     ns = []
     idx = 0
@@ -310,7 +315,7 @@ class TeachSessionManager:
             saved_qid_first = db_save_question(question, save_aj)
         except Exception as e:
             saved_qid_first = None
-            print(f"[Warn] first save_question failed: {e}")
+            logger.warning("first save_question failed: %s", e)
 
         # 预生成每步的引导语和期望回答（仅当缺失时）
         has_all_prompts = all(s.get("step_prompt") for s in steps if s.get("title") != "最终答案")
@@ -330,7 +335,7 @@ class TeachSessionManager:
                 saved_qid = db_save_question(question, save_aj)
             except Exception as e:
                 saved_qid = None
-                print(f"[Warn] _fs or second save_question failed: {e}")
+                logger.warning("_fs or second save_question failed: %s", e)
         session_id = str(_uuid.uuid4())
         self._sessions[session_id] = {
             "session_id": session_id,

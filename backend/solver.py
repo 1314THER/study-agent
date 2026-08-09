@@ -8,13 +8,16 @@ Formatter（1 次调用）：全局校验 + 聚合入库
 
 import os
 import json
-import re, sys
+import re
+import logging
 import httpx
 from typing import Dict, Any, List, Optional
 
 from backend import difficulty as diff
 import backend.settings as runtime_settings
 from backend.categories import CATEGORIES
+
+logger = logging.getLogger(__name__)
 
 # ---------- 目录 ----------
 PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
@@ -118,8 +121,8 @@ _VERIFIER_OUTPUT_TEMPLATE = """## 输出格式（必须严格遵守，否则无�
 
 步骤1：<步骤名>
 二级步骤：<二级步骤名，没有就写 null>
-标准过程：<标准/简略过程>
-详细过程：<详细过程>
+标准过程：<标准/简略过程，必须含所有得分点与关键公式，可分行写；纯计算可简化>
+详细过程：<详细过程，保留原始换行>
 知识点：<知识点1>、<知识点2>
 
 步骤2：<步骤名>
@@ -128,7 +131,7 @@ _VERIFIER_OUTPUT_TEMPLATE = """## 输出格式（必须严格遵守，否则无�
 格式要求：
 1. 块与块之间用 `### 块N` 分隔，步骤与步骤之间用 `---` 分隔。
 2. `知识点：` 只能放在各自字段里，不得写进标准过程或详细过程。
-3. 不要修改或删除任何推导步骤；步骤名、标准过程、详细过程都必须完整。
+3. 不要修改或删除任何推导步骤；步骤名、标准过程、详细过程都必须完整。标准过程里每个得分点或关键公式单独占一行。
 4. 多选题的原题开头必须带（多选），块最终答案直接写 `选 AB` 这种紧凑格式。"""
 
 
@@ -678,13 +681,13 @@ def _validate_step_names(verifier_cat: str, steps: list) -> list:
         step_level1 = step.get("step_level1")
         # title（一级步骤名）校验：对 steps.yaml keys
         if title and valid_l1 and title not in valid_l1:
-            print(f"[Warn] 步骤 {step.get('step_number')}: 一级步骤名 '{title}' 不在预定义列表中，已重置", file=sys.stderr)
+            logger.warning("步骤 %s: 一级步骤名 '%s' 不在预定义列表中，已重置", step.get("step_number"), title)
             step["title"] = ""
         # step_level1（二级步骤名）校验：去掉括号后缀后对 steps.yaml values
         if step_level1 and valid_l2:
             cleaned = re.sub(r'\s*[（(][^）)]*[）)]\s*$', '', step_level1).strip()
             if cleaned not in valid_l2:
-                print(f"[Warn] 步骤 {step.get('step_number')}: 二级步骤名 '{step_level1}'（清理后 '{cleaned}'）不在预定义列表中，已重置", file=sys.stderr)
+                logger.warning("步骤 %s: 二级步骤名 '%s'（清理后 '%s'）不在预定义列表中，已重置", step.get("step_number"), step_level1, cleaned)
                 step["step_level1"] = None
     return steps
 
@@ -721,7 +724,7 @@ def step_verify_all(content: str, question: str, category: str = None, question_
         meta = _parse_chunk_meta(pc["content"])
         steps = _parse_steps(pc["content"], allow_option_steps=(verifier_cat == "多选题"))
         if not steps:
-            print(f"[Verifier] {verifier_cat} 未解析到步骤，输出片段: {pc['content'][:300]}", file=sys.stderr)
+            logger.warning("%s 未解析到步骤，输出片段: %s", verifier_cat, pc["content"][:300])
             steps = [{
                 "step_number": 1,
                 "title": (meta.get("chunk_type") or "解答")[:30],
@@ -763,7 +766,7 @@ def step_verify_all(content: str, question: str, category: str = None, question_
         for step in steps:
             missing = [k for k in ("title", "standard_writing", "detailed_writing") if not str(step.get(k) or "").strip()]
             if missing:
-                print(f"[Verifier] 步骤 {step.get('step_number')} 缺字段 {missing}: {json.dumps(step, ensure_ascii=False)[:300]}", file=sys.stderr)
+                logger.warning("步骤 %s 缺字段 %s: %s", step.get("step_number"), missing, json.dumps(step, ensure_ascii=False)[:300])
     # 知识点过滤：只保留 CATEGORIES 中存在的子板块名
     _all_valid_kps = set()
     for subs in CATEGORIES.values():
@@ -905,7 +908,7 @@ def step_final_check(question: str, chunk_results: list, chunks_raw: list, token
                 question_type=question_type, teacher=teacher,
             )
         except Exception as e:
-            print(f"[Formatter] Verifier 重跑失败: {str(e)[:200]}", file=sys.stderr)
+            logger.warning("Verifier 重跑失败: %s", str(e)[:200])
             retried = None
         if retried and not retried.get("error"):
             result, reason2 = _call_formatter(question, retried["chunk_results"], token_total, teacher)

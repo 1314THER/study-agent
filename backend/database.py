@@ -5,6 +5,7 @@
 """
 
 import json
+import logging
 import os
 import random
 import re
@@ -12,6 +13,8 @@ import sqlite3
 from backend import difficulty as diff
 from backend.categories import CATEGORIES
 from backend.steps import _load_steps
+
+logger = logging.getLogger(__name__)
 
 # 结构化字段的合法值（写死，不依赖模型输出）
 _VALID_CATEGORIES = set(CATEGORIES.keys())
@@ -206,7 +209,7 @@ def _backfill_legacy_source_meta(conn):
         changed += 1
     if changed:
         conn.commit()
-        print(f"[Database] 已为 {changed} 道旧题补写 模拟题·test·随机题号")
+        logger.info("已为 %s 道旧题补写 模拟题·test·随机题号", changed)
 
 
 def _sync_question_to_source_list(conn, question_id, source_type):
@@ -240,7 +243,7 @@ def _backfill_source_lists(conn):
             changed += 1
     if changed:
         conn.commit()
-        print(f"[Database] 已为 {changed} 道题补进来源对应题单")
+        logger.info("已为 %s 道题补进来源对应题单", changed)
 
 
 def _backfill_choice_questions(conn):
@@ -315,7 +318,7 @@ def _backfill_choice_questions(conn):
             changed += 1
     if changed:
         conn.commit()
-        print(f"[Database] 已修正 {changed} 道题的题型/选项/知识点")
+        logger.info("已修正 %s 道题的题型/选项/知识点", changed)
 
 
 def _backfill_multi_choice_marker(conn):
@@ -335,7 +338,7 @@ def _backfill_multi_choice_marker(conn):
             changed += 1
     if changed:
         conn.commit()
-        print(f"[Database] 已为 {changed} 道多选题补上（多选）标记")
+        logger.info("已为 %s 道多选题补上（多选）标记", changed)
 
 
 def init_db():
@@ -428,7 +431,7 @@ def init_db():
         try:
             conn.execute(f"ALTER TABLE practice_records ADD COLUMN {col} {decl}")
             conn.commit()
-            print(f"[Database] practice_records 新增 {col} 列")
+            logger.info("practice_records 新增 %s 列", col)
         except sqlite3.OperationalError:
             pass
     _ensure_system_lists(conn)
@@ -445,12 +448,12 @@ def init_db():
                 (all_id,)
             )
             conn.commit()
-            print(f"[Database] 已回填 {missing} 道题到「全部」题单")
+            logger.info("已回填 %s 道题到「全部」题单", missing)
     # 迁移：新增 question_type 列（首次创建时一并添加，已存在则跳过）
     try:
         conn.execute("ALTER TABLE questions ADD COLUMN question_type TEXT")
         conn.commit()
-        print("[Database] 新增 question_type 列")
+        logger.info("新增 question_type 列")
     except sqlite3.OperationalError:
         pass  # 列已存在
     # 迁移：新增 source_type / source_meta 列
@@ -458,48 +461,48 @@ def init_db():
         try:
             conn.execute(f"ALTER TABLE questions ADD COLUMN {col} TEXT")
             conn.commit()
-            print(f"[Database] 新增 {col} 列")
+            logger.info("新增 %s 列", col)
         except sqlite3.OperationalError:
             pass
     # 回填：老题没有二级标签时补成 模拟题·test·第 n 题（n 随机 1-19）
     try:
         _backfill_legacy_source_meta(conn)
     except sqlite3.OperationalError as e:
-        print(f"[Database] 来源二级标签回填跳过: {e}")
+        logger.warning("来源二级标签回填跳过: %s", e)
     # 回填：老题按来源标签补进高考题/母题系统题单
     try:
         _backfill_source_lists(conn)
     except sqlite3.OperationalError as e:
-        print(f"[Database] 来源题单回填跳过: {e}")
+        logger.warning("来源题单回填跳过: %s", e)
     # 回填：选项齐全却按大题保存的题改为选择题
     try:
         _backfill_choice_questions(conn)
     except sqlite3.OperationalError as e:
-        print(f"[Database] 选择题题型回填跳过: {e}")
+        logger.warning("选择题题型回填跳过: %s", e)
     # 回填：多选题题干开头统一加（多选）
     try:
         _backfill_multi_choice_marker(conn)
     except sqlite3.OperationalError as e:
-        print(f"[Database] 多选题标记回填跳过: {e}")
+        logger.warning("多选题标记回填跳过: %s", e)
     # 迁移：新增时间追踪列
     for col in ("last_viewed_at", "last_edited_at", "last_exam_at"):
         try:
             conn.execute(f"ALTER TABLE questions ADD COLUMN {col} TIMESTAMP")
             conn.commit()
-            print(f"[Database] 新增 {col} 列")
+            logger.info("新增 %s 列", col)
         except sqlite3.OperationalError:
             pass
         try:
             conn.execute(f"ALTER TABLE questions ADD COLUMN {col} TEXT")
             conn.commit()
-            print(f"[Database] 新增 {col} 列")
+            logger.info("新增 %s 列", col)
         except sqlite3.OperationalError:
             pass
     # 迁移：新增 steps_structure 列
     try:
         conn.execute("ALTER TABLE questions ADD COLUMN steps_structure TEXT")
         conn.commit()
-        print("[Database] 新增 steps_structure 列")
+        logger.info("新增 steps_structure 列")
     except sqlite3.OperationalError:
         pass
     # 回填：把旧版难度维度字段名统一成新版，缺失时从 answer_json 补充
@@ -533,17 +536,17 @@ def init_db():
                     )
         conn.commit()
     except sqlite3.OperationalError as e:
-        print(f"[Database] 难度维度回填跳过: {e}")
+        logger.warning("难度维度回填跳过: %s", e)
     # 迁移：新建题单表（兼容已有库）
     try:
         conn.execute("CREATE TABLE IF NOT EXISTS question_lists (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, list_type TEXT NOT NULL DEFAULT 'user', created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)")
         conn.execute("CREATE TABLE IF NOT EXISTS question_list_members (id INTEGER PRIMARY KEY AUTOINCREMENT, list_id INTEGER NOT NULL REFERENCES question_lists(id), question_id INTEGER NOT NULL REFERENCES questions(id), is_removed INTEGER DEFAULT 0, created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, UNIQUE(list_id, question_id))")
-        print("[Database] 题单表已就绪")
+        logger.info("题单表已就绪")
     except sqlite3.OperationalError as e:
-        print(f"[Database] 题单表初始化跳过: {e}")
+        logger.warning("题单表初始化跳过: %s", e)
     _ensure_system_lists(conn)
     conn.close()
-    print("[Database] 数据库初始化完成")
+    logger.info("数据库初始化完成")
 
 
 
@@ -925,9 +928,9 @@ def save_question(question_text: str, answer_dict: dict):
         except Exception:
             pass
         _all_conn.close()
-    print(f"[Database] 题目已保存（ID={question_id}, {category_level1} → {category_level2}，难度 {difficulty_level}）")
+    logger.info("题目已保存（ID=%s, %s → %s，难度 %s）", question_id, category_level1, category_level2, difficulty_level)
     if raw_kps != clean_kps:
-        print(f"  [Sanitize] 知识点被清理: {raw_kps} → {clean_kps}")
+        logger.info("知识点被清理: %s → %s", raw_kps, clean_kps)
     return question_id
 
 

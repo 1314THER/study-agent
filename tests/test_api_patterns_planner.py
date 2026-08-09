@@ -174,6 +174,18 @@ class BoardApiTest(ApiTestCase):
             resp = self.client.put("/boards/1", json={"nodes": [], "edges": []})
         self.assertEqual(resp.status_code, 400)
 
+    def test_save_board_layout_with_level_names(self):
+        fixture = {"saved": 1}
+        with patch("backend.patterns.save_board_layout", return_value=fixture) as mock:
+            resp = self.client.put("/boards/1", json={
+                "nodes": [{"question_id": 1, "x": 0, "y": 0}],
+                "edges": [],
+                "levels": [{"level_index": 0, "name": "基础关"}],
+            })
+        self.assertEqual(resp.status_code, 200)
+        levels = mock.call_args[0][3]
+        self.assertEqual(levels, [{"level_index": 0.0, "name": "基础关"}])
+
 
 class PlannerApiTest(ApiTestCase):
     def test_board_order_get_and_put(self):

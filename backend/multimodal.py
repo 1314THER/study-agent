@@ -7,10 +7,13 @@ import os
 import re
 import json
 import base64
+import logging
 import httpx
 from typing import Optional
 
 import backend.settings as runtime_settings
+
+logger = logging.getLogger(__name__)
 
 # ---------- API ----------
 DASHSCOPE_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
@@ -151,7 +154,7 @@ def _parse_questions(raw: str) -> list:
         return items
     except (json.JSONDecodeError, ValueError) as e:
         # 尝试逐行解析兜底
-        print(f"[Warn] JSON 解析失败，尝试兜底解析: {e}")
+        logger.warning("JSON 解析失败，尝试兜底解析: %s", e)
         return _fallback_parse(raw)
 
 

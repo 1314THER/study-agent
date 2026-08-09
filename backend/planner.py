@@ -98,7 +98,10 @@ def _topo_order(board):
     if not nodes:
         return []
     q_to_p = {n["question_id"]: n["pattern_id"] for n in nodes}
-    node_pos = {n["pattern_id"]: i for i, n in enumerate(nodes)}
+    node_pos = {
+        n["pattern_id"]: (float(n.get("x") or 0), float(n.get("y") or 0), i)
+        for i, n in enumerate(nodes)
+    }
     adj = {}
     indeg = {}
     for n in nodes:
@@ -111,7 +114,7 @@ def _topo_order(board):
             adj[f].append(t)
             indeg[t] = indeg.get(t, 0) + 1
     queue = [p for p, d in indeg.items() if d == 0]
-    queue.sort(key=lambda p: node_pos.get(p, 0))
+    queue.sort(key=lambda p: node_pos.get(p, (0, 0, 0)))
     result = []
     while queue:
         p = queue.pop(0)
@@ -120,9 +123,13 @@ def _topo_order(board):
             indeg[nb] -= 1
             if indeg[nb] == 0:
                 queue.append(nb)
-                queue.sort(key=lambda x: node_pos.get(x, 0))
+                queue.sort(key=lambda x: node_pos.get(x, (0, 0, 0)))
     if len(result) != len(indeg):
-        for n in nodes:
+        remaining = sorted(
+            nodes,
+            key=lambda n: node_pos.get(n["pattern_id"], (0, 0, 0)),
+        )
+        for n in remaining:
             if n["pattern_id"] not in result:
                 result.append(n["pattern_id"])
     return result

@@ -100,6 +100,7 @@
     </main>
 </div>
 <script src="nav.js?v=20260809e"></script>
+<script src="question-search.js?v=20260809"></script>
 <script>
 var _patterns = [];
 var _categories = [];
@@ -241,7 +242,7 @@ function selectPattern(id) {
     html += '<div class="form-row"><div><label>单题限时（秒）</label><input id="patternMaxTime" type="number" min="10" value="' + (p.max_time_seconds || 120) + '"></div><div></div></div>';
     html += '<div class="form-row one"><label>套路说明</label><textarea id="patternDesc">' + escapeHtml(p.description || '') + '</textarea></div>';
     html += '<div class="form-row one"><label>已关联题目</label><div id="questionLinks"></div>';
-    html += '<div class="add-question-row"><input id="newQuestionId" type="number" placeholder="题目ID" min="1">';
+    html += '<div class="add-question-row"><div class="question-search-wrap" style="flex:1;"><input id="newQuestionIdSearch" type="text" class="question-search-input" data-target-id="newQuestionId" data-results-id="newQuestionIdResults" placeholder="搜索并选择题目..." autocomplete="off"><input type="hidden" id="newQuestionId"><div id="newQuestionIdResults" class="question-search-results"></div></div>';
     html += '<select id="newQuestionRole"><option value="mother">母题</option><option value="variant1">变式1</option><option value="variant2">变式2</option><option value="variant3">变式3</option></select>';
     html += '<button class="mother-btn" onclick="linkQuestion(' + p.id + ')">挂载</button></div></div>';
     html += '<div class="form-actions">';
@@ -273,7 +274,7 @@ function newPattern() {
     _selectedPatternId = null;
     renderTree();
     var form = document.getElementById('motherEditForm');
-    var html = '<div class="form-row"><div><label>题目 ID（母题）</label><input id="newMotherQuestionId" type="number" min="1" placeholder="题库中的题目ID"></div>';
+    var html = '<div class="form-row"><div><label>母题（搜索并选择）</label><div class="question-search-wrap"><input id="newMotherQuestionSearch" type="text" class="question-search-input" data-target-id="newMotherQuestionId" data-results-id="newMotherQuestionResults" placeholder="输入题干关键词搜索..." autocomplete="off"><input type="hidden" id="newMotherQuestionId"><div id="newMotherQuestionResults" class="question-search-results"></div></div></div>';
     html += '<div><label>稳定编号 key</label><input id="patternKey" placeholder="留空自动生成"></div></div>';
     html += '<div class="form-row"><div><label>所属板块</label><select id="patternCategory"></select></div>';
     html += '<div><label>套路名</label><input id="patternName" placeholder="如：直线与圆锥曲线联立"></div></div>';
@@ -305,7 +306,7 @@ async function savePattern() {
 
 async function createPattern() {
     var qid = parseInt(document.getElementById('newMotherQuestionId').value);
-    if (!qid) { setStatus('请填写母题题目 ID', true); return; }
+    if (!qid) { setStatus('请搜索并选择母题题目', true); return; }
     var payload = {
         question_id: qid,
         category: document.getElementById('patternCategory').value,
@@ -327,7 +328,7 @@ async function createPattern() {
 async function linkQuestion(patternId) {
     var qid = parseInt(document.getElementById('newQuestionId').value);
     var role = document.getElementById('newQuestionRole').value;
-    if (!qid) { setStatus('请填写题目 ID', true); return; }
+    if (!qid) { setStatus('请搜索并选择题目', true); return; }
     try {
         var r = await fetch('http://127.0.0.1:8000/patterns/' + patternId + '/questions', {method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({question_id: qid, role: role})});
         var d = await r.json();
