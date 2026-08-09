@@ -1,8 +1,8 @@
 # 成为数学高手 — AI 学习伴侣
 
-> 当前版本：v0.9.1（2026-08-09）
+> 当前版本：v0.9.6（2026-08-09）
 
-面向高中生的 AI 数学学习系统。基于 DeepSeek V4 多老师路由与 Solver → Verifier → Formatter 三段流水线，同时提供多模态切题、手把手教学、AI 仿题、个人题库、题单、错题与组卷系统。完整开发路线见 [ROADMAP.md](ROADMAP.md)。
+面向高中生的 AI 数学学习系统。基于 DeepSeek V4 多老师路由与 Solver → Verifier → Formatter 三段流水线，同时提供首页教练台、全局智能体、手写作答识别、一键规划、多模态切题、手把手教学、AI 仿题、个人题库、题单、错题与组卷系统。完整开发路线见 [ROADMAP.md](ROADMAP.md)。
 
 ---
 
@@ -40,15 +40,20 @@
 
 | 页面 | 文件 | 说明 |
 |------|------|------|
+| 首页教练台 | `frontend/home.html` | 学情卡片 + 今日待办 + 全局教练全屏对话 |
 | 单题解答 | `frontend/index.html` | 文本搜题 + 分步展示 + 保存到个人题库 |
 | 多模态解答 | `frontend/multimodal.html` | 上传文件切题 + 批量解题 + 多会话管理 |
 | 老师手把手教你做题 | `frontend/teach.html` | 对话式分步教学 + 跳过/看答案 + 错因标记 |
 | 个人题库 | `frontend/history.html` | 题目列表 + 详情（含雷达图）+ 题单 + 购物车 |
 | 组卷 | `frontend/exam.html` | 从购物车组卷 + 排序 + 双模式 + 导出 PDF |
+| 母题看板 | `frontend/mother.html` | 母题管理 + 板块顺序编辑入口（规划中 UI） |
+| 套路循环 | `frontend/loop.html` | 母题/变式循环练习 + 一键规划入口 |
+| 巩固日历 | `frontend/calendar.html` | 套路巩固排期 + 一键规划入口 |
+| 闯关地图 | `frontend/board.html` | 板块内题目关卡与连线 |
 | AI 改卷 | `frontend/grade.html` | 选择题/填空题直接判答案，大题按标准步骤 AI 判分，记录作答来源与防欺骗信号 |
 | 系统设置 | `frontend/settings.html` | 难度评分公式、老师模型、API 密钥与服务商切换、性能与并发限制 |
 
-所有页面共享 `frontend/style.css`、`frontend/radar.js`、`frontend/dimchart.js`、`frontend/nav.js`，左侧导航支持展开/收起和移动端抽屉。
+所有页面共享 `frontend/style.css`、`frontend/radar.js`、`frontend/dimchart.js`、`frontend/nav.js`、`frontend/agent.js`、`frontend/agent.css`，左侧导航支持展开/收起和移动端抽屉；其他页面右下侧提供可折叠的全局教练抽屉，日历与套路循环页额外加载 `frontend/planner.js`。
 
 ### 主要特性
 
@@ -69,16 +74,21 @@
 - **组卷**：购物车选题目 → 排序 → 学生版/教师版预览 → 导出 PDF
 - **步骤五维柱状图**：每一步的难度标签旁显示五维横向柱状图，颜色随分值 0/1/2/3 变化
 - **系统设置**：运行时调整难度评分权重、总分封顶与等级阈值，四个老师的三阶段模型与思考强度，DeepSeek / Qwen / 豆包 API 密钥与地址；CC Switch 风格弹窗一键切换服务商，保存即热生效
+- **首页教练台**：学情卡片、今日待办（来自巩固日历）、快捷入口与全屏教练对话
+- **全局智能体**：规则识别 + DeepSeek 决策，动作白名单（打开页面 / 搜题 / 教学 / 改卷 / 组卷 / 学情），每次请求注入当前学情快照
+- **手写作答识别**：`/ocr/answer` 接口，教学页与改卷页可上传手写图片，识别结果回填作答框后继续原流程
+- **一键规划**：日历页与套路循环页可打开规划弹窗，按“每天 1/2/3 个”等模板把未掌握套路写入巩固日历；排序支持板块优先级与板块内关卡顺序
 
 ---
 
 ## 路线图
 
-当前处于 v0.9.1（AI 仿题、难度评分收敛、系统设置与服务商切换已上线）。接下来的产品路线以两套学习系统为主线：母题计划（覆盖高考 130+ 分套路题）与个人错题本；以 AI 改题/改卷和 OCR 作答识别为两大能力，最终由全局智能体总控。
+当前处于 v0.9.6（首页教练台、全局智能体雏形、手写作答识别、一键规划已上线）。接下来的产品路线以两套学习系统为主线：母题计划（覆盖高考 130+ 分套路题）与个人错题本；以 AI 改题/改卷和 OCR 作答识别为两大能力，最终由全局智能体总控。
 
 | 版本 | 主题 | 重点 |
 |------|------|------|
 | v0.9 | 母题矩阵与种子库 | 内容地基 |
+| v0.9.6 | 教练台 · 智能体雏形 · 手写作答识别 · 一键规划 | 学习入口与调度 |
 | v0.10 | AI 改题 | 【重点】防欺骗第一道闸，可立即开工 |
 | v0.11 | OCR 作答识别 | 并行线，可与 v0.10 同时推进 |
 | v0.12 | 母题掌握闭环 | 核心闭环 |
@@ -162,6 +172,9 @@ Formatter 校验失败时自动重跑一次 Verifier 再试；仍失败则返回
 study-agent/
 ├── backend/
 │   ├── main.py              # FastAPI 服务器（路由 + 静态文件服务）
+│   ├── agent.py             # 全局智能体：指令 → 结构化动作（规则 + DeepSeek 决策）
+│   ├── planner.py           # 一键规划：板块顺序 + 板内顺序 → 巩固日历
+│   ├── board_order.yaml     # 板块顺序配置（含板内 question_id 精确顺序）
 │   ├── settings.py          # 运行时设置：评分公式 / 老师模型 / API 密钥（settings.json 热加载）
 │   ├── solver.py            # TEACHER_CONFIG + 三阶流水线 + 解析/清洗/校验
 │   ├── teach.py             # 手把手教学：步骤生成、逐题检查、对话式会话
@@ -188,11 +201,19 @@ study-agent/
 │   ├── radar.js             # 公共雷达图
 │   ├── dimchart.js          # 公共步骤五维柱状图
 │   ├── nav.js               # 公共导航（展开/收起/移动端抽屉）
+│   ├── agent.js             # 全局教练：全屏对话 / 右侧可折叠抽屉 + 动作执行器
+│   ├── agent.css            # 全局教练样式
+│   ├── planner.js           # 一键规划弹窗（模板 / 日期 / 板块 / 预览 / 写入）
+│   ├── home.html            # 首页教练台
 │   ├── index.html           # 单题解答
 │   ├── multimodal.html      # 多模态解答
 │   ├── teach.html           # 手把手教学
 │   ├── history.html         # 个人题库 + 题单
 │   ├── exam.html            # 组卷 + PDF 导出
+│   ├── mother.html          # 母题看板
+│   ├── loop.html            # 套路循环
+│   ├── calendar.html        # 巩固日历
+│   ├── board.html           # 闯关地图
 │   └── settings.html        # 系统设置：评分公式 / 老师模型 / API 密钥 / 服务商切换
 ├── study_agent.db           # SQLite（自动创建）
 ├── requirements.txt
@@ -233,6 +254,13 @@ study-agent/
 | PUT | `/settings` | 保存系统设置：评分公式、老师模型、API 地址与密钥 |
 | POST | `/settings/reset` | 恢复默认设置 |
 | POST | `/settings/test` | 测试 DeepSeek / DashScope 连接 |
+| POST | `/agent/act` | 全局教练：自然语言指令 → 结构化动作 |
+| GET | `/agent/context` | 首页与教练共享的学情快照 |
+| POST | `/ocr/answer` | 手写作答图片识别，返回文本与置信度 |
+| POST | `/planner/plan` | 一键规划：生成未掌握套路的日历安排预览 |
+| POST | `/planner/apply` | 一键规划：生成并写入巩固日历 |
+| GET | `/planner/board-order` | 读取板块顺序配置（含板内关卡顺序） |
+| PUT | `/planner/board-order` | 保存板块顺序配置 |
 | POST | `/questions/ai-search` | AI 语义搜索（预留，当前返回空列表） |
 | POST | `/exam/ai-assemble` | AI 一键组卷（预留，当前返回开发中提示） |
 | POST | `/multimodal/parse` | 上传文件并切题为题目列表 |
@@ -371,6 +399,8 @@ uvicorn backend.main:app --host 127.0.0.1 --port 8000
 | V0.7.1-3 | 共享导航、移动端适配、保存弹窗、来源标签完善 | ✅ 完成 |
 | V0.8 | AI 仿题：变式生成 + 完整流水线校验 + 自动入库 | ✅ 完成 |
 | V0.8.1 | AI 仿题异步任务、进度轮询、匹配度筛选 | ✅ 完成 |
+| V0.9.4-5 | 首页教练台、全局智能体雏形、手写作答识别、右侧教练抽屉 | ✅ 完成 |
+| V0.9.6 | 一键规划器：模板 + 板块/关卡顺序 + 写入巩固日历 | ✅ 完成 |
 | V0.9+ | 母题矩阵、AI 改题、OCR 作答识别、掌握闭环、记忆复习、错题本、学情、试卷改卷、全局智能体 | 📋 见 [ROADMAP.md](ROADMAP.md) |
 | V2.0 | 教师端与学校端：母题作业、学情调整、AI 出卷、笔触时间戳 OCR 改卷、开放配置 | 📋 探讨中 |
 | V3.0 | 教研端：母题/YAML 治理、教学效果与教师 KPI、高考教材变更响应 | 📋 探讨中 |
