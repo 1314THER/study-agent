@@ -93,6 +93,21 @@ class QuestionApiTest(ApiTestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(len(resp.json()), 1)
 
+    def test_search_knowledge_and_step_filters(self):
+        qid = self.seed_question()
+
+        resp = self.client.get("/questions/search", params={"knowledge_points": "集合与元素"})
+        self.assertEqual(len(resp.json()), 1)
+
+        resp = self.client.get("/questions/search", params={"knowledge_points": "集合与元素,集合间的基本关系"})
+        self.assertEqual(len(resp.json()), 0)
+
+        resp = self.client.get("/questions/search", params={"step_level1": "判断元素归属"})
+        self.assertEqual(len(resp.json()), 1)
+
+        resp = self.client.get("/questions/search", params={"step_level1": "判断元素归属,不存在的步骤"})
+        self.assertEqual(len(resp.json()), 0)
+
     def test_get_and_delete_question(self):
         qid = self.seed_question()
         resp = self.client.get(f"/questions/{qid}")

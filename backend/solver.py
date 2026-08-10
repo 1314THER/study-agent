@@ -32,7 +32,7 @@ STEP_HEADER_PATTERN = re.compile(r'^(?:#{1,6}\s*|\*\*\s*)?步骤\s*([一二三�
 OPTION_STEP_PATTERN = re.compile(r'^(?:#{1,6}\s*|\*\*\s*)([A-H])\s*(?:选项|、|\.|．)?\s*(?:[:：]\s*(.*?))?\s*\**$')
 CN_STEP_HEADER_PATTERN = re.compile(r'^(?:#{1,6}\s*|\*\*\s*)?第\s*([一二三四五六七八九十]+|\d+)\s*步\s*[：:]\s*(.*?)\s*\**$')
 _CN_NUM = {"一": 1, "二": 2, "三": 3, "四": 4, "五": 5, "六": 6, "七": 7, "八": 8, "九": 9, "十": 10}
-FINAL_ANSWER_LINE_PATTERN = re.compile(r'^(?:最终答案|正确答案|答案)\s*[：:]\s*(.+)$')
+FINAL_ANSWER_LINE_PATTERN = re.compile(r'^(?:最终答案|正确答案|答案)\s*[：:]\s*(.*)$')
 TOTAL_DIFF_PATTERN = re.compile(r'总分\s*[：:]\s*\$?(\d+)\$?\s*分?\s*[→\-]?\s*(容易|中等|困难|极难)')
 KP_LINE_PATTERN = re.compile(r'^(?:块知识点|知识点)\s*[：:]\s*(.+)$')
 CHUNK_PATTERN = re.compile(r'###\s*块(\d+)\s*')
@@ -49,7 +49,7 @@ IS_MISTAKE_PATTERN = re.compile(r'^是否错题[：:]\s*(.+)$')
 CAN_SOLVE_PATTERN = re.compile(r'^是否能做出来[：:]\s*(.+)$')
 STATUS_PLAIN_PATTERN = re.compile(r'^状态[：:]\s*(.+)$')
 BLOCK_DIFFICULTY_PATTERN = re.compile(r'^块难度[：:]\s*(.+)$')
-BLOCK_FINAL_ANSWER_PATTERN = re.compile(r'^块最终答案[：:]\s*(.+)$')
+BLOCK_FINAL_ANSWER_PATTERN = re.compile(r'^块最终答案[：:]\s*(.*)$')
 BLOCK_KP_PATTERN = re.compile(r'^块知识点[：:]\s*(.+)$')
 STEP_DIFFICULTY_PATTERN = re.compile(r'^步骤难度[：:]\s*(.+)$')
 STEP_LEVEL1_PATTERN = re.compile(r'^二级步骤[：:]\s*(.+)$')
@@ -294,11 +294,26 @@ def _parse_chunk_meta(text: str) -> dict:
             "difficulty": None, "final_answer": "", "knowledge_points": []}
     diff_rows = {}
     in_diff_table = False
+    final_capture = False
+    final_lines = []
+    final_stop_patterns = (
+        BLOCK_TYPE_PATTERN, BLOCK_CATEGORY_PATTERN, BLOCK_DIFFICULTY_PATTERN,
+        BLOCK_KP_PATTERN, CHUNK_META_LINE_PATTERN, STEP_HEADER_PATTERN,
+        OPTION_STEP_PATTERN, CN_STEP_HEADER_PATTERN, STEP_LEVEL1_PATTERN,
+        BRIEF_PATTERN, STANDARD_PATTERN, DETAIL_PATTERN, STEP_KP_PATTERN,
+        DIFF_TABLE_HEADER_PATTERN,
+    )
     for line in text.split("\n"):
         stripped = line.strip()
         if not stripped:
             continue
         body = _strip_bullet(stripped)
+        if final_capture:
+            if any(p.match(body) for p in final_stop_patterns) or TOTAL_DIFF_PATTERN.search(body):
+                final_capture = False
+            else:
+                final_lines.append(stripped)
+                continue
         if DIFF_TABLE_HEADER_PATTERN.match(body):
             in_diff_table = True
             continue
@@ -333,11 +348,17 @@ def _parse_chunk_meta(text: str) -> dict:
             continue
         m = BLOCK_FINAL_ANSWER_PATTERN.match(body)
         if m:
-            meta["final_answer"] = m.group(1).strip()
+            final_capture = True
+            answer_text = m.group(1).strip()
+            if answer_text:
+                meta["final_answer"] = answer_text
             continue
         m = FINAL_ANSWER_LINE_PATTERN.match(body)
-        if m and not meta["final_answer"]:
-            meta["final_answer"] = m.group(1).strip()
+        if m:
+            final_capture = True
+            answer_text = m.group(1).strip()
+            if answer_text and not meta["final_answer"]:
+                meta["final_answer"] = answer_text
             continue
         m = BLOCK_KP_PATTERN.match(body)
         if m:
@@ -362,6 +383,9 @@ def _parse_chunk_meta(text: str) -> dict:
             meta["difficulty"]["dimensions"] = dims
         else:
             meta["difficulty"] = {"level": "未知", "total_score": 0, "dimensions": diff_rows}
+    if final_lines:
+        tail = "\n".join(final_lines)
+        meta["final_answer"] = (meta["final_answer"] + "\n" + tail) if meta["final_answer"] else tail
     return meta
 
 
@@ -374,6 +398,7 @@ def _parse_steps(text: str, allow_option_steps: bool = True) -> list:
     parsing_detailed = False
     diff_state = 0
     kp_bullet_state = False
+    pending_step_level1 = False
     skip_rest = False
     for line in text.split("\n"):
         stripped = line.strip()
@@ -459,6 +484,29 @@ def _parse_steps(text: str, allow_option_steps: bool = True) -> list:
                 continue
         if diff_state:
             diff_state = 0
+        if pending_step_level1:
+            if not stripped:
+                continue
+            if (
+                STEP_HEADER_PATTERN.match(stripped)
+                or OPTION_STEP_PATTERN.match(stripped)
+                or CN_STEP_HEADER_PATTERN.match(stripped)
+                or CHUNK_META_LINE_PATTERN.match(body)
+                or STEP_LEVEL1_PATTERN.match(body)
+                or STANDARD_PATTERN.match(stripped)
+                or STANDARD_PATTERN.match(body)
+                or BRIEF_PATTERN.match(stripped)
+                or BRIEF_PATTERN.match(body)
+                or DETAIL_PATTERN.match(stripped)
+                or DETAIL_PATTERN.match(body)
+                or STEP_KP_PATTERN.match(body)
+                or DIFF_TABLE_HEADER_PATTERN.match(body)
+            ):
+                pending_step_level1 = False
+            else:
+                current_step["step_level1"] = stripped
+                pending_step_level1 = False
+                continue
         m = STEP_KP_PATTERN.match(body)
         if m:
             parsing_standard = False
@@ -477,9 +525,15 @@ def _parse_steps(text: str, allow_option_steps: bool = True) -> list:
             continue
         slm = STEP_LEVEL1_PATTERN.match(body)
         if slm:
+            pending_step_level1 = False
             parsing_standard = False
             parsing_detailed = False
             current_step["step_level1"] = slm.group(1).strip()
+            continue
+        if re.match(r'^二级步骤[：:]\s*$', body):
+            pending_step_level1 = True
+            parsing_standard = False
+            parsing_detailed = False
             continue
         bm = BRIEF_PATTERN.match(stripped)
         if not bm:

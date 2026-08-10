@@ -283,6 +283,9 @@ def api_search_questions(
     category: str = "",
     difficulty: str = "",
     question_type: str = "",
+    knowledge_points: str = "",
+    step_level1: str = "",
+    step_level2: str = "",
     limit: Optional[int] = Query(None, ge=1, le=1000),
     mode: str = "content",
     error_type: str = "",
@@ -290,22 +293,30 @@ def api_search_questions(
     page_size: int = 0,
     source_type: str = "",
 ):
-    """搜索个人题库：关键词（空格分隔为 AND 匹配）+ 板块 + 难度 + 题型 + 来源筛选
+    """搜索个人题库：关键词（空格分隔为 AND 匹配）+ 板块 + 知识点二级 + 步骤名 + 难度 + 题型 + 来源筛选
     mode="content": 仅搜索题目原文（默认）
     mode="global":  同时搜索板块、知识点、错因
-    error_type: 错因筛选（none=无错因，具体类型=按类型筛选，空=全部）"""
+    error_type: 错因筛选（none=无错因，具体类型=按类型筛选，空=全部）
+    knowledge_points / step_level1 / step_level2 用逗号分隔多个值，多个值之间取 AND（全部满足）。"""
     if mode not in ("content", "global"):
         mode = "content"
     keywords = [kw.strip() for kw in q.split() if kw.strip()] if q else None
     categories = [c.strip() for c in category.split(",") if c.strip()] if category else None
     difficulties = [d.strip() for d in difficulty.split(",") if d.strip()] if difficulty else None
     types = [t.strip() for t in question_type.split(",") if t.strip()] if question_type else None
+    kps = [k.strip() for k in knowledge_points.split(",") if k.strip()] if knowledge_points else None
+    sl1s = [s.strip() for s in step_level1.split(",") if s.strip()] if step_level1 else None
+    sl2s = [s.strip() for s in step_level2.split(",") if s.strip()] if step_level2 else None
     et = error_type if error_type else None
     ps = page_size if page_size > 0 else None
     st = source_type if source_type else None
     if limit is None:
         limit = int(runtime_settings.get_limits().get("search_default_limit", 200))
-    return search_questions(keywords, categories, difficulties, types, limit=limit, mode=mode, error_type=et, page=page, page_size=ps, source_type=st)
+    return search_questions(
+        keywords, categories, difficulties, types, limit=limit, mode=mode, error_type=et,
+        page=page, page_size=ps, source_type=st,
+        knowledge_points=kps, step_level1s=sl1s, step_level2s=sl2s,
+    )
 
 
 @app.get("/questions/errors")
@@ -1029,6 +1040,9 @@ def api_get_list_questions(
     category: str = "",
     difficulty: str = "",
     question_type: str = "",
+    knowledge_points: str = "",
+    step_level1: str = "",
+    step_level2: str = "",
     error_type: str = "",
     source_type: str = "",
     page: int = Query(1, ge=1),
@@ -1044,17 +1058,20 @@ def api_get_list_questions(
     categories = [c.strip() for c in category.split(",") if c.strip()] if category else None
     difficulties = [d.strip() for d in difficulty.split(",") if d.strip()] if difficulty else None
     types = [t.strip() for t in question_type.split(",") if t.strip()] if question_type else None
+    kps = [k.strip() for k in knowledge_points.split(",") if k.strip()] if knowledge_points else None
+    sl1s = [s.strip() for s in step_level1.split(",") if s.strip()] if step_level1 else None
+    sl2s = [s.strip() for s in step_level2.split(",") if s.strip()] if step_level2 else None
     et = error_type if error_type else None
     ps = page_size if page_size > 0 else None
     st = source_type if source_type else None
 
     if target == "wrong":
-        return get_wrong_questions(keywords, categories, difficulties, types, et, page, ps, st)
+        return get_wrong_questions(keywords, categories, difficulties, types, et, page, ps, st, knowledge_points=kps, step_level1s=sl1s, step_level2s=sl2s)
     try:
         list_id = int(target)
     except ValueError:
         return {"error": "invalid_target", "message": "target 必须是 all、wrong 或数字 ID"}
-    return get_list_questions(list_id, keywords, categories, difficulties, types, et, page, ps, st)
+    return get_list_questions(list_id, keywords, categories, difficulties, types, et, page, ps, st, knowledge_points=kps, step_level1s=sl1s, step_level2s=sl2s)
 
 
 class AddToListRequest(BaseModel):

@@ -341,6 +341,51 @@ def _backfill_multi_choice_marker(conn):
         logger.info("已为 %s 道多选题补上（多选）标记", changed)
 
 
+def _backfill_category_level2(conn):
+    """老题回填：从已清洗的二级知识点推断 category_level2。"""
+    rows = conn.execute(
+        "SELECT id, answer_json, knowledge_points, category_level1, category_level2 FROM questions"
+    ).fetchall()
+    changed = 0
+    for row in rows:
+        if row["category_level2"] or not row["category_level1"]:
+            continue
+        try:
+            aj = json.loads(row["answer_json"]) if row["answer_json"] else {}
+        except (json.JSONDecodeError, TypeError):
+            aj = {}
+        if not isinstance(aj, dict):
+            aj = {}
+        kps = row["knowledge_points"]
+        try:
+            clean_kps = json.loads(kps) if kps else []
+        except (json.JSONDecodeError, TypeError):
+            clean_kps = []
+        if not isinstance(clean_kps, list):
+            clean_kps = []
+        if not clean_kps:
+            clean_kps = _sanitize_knowledge_points(
+                row["category_level1"],
+                aj.get("knowledge_points") or _collect_step_knowledge_points(aj.get("chunk_results")),
+            )
+        level2 = _infer_category_level2(row["category_level1"], clean_kps)
+        if not level2:
+            continue
+        if isinstance(aj.get("category"), dict):
+            aj["category"]["level2"] = level2
+        for cr in aj.get("chunk_results") or []:
+            if isinstance(cr, dict) and isinstance(cr.get("category"), dict):
+                cr["category"]["level2"] = level2
+        conn.execute(
+            "UPDATE questions SET category_level2 = ?, answer_json = ? WHERE id = ?",
+            (level2, json.dumps(aj, ensure_ascii=False), row["id"]),
+        )
+        changed += 1
+    if changed:
+        conn.commit()
+        logger.info("已回填 %s 道题的二级分类", changed)
+
+
 def init_db():
     conn = get_connection()
     conn.executescript("""
@@ -484,6 +529,11 @@ def init_db():
         _backfill_multi_choice_marker(conn)
     except sqlite3.OperationalError as e:
         logger.warning("多选题标记回填跳过: %s", e)
+    # 回填：一级板块已有但二级分类为空时，从二级知识点推断
+    try:
+        _backfill_category_level2(conn)
+    except sqlite3.OperationalError as e:
+        logger.warning("二级分类回填跳过: %s", e)
     # 迁移：新增时间追踪列
     for col in ("last_viewed_at", "last_edited_at", "last_exam_at"):
         try:
@@ -505,6 +555,31 @@ def init_db():
         logger.info("新增 steps_structure 列")
     except sqlite3.OperationalError:
         pass
+    # 迁移：真实步骤索引表（按一级/二级步骤名筛选时使用）
+    try:
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS question_steps (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                question_id INTEGER NOT NULL REFERENCES questions(id),
+                chunk_id INTEGER,
+                step_number INTEGER,
+                step_level1 TEXT,
+                step_level2 TEXT,
+                difficulty_score INTEGER
+            )
+        """)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_question_steps_qid ON question_steps(question_id)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_question_steps_l1 ON question_steps(step_level1)")
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_question_steps_l2 ON question_steps(step_level2)")
+        indexed_count = conn.execute("SELECT COUNT(*) FROM question_steps").fetchone()[0]
+        total_count = conn.execute("SELECT COUNT(*) FROM questions").fetchone()[0]
+        if indexed_count < total_count:
+            for row in conn.execute("SELECT id, answer_json FROM questions"):
+                _index_question_steps(conn, row["id"], answer_json_text=row["answer_json"])
+            conn.commit()
+            logger.info("已回填题目真实步骤索引")
+    except sqlite3.OperationalError as e:
+        logger.warning("步骤索引表初始化跳过: %s", e)
     # 回填：把旧版难度维度字段名统一成新版，缺失时从 answer_json 补充
     try:
         rows = conn.execute(
@@ -577,6 +652,51 @@ def _build_steps_structure(chunk_results: list) -> str:
             }
             index.append(entry)
     return json.dumps(index, ensure_ascii=False)
+
+
+def _index_question_steps(conn, question_id: int, answer_json_text=None, chunk_results=None) -> int:
+    """重建题目的真实步骤索引，供“一级/二级步骤名”筛选使用。
+
+    steps_structure 里混入了预定义候选步骤，且字段语义不稳定，不能直接拿来筛选；
+    这里只从 answer_json 的真实步骤中提取 title（一级步骤名）和 step_level1（二级步骤名）。
+    """
+    conn.execute("DELETE FROM question_steps WHERE question_id = ?", (question_id,))
+    if chunk_results is None:
+        try:
+            aj = json.loads(answer_json_text) if answer_json_text else None
+            chunk_results = (aj or {}).get("chunk_results") if isinstance(aj, dict) else None
+        except (json.JSONDecodeError, TypeError):
+            chunk_results = None
+    if not chunk_results:
+        return 0
+    rows = []
+    for cr in chunk_results:
+        if not isinstance(cr, dict):
+            continue
+        chunk_id = cr.get("chunk_id", 1)
+        for step in cr.get("steps", []) or []:
+            if not isinstance(step, dict):
+                continue
+            level1 = str(step.get("title") or "").strip()
+            raw_level2 = step.get("step_level1")
+            level2 = ""
+            if raw_level2 is not None and str(raw_level2).strip() not in ("", "null"):
+                level2 = re.sub(r"\s*[（(][^）)]*[）)]\s*$", "", str(raw_level2)).strip()
+            if not level1 and not level2:
+                continue
+            score = None
+            sd = step.get("step_difficulty")
+            if isinstance(sd, dict):
+                score = sd.get("score")
+            rows.append((question_id, chunk_id, step.get("step_number"), level1, level2, score))
+    if rows:
+        conn.executemany(
+            """INSERT INTO question_steps
+               (question_id, chunk_id, step_number, step_level1, step_level2, difficulty_score)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            rows,
+        )
+    return len(rows)
 def _normalize_question(q: str) -> str:
     """归一化题目文本：去掉所有空白字符，使相同题目的不同格式能匹配"""
     import re
@@ -731,6 +851,17 @@ def _sanitize_knowledge_points(level1: str, points: list) -> list:
     return result
 
 
+def _infer_category_level2(level1: str, kps: list):
+    """从二级知识点推断题目的二级分类（取第一个合法值）。"""
+    if not level1 or not kps:
+        return None
+    valid = set(CATEGORIES.get(level1, []))
+    for kp in kps:
+        if kp in valid:
+            return kp
+    return None
+
+
 def save_question(question_text: str, answer_dict: dict):
     """从 answer_dict 提取各字段，分别存入数据库（入库前清洗，保证字段来自字典）"""
 
@@ -782,6 +913,15 @@ def save_question(question_text: str, answer_dict: dict):
     if not raw_kps:
         raw_kps = _collect_step_knowledge_points(chunk_results)
     clean_kps = _sanitize_knowledge_points(category_level1, raw_kps)
+    if not category_level2:
+        category_level2 = _infer_category_level2(category_level1, clean_kps)
+    if category_level2:
+        if isinstance(answer_dict.get("category"), dict):
+            answer_dict["category"]["level2"] = category_level2
+        if isinstance(chunk_results, list):
+            for cr in chunk_results:
+                if isinstance(cr, dict) and isinstance(cr.get("category"), dict):
+                    cr["category"]["level2"] = category_level2
     # 把清洗后的知识点写回 answer_json，保证详情页与库字段一致
     answer_dict["knowledge_points"] = clean_kps
 
@@ -912,6 +1052,9 @@ def save_question(question_text: str, answer_dict: dict):
     # 获取新增/更新的题目 ID
     row = conn.execute("SELECT id FROM questions WHERE content = ?", (question_text.strip(),)).fetchone()
     question_id = row["id"] if row else None
+    if question_id is not None:
+        _index_question_steps(conn, question_id, chunk_results=chunk_results)
+        conn.commit()
     conn.close()
     # 自动加入 "全部" 题单
     if question_id is not None:
@@ -980,15 +1123,13 @@ def get_question_by_id(qid: int):
     return d
 
 
-def search_questions(keywords=None, categories=None, difficulties=None, types=None, limit=200, mode="content", error_type=None, page=1, page_size=None, source_type=None):
-    """按关键词 + 板块 + 难度 + 题型 + 来源筛选
-    关键词同时搜索题目原文、板块、知识点、错因、来源字段（OR），多个关键词之间取 AND。"""
-    conn = get_connection()
-    # 统一走全局模式：搜全字段
-    is_global = True
-    where_clauses = []
-    params = []
+def _add_question_filter_clauses(where_clauses, params, keywords=None, categories=None, difficulties=None,
+                                 types=None, source_type=None, knowledge_points=None,
+                                 step_level1s=None, step_level2s=None, q_alias="q"):
+    """把公共筛选条件追加到 SQL where 子句。
 
+    知识点二级和步骤名都是多选，同一组内多选之间取 AND（题目必须全部满足）。
+    """
     if keywords:
         for kw in keywords:
             kw_s = kw.strip()
@@ -996,38 +1137,86 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
                 continue
             kw_pat = f"%{kw_s}%"
             search_conds = [
-                "q.content LIKE ?",
-                "q.category_level1 LIKE ?",
-                "q.category_level2 LIKE ?",
-                "q.knowledge_points LIKE ?",
-                "q.steps_structure LIKE ?",
-                "q.difficulty_level LIKE ?",
+                f"{q_alias}.content LIKE ?",
+                f"{q_alias}.category_level1 LIKE ?",
+                f"{q_alias}.category_level2 LIKE ?",
+                f"{q_alias}.knowledge_points LIKE ?",
+                f"{q_alias}.steps_structure LIKE ?",
+                f"{q_alias}.difficulty_level LIKE ?",
                 "e.mistake_type LIKE ?",
                 "e.mistake_detail LIKE ?",
-                "q.source_type LIKE ?",
-                "q.source_meta LIKE ?"
+                f"{q_alias}.source_type LIKE ?",
+                f"{q_alias}.source_meta LIKE ?"
             ]
             where_clauses.append(f"({' OR '.join(search_conds)})")
             params.extend([kw_pat] * 10)
 
     if categories:
         placeholders = ",".join("?" for _ in categories)
-        where_clauses.append(f"category_level1 IN ({placeholders})")
+        where_clauses.append(f"{q_alias}.category_level1 IN ({placeholders})")
         params.extend(categories)
 
     if difficulties:
         placeholders = ",".join("?" for _ in difficulties)
-        where_clauses.append(f"difficulty_level IN ({placeholders})")
+        where_clauses.append(f"{q_alias}.difficulty_level IN ({placeholders})")
         params.extend(difficulties)
 
     if types:
         placeholders = ",".join("?" for _ in types)
-        where_clauses.append(f"question_type IN ({placeholders})")
+        where_clauses.append(f"{q_alias}.question_type IN ({placeholders})")
         params.extend(types)
 
     if source_type:
-        where_clauses.append("q.source_type = ?")
+        where_clauses.append(f"{q_alias}.source_type = ?")
         params.append(source_type)
+
+    if knowledge_points:
+        for kp in knowledge_points:
+            kp_s = kp.strip()
+            if not kp_s:
+                continue
+            where_clauses.append(
+                f"({q_alias}.category_level2 = ? OR {q_alias}.knowledge_points LIKE ?)"
+            )
+            params.extend([kp_s, f'%"{kp_s}"%'])
+
+    if step_level1s:
+        for idx, name in enumerate(step_level1s):
+            name_s = name.strip()
+            if not name_s:
+                continue
+            alias = f"step_l1_{idx}"
+            where_clauses.append(
+                f"EXISTS (SELECT 1 FROM question_steps {alias} "
+                f"WHERE {alias}.question_id = {q_alias}.id AND {alias}.step_level1 = ?)"
+            )
+            params.append(name_s)
+
+    if step_level2s:
+        for idx, name in enumerate(step_level2s):
+            name_s = name.strip()
+            if not name_s:
+                continue
+            alias = f"step_l2_{idx}"
+            where_clauses.append(
+                f"EXISTS (SELECT 1 FROM question_steps {alias} "
+                f"WHERE {alias}.question_id = {q_alias}.id AND {alias}.step_level2 = ?)"
+            )
+            params.append(name_s)
+    return where_clauses, params
+
+
+def search_questions(keywords=None, categories=None, difficulties=None, types=None, limit=200, mode="content", error_type=None, page=1, page_size=None, source_type=None, knowledge_points=None, step_level1s=None, step_level2s=None):
+    """按关键词 + 板块 + 知识点二级 + 步骤名 + 难度 + 题型 + 来源筛选
+    关键词同时搜索题目原文、板块、知识点、错因、来源字段（OR），多个关键词之间取 AND。"""
+    conn = get_connection()
+    # 统一走全局模式：搜全字段
+    is_global = True
+    where_clauses, params = _add_question_filter_clauses(
+        [], [], keywords=keywords, categories=categories, difficulties=difficulties,
+        types=types, source_type=source_type, knowledge_points=knowledge_points,
+        step_level1s=step_level1s, step_level2s=step_level2s, q_alias="q",
+    )
 
     if error_type:
         q_id = "q.id" if is_global else "questions.id"
@@ -1100,6 +1289,7 @@ def delete_question(qid: int) -> bool:
     conn = get_connection()
     conn.execute("DELETE FROM question_list_members WHERE question_id = ?", (qid,))
     conn.execute("DELETE FROM step_errors WHERE question_id = ?", (qid,))
+    conn.execute("DELETE FROM question_steps WHERE question_id = ?", (qid,))
     cursor = conn.execute("DELETE FROM questions WHERE id = ?", (qid,))
     deleted = cursor.rowcount > 0
     conn.commit()
@@ -1353,45 +1543,13 @@ def get_question_list_ids(question_id):
     return [r["list_id"] for r in rows]
 
 
-def get_list_questions(list_id, keywords=None, categories=None, difficulties=None, types=None, error_type=None, page=1, page_size=None, source_type=None):
+def get_list_questions(list_id, keywords=None, categories=None, difficulties=None, types=None, error_type=None, page=1, page_size=None, source_type=None, knowledge_points=None, step_level1s=None, step_level2s=None):
     conn = get_connection()
-    where_clauses = []
-    params = []
-    if keywords:
-        for kw in keywords:
-            kw_s = kw.strip()
-            if not kw_s:
-                continue
-            kw_pat = "%%%s%%" % kw_s
-            search_conds = [
-                "q.content LIKE ?",
-                "q.category_level1 LIKE ?",
-                "q.category_level2 LIKE ?",
-                "q.knowledge_points LIKE ?",
-                "q.steps_structure LIKE ?",
-                "q.difficulty_level LIKE ?",
-                "e.mistake_type LIKE ?",
-                "e.mistake_detail LIKE ?",
-                "q.source_type LIKE ?",
-                "q.source_meta LIKE ?"
-            ]
-            where_clauses.append("(" + " OR ".join(search_conds) + ")")
-            params.extend([kw_pat] * 10)
-    if categories:
-        placeholders = ",".join("?" for _ in categories)
-        where_clauses.append("q.category_level1 IN (" + placeholders + ")")
-        params.extend(categories)
-    if difficulties:
-        placeholders = ",".join("?" for _ in difficulties)
-        where_clauses.append("q.difficulty_level IN (" + placeholders + ")")
-        params.extend(difficulties)
-    if types:
-        placeholders = ",".join("?" for _ in types)
-        where_clauses.append("q.question_type IN (" + placeholders + ")")
-        params.extend(types)
-    if source_type:
-        where_clauses.append("q.source_type = ?")
-        params.append(source_type)
+    where_clauses, params = _add_question_filter_clauses(
+        [], [], keywords=keywords, categories=categories, difficulties=difficulties,
+        types=types, source_type=source_type, knowledge_points=knowledge_points,
+        step_level1s=step_level1s, step_level2s=step_level2s, q_alias="q",
+    )
     if error_type:
         if error_type == "none":
             where_clauses.append("NOT EXISTS (SELECT 1 FROM step_errors e2 WHERE e2.question_id = q.id)")
@@ -1436,45 +1594,14 @@ def get_list_questions(list_id, keywords=None, categories=None, difficulties=Non
     return {"data": all_rows, "total": total}
 
 
-def get_wrong_questions(keywords=None, categories=None, difficulties=None, types=None, error_type=None, page=1, page_size=None, source_type=None):
+def get_wrong_questions(keywords=None, categories=None, difficulties=None, types=None, error_type=None, page=1, page_size=None, source_type=None, knowledge_points=None, step_level1s=None, step_level2s=None):
     conn = get_connection()
     where_clauses = ["EXISTS (SELECT 1 FROM step_errors e2 WHERE e2.question_id = q.id)"]
-    params = []
-    if keywords:
-        for kw in keywords:
-            kw_s = kw.strip()
-            if not kw_s:
-                continue
-            kw_pat = "%%%s%%" % kw_s
-            search_conds = [
-                "q.content LIKE ?",
-                "q.category_level1 LIKE ?",
-                "q.category_level2 LIKE ?",
-                "q.knowledge_points LIKE ?",
-                "q.steps_structure LIKE ?",
-                "q.difficulty_level LIKE ?",
-                "e.mistake_type LIKE ?",
-                "e.mistake_detail LIKE ?",
-                "q.source_type LIKE ?",
-                "q.source_meta LIKE ?"
-            ]
-            where_clauses.append("(" + " OR ".join(search_conds) + ")")
-            params.extend([kw_pat] * 10)
-    if categories:
-        placeholders = ",".join("?" for _ in categories)
-        where_clauses.append("q.category_level1 IN (" + placeholders + ")")
-        params.extend(categories)
-    if difficulties:
-        placeholders = ",".join("?" for _ in difficulties)
-        where_clauses.append("q.difficulty_level IN (" + placeholders + ")")
-        params.extend(difficulties)
-    if types:
-        placeholders = ",".join("?" for _ in types)
-        where_clauses.append("q.question_type IN (" + placeholders + ")")
-        params.extend(types)
-    if source_type:
-        where_clauses.append("q.source_type = ?")
-        params.append(source_type)
+    where_clauses, params = _add_question_filter_clauses(
+        where_clauses, [], keywords=keywords, categories=categories, difficulties=difficulties,
+        types=types, source_type=source_type, knowledge_points=knowledge_points,
+        step_level1s=step_level1s, step_level2s=step_level2s, q_alias="q",
+    )
     if error_type and error_type != "errors":
         if error_type != "none":
             where_clauses.append("EXISTS (SELECT 1 FROM step_errors e2 WHERE e2.question_id = q.id AND e2.mistake_type = ?)")

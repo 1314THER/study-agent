@@ -83,6 +83,31 @@ class PureParserTest(unittest.TestCase):
         self.assertEqual(meta["final_answer"], "A")
         self.assertEqual(meta["knowledge_points"], ["集合与元素", "常用逻辑用语"])
 
+    def test_parse_chunk_meta_multiline_final_answer(self):
+        text = (
+            "块类型：子问\n"
+            "块最终答案：轨迹 $M$ 的方程为\n"
+            "\n"
+            "$$x^2+y^2=1$$\n"
+            "步骤1：轨迹方程\n"
+            "二级步骤：参数法\n"
+            "标准过程：...\n"
+        )
+        meta = _parse_chunk_meta(text)
+        self.assertEqual(meta["final_answer"], "轨迹 $M$ 的方程为\n$$x^2+y^2=1$$")
+
+    def test_parse_chunk_meta_empty_final_answer_label(self):
+        text = (
+            "块类型：子问\n"
+            "块最终答案：\n"
+            "轨迹 $M$ 的方程为\n"
+            "\n"
+            "$$x^2+y^2=1$$\n"
+            "步骤1：轨迹方程\n"
+        )
+        meta = _parse_chunk_meta(text)
+        self.assertEqual(meta["final_answer"], "轨迹 $M$ 的方程为\n$$x^2+y^2=1$$")
+
     def test_parse_steps(self):
         text = (
             "步骤1：判断元素归属\n"
@@ -96,6 +121,19 @@ class PureParserTest(unittest.TestCase):
         self.assertEqual(steps[0]["title"], "判断元素归属")
         self.assertEqual(steps[0]["standard_writing"], "逐项判断")
         self.assertEqual(steps[0]["knowledge_point"], "集合与元素")
+
+    def test_parse_steps_level1_on_next_line(self):
+        text = (
+            "步骤1：轨迹方程\n"
+            "二级步骤：\n"
+            "参数法\n"
+            "标准过程：先设点\n"
+            "知识点：参数法\n"
+        )
+        steps = _parse_steps(text)
+        self.assertEqual(len(steps), 1)
+        self.assertEqual(steps[0]["step_level1"], "参数法")
+        self.assertEqual(steps[0]["standard_writing"], "先设点")
 
     def test_split_chunks(self):
         text = "头部\n### 块1\n内容1\n### 块2\n内容2"

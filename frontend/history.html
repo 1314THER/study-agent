@@ -6,7 +6,7 @@
     <meta http-equiv="Cache-Control" content="no-cache">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>个人题库 - 数学最强大脑</title>
-    <link rel="stylesheet" href="style.css?v=20260731progress">
+    <link rel="stylesheet" href="style.css?v=20260810ui2">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
@@ -70,7 +70,7 @@ function saveRememberedSource(data){ localStorage.setItem('remembered_question_s
 function clearRememberedSource(){ localStorage.removeItem('remembered_question_source'); }
 </script>
 </head>
-<body>
+<body class="history-page">
     <div class="app-layout">
         <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
         <aside class="sidebar">
@@ -91,9 +91,51 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
         </aside>
         <main class="main-content">
             <div class="container history-header">
-                <div class="history-header-text">
-                    <h1>个人题库</h1>
-                    <p class="subtitle" id="historyCount">个人题库 · 加载中...</p>
+                <div class="history-header-inner">
+                    <div class="history-header-text">
+                        <div class="history-head-icon">📋</div>
+                        <div class="history-head-title">
+                            <h1>个人题库</h1>
+                            <p class="subtitle" id="historyCount">个人题库 · 加载中...</p>
+                        </div>
+                    </div>
+                    <div class="history-toolbar">
+                        <a href="exam.html" class="go-exam-btn" id="goExamBtn">
+                            📋 前往组卷
+                            <span class="go-exam-badge" id="goExamBadge">0</span>
+                        </a>
+                        <button class="batch-btn" id="batchToggle" onclick="toggleBatch()">✓ 批量组卷</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search + question lists moved to top -->
+            <div class="history-topbar">
+                <div class="history-topbar-search">
+                    <div class="filter-search topbar-search">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="searchInput" placeholder="搜索关键词" oninput="onFilterChange()">
+                        <button type="button" class="filter-search-clear" onclick="clearSearch()" title="清空搜索" aria-label="清空搜索">
+                            <svg width="13" height="13" viewBox="0 0 14 14"><path d="M3 3l8 8M11 3l-8 8" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linecap="round"/></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="history-topbar-lists">
+                    <div class="history-topbar-lists-head">
+                        <span class="history-topbar-lists-title">题单</span>
+                        <button onclick="loadLists()" class="ql-icon-btn" title="刷新题单" aria-label="刷新题单">
+                            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M12 7a5 5 0 11-1.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M12 2v3.5H8.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                        </button>
+                    </div>
+                    <div class="history-topbar-list-row">
+                        <div class="ql-panel-body" id="historyListItems">
+                            <div style="padding:24px 16px;color:#86868b;font-size:13px;text-align:center;">加载中...</div>
+                        </div>
+                        <button class="ql-add-btn" onclick="showNewListDialog()">
+                            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
+                            <span>新建题单</span>
+                        </button>
+                    </div>
                 </div>
             </div>
  
@@ -102,68 +144,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
                 <!-- Main Content -->
                 <div class="history-main-area">
 
-                <!-- Search + Filter Bar -->
-                <div class="filter-row-2">
-                    <div class="filter-search" style="flex:2;">
-                        <span class="search-icon">🔍</span>
-                        <input type="text" id="searchInput" placeholder="搜索关键词（支持空格分隔多个，来源也可搜）" oninput="onFilterChange()">
-                    </div>
-                    <select class="filter-select" id="filterSourceType" onchange="selectSourceFilter(this)">
-                        <option value="">全部来源</option>
-                        <option value="ai生成">AI生成</option>
-                        <option value="高考题">高考题</option>
-                        <option value="模拟题">模拟题</option>
-                        <option value="精选母题">精选母题</option>
-                    </select>
-                    <select class="filter-select filter-error-select" id="filterErrorType" onchange="onErrorTypeChange()">
-                        <option value="">全部题目</option>
-                        <option value="errors">全部错题</option>
-                        <option value="none">非错题</option>
-                    </select>
-                    <select class="filter-select" id="filterMistakeType" style="display:none" onchange="onFilterChange()">
-                        <option value="">全部错因</option>
-                        <option value="符号错误">符号错误</option>
-                        <option value="计算错误">计算错误</option>
-                        <option value="公式记错">公式记错</option>
-                        <option value="知识性错误">知识性错误</option>
-                        <option value="审题错误">审题错误</option>
-                        <option value="思路错误">思路错误</option>
-                        <option value="其他">其他</option>
-                    </select>
-                </div>
-                <div class="filter-bar">
-                    <select class="filter-select" id="filterCategory" onchange="onFilterChange()">
-                        <option value="">全部板块</option>
-                        
-                    </select>
-                    <select class="filter-select" id="filterType" onchange="onFilterChange()">
-                        <option value="">全部题型</option>
-                        <option value="选择题">选择题</option>
-                        <option value="多选题">多选题</option>
-                        <option value="填空题">填空题</option>
-                        <option value="大题">大题</option>
-                        
-                    </select>
-                    <select class="filter-select" id="filterBigType" onchange="onBigTypeChange()" style="display:none">
-                        <option value="">大题细分</option>
-                    </select>
-                    <select class="filter-select" id="filterDifficulty" onchange="onFilterChange()">
-                        <option value="">全部难度</option>
-                        <option value="容易">容易</option>
-                        <option value="中等">中等</option>
-                        <option value="困难">困难</option>
-                        <option value="极难">极难</option>
-                    </select>
-
-                    <button class="filter-reset" onclick="resetFilters()">重置</button>
-                    <div class="filter-batch">
-                        <a href="exam.html" class="go-exam-btn" id="goExamBtn">
-                            📋 前往组卷
-                            <span class="go-exam-badge" id="goExamBadge">0</span>
-                        </a>
-                        <button class="batch-btn" id="batchToggle" onclick="toggleBatch()">✓ 批量组卷</button>
-                    </div>
-                </div>
+                <div class="filter-summary" id="filterSummary" style="display:none"></div>
                 <div class="batch-action-bar" id="batchActionBar">
                     <span class="bar-count" id="batchCount">已选 0 题</span>
                     <button class="bar-btn bar-select-all" onclick="selectAllInView()">全选</button>
@@ -213,22 +194,91 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
 
                 <!-- Question list panel: inline on wide screens, floating on narrow screens -->
                 <div class="ql-panel" id="qlPanel">
-                    <div class="ql-panel-header">
-                        <span><span class="hlh-icon">📂</span>题单</span>
-                        <span class="ql-panel-actions">
-                            <button onclick="loadLists()" class="ql-icon-btn" title="刷新">
-                                <svg width="14" height="14" viewBox="0 0 14 14"><path d="M12 7a5 5 0 11-1.5-3.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round"/><path d="M12 2v3.5H8.5" stroke="currentColor" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                            </button>
-                        </span>
-                    </div>
-                    <div class="ql-panel-body" id="historyListItems">
-                        <div style="padding:24px 16px;color:#86868b;font-size:13px;text-align:center;">加载中...</div>
-                    </div>
-                    <div class="ql-panel-footer">
-                        <button class="ql-add-btn" onclick="showNewListDialog()">
-                            <svg width="14" height="14" viewBox="0 0 14 14"><path d="M7 2v10M2 7h10" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/></svg>
-                            <span>新建题单</span>
-                        </button>
+                    <div class="ql-filter-section" id="filterPanel">
+                        <div class="ql-filter-head">
+                            <span class="ql-filter-title">筛选</span>
+                            <button class="filter-reset" onclick="resetFilters()">重置</button>
+                        </div>
+                        <div class="ql-filter-group">
+                            <div class="ql-filter-label">来源</div>
+                            <select class="filter-select ql-filter-select" id="filterSourceType" onchange="selectSourceFilter(this)">
+                                <option value="">全部来源</option>
+                                <option value="ai生成">AI生成</option>
+                                <option value="高考题">高考题</option>
+                                <option value="模拟题">模拟题</option>
+                                <option value="精选母题">精选母题</option>
+                            </select>
+                        </div>
+                        <div class="ql-filter-group">
+                            <div class="ql-filter-label">题目状态</div>
+                            <select class="filter-select ql-filter-select" id="filterErrorType" onchange="onErrorTypeChange()">
+                                <option value="">全部题目</option>
+                                <option value="errors">全部错题</option>
+                                <option value="none">非错题</option>
+                            </select>
+                            <select class="filter-select ql-filter-select" id="filterMistakeType" style="display:none" onchange="onFilterChange()">
+                                <option value="">全部错因</option>
+                                <option value="符号错误">符号错误</option>
+                                <option value="计算错误">计算错误</option>
+                                <option value="公式记错">公式记错</option>
+                                <option value="知识性错误">知识性错误</option>
+                                <option value="审题错误">审题错误</option>
+                                <option value="思路错误">思路错误</option>
+                                <option value="其他">其他</option>
+                            </select>
+                        </div>
+                        <div class="ql-filter-group">
+                            <div class="ql-filter-label">题型 / 大题类型</div>
+                            <select class="filter-select ql-filter-select" id="filterTypeMerged" onchange="onMergedTypeChange(this)">
+                                <option value="">全部题型</option>
+                                <option value="选择题">选择题</option>
+                                <option value="多选题">多选题</option>
+                                <option value="填空题">填空题</option>
+                                <option value="大题">大题</option>
+                                <optgroup label="大题类型"></optgroup>
+                            </select>
+                            <select class="filter-select ql-filter-select" id="filterType" onchange="onFilterChange()" style="display:none">
+                                <option value="">全部题型</option>
+                                <option value="选择题">选择题</option>
+                                <option value="多选题">多选题</option>
+                                <option value="填空题">填空题</option>
+                                <option value="大题">大题</option>
+                            </select>
+                        </div>
+                        <div class="ql-filter-group" style="display:none">
+                            <div class="ql-filter-label">大题类型</div>
+                            <select class="filter-select ql-filter-select" id="filterBigType" onchange="onBigTypeChange()">
+                                <option value="">全部大题</option>
+                            </select>
+                        </div>
+                        <div class="ql-filter-group">
+                            <div class="ql-filter-label">难度</div>
+                            <select class="filter-select ql-filter-select" id="filterDifficulty" onchange="onFilterChange()">
+                                <option value="">全部难度</option>
+                                <option value="容易">容易</option>
+                                <option value="中等">中等</option>
+                                <option value="困难">困难</option>
+                                <option value="极难">极难</option>
+                            </select>
+                        </div>
+                        <div class="ql-filter-group">
+                            <div class="ql-filter-label">知识点 · 一级</div>
+                            <select class="filter-select ql-filter-select" id="filterCategory" onchange="onCategoryChange()">
+                                <option value="">全部板块</option>
+                            </select>
+                        </div>
+                        <div class="ql-filter-group" id="kpLevel2Group" style="display:none">
+                            <div class="ql-filter-label">知识点 · 二级（多选，需全部满足）</div>
+                            <div class="multi-check-list" id="filterKpLevel2"></div>
+                        </div>
+                        <div class="ql-filter-group" id="stepLevel1Group" style="display:none">
+                            <div class="ql-filter-label">步骤 · 一级（多选，需全部满足）</div>
+                            <div class="multi-check-list" id="filterStepLevel1"></div>
+                        </div>
+                        <div class="ql-filter-group" id="stepLevel2Group" style="display:none">
+                            <div class="ql-filter-label">步骤 · 二级（多选，需全部满足）</div>
+                            <div class="multi-check-list" id="filterStepLevel2"></div>
+                        </div>
                     </div>
                 </div>
             </div><!-- /history-layout -->
@@ -253,15 +303,31 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
         // var _searchMode = 'content';
 
         // ---- Init: load categories into filter ----
+        var _categoryData = [];
+        var _stepsData = [];
+        var _selectedSourceFilter = '';
+        var _multiState = { filterKpLevel2: [], filterStepLevel1: [], filterStepLevel2: [] };
+        var _bigTypeCategoryMap = {
+            '立体几何大题': '立体几何',
+            '解析几何大题': '解析几何',
+            '解三角形大题': '三角函数',
+            '数列大题': '数列',
+            '函数与导数大题': '函数与导数',
+            '简单的概率统计大题': '概率统计',
+            '困难的概率大题': '概率统计'
+        };
+
         function initFilters() {
             fetch('http://127.0.0.1:8000/categories')
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
+                    _categoryData = data || [];
                     var sel = document.getElementById('filterCategory');
-                    for (var i = 0; i < data.length; i++) {
+                    sel.innerHTML = '<option value="">全部板块</option>';
+                    for (var i = 0; i < _categoryData.length; i++) {
                         var opt = document.createElement('option');
-                        opt.value = data[i].level1;
-                        opt.textContent = data[i].level1;
+                        opt.value = _categoryData[i].level1;
+                        opt.textContent = _categoryData[i].level1;
                         sel.appendChild(opt);
                     }
                 })
@@ -269,27 +335,68 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
         }
 
         // ---- Search + Filter ----
-        var _selectedSourceFilter = '';
         function selectSourceFilter(el) {
             _selectedSourceFilter = el.value;
             onFilterChange();
         }
         function onFilterChange() {
-            // Show big type filter only when 大题 is selected
-            var typeVal = document.getElementById('filterType').value;
-            var bigTypeEl = document.getElementById('filterBigType');
-            if (bigTypeEl) {
-                bigTypeEl.style.display = typeVal === '大题' ? 'inline-block' : 'none';
-                if (typeVal !== '大题') bigTypeEl.value = '';
-            }
+            _currentPage = 1;
             doSearch();
+        }
+
+        function clearSearch() {
+            document.getElementById('searchInput').value = '';
+            onFilterChange();
+        }
+
+        function onMergedTypeChange(el) {
+            var val = el.value;
+            var typeEl = document.getElementById('filterType');
+            var bigEl = document.getElementById('filterBigType');
+            var isBig = false;
+            for (var i = 0; i < _stepsData.length; i++) {
+                if (_stepsData[i].has_predefined && _stepsData[i].name === val) {
+                    isBig = true;
+                    break;
+                }
+            }
+            if (isBig) {
+                bigEl.value = val;
+                typeEl.value = '';
+            } else {
+                bigEl.value = '';
+                typeEl.value = val;
+            }
+            onBigTypeChange();
         }
 
         function loadBigTypes() {
             fetch('/steps').then(function(r){return r.json()}).then(function(data){
+                _stepsData = (data && data.types) || [];
+                var merged = document.getElementById('filterTypeMerged');
+                var oldVal = merged ? merged.value : '';
+                if (merged) {
+                    merged.innerHTML = '<option value="">全部题型</option>' +
+                        '<option value="选择题">选择题</option>' +
+                        '<option value="多选题">多选题</option>' +
+                        '<option value="填空题">填空题</option>' +
+                        '<option value="大题">大题</option>' +
+                        '<optgroup label="大题类型"></optgroup>';
+                    var bigTypes = _stepsData.filter(function(t){return t.has_predefined;});
+                    var grp = merged.querySelector('optgroup');
+                    if (grp) {
+                        bigTypes.forEach(function(t){
+                            var opt = document.createElement('option');
+                            opt.value = t.name;
+                            opt.textContent = t.name;
+                            grp.appendChild(opt);
+                        });
+                    }
+                    merged.value = oldVal;
+                }
                 var sel = document.getElementById('filterBigType');
-                sel.innerHTML = '<option value="">大题细分</option>';
-                data.types.filter(function(t){return t.has_predefined;}).forEach(function(t){
+                sel.innerHTML = '<option value="">全部大题</option>';
+                _stepsData.filter(function(t){return t.has_predefined;}).forEach(function(t){
                     var opt = document.createElement('option');
                     opt.value = t.name;
                     opt.textContent = t.name;
@@ -298,9 +405,101 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
             });
         }
 
-        // Search mode removed - search always covers all fields
+        function onCategoryChange() {
+            var cat = document.getElementById('filterCategory').value;
+            var opts = [];
+            for (var i = 0; i < _categoryData.length; i++) {
+                if (_categoryData[i].level1 === cat) {
+                    opts = _categoryData[i].level2_list || [];
+                    break;
+                }
+            }
+            _multiState.filterKpLevel2 = [];
+            var grp = document.getElementById('kpLevel2Group');
+            if (grp) grp.style.display = opts.length ? 'block' : 'none';
+            renderMultiChecks('filterKpLevel2', opts);
+            _currentPage = 1;
+            doSearch();
+        }
 
-        function onBigTypeChange() { onFilterChange(); }
+        function onBigTypeChange() {
+            var big = document.getElementById('filterBigType').value;
+            var l1s = [];
+            for (var i = 0; i < _stepsData.length; i++) {
+                if (_stepsData[i].name === big) {
+                    l1s = Object.keys(_stepsData[i].steps || {});
+                    break;
+                }
+            }
+            _multiState.filterStepLevel1 = [];
+            _multiState.filterStepLevel2 = [];
+            document.getElementById('stepLevel1Group').style.display = l1s.length ? 'block' : 'none';
+            document.getElementById('stepLevel2Group').style.display = 'none';
+            renderMultiChecks('filterStepLevel1', l1s);
+            _currentPage = 1;
+            doSearch();
+        }
+
+        function refreshStepLevel2Options() {
+            var big = document.getElementById('filterBigType').value;
+            var selectedL1 = _multiState.filterStepLevel1 || [];
+            var opts = [];
+            var steps = {};
+            for (var i = 0; i < _stepsData.length; i++) {
+                if (_stepsData[i].name === big) {
+                    steps = _stepsData[i].steps || {};
+                    break;
+                }
+            }
+            var keys = selectedL1.length ? selectedL1 : Object.keys(steps);
+            for (var j = 0; j < keys.length; j++) {
+                opts = opts.concat(steps[keys[j]] || []);
+            }
+            opts = opts.filter(function(v, idx, arr) { return arr.indexOf(v) === idx; });
+            _multiState.filterStepLevel2 = [];
+            var grp = document.getElementById('stepLevel2Group');
+            if (grp) grp.style.display = opts.length ? 'block' : 'none';
+            renderMultiChecks('filterStepLevel2', opts);
+        }
+
+        function renderMultiChecks(listId, options) {
+            var el = document.getElementById(listId);
+            if (!el) return;
+            var selected = _multiState[listId] || [];
+            if (!options || !options.length) {
+                el.innerHTML = '<div class="multi-check-empty">暂无选项</div>';
+                return;
+            }
+            var html = '';
+            for (var i = 0; i < options.length; i++) {
+                var val = options[i];
+                var checked = selected.indexOf(val) >= 0 ? ' checked' : '';
+                html += '<label class="multi-check-item">' +
+                    '<input type="checkbox" data-list="' + listId + '" value="' + escapeHtml(val) + '"' + checked + '>' +
+                    '<span>' + escapeHtml(val) + '</span></label>';
+            }
+            el.innerHTML = html;
+            var boxes = el.querySelectorAll('input[type="checkbox"]');
+            for (var j = 0; j < boxes.length; j++) {
+                boxes[j].addEventListener('change', handleMultiCheckChange);
+            }
+        }
+
+        function handleMultiCheckChange(e) {
+            var box = e.target;
+            var listId = box.getAttribute('data-list');
+            var arr = _multiState[listId] = _multiState[listId] || [];
+            var val = box.value;
+            if (box.checked) {
+                if (arr.indexOf(val) < 0) arr.push(val);
+            } else {
+                _multiState[listId] = arr.filter(function(x) { return x !== val; });
+            }
+            if (listId === 'filterStepLevel1') refreshStepLevel2Options();
+            _currentPage = 1;
+            doSearch();
+        }
+
         function onErrorTypeChange() {
             var val = document.getElementById('filterErrorType').value;
             var mtEl = document.getElementById('filterMistakeType');
@@ -310,6 +509,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
                 mtEl.style.display = 'none';
                 mtEl.value = '';
             }
+            _currentPage = 1;
             doSearch();
         }
 
@@ -319,39 +519,69 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
             _selectedSourceFilter = '';
             document.getElementById('filterCategory').value = '';
             document.getElementById('filterType').value = '';
+            document.getElementById('filterTypeMerged').value = '';
             document.getElementById('filterBigType').value = '';
-            document.getElementById('filterBigType').style.display = 'none';
             document.getElementById('filterDifficulty').value = '';
             document.getElementById('filterErrorType').value = '';
             document.getElementById('filterMistakeType').value = '';
             document.getElementById('filterMistakeType').style.display = 'none';
+            _multiState.filterKpLevel2 = [];
+            _multiState.filterStepLevel1 = [];
+            _multiState.filterStepLevel2 = [];
+            document.getElementById('kpLevel2Group').style.display = 'none';
+            document.getElementById('stepLevel1Group').style.display = 'none';
+            document.getElementById('stepLevel2Group').style.display = 'none';
+            renderMultiChecks('filterKpLevel2', []);
+            renderMultiChecks('filterStepLevel1', []);
+            renderMultiChecks('filterStepLevel2', []);
             _currentPage = 1;
+            updateFilterSummary();
             doSearch();
+        }
+
+        function updateFilterSummary() {
+            var el = document.getElementById('filterSummary');
+            if (!el) return;
+            var items = [];
+            var cat = document.getElementById('filterCategory').value;
+            var bigType = document.getElementById('filterBigType').value;
+            if (cat) items.push('板块：' + cat);
+            if (bigType) items.push('大题：' + bigType);
+            (_multiState.filterKpLevel2 || []).forEach(function(v) { items.push('知识点：' + v); });
+            (_multiState.filterStepLevel1 || []).forEach(function(v) { items.push('一级步骤：' + v); });
+            (_multiState.filterStepLevel2 || []).forEach(function(v) { items.push('二级步骤：' + v); });
+            if (!items.length) {
+                el.style.display = 'none';
+                el.innerHTML = '';
+                return;
+            }
+            el.style.display = 'block';
+            el.innerHTML = '已筛选 ' + items.length + ' 项 · <a href="javascript:void(0)" onclick="resetFilters()">重置</a>';
         }
 
         function doSearch() {
             var q = document.getElementById('searchInput').value.trim();
             var cat = document.getElementById('filterCategory').value;
-            // If big type is selected, use its mapped category
             var bigType = document.getElementById('filterBigType').value;
-            if (bigType) {
-                var bigMap = {'立体几何大题':'立体几何','解析几何大题':'解析几何','解三角形大题':'三角函数',
-                              '数列大题':'数列','函数与导数大题':'函数与导数','简单的概率统计大题':'概率统计',
-                              '困难的概率大题':'概率统计'};
-                cat = bigMap[bigType] || '';
-            }
+            if (bigType && !cat) cat = _bigTypeCategoryMap[bigType] || '';
             var type = document.getElementById('filterType').value;
             var diff = document.getElementById('filterDifficulty').value;
             var errorType = document.getElementById('filterErrorType').value;
             var mistakeType = document.getElementById('filterMistakeType').value;
             var pageSizeSelect = document.getElementById('pageSizeSelect');
             var pageSize = pageSizeSelect ? pageSizeSelect.value : '5';
+            var kps = (_multiState.filterKpLevel2 || []).slice();
+            var l1s = (_multiState.filterStepLevel1 || []).slice();
+            var l2s = (_multiState.filterStepLevel2 || []).slice();
 
             var params = [];
             var srcFilter = _selectedSourceFilter || '';
             if (srcFilter) params.push('source_type=' + encodeURIComponent(srcFilter));
             if (q) params.push('q=' + encodeURIComponent(q));
             if (cat) params.push('category=' + encodeURIComponent(cat));
+            if (kps.length) params.push('knowledge_points=' + encodeURIComponent(kps.join(',')));
+            if (l1s.length) params.push('step_level1=' + encodeURIComponent(l1s.join(',')));
+            if (l2s.length) params.push('step_level2=' + encodeURIComponent(l2s.join(',')));
             if (type) params.push('question_type=' + encodeURIComponent(type));
             if (diff) params.push('difficulty=' + encodeURIComponent(diff));
             if (errorType) {
@@ -361,9 +591,10 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
                     params.push('error_type=' + encodeURIComponent(errorType));
                 }
             }
-            // params.push('mode=' + _searchMode);
             params.push('page=' + _currentPage);
             if (pageSize !== 'all') params.push('page_size=' + pageSize);
+            var hasFilters = !!(q || cat || type || diff || errorType || srcFilter || kps.length || l1s.length || l2s.length);
+            updateFilterSummary();
 
             var skeletonEl = document.getElementById('skeletonArea');
             var listEl = document.getElementById('historyCards');
@@ -404,7 +635,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
                 .catch(function(err) {
                     console.error('Search failed:', err);
                     skeletonEl.style.display = 'none';
-                    if (q || cat || type || diff || errorType) {
+                    if (hasFilters) {
                         countEl.textContent = '搜索失败';
                     } else {
                         emptyEl.style.display = 'block';
@@ -811,6 +1042,9 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
                     }
                     html += '</div>';
                 }
+            }
+            if (data.final_answer && data.chunk_results && data.chunk_results.some(function(cr){return !cr.final_answer;})) {
+                html += '<div class="final-answer">\u6574\u9898\u7b54\u6848\uff1a' + data.final_answer + '</div>';
             }
 
             result.innerHTML = html;
@@ -1418,12 +1652,12 @@ function safeParseKps(kps){
         }
         
         function showNewListDialog() {
-            var panelBody = document.querySelector('.ql-panel-body');
+            var panelBody = document.getElementById('historyListItems');
             var existing = document.querySelector('.history-list-add-input');
             if (existing) { existing.focus(); return; }
             var addBtn = document.querySelector('.ql-add-btn');
             var input = document.createElement('div');
-            input.style.cssText = 'display:flex;gap:6px;padding:8px 12px;border-top:1px solid #f0f0f0;';
+            input.style.cssText = 'display:flex;align-items:center;gap:6px;padding:0 0 0 8px;border-left:1px solid #e5e5e7;';
             input.innerHTML = '<input type="text" class="history-list-add-input" placeholder="题单名" maxlength="50">' +
                 '<button class="history-list-add-confirm" onclick="confirmCreateList(this)">确定</button>';
             addBtn.parentNode.insertBefore(input, addBtn);

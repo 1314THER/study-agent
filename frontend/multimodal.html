@@ -939,6 +939,7 @@ function renderSessionResult(idx,data,autoSave,keepOpen){
                     var step=cr.steps[si];
                     html+='<div class="step" data-step-number="'+step.step_number+'" data-chunk-id="'+cid+'">';
                     html+='<div class="step-header"><span class="step-number">步骤'+step.step_number+'：'+escapeHtml(step.title||'')+'</span>';
+                    if(step.step_level1)html+='<span class="step-level1-tag">'+escapeHtml(step.step_level1)+'</span>';
                     if(step.step_difficulty)html+='<span class="step-diff-tag">'+escapeHtml(step.step_difficulty.level)+' ('+step.step_difficulty.score+'分)</span>';
                     html+='</div>';
                     if(window.renderDimBarsHtml&&step.step_difficulty)html+=window.renderDimBarsHtml(step.step_difficulty.dimensions);
@@ -955,6 +956,9 @@ function renderSessionResult(idx,data,autoSave,keepOpen){
             if(cr.final_answer)html+='<div class="final-answer">答案：'+cr.final_answer+'</div>';
             html+='</div>';
         }
+    }
+    if(data.final_answer&&data.chunk_results&&data.chunk_results.some(function(cr){return !cr.final_answer;})){
+        html+='<div class="final-answer">整题答案：'+data.final_answer+'</div>';
     }
     var isSaved=_sessions[idx]&&_sessions[idx].saved;
     html+='<div style="text-align:center;margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">';

@@ -12,6 +12,7 @@ from backend.database import (
     _build_steps_structure,
     _collect_step_knowledge_points,
     _ensure_multi_choice_marker,
+    _infer_category_level2,
     _normalize_choice_question_text,
     _normalize_dimension_keys,
     _normalize_question,
@@ -52,28 +53,29 @@ from backend.database import (
 )
 
 
-def _answer(category="集合与逻辑用语", with_steps=True):
-    step = {
+def _answer(category="集合与逻辑用语", with_steps=True, kps=None, chunk_type="选择题", steps=None):
+    kps = kps or ["集合与元素"]
+    steps = steps if steps is not None else [{
         "step_number": 1,
         "title": "判断",
         "standard_writing": "逐项判断",
         "detailed_writing": "逐项判断并排除",
         "knowledge_point": "集合与元素",
         "step_difficulty": {"level": "容易", "score": 1, "dimensions": {}},
-    }
+    }]
     cr = {
         "chunk_id": 1,
-        "chunk_type": "选择题",
+        "chunk_type": chunk_type,
         "category": {"level1": category, "level2": ""},
         "final_answer": "A",
-        "knowledge_points": ["集合与元素"],
-        "steps": [step] if with_steps else [],
+        "knowledge_points": kps,
+        "steps": steps if with_steps else [],
     }
     return {
         "category": {"level1": category, "level2": ""},
         "chunk_results": [cr],
         "final_answer": "A",
-        "knowledge_points": ["集合与元素"],
+        "knowledge_points": kps,
         "overall_difficulty": {"level": "容易", "score": 1, "dimensions": {}},
     }
 
@@ -144,6 +146,11 @@ class PureHelperTest(unittest.TestCase):
         self.assertEqual(_sanitize_knowledge_points("集合与逻辑用语", ["集合与元素"]), ["集合与元素"])
         self.assertEqual(_sanitize_knowledge_points("集合与逻辑用语", []), [])
 
+    def test_infer_category_level2(self):
+        self.assertEqual(_infer_category_level2("集合与逻辑用语", ["集合与元素", "集合间的基本关系"]), "集合与元素")
+        self.assertEqual(_infer_category_level2("集合与逻辑用语", ["不存在的知识点"]), None)
+        self.assertEqual(_infer_category_level2("", ["集合与元素"]), None)
+
 
 class TempDbCase(unittest.TestCase):
     def setUp(self):
@@ -155,8 +162,8 @@ class TempDbCase(unittest.TestCase):
         self.addCleanup(patcher.stop)
         init_db()
 
-    def seed(self, text="设集合 $A=\\{1,2\\}$，则子集个数是？", category="集合与逻辑用语"):
-        return save_question(text, _answer(category))
+    def seed(self, text="设集合 $A=\\{1,2\\}$，则子集个数是？", category="集合与逻辑用语", kps=None, chunk_type="选择题", steps=None):
+        return save_question(text, _answer(category, kps=kps, chunk_type=chunk_type, steps=steps))
 
 
 class CrudTest(TempDbCase):
@@ -171,6 +178,74 @@ class CrudTest(TempDbCase):
         self.assertTrue(delete_question(qid))
         self.assertFalse(delete_question(qid))
         self.assertIsNone(get_question_by_id(qid))
+
+    def test_save_backfills_category_level2(self):
+        qid = self.seed(kps=["集合与元素"])
+        row = dbmod.get_connection().execute(
+            "SELECT category_level2, answer_json FROM questions WHERE id = ?", (qid,)
+        ).fetchone()
+        self.assertEqual(row["category_level2"], "集合与元素")
+        aj = json.loads(row["answer_json"])
+        self.assertEqual(aj["category"]["level2"], "集合与元素")
+
+    def test_search_knowledge_points_all_required(self):
+        self.seed("只有集合元素", kps=["集合与元素"])
+        both_id = self.seed("集合元素加基本关系", kps=["集合与元素", "集合间的基本关系"])
+
+        single = search_questions(knowledge_points=["集合与元素"])
+        self.assertEqual(len(single), 2)
+
+        both = search_questions(knowledge_points=["集合与元素", "集合间的基本关系"])
+        self.assertEqual([q["id"] for q in both], [both_id])
+
+        result = get_list_questions(
+            create_question_list("测试清单"),
+            knowledge_points=["集合与元素", "集合间的基本关系"],
+        )
+        self.assertEqual(result["total"], 0)
+
+    def test_search_steps_all_required(self):
+        step_one = {
+            "step_number": 1,
+            "title": "证明线线平行关系",
+            "step_level1": "中位线",
+            "standard_writing": "取中点",
+            "detailed_writing": "取中点后证明",
+            "knowledge_point": "立体几何",
+            "step_difficulty": {"level": "容易", "score": 1, "dimensions": {}},
+        }
+        step_two = {
+            "step_number": 2,
+            "title": "求平面的法向量",
+            "step_level1": "求平面法向量的标准过程",
+            "standard_writing": "设向量",
+            "detailed_writing": "设向量后解方程",
+            "knowledge_point": "立体几何",
+            "step_difficulty": {"level": "容易", "score": 1, "dimensions": {}},
+        }
+        one_id = self.seed(
+            "立体几何只有中位线",
+            category="立体几何",
+            kps=["空间向量与立体几何"],
+            chunk_type="大题",
+            steps=[step_one],
+        )
+        two_id = self.seed(
+            "立体几何中位线加法向量",
+            category="立体几何",
+            kps=["空间向量与立体几何"],
+            chunk_type="大题",
+            steps=[step_one, step_two],
+        )
+
+        l1_result = search_questions(step_level1s=["证明线线平行关系"])
+        self.assertEqual({q["id"] for q in l1_result}, {one_id, two_id})
+
+        l1_both = search_questions(step_level1s=["证明线线平行关系", "求平面的法向量"])
+        self.assertEqual([q["id"] for q in l1_both], [two_id])
+
+        l2_both = search_questions(step_level2s=["中位线", "求平面法向量的标准过程"])
+        self.assertEqual([q["id"] for q in l2_both], [two_id])
 
     def test_find_question_exact_and_normalized(self):
         qid = self.seed()
