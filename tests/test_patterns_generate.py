@@ -43,9 +43,11 @@ from backend.patterns import (
     mark_pattern_wrong,
     match_mother_for_wrong_question,
     record_attempt,
+    schedule_pattern_review,
     save_board_layout,
     set_pattern_schedule,
     sync_mother_questions,
+    unschedule_pattern_review,
 )
 
 
@@ -197,6 +199,14 @@ class PatternFlowTest(PatternsDbCase):
         calendar = get_pattern_calendar()
         self.assertTrue(calendar["items"])
 
+        schedule_pattern_review(pid, "2026-08-15")
+        moved = next(it for it in get_pattern_calendar()["items"] if it["pattern_id"] == pid)
+        self.assertEqual(moved["due_date"], "2026-08-15")
+        unschedule_pattern_review(pid)
+        self.assertNotIn(pid, [it["pattern_id"] for it in get_pattern_calendar()["items"]])
+        with self.assertRaises(ValueError):
+            schedule_pattern_review(9999, "2026-08-15")
+
         with patch("backend.patterns.get_pattern_calendar", return_value={
             "items": [{
                 "pattern_id": pid,
@@ -245,6 +255,13 @@ class PatternFlowTest(PatternsDbCase):
         board = next(b for b in boards if b["category"] == pattern["category"])
         saved = save_board_layout(board["id"], [{"question_id": pattern["mother_id"], "x": 1, "y": 2}], [])
         self.assertEqual(saved["nodes"][0]["question_id"], pattern["mother_id"])
+        saved = save_board_layout(
+            board["id"],
+            [{"question_id": pattern["mother_id"], "x": 1, "y": 2}],
+            [],
+            [{"level_index": 1, "name": "入门关", "description": "$x^2+y^2=r^2$"}],
+        )
+        self.assertEqual(saved["levels"][0]["description"], "$x^2+y^2=r^2$")
         with self.assertRaises(ValueError):
             save_board_layout(9999, [], [])
 

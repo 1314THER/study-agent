@@ -41,6 +41,25 @@
     .state-second_pass { background: #fef3c7; color: #b45309; }
     .state-third_pass { background: #d1fae5; color: #047857; }
     .state-again_wrong { background: #fee2e2; color: #b91c1c; }
+    .cal-toolbar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .cal-day.clickable { cursor: pointer; }
+    .cal-day.clickable:hover { background: #f0f7ff; border-color: #0071e3; }
+    .cal-day.selected { background: #e8f4ff; border-color: #0071e3; box-shadow: inset 0 0 0 1px #0071e3; }
+    .cal-day-list { display: flex; flex-direction: column; gap: 8px; }
+    .cal-day-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: white; border: 1px solid #e5e5e7; border-radius: 10px; padding: 12px 14px; }
+    .cal-day-item .today-name { font-size: 14px; font-weight: 700; color: #1d1d1f; }
+    .cal-day-item .today-meta { font-size: 12px; color: #86868b; margin-top: 4px; }
+    .cal-day-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; flex-wrap: wrap; }
+    .cal-btn.small { padding: 6px 10px; font-size: 12px; }
+    .cal-btn.green { background: #2e7d32; color: white; }
+    .cal-btn.danger { background: #fff0f0; color: #c62828; }
+    .cal-modal-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.4); z-index: 3000; display: none; align-items: flex-start; justify-content: center; padding: 48px 16px; overflow-y: auto; }
+    .cal-modal-overlay.show { display: flex; }
+    .cal-modal { width: min(480px, 100%); background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); padding: 18px 20px 20px; }
+    .cal-modal h3 { font-size: 16px; font-weight: 700; color: #1d1d1f; margin: 0 0 14px; }
+    .cal-modal label { display: block; font-size: 12px; font-weight: 600; color: #515154; margin: 10px 0 6px; }
+    .cal-modal select, .cal-modal input { width: 100%; box-sizing: border-box; padding: 9px 10px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 14px; background: white; }
+    .cal-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 18px; }
 </style>
 </head>
 <body class="theme-liangliang">
@@ -66,8 +85,11 @@
         <div class="cal-wrap">
             <div class="cal-top">
                 <h1>巩固日历</h1>
-                <a class="cal-btn amber" href="http://127.0.0.1:8000/patterns/calendar.ics" download>下载 ICS 导入日历</a>
-                <span class="cal-note">时区：Asia/Shanghai（UTC+8）</span>
+                <div class="cal-toolbar">
+                    <button class="cal-btn" onclick="openAddModal()">添加巩固</button>
+                    <a class="cal-btn amber" href="http://127.0.0.1:8000/patterns/calendar.ics" download>下载 ICS 导入日历</a>
+                    <span class="cal-note">时区：Asia/Shanghai（UTC+8）</span>
+                </div>
             </div>
             <div class="cal-month-row">
                 <button class="cal-btn secondary" onclick="prevMonth()">上一月</button>
@@ -76,6 +98,10 @@
                 <button class="cal-btn secondary" onclick="goToday()">回到今天</button>
             </div>
             <div class="cal-grid" id="calGrid"></div>
+            <div class="cal-section" id="daySection" style="display:none;">
+                <h2 id="daySectionTitle">当天巩固</h2>
+                <div id="dayList"><div class="cal-empty">加载中...</div></div>
+            </div>
             <div class="cal-section">
                 <h2>今天需要巩固</h2>
                 <div id="todayList"><div class="cal-empty">加载中...</div></div>
@@ -88,6 +114,7 @@
 var _data = null;
 var _year = 0;
 var _month = 0;
+var _selectedDate = null;
 var _weekdays = ['一', '二', '三', '四', '五', '六', '日'];
 
 function escapeHtml(s) {
@@ -130,6 +157,7 @@ async function loadData() {
 function renderAll() {
     renderCalendar();
     renderTodayList();
+    renderDaySection();
 }
 
 function renderCalendar() {
@@ -153,7 +181,9 @@ function renderCalendar() {
         var cls = 'cal-day';
         if (iso === _data.today) cls += ' today';
         if (items.length) cls += ' has';
-        html += '<div class="' + cls + '"><div class="cal-date">' + d + '</div>';
+        if (iso === _selectedDate) cls += ' selected';
+        cls += ' clickable';
+        html += '<div class="' + cls + '" onclick="selectDay(\'' + iso + '\')"><div class="cal-date">' + d + '</div>';
         if (items.length) {
             html += '<div class="cal-count">' + items.length + ' 个套路巩固</div>';
         }
@@ -179,10 +209,152 @@ function renderTodayList() {
         html += '<div class="today-meta">' + escapeHtml(it.category) + ' · 巩固日 ' + escapeHtml(it.due_date) + '</div></div>';
         html += '<div class="today-side">';
         html += '<span class="today-days' + (overdue ? ' over' : '') + '">' + (overdue ? '逾期 ' + Math.abs(it.days_left) + ' 天' : '今天') + '</span>';
+        html += '<button class="cal-btn small secondary" onclick="openScheduleModal(' + it.pattern_id + ',\'' + it.due_date + '\')">调整日期</button>';
+        html += '<button class="cal-btn small green" onclick="moveEarlier(' + it.pattern_id + ',\'' + it.due_date + '\')">提前 1 天</button>';
+        html += '<button class="cal-btn small danger" onclick="removeItem(' + it.pattern_id + ')">删除</button>';
         html += '<button class="cal-btn" onclick="openLoop(' + it.pattern_id + ')">去巩固</button>';
         html += '</div></div>';
     }
     el.innerHTML = html;
+}
+
+function selectDay(iso) {
+    _selectedDate = iso;
+    renderCalendar();
+    renderDaySection();
+}
+
+function renderDaySection() {
+    var section = document.getElementById('daySection');
+    var el = document.getElementById('dayList');
+    if (!section || !el || !_selectedDate) {
+        if (section) section.style.display = 'none';
+        return;
+    }
+    section.style.display = 'block';
+    document.getElementById('daySectionTitle').textContent = _selectedDate + ' 巩固';
+    var items = (_data.items || []).filter(function(x) { return x.due_date === _selectedDate; });
+    if (!items.length) {
+        el.innerHTML = '<div class="cal-empty">这一天没有安排巩固 <button class="cal-btn secondary small" onclick="openAddModal(\'' + _selectedDate + '\')">添加</button></div>';
+        return;
+    }
+    var html = '';
+    for (var i = 0; i < items.length; i++) {
+        var it = items[i];
+        html += '<div class="cal-day-item">';
+        html += '<div><div class="today-name">' + escapeHtml(it.name) + '<span class="state-badge ' + stateClass(it.state) + '">' + escapeHtml(stateLabel(it.state)) + '</span></div>';
+        html += '<div class="today-meta">' + escapeHtml(it.category) + ' · 巩固日 ' + escapeHtml(it.due_date) + '</div></div>';
+        html += '<div class="cal-day-actions">';
+        html += '<button class="cal-btn small secondary" onclick="openScheduleModal(' + it.pattern_id + ',\'' + it.due_date + '\')">调整日期</button>';
+        html += '<button class="cal-btn small green" onclick="moveEarlier(' + it.pattern_id + ',\'' + it.due_date + '\')">提前 1 天</button>';
+        html += '<button class="cal-btn small danger" onclick="removeItem(' + it.pattern_id + ')">删除</button>';
+        html += '<button class="cal-btn small" onclick="openLoop(' + it.pattern_id + ')">去巩固</button>';
+        html += '</div></div>';
+    }
+    el.innerHTML = html;
+}
+
+function shiftDate(iso, delta) {
+    var p = iso.split('-').map(Number);
+    var dt = new Date(p[0], p[1] - 1, p[2] + delta);
+    return dt.getFullYear() + '-' + pad2(dt.getMonth() + 1) + '-' + pad2(dt.getDate());
+}
+
+function openAddModal(prefillDate) {
+    var today = (_data && _data.today) || '';
+    var date = prefillDate || today;
+    var overlay = document.createElement('div');
+    overlay.className = 'cal-modal-overlay show';
+    overlay.id = 'calModalOverlay';
+    overlay.innerHTML = '<div class="cal-modal">' +
+        '<h3>添加巩固</h3>' +
+        '<label for="calAddPattern">套路</label><select id="calAddPattern"><option value="">加载中...</option></select>' +
+        '<label for="calAddDate">巩固日期</label><input type="date" id="calAddDate" value="' + date + '">' +
+        '<div class="cal-modal-actions"><button class="cal-btn secondary" onclick="closeCalModal()">取消</button>' +
+        '<button class="cal-btn" onclick="saveAddModal()">保存</button></div></div>';
+    document.body.appendChild(overlay);
+    loadPatternOptions();
+}
+
+async function loadPatternOptions() {
+    var sel = document.getElementById('calAddPattern');
+    if (!sel) return;
+    try {
+        var r = await fetch('http://127.0.0.1:8000/patterns');
+        var patterns = await r.json();
+        var scheduled = new Set((_data.items || []).map(function(x) { return x.pattern_id; }));
+        var html = '<option value="">选择套路...</option>';
+        for (var i = 0; i < patterns.length; i++) {
+            if (scheduled.has(patterns[i].id)) continue;
+            html += '<option value="' + patterns[i].id + '">' + escapeHtml(patterns[i].category + ' · ' + patterns[i].name) + '</option>';
+        }
+        sel.innerHTML = html || '<option value="">没有可添加的套路</option>';
+    } catch (e) {
+        sel.innerHTML = '<option value="">加载失败</option>';
+    }
+}
+
+async function saveAddModal() {
+    var pid = parseInt(document.getElementById('calAddPattern').value, 10);
+    var date = document.getElementById('calAddDate').value;
+    if (!pid || !date) return;
+    await schedulePattern(pid, date);
+}
+
+function openScheduleModal(patternId, dueDate) {
+    var overlay = document.createElement('div');
+    overlay.className = 'cal-modal-overlay show';
+    overlay.id = 'calModalOverlay';
+    overlay.innerHTML = '<div class="cal-modal">' +
+        '<h3>调整巩固日期</h3>' +
+        '<input type="hidden" id="calSchedulePattern" value="' + patternId + '">' +
+        '<label for="calScheduleDate">巩固日期</label><input type="date" id="calScheduleDate" value="' + dueDate + '">' +
+        '<div class="cal-modal-actions"><button class="cal-btn secondary" onclick="closeCalModal()">取消</button>' +
+        '<button class="cal-btn" onclick="saveScheduleModal()">保存</button></div></div>';
+    document.body.appendChild(overlay);
+}
+
+async function saveScheduleModal() {
+    var pid = parseInt(document.getElementById('calSchedulePattern').value, 10);
+    var date = document.getElementById('calScheduleDate').value;
+    if (!pid || !date) return;
+    await schedulePattern(pid, date);
+}
+
+async function schedulePattern(patternId, dueDate) {
+    try {
+        var r = await api('/patterns/calendar', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({pattern_id: patternId, due_date: dueDate})
+        });
+        if (r && r.error) throw new Error(r.detail || r.error);
+        closeCalModal();
+        await loadData();
+    } catch (e) {
+        alert('保存失败：' + e.message);
+    }
+}
+
+async function moveEarlier(patternId, dueDate) {
+    var earlier = shiftDate(dueDate, -1);
+    await schedulePattern(patternId, earlier);
+}
+
+async function removeItem(patternId) {
+    if (!confirm('确定从巩固日历中删除这个套路吗？')) return;
+    try {
+        var r = await api('/patterns/calendar/' + patternId, {method: 'DELETE'});
+        if (r && r.error) throw new Error(r.detail || r.error);
+        await loadData();
+    } catch (e) {
+        alert('删除失败：' + e.message);
+    }
+}
+
+function closeCalModal() {
+    var el = document.getElementById('calModalOverlay');
+    if (el) el.remove();
 }
 
 function prevMonth() {

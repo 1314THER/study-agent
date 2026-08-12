@@ -240,6 +240,11 @@ def init_mastery_db() -> None:
         if "max_time_seconds" not in cols:
             conn.execute("ALTER TABLE patterns ADD COLUMN max_time_seconds INTEGER NOT NULL DEFAULT 120")
             conn.commit()
+        # 迁移：关卡说明
+        level_cols = [r["name"] for r in conn.execute("PRAGMA table_info(board_levels)").fetchall()]
+        if "description" not in level_cols:
+            conn.execute("ALTER TABLE board_levels ADD COLUMN description TEXT DEFAULT ''")
+            conn.commit()
         # 清理挂错板块的闯关节点：套路板块与地图板块不一致时移除
         conn.execute("""
             DELETE FROM board_nodes WHERE id IN (
@@ -932,6 +937,24 @@ def get_pattern_calendar() -> dict:
     }
 
 
+def schedule_pattern_review(pattern_id: int, due_date: str, need_check: int = 1) -> None:
+    """把某个套路安排到指定巩固日（YYYY-MM-DD）。"""
+    if not get_pattern(pattern_id):
+        raise ValueError(f"套路不存在: {pattern_id}")
+    try:
+        datetime.strptime(due_date, "%Y-%m-%d")
+    except (TypeError, ValueError):
+        raise ValueError("日期格式应为 YYYY-MM-DD")
+    set_pattern_schedule(pattern_id, f"{due_date} 00:00:00", need_check)
+
+
+def unschedule_pattern_review(pattern_id: int) -> None:
+    """从巩固日历移除某个套路。"""
+    if not get_pattern(pattern_id):
+        raise ValueError(f"套路不存在: {pattern_id}")
+    set_pattern_schedule(pattern_id, None, 0)
+
+
 def get_pattern_calendar_ics() -> str:
     """导出套路巩固安排为 iCal（.ics），供系统日历导入。"""
     data = get_pattern_calendar()
@@ -1029,7 +1052,9 @@ def get_boards() -> list:
         board_rows = conn.execute("SELECT * FROM boards ORDER BY category").fetchall()
         node_rows = conn.execute("SELECT * FROM board_nodes ORDER BY id").fetchall()
         edge_rows = conn.execute("SELECT * FROM board_edges ORDER BY id").fetchall()
-        level_rows = conn.execute("SELECT board_id, level_index, name FROM board_levels ORDER BY level_index").fetchall()
+        level_rows = conn.execute(
+            "SELECT board_id, level_index, name, description FROM board_levels ORDER BY level_index"
+        ).fetchall()
         pq_rows = conn.execute(
             "SELECT pattern_id, question_id, role FROM pattern_questions"
         ).fetchall()
@@ -1045,9 +1070,12 @@ def get_boards() -> list:
     pq_by_qid = {}
     for pq in pq_rows:
         pq_by_qid.setdefault(pq["question_id"], []).append(dict(pq))
-    level_names = {}
+    level_data = {}
     for lv in level_rows:
-        level_names.setdefault(lv["board_id"], {})[lv["level_index"]] = lv["name"]
+        level_data.setdefault(lv["board_id"], {})[lv["level_index"]] = {
+            "name": lv["name"] or "",
+            "description": lv["description"] or "",
+        }
 
     boards = []
     for b in board_rows:
@@ -1091,7 +1119,8 @@ def get_boards() -> list:
                         kps.append(kp)
             levels.append({
                 "level_index": idx,
-                "name": (level_names.get(b["id"]) or {}).get(idx, ""),
+                "name": (level_data.get(b["id"]) or {}).get(idx, {}).get("name", ""),
+                "description": (level_data.get(b["id"]) or {}).get(idx, {}).get("description", ""),
                 "knowledge_points": kps,
             })
         edges = [
@@ -1143,10 +1172,11 @@ def save_board_layout(board_id: int, nodes: list, edges: list, levels: list = No
                 except (TypeError, ValueError):
                     continue
                 name = str(lv.get("name") or "").strip()
-                if name:
+                description = str(lv.get("description") or "").strip()
+                if name or description:
                     conn.execute(
-                        "INSERT INTO board_levels (board_id, level_index, name) VALUES (?, ?, ?)",
-                        (board_id, idx, name),
+                        "INSERT INTO board_levels (board_id, level_index, name, description) VALUES (?, ?, ?, ?)",
+                        (board_id, idx, name, description),
                     )
         conn.execute("UPDATE boards SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (board_id,))
         conn.commit()

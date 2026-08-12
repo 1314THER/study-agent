@@ -107,6 +107,35 @@ class PatternApiTest(ApiTestCase):
         self.assertIn("text/calendar", resp.headers["content-type"])
         self.assertIn("BEGIN:VCALENDAR", resp.text)
 
+    def test_schedule_and_remove_pattern_calendar(self):
+        with patch("backend.patterns.schedule_pattern_review") as sched, \
+             patch("backend.patterns.get_pattern_calendar", return_value={"items": []}):
+            resp = self.client.post("/patterns/calendar", json={
+                "pattern_id": 1,
+                "due_date": "2026-08-15",
+            })
+        self.assertEqual(resp.status_code, 200)
+        sched.assert_called_once_with(1, "2026-08-15")
+
+        with patch("backend.patterns.schedule_pattern_review", side_effect=ValueError("日期格式应为 YYYY-MM-DD")):
+            resp = self.client.post("/patterns/calendar", json={
+                "pattern_id": 1,
+                "due_date": "bad",
+            })
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.json()["error"], "invalid_schedule")
+
+        with patch("backend.patterns.unschedule_pattern_review") as unsched, \
+             patch("backend.patterns.get_pattern_calendar", return_value={"items": []}):
+            resp = self.client.delete("/patterns/calendar/1")
+        self.assertEqual(resp.status_code, 200)
+        unsched.assert_called_once_with(1)
+
+        with patch("backend.patterns.unschedule_pattern_review", side_effect=ValueError("套路不存在: 999")):
+            resp = self.client.delete("/patterns/calendar/999")
+        self.assertEqual(resp.status_code, 404)
+        self.assertEqual(resp.json()["error"], "not_found")
+
     def test_record_attempt(self):
         pattern = self.create_pattern()
         pid = pattern["pattern_id"]
@@ -180,11 +209,11 @@ class BoardApiTest(ApiTestCase):
             resp = self.client.put("/boards/1", json={
                 "nodes": [{"question_id": 1, "x": 0, "y": 0}],
                 "edges": [],
-                "levels": [{"level_index": 0, "name": "基础关"}],
+                "levels": [{"level_index": 0, "name": "基础关", "description": "$x^2$"}],
             })
         self.assertEqual(resp.status_code, 200)
         levels = mock.call_args[0][3]
-        self.assertEqual(levels, [{"level_index": 0.0, "name": "基础关"}])
+        self.assertEqual(levels, [{"level_index": 0.0, "name": "基础关", "description": "$x^2$"}])
 
 
 class PlannerApiTest(ApiTestCase):

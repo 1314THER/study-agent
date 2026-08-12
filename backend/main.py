@@ -587,6 +587,37 @@ def api_pattern_calendar():
     return get_pattern_calendar()
 
 
+class CalendarScheduleRequest(BaseModel):
+    pattern_id: int
+    due_date: str = Field(..., description="巩固日期 YYYY-MM-DD")
+
+
+@app.post("/patterns/calendar")
+def api_add_pattern_calendar(req: CalendarScheduleRequest):
+    """把某个套路安排/调整到指定巩固日。"""
+    from fastapi.responses import JSONResponse
+    from backend.patterns import schedule_pattern_review, get_pattern_calendar
+    try:
+        schedule_pattern_review(req.pattern_id, req.due_date)
+        logger.info("巩固日历调整：套路 %s → %s", req.pattern_id, req.due_date)
+        return get_pattern_calendar()
+    except ValueError as e:
+        return JSONResponse(status_code=400, content={"error": "invalid_schedule", "detail": str(e)})
+
+
+@app.delete("/patterns/calendar/{pattern_id}")
+def api_remove_pattern_calendar(pattern_id: int):
+    """从巩固日历移除某个套路。"""
+    from fastapi.responses import JSONResponse
+    from backend.patterns import unschedule_pattern_review, get_pattern_calendar
+    try:
+        unschedule_pattern_review(pattern_id)
+        logger.info("巩固日历移除：套路 %s", pattern_id)
+        return get_pattern_calendar()
+    except ValueError as e:
+        return JSONResponse(status_code=404, content={"error": "not_found", "detail": str(e)})
+
+
 @app.get("/patterns/calendar.ics")
 def api_pattern_calendar_ics():
     """导出套路巩固安排为 .ics 日历文件"""
@@ -688,6 +719,7 @@ class BoardEdgePayload(BaseModel):
 class BoardLevelPayload(BaseModel):
     level_index: float = 0
     name: str = ""
+    description: str = ""
 
 
 class BoardLayoutRequest(BaseModel):
@@ -701,12 +733,14 @@ def api_save_board_layout(board_id: int, req: BoardLayoutRequest):
     """整体保存某板块地图的节点与连线"""
     from backend.patterns import save_board_layout
     try:
-        return save_board_layout(
+        result = save_board_layout(
             board_id,
             [{"question_id": n.question_id, "x": n.x, "y": n.y} for n in req.nodes],
             [{"from_question_id": e.from_question_id, "to_question_id": e.to_question_id} for e in req.edges],
-            [{"level_index": lv.level_index, "name": lv.name} for lv in req.levels],
+            [{"level_index": lv.level_index, "name": lv.name, "description": lv.description} for lv in req.levels],
         )
+        logger.info("保存闯关地图：board %s，节点 %s，关卡 %s", board_id, len(req.nodes), len(req.levels))
+        return result
     except ValueError as e:
         from fastapi.responses import JSONResponse
         return JSONResponse(status_code=400, content={"error": "invalid_board", "detail": str(e)})

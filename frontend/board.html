@@ -7,6 +7,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>闯关地图 - 数学最强大脑</title>
 <link rel="stylesheet" href="style.css?v=20260806board">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 <style>
     body { background: #f5f5f7; }
     .board-wrap { height: 100vh; display: flex; flex-direction: column; padding: 16px; box-sizing: border-box; }
@@ -15,10 +18,13 @@
     .board-btn { padding: 8px 16px; border: none; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; background: #0071e3; color: white; }
     .board-btn.secondary { background: #f5f5f7; color: #515154; }
     .board-btn.danger { background: #c62828; color: white; }
-    .board-layout { display: grid; grid-template-columns: 230px 1fr; gap: 12px; flex: 1; min-height: 0; }
-    @media (max-width: 820px) { .board-layout { grid-template-columns: 1fr; } }
+    .board-layout { display: grid; grid-template-columns: 230px minmax(220px, 280px) 1fr; gap: 12px; flex: 1; min-height: 0; }
+    @media (max-width: 1100px) { .board-layout { grid-template-columns: 230px 1fr; } .board-mid { grid-column: 1 / -1; max-height: 240px; } }
+    @media (max-width: 820px) { .board-layout { grid-template-columns: 1fr; } .board-mid { grid-column: auto; max-height: 220px; } }
     .board-side { background: white; border: 1px solid #e5e5e7; border-radius: 12px; padding: 12px; overflow-y: auto; }
     .board-side h2 { font-size: 14px; font-weight: 600; margin: 0 0 10px; }
+    .board-mid { min-height: 0; }
+    .board-detail { display: flex; flex-direction: column; }
     .board-cat { display: block; width: 100%; text-align: left; padding: 9px 10px; border: none; border-radius: 8px; background: transparent; cursor: pointer; font-size: 13px; color: #1d1d1f; }
     .board-cat:hover { background: #f0f7ff; }
     .board-cat.active { background: #e8f4ff; color: #0071e3; font-weight: 600; }
@@ -32,6 +38,7 @@
     .level-status { font-size: 12px; padding: 3px 10px; border-radius: 999px; }
     .level-status.open { background: #e8f4ff; color: #0071e3; }
     .level-status.locked { background: #f3f4f6; color: #9ca3af; }
+    .level-status.done { background: #d1fae5; color: #047857; }
     .level-patterns { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
     .pattern-card { background: white; border: 1px solid #e5e5e7; border-radius: 8px; padding: 12px 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
     .pattern-card.done { border-color: #2e7d32; background: #f7fdf8; }
@@ -68,8 +75,35 @@
     .level-rename { display: none; gap: 6px; margin: 0 0 8px; }
     .level-rename input { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid #c7c7cc; border-radius: 6px; font-size: 12px; box-sizing: border-box; }
     .level-rename button { border: none; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; background: #2e7d32; color: white; }
+    .level-nav-list { display: flex; flex-direction: column; gap: 8px; }
+    .level-nav-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid #e5e5e7; border-radius: 10px; background: white; cursor: pointer; text-align: left; }
+    .level-nav-item:hover { background: #f0f7ff; border-color: #0071e3; }
+    .level-nav-item.active { background: #e8f4ff; border-color: #0071e3; box-shadow: 0 0 0 1px #0071e3; }
+    .level-nav-seq { font-size: 12px; font-weight: 700; color: #0071e3; white-space: nowrap; }
+    .level-nav-name { flex: 1; font-size: 13px; font-weight: 600; color: #1d1d1f; word-break: break-word; line-height: 1.4; }
+    .level-detail { display: flex; flex-direction: column; gap: 14px; padding-bottom: 48px; }
+    .level-detail-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .level-detail-head h2 { font-size: 18px; font-weight: 700; color: #1d1d1f; margin: 0; }
+    .level-detail-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+    .level-detail-actions button { border: none; border-radius: 7px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; background: #f0f0f0; color: #1d1d1f; }
+    .level-detail-actions button.primary { background: #0071e3; color: white; }
+    .level-detail-actions button.danger { background: #fff0f0; color: #c62828; }
+    .level-desc-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; }
+    .level-desc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .level-desc-head b { font-size: 13px; color: #334155; }
+    .level-desc-text { font-size: 13px; color: #1e293b; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+    .level-desc-empty { font-size: 12px; color: #94a3b8; }
+    .level-desc-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.4); z-index: 3000; display: none; align-items: flex-start; justify-content: center; padding: 48px 16px; overflow-y: auto; }
+    .level-desc-overlay.show { display: flex; }
+    .level-desc-modal { width: min(680px, 100%); background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); padding: 18px 20px 20px; }
+    .level-desc-modal h3 { font-size: 16px; font-weight: 700; color: #1d1d1f; margin: 0 0 12px; }
+    .level-desc-modal textarea { width: 100%; min-height: 180px; box-sizing: border-box; padding: 10px 12px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 14px; line-height: 1.7; font-family: inherit; resize: vertical; }
+    .level-desc-modal .preview-title { font-size: 12px; font-weight: 600; color: #515154; margin: 12px 0 6px; }
+    .level-desc-preview { border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 10px 12px; min-height: 60px; font-size: 14px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
+    .level-desc-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
     .stage-item { border: 1px solid #e5e5e7; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; cursor: pointer; background: #fafafa; }
     .stage-item:hover { background: #f0f7ff; }
+    .stage-item.active { border-color: #0071e3; background: #e8f4ff; }
     .stage-head { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
     .stage-name { font-size: 13px; font-weight: 600; color: #1d1d1f; word-break: break-word; }
     .stage-status { font-size: 11px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
@@ -120,8 +154,12 @@
                     <div class="board-hint" style="margin-top:12px;">按关卡布置套路：一关里可以放多个套路，后一关需要前一关全部通关后解锁。</div>
                     <div class="board-hint">状态：已通关 / 进行中 / 未解锁 / 未挑战</div>
                 </div>
-                <div class="board-main">
-                    <div id="levelList" class="level-list"></div>
+                <div class="board-side board-mid">
+                    <h2>关卡</h2>
+                    <div id="levelList" class="level-nav-list"></div>
+                </div>
+                <div class="board-main board-detail">
+                    <div id="levelDetail" class="level-detail"></div>
                 </div>
             </div>
         </div>
@@ -134,6 +172,7 @@ var boards = [];
 var currentBoard = null;
 var patterns = [];
 var _validCategories = [];
+var selectedLevelSeq = 0;
 
 function escapeHtml(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
@@ -209,6 +248,7 @@ function renderBoardList() {
 
 function selectBoard(id) {
     currentBoard = boards.find(function(b) { return b.id === id; }) || null;
+    selectedLevelSeq = 0;
     if (currentBoard) {
         currentBoard.nodes = (currentBoard.nodes || []).filter(function(n) { return n.pattern_id; });
         currentBoard.edges = currentBoard.edges || [];
@@ -261,6 +301,11 @@ function getLevelKps(levelIndex) {
     return (lv && lv.knowledge_points) || [];
 }
 
+function getLevelDescription(levelIndex) {
+    var lv = getLevelData(levelIndex);
+    return (lv && lv.description) || '';
+}
+
 function levelLocked(levels, seq) {
     for (var i = seq - 1; i >= 0; i--) {
         var prev = levels[i];
@@ -282,49 +327,172 @@ function renderLevels() {
     if (!el) return;
     if (!currentBoard) {
         el.innerHTML = '<div class="empty-board">请先选择左侧板块</div>';
+        var detailEl = document.getElementById('levelDetail');
+        if (detailEl) detailEl.innerHTML = '<div class="empty-board">请先选择左侧板块</div>';
         return;
     }
     var levels = getLevels();
+    if (selectedLevelSeq > levels.length) selectedLevelSeq = levels.length;
     var html = '';
     for (var i = 0; i < levels.length; i++) {
         var locked = levelLocked(levels, i);
         var allDone = !locked && levels[i].patterns.length && levels[i].patterns.every(function(n) { return n.state === 'third_pass'; });
-        html += renderLevelBand(levels[i], i, locked, allDone, false);
+        html += renderLevelNavItem(levels[i], i, locked, allDone, false);
     }
     var nextLevel = {index: levels.length ? levels[levels.length - 1].index + 1 : 0, patterns: []};
-    html += renderLevelBand(nextLevel, levels.length, false, false, true);
+    html += renderLevelNavItem(nextLevel, levels.length, false, false, true);
     el.innerHTML = html;
+    renderLevelDetail();
 }
 
-function renderLevelBand(level, seq, locked, allDone, isNext) {
+function renderLevelNavItem(level, seq, locked, allDone, isNext) {
     var lvName = getLevelName(level.index);
-    var html = '<div class="level-band" id="level_band_' + seq + '">';
-    html += '<div class="level-head"><span class="level-title">' + escapeHtml(lvName || ('第 ' + (seq + 1) + ' 关')) + (lvName ? '<span class="level-seq">第 ' + (seq + 1) + ' 关</span>' : '') + '</span>';
-    if (isNext) {
-        html += '<span class="level-status open">空关卡</span>';
-    } else {
-        var lvLabel = locked ? '未解锁' : (allDone ? '已通关' : '待挑战');
-        html += '<span class="level-status ' + (locked ? 'locked' : 'open') + '">' + lvLabel + '</span>';
+    var name = lvName || ('第 ' + (seq + 1) + ' 关');
+    var lvLabel = isNext ? '空关卡' : (locked ? '未解锁' : (allDone ? '已通关' : '待挑战'));
+    var cls = isNext ? 'open' : (locked ? 'locked' : (allDone ? 'done' : 'open'));
+    return '<div class="level-nav-item' + (selectedLevelSeq === seq ? ' active' : '') + '" onclick="selectLevel(' + seq + ')">' +
+        '<span class="level-nav-seq">' + (isNext ? '＋' : '第 ' + (seq + 1) + ' 关') + '</span>' +
+        '<span class="level-nav-name">' + escapeHtml(name) + '</span>' +
+        '<span class="level-status ' + cls + '">' + escapeHtml(lvLabel) + '</span></div>';
+}
+
+function selectLevel(seq) {
+    selectedLevelSeq = seq;
+    renderLevels();
+    renderStageList();
+}
+
+function renderLevelDetail() {
+    var el = document.getElementById('levelDetail');
+    if (!el) return;
+    if (!currentBoard) {
+        el.innerHTML = '<div class="empty-board">请先选择左侧板块</div>';
+        return;
     }
-    if (!isNext && level.patterns.length) {
-        html += '<button class="board-btn secondary" style="padding:5px 10px;font-size:12px;margin-left:auto;" onclick="toggleLevelRename(' + level.index + ')">改名</button>';
-        html += '<button class="board-btn danger" style="padding:5px 10px;font-size:12px;" onclick="removeLevel(' + seq + ')">删除本关</button>';
+    var levels = getLevels();
+    var seq = selectedLevelSeq;
+    if (seq > levels.length) seq = levels.length;
+    var isNext = seq >= levels.length;
+    var level = isNext ? {index: levels.length ? levels[levels.length - 1].index + 1 : 0, patterns: []} : levels[seq];
+    var locked = levelLocked(levels, seq);
+    var allDone = !isNext && level.patterns.length && level.patterns.every(function(n) { return n.state === 'third_pass'; });
+    var name = getLevelName(level.index) || ('第 ' + (seq + 1) + ' 关');
+    var desc = getLevelDescription(level.index) || '';
+    var status = isNext ? '空关卡' : (locked ? '未解锁' : (allDone ? '已通关' : '待挑战'));
+    var statusCls = isNext ? 'open' : (locked ? 'locked' : (allDone ? 'done' : 'open'));
+
+    var html = '<div class="level-detail-head"><h2>' + escapeHtml(name) + '</h2>';
+    html += '<span class="level-status ' + statusCls + '">' + escapeHtml(status) + '</span>';
+    html += '<div class="level-detail-actions">';
+    html += '<button class="primary" onclick="openLevelDescription(' + seq + ')">关卡说明</button>';
+    if (!isNext) {
+        html += '<button onclick="toggleLevelRename(' + level.index + ')">改名</button>';
+        html += '<button onclick="moveLevel(' + seq + ',-1)"' + (seq === 0 ? ' disabled' : '') + '>上移</button>';
+        html += '<button onclick="moveLevel(' + seq + ',1)"' + (seq === levels.length - 1 ? ' disabled' : '') + '>下移</button>';
+        html += '<button class="danger" onclick="removeLevel(' + seq + ')">删除本关</button>';
     }
-    html += '</div>';
-    if (!isNext && level.patterns.length) {
+    html += '</div></div>';
+
+    if (!isNext) {
         html += '<div class="level-rename" id="levelRename_' + level.index + '">';
-        html += '<input id="levelNameInput_' + level.index + '" value="' + escapeHtml(lvName) + '" placeholder="输入关卡名">';
+        html += '<input id="levelNameInput_' + level.index + '" value="' + escapeHtml(name) + '" placeholder="输入关卡名">';
         html += '<button onclick="saveLevelName(' + level.index + ')">保存</button>';
         html += '</div>';
     }
+
+    html += '<div class="level-desc-box">';
+    html += '<div class="level-desc-head"><b>关卡说明</b>';
+    html += '<button class="board-btn secondary" style="padding:4px 10px;font-size:12px;" onclick="openLevelDescription(' + seq + ')">' + (desc ? '编辑' : '添加') + '</button></div>';
+    if (desc) {
+        html += '<div class="level-desc-text" id="levelDescText_' + level.index + '">' + escapeHtml(desc) + '</div>';
+    } else {
+        html += '<div class="level-desc-empty">还没有关卡说明，点击添加后用 LaTeX 书写。</div>';
+    }
+    html += '</div>';
+
     html += '<div class="level-patterns">';
     for (var j = 0; j < level.patterns.length; j++) {
         html += renderPatternCard(level.patterns[j], patternStatus(level.patterns[j], locked));
     }
+    if (!level.patterns.length) {
+        html += '<div class="empty-board">这一关还没有题目，从下方添加套路。</div>';
+    }
     html += '</div>';
     html += renderLevelAdd(seq);
-    html += '</div>';
-    return html;
+    el.innerHTML = html;
+    if (window.renderMathInElement) {
+        try {
+            renderMathInElement(el, {delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ], ignoredTags: []});
+        } catch (e) {}
+    }
+}
+
+function openLevelDescription(seq) {
+    var levels = getLevels();
+    var level = levels[seq];
+    if (!level && seq === levels.length) {
+        level = {index: levels.length ? levels[levels.length - 1].index + 1 : 0, patterns: []};
+    }
+    if (!level) return;
+    var name = getLevelName(level.index) || ('第 ' + (seq + 1) + ' 关');
+    var desc = getLevelDescription(level.index) || '';
+    var overlay = document.createElement('div');
+    overlay.className = 'level-desc-overlay show';
+    overlay.id = 'levelDescOverlay';
+    overlay.innerHTML = '<div class="level-desc-modal">' +
+        '<h3>关卡说明 · ' + escapeHtml(name) + '</h3>' +
+        '<textarea id="levelDescInput" placeholder="用 LaTeX 书写关卡说明，例如 $x^2+y^2=r^2$">' + escapeHtml(desc) + '</textarea>' +
+        '<div class="preview-title">预览</div><div class="level-desc-preview" id="levelDescPreview">' + escapeHtml(desc) + '</div>' +
+        '<div class="level-desc-modal-actions">' +
+        '<button class="board-btn secondary" onclick="closeLevelDescription()">取消</button>' +
+        '<button class="board-btn" onclick="saveLevelDescription(' + seq + ')">保存</button>' +
+        '</div></div>';
+    document.body.appendChild(overlay);
+    renderLevelDescriptionPreview();
+    overlay.querySelector('textarea').addEventListener('input', renderLevelDescriptionPreview);
+}
+
+function renderLevelDescriptionPreview() {
+    var input = document.getElementById('levelDescInput');
+    var preview = document.getElementById('levelDescPreview');
+    if (!input || !preview) return;
+    preview.textContent = input.value;
+    if (window.renderMathInElement) {
+        try {
+            renderMathInElement(preview, {delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ], ignoredTags: []});
+        } catch (e) {}
+    }
+}
+
+function closeLevelDescription() {
+    var el = document.getElementById('levelDescOverlay');
+    if (el) el.remove();
+}
+
+async function saveLevelDescription(seq) {
+    var input = document.getElementById('levelDescInput');
+    var desc = input ? input.value : '';
+    var levels = getLevels();
+    var level = levels[seq];
+    if (!level && seq === levels.length) {
+        level = {index: levels.length ? levels[levels.length - 1].index + 1 : 0, patterns: []};
+    }
+    if (!level) return;
+    currentBoard.levels = currentBoard.levels || [];
+    var lv = getLevelData(level.index);
+    if (lv) {
+        lv.description = desc;
+    } else {
+        currentBoard.levels.push({level_index: level.index, name: getLevelName(level.index), knowledge_points: [], description: desc});
+    }
+    closeLevelDescription();
+    await saveBoard();
 }
 
 function renderPatternCard(n, status) {
@@ -397,7 +565,7 @@ async function saveLevelName(levelIndex) {
     if (lv) {
         lv.name = name;
     } else {
-        currentBoard.levels.push({level_index: levelIndex, name: name, knowledge_points: []});
+        currentBoard.levels.push({level_index: levelIndex, name: name, knowledge_points: [], description: ''});
     }
     await saveBoard();
 }
@@ -425,7 +593,7 @@ function renderStageList() {
         var status = locked ? '未解锁' : (allDone ? '已通关' : '待挑战');
         var name = getLevelName(levels[i].index) || ('第 ' + (i + 1) + ' 关');
         var kps = getLevelKps(levels[i].index);
-        html += '<div class="stage-item" onclick="scrollToLevel(' + i + ')">';
+        html += '<div class="stage-item' + (selectedLevelSeq === i ? ' active' : '') + '" onclick="selectLevel(' + i + ')">';
         html += '<div class="stage-head"><span class="stage-name">' + escapeHtml(name) + '</span><span class="stage-status ' + (locked ? 'locked' : (allDone ? 'done' : 'open')) + '">' + escapeHtml(status) + '</span></div>';
         if (kps.length) {
             html += '<div class="stage-kps">' + escapeHtml(kps.join('、')) + '</div>';
@@ -439,8 +607,7 @@ function renderStageList() {
 }
 
 function scrollToLevel(seq) {
-    var el = document.getElementById('level_band_' + seq);
-    if (el) el.scrollIntoView({behavior: 'smooth', block: 'start'});
+    selectLevel(seq);
 }
 
 async function moveLevel(seq, dir) {
@@ -452,10 +619,12 @@ async function moveLevel(seq, dir) {
     for (var j = 0; j < b.patterns.length; j++) b.patterns[j].x = a.index;
     currentBoard.levels = currentBoard.levels || [];
     var la = getLevelData(a.index), lb = getLevelData(b.index);
-    if (!la) { la = {level_index: a.index, name: '', knowledge_points: []}; currentBoard.levels.push(la); }
-    if (!lb) { lb = {level_index: b.index, name: '', knowledge_points: []}; currentBoard.levels.push(lb); }
+    if (!la) { la = {level_index: a.index, name: '', knowledge_points: [], description: ''}; currentBoard.levels.push(la); }
+    if (!lb) { lb = {level_index: b.index, name: '', knowledge_points: [], description: ''}; currentBoard.levels.push(lb); }
     var tmpName = la.name; la.name = lb.name; lb.name = tmpName;
     var tmpKps = la.knowledge_points; la.knowledge_points = lb.knowledge_points; lb.knowledge_points = tmpKps;
+    var tmpDesc = la.description; la.description = lb.description; lb.description = tmpDesc;
+    selectedLevelSeq = target;
     await saveBoard();
 }
 
@@ -565,7 +734,8 @@ function renumberLevels() {
         nextLevels.push({
             level_index: i,
             name: old.name || '',
-            knowledge_points: old.knowledge_points || []
+            knowledge_points: old.knowledge_points || [],
+            description: old.description || ''
         });
     }
     currentBoard.levels = nextLevels;
@@ -573,13 +743,14 @@ function renumberLevels() {
 
 async function saveBoard() {
     if (!currentBoard) return;
+    var keepSeq = selectedLevelSeq;
     var payload = {
         nodes: currentBoard.nodes.map(function(n) {
             return {question_id: n.question_id, x: Math.round(n.x || 0), y: Math.round(n.y || 0)};
         }),
         edges: [],
         levels: (currentBoard.levels || []).map(function(l) {
-            return {level_index: l.level_index, name: l.name || ''};
+            return {level_index: l.level_index, name: l.name || '', description: l.description || ''};
         })
     };
     try {
@@ -590,6 +761,8 @@ async function saveBoard() {
         });
         if (d && d.id) {
             await loadBoards();
+            selectedLevelSeq = Math.min(keepSeq, getLevels().length);
+            renderLevels();
             setBoardStatus('已保存');
         } else {
             setBoardStatus('保存失败：' + ((d && d.detail) || '未知错误'), true);
