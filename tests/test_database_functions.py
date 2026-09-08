@@ -188,6 +188,25 @@ class CrudTest(TempDbCase):
         aj = json.loads(row["answer_json"])
         self.assertEqual(aj["category"]["level2"], "集合与元素")
 
+    def test_save_question_keeps_pattern_difficulty(self):
+        aj = _answer(category="数列", chunk_type="大题", kps=["等差数列"])
+        cr = aj["chunk_results"][0]
+        cr["steps"] = [{
+            "step_number": 1, "title": "判等差", "standard_writing": "d恒定",
+            "detailed_writing": "d恒定", "knowledge_point": "等差数列",
+            "step_difficulty": {"dimensions": {
+                "计算量": 1, "非常规程度": 0, "分类讨论": 0, "知识广度": 0, "条件转化难度": 0,
+            }},
+        }]
+        cr["difficulty"] = {"pattern_id": 7, "pattern_difficulty": 3}
+        qid = save_question("某等差题", aj)
+        row = get_question_by_id(qid)
+        od = row["answer_json"]["overall_difficulty"]
+        self.assertEqual(od["pattern_difficulty"], 3)
+        self.assertEqual(od["pattern_id"], 7)
+        self.assertEqual(od["level"], "极难")  # 套路难度 3 主导综合等级
+        self.assertEqual(row["difficulty_level"], "极难")
+
     def test_search_knowledge_points_all_required(self):
         self.seed("只有集合元素", kps=["集合与元素"])
         both_id = self.seed("集合元素加基本关系", kps=["集合与元素", "集合间的基本关系"])

@@ -532,6 +532,14 @@ function patternStateLabel(s) {
     return {never: '未挑战', first_pass: '第一次会', second_pass: '第二次会', third_pass: '已通关', again_wrong: '再次出错'}[s] || s || '未挑战';
 }
 
+function difficultySelectHtml(selected) {
+    var v = String(selected == null ? 1 : selected);
+    var opts = [['0', '0 · 送分'], ['1', '1 · 常规'], ['2', '2 · 难题'], ['3', '3 · 压轴']];
+    return opts.map(function(o) {
+        return '<option value="' + o[0] + '"' + (v === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+    }).join('');
+}
+
 function togglePatternForm() {
     var box = document.getElementById('newPatternBox');
     if (!box) return;
@@ -572,6 +580,7 @@ function renderPatternModal(data) {
     html += '<div class="new-pattern-box" id="newPatternBox" style="display:' + (matches.length ? 'none' : 'block') + ';">';
     html += '<label>所属板块</label><select id="newPatternCategory"></select>';
     html += '<label>套路名</label><input id="newPatternName" placeholder="如：直线与圆锥曲线联立">';
+    html += '<label>套路难度</label><select id="newPatternDifficulty">' + difficultySelectHtml(1) + '</select>';
     html += '<label>套路说明</label><textarea id="newPatternDesc" placeholder="这个套路考什么、怎么破题"></textarea>';
     html += '</div>';
     html += '<label class="pattern-choice"><input type="radio" name="patternChoice" value="none"><span><div class="pattern-choice-name">暂不关联</div><div class="pattern-choice-meta">保留错题标签，稍后再到母题看板处理</div></span></label>';
@@ -615,6 +624,7 @@ async function confirmPatternMatch() {
             var name = document.getElementById('newPatternName').value.trim();
             var category = document.getElementById('newPatternCategory').value;
             var desc = document.getElementById('newPatternDesc').value.trim();
+            var difficulty = parseInt(document.getElementById('newPatternDifficulty').value) || 1;
             if (!category || !name) {
                 if (statusEl) statusEl.innerHTML = '<span style="color:#c62828;">请选择板块并填写套路名。</span>';
                 return;
@@ -622,7 +632,7 @@ async function confirmPatternMatch() {
             var d = await api('/patterns/mother', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({question_id: _patternMatch.question_id, category: category, name: name, description: desc})
+                body: JSON.stringify({question_id: _patternMatch.question_id, category: category, name: name, description: desc, difficulty: difficulty})
             });
             if (d.error) throw new Error(d.detail || d.error);
             await api('/patterns/' + d.pattern_id + '/wrong', {

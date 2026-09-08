@@ -865,6 +865,7 @@ def _is_well_formed_chunk_results(chunk_results) -> bool:
 
 def _aggregate_from_chunks(question: str, chunk_results: list, token_total: dict) -> dict:
     """聚合 Verifier 输出为最终 JSON（Formatter 两次都失败时的兜底）。"""
+    _attach_pattern_difficulty(chunk_results)
     kps = set()
     answers = []
     for cr in chunk_results:
@@ -878,13 +879,28 @@ def _aggregate_from_chunks(question: str, chunk_results: list, token_total: dict
                     part = part.strip()
                     if part:
                         kps.add(part)
-        cr["difficulty"] = dict(diff.UNKNOWN_DIFFICULTY)
+        pattern = cr.get("difficulty") or {}
+        pd = pattern.get("pattern_difficulty") if isinstance(pattern, dict) else None
+        pid = pattern.get("pattern_id") if isinstance(pattern, dict) else None
+        if pd is None:
+            # 兜底路径没有五维，也没有套路匹配 → 保持"未知"，避免误判为容易
+            cr["difficulty"] = dict(diff.UNKNOWN_DIFFICULTY)
+        else:
+            cr["difficulty"] = diff.combine_pattern_and_exec({}, pd, pid)
+    pdiffs = [c["difficulty"].get("pattern_difficulty") for c in chunk_results
+              if isinstance(c, dict) and c["difficulty"].get("pattern_difficulty") is not None]
+    pids = [c["difficulty"].get("pattern_id") for c in chunk_results
+            if isinstance(c, dict) and c["difficulty"].get("pattern_id") is not None]
+    if pdiffs:
+        overall = diff.combine_pattern_and_exec({}, max(pdiffs), pids[-1] if pids else None)
+    else:
+        overall = dict(diff.UNKNOWN_DIFFICULTY)
     return {
         "status": "可解",
         "chunk_results": chunk_results,
         "final_answer": " | ".join(answers) if len(answers) > 1 else (answers[0] if answers else ""),
         "knowledge_points": list(kps),
-        "overall_difficulty": dict(diff.UNKNOWN_DIFFICULTY),
+        "overall_difficulty": overall,
         "token_usage": {k: token_total.get(k, 0) for k in token_total},
     }
 
@@ -905,6 +921,51 @@ def _collect_kps_from_steps(chunk_results: list) -> list:
                     seen.add(part)
                     out.append(part)
     return out
+
+
+def _chunk_match_text(cr) -> str:
+    """构造一个块用于套路匹配的文本（步骤过程 + 最终答案）。"""
+    parts = []
+    for step in cr.get("steps") or []:
+        if not isinstance(step, dict):
+            continue
+        for key in ("standard_writing", "detailed_writing", "title"):
+            v = step.get(key)
+            if v and isinstance(v, str):
+                parts.append(v)
+    if cr.get("final_answer"):
+        parts.append(str(cr["final_answer"]))
+    return "\n".join(parts)
+
+
+def _match_chunk_to_pattern(cr) -> tuple:
+    """给一个块匹配套路，返回 (pattern_id, pattern_difficulty)。"""
+    try:
+        from backend.patterns import match_question_to_pattern
+        cat = cr.get("category") or {}
+        cat_l1 = cat.get("level1") if isinstance(cat, dict) else cat
+        m = match_question_to_pattern(
+            content=_chunk_match_text(cr),
+            category=cat_l1,
+            kps=cr.get("knowledge_points") or [],
+            question_type=cr.get("chunk_type"),
+        )
+        return m.get("pattern_id"), m.get("difficulty")
+    except Exception as e:
+        logger.warning("套路匹配失败（忽略，回退到纯五维难度）: %s", str(e)[:120])
+        return None, None
+
+
+def _attach_pattern_difficulty(chunk_results) -> None:
+    """给每个块补上套路匹配结果（pattern_id / pattern_difficulty）。"""
+    for cr in chunk_results or []:
+        if not isinstance(cr, dict):
+            continue
+        pid, pdiff = _match_chunk_to_pattern(cr)
+        cr["difficulty"] = {
+            "pattern_id": pid,
+            "pattern_difficulty": pdiff,
+        }
 
 
 def _call_formatter(question: str, chunk_results: list, token_total: dict, teacher: str):
@@ -935,6 +996,7 @@ def _call_formatter(question: str, chunk_results: list, token_total: dict, teach
         return None, "Formatter 输出缺少完整步骤"
     if not diff.has_step_dimensions(crs):
         return None, "Formatter 未给每个步骤输出五维难度"
+    _attach_pattern_difficulty(crs)
     try:
         _, overall = diff.aggregate_chunk_results(crs)
     except Exception as e:

@@ -121,6 +121,18 @@ function isDue(p) {
     return m.need_check && m.next_check_at && new Date(m.next_check_at.replace(' ', 'T')) <= new Date();
 }
 
+function difficultyLabel(d) {
+    return {'0': '0 · 送分', '1': '1 · 常规', '2': '2 · 难题', '3': '3 · 压轴'}[String(d)] || '1 · 常规';
+}
+
+function difficultyOptions(selected) {
+    var v = String(selected == null ? 1 : selected);
+    var opts = [['0', '0 · 送分'], ['1', '1 · 常规'], ['2', '2 · 难题'], ['3', '3 · 压轴']];
+    return opts.map(function(o) {
+        return '<option value="' + o[0] + '"' + (v === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+    }).join('');
+}
+
 function checkReminders() {
     var due = _patterns.filter(isDue);
     var el = document.getElementById('motherReminder');
@@ -221,7 +233,7 @@ function renderTree() {
             html += '<div class="mm-pattern-name">' + escapeHtml(p.name) + '<span class="state-badge ' + stateClass(state) + '">' + escapeHtml(stateLabel(state)) + '</span>';
             if (isDue(p)) html += '<span class="state-badge" style="background:#fee2e2;color:#b91c1c;">待复查</span>';
             html += '</div>';
-            html += '<div class="mm-pattern-meta">母题 #' + (p.mother_id || '无') + (p.variant_ids.length ? ' · 变式 ' + p.variant_ids.length + ' 道' : '') + '</div>';
+            html += '<div class="mm-pattern-meta">母题 #' + (p.mother_id || '无') + (p.variant_ids.length ? ' · 变式 ' + p.variant_ids.length + ' 道' : '') + ' · 难度 ' + difficultyLabel(p.difficulty) + '</div>';
             html += '</li>';
         }
         html += '</ul></div>';
@@ -240,6 +252,7 @@ function selectPattern(id) {
     html += '<div class="form-row"><div><label>所属板块</label><select id="patternCategory" onchange="fillCategorySelect(this)"></select></div>';
     html += '<div><label>套路名</label><input id="patternName" value="' + escapeHtml(p.name || '') + '"></div></div>';
     html += '<div class="form-row"><div><label>单题限时（秒）</label><input id="patternMaxTime" type="number" min="10" value="' + (p.max_time_seconds || 120) + '"></div><div></div></div>';
+    html += '<div class="form-row one"><label>套路难度</label><select id="patternDifficulty">' + difficultyOptions(p.difficulty) + '</select></div>';
     html += '<div class="form-row one"><label>套路说明</label><textarea id="patternDesc">' + escapeHtml(p.description || '') + '</textarea></div>';
     html += '<div class="form-row one"><label>已关联题目</label><div id="questionLinks"></div>';
     html += '<div class="add-question-row"><div class="question-search-wrap" style="flex:1;"><input id="newQuestionIdSearch" type="text" class="question-search-input" data-target-id="newQuestionId" data-results-id="newQuestionIdResults" placeholder="搜索并选择题目..." autocomplete="off"><input type="hidden" id="newQuestionId"><div id="newQuestionIdResults" class="question-search-results"></div></div>';
@@ -278,6 +291,7 @@ function newPattern() {
     html += '<div><label>稳定编号 key</label><input id="patternKey" placeholder="留空自动生成"></div></div>';
     html += '<div class="form-row"><div><label>所属板块</label><select id="patternCategory"></select></div>';
     html += '<div><label>套路名</label><input id="patternName" placeholder="如：直线与圆锥曲线联立"></div></div>';
+    html += '<div class="form-row one"><label>套路难度</label><select id="patternDifficulty">' + difficultyOptions(1) + '</select></div>';
     html += '<div class="form-row one"><label>套路说明</label><textarea id="patternDesc" placeholder="这个套路考什么、怎么破题"></textarea></div>';
     html += '<div class="form-actions"><button class="mother-btn" onclick="createPattern()">创建套路</button></div>';
     form.innerHTML = html;
@@ -292,7 +306,8 @@ async function savePattern() {
         name: document.getElementById('patternName').value.trim(),
         description: document.getElementById('patternDesc').value,
         key: document.getElementById('patternKey').value.trim() || null,
-        max_time_seconds: parseInt(document.getElementById('patternMaxTime').value) || 120
+        max_time_seconds: parseInt(document.getElementById('patternMaxTime').value) || 120,
+        difficulty: parseInt(document.getElementById('patternDifficulty').value) || 1
     };
     if (!payload.category || !payload.name) { setStatus('板块和套路名不能为空', true); return; }
     try {
@@ -312,7 +327,8 @@ async function createPattern() {
         category: document.getElementById('patternCategory').value,
         name: document.getElementById('patternName').value.trim(),
         key: document.getElementById('patternKey').value.trim() || null,
-        description: document.getElementById('patternDesc').value
+        description: document.getElementById('patternDesc').value,
+        difficulty: parseInt(document.getElementById('patternDifficulty').value) || 1
     };
     if (!payload.category || !payload.name) { setStatus('板块和套路名不能为空', true); return; }
     try {

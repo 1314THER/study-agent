@@ -441,6 +441,7 @@ class AddMotherQuestionRequest(BaseModel):
     name: str
     key: Optional[str] = Field(None, description="套路稳定编号")
     description: Optional[str] = Field("", description="套路说明")
+    difficulty: Optional[int] = Field(None, description="套路本身难度（0-3，0 送分 / 1 常规 / 2 难题 / 3 压轴）")
 
 
 @app.get("/patterns")
@@ -461,6 +462,7 @@ def api_add_mother_question(req: AddMotherQuestionRequest):
             name=req.name,
             key=req.key,
             description=req.description,
+            difficulty=req.difficulty,
         )
     except ValueError as e:
         from fastapi.responses import JSONResponse
@@ -473,6 +475,7 @@ class UpdatePatternRequest(BaseModel):
     description: Optional[str] = Field(None, description="套路说明")
     key: Optional[str] = Field(None, description="套路稳定编号")
     max_time_seconds: Optional[int] = Field(None, description="单题限时（秒）")
+    difficulty: Optional[int] = Field(None, description="套路本身难度（0-3）")
 
 
 class PatternQuestionRequest(BaseModel):
@@ -491,6 +494,7 @@ def api_update_pattern(pattern_id: int, req: UpdatePatternRequest):
             description=req.description,
             key=req.key,
             max_time_seconds=req.max_time_seconds,
+            difficulty=req.difficulty,
         )
     except ValueError as e:
         from fastapi.responses import JSONResponse

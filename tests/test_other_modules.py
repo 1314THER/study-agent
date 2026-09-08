@@ -18,6 +18,8 @@ from backend.difficulty import (
     _weight_for,
     aggregate_chunk_results,
     aggregate_dims,
+    clamp_pattern_difficulty,
+    combine_pattern_and_exec,
     difficulty_from_dims,
     has_step_dimensions,
     level_from_score,
@@ -129,6 +131,48 @@ class DifficultyTest(unittest.TestCase):
         chunk_results, overall = aggregate_chunk_results(crs)
         self.assertEqual(chunk_results[0]["difficulty"]["level"], "中等")
         self.assertIn("level", overall)
+
+    def test_clamp_pattern_difficulty(self):
+        self.assertEqual(clamp_pattern_difficulty(0), 0)
+        self.assertEqual(clamp_pattern_difficulty(3), 3)
+        self.assertEqual(clamp_pattern_difficulty(7), 3)
+        self.assertEqual(clamp_pattern_difficulty(-1), 0)
+        self.assertEqual(clamp_pattern_difficulty("x"), 1)
+        self.assertEqual(clamp_pattern_difficulty(None), 1)
+        self.assertEqual(clamp_pattern_difficulty(2, default=5), 2)
+
+    def test_combine_pattern_and_exec_takes_higher_axis(self):
+        # 套路难但几乎没计算量 → 综合应为极难、执行分很低、套路难度保留
+        r = combine_pattern_and_exec(
+            {"计算量": 0, "非常规程度": 0, "分类讨论": 0, "知识广度": 0, "条件转化难度": 0},
+            3, 99,
+        )
+        self.assertEqual(r["level"], "极难")
+        self.assertEqual(r["total_score"], 0)
+        self.assertEqual(r["pattern_difficulty"], 3)
+        self.assertEqual(r["pattern_id"], 99)
+        # 套路简单但计算量大 → 综合应为极难、套路难度为 0
+        r2 = combine_pattern_and_exec(
+            {"计算量": 3, "非常规程度": 3, "分类讨论": 3, "知识广度": 3, "条件转化难度": 3},
+            0, 100,
+        )
+        self.assertEqual(r2["level"], "极难")
+        self.assertEqual(r2["total_score"], 15)
+        self.assertEqual(r2["pattern_difficulty"], 0)
+        # 无套路 → 综合等级=执行等级，不加 pattern 轴
+        r3 = combine_pattern_and_exec({"计算量": 1}, None, None)
+        self.assertEqual(r3["pattern_difficulty"], None)
+        self.assertEqual(r3["level"], "容易")
+
+    def test_aggregate_chunk_results_keeps_pattern_fields(self):
+        crs = [{
+            "steps": [{"step_difficulty": {"dimensions": {"计算量": 3, "非常规程度": 3}}}],
+        }]
+        crs[0]["difficulty"] = {"pattern_id": 5, "pattern_difficulty": 2}
+        chunk_results, overall = aggregate_chunk_results(crs)
+        self.assertEqual(chunk_results[0]["difficulty"]["pattern_difficulty"], 2)
+        self.assertEqual(chunk_results[0]["difficulty"]["pattern_id"], 5)
+        self.assertEqual(overall["pattern_difficulty"], 2)
 
 
 class StepsTest(unittest.TestCase):

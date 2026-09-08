@@ -21,6 +21,32 @@ class PatternApiTest(ApiTestCase):
         self.assertEqual(resp.status_code, 200)
         self.assertTrue(any(p["id"] == pid for p in resp.json()))
 
+    def test_add_mother_with_difficulty_and_match(self):
+        qid = self.seed_question()
+        resp = self.client.post("/patterns/mother", json={
+            "question_id": qid,
+            "category": "集合与逻辑用语",
+            "name": "集合子集计数",
+            "difficulty": 3,
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json()["difficulty"], 3)
+        pid = resp.json()["pattern_id"]
+
+        listed = [p for p in self.client.get("/patterns").json() if p["id"] == pid][0]
+        self.assertEqual(listed["difficulty"], 3)
+
+        from backend.patterns import match_question_to_pattern
+        m = match_question_to_pattern(
+            content="设集合 A={1,2}，则 A 的子集个数是？",
+            category="集合与逻辑用语",
+            kps=["集合与元素"],
+            question_type="选择题",
+        )
+        self.assertTrue(m["matches"], "应匹配到套路")
+        self.assertEqual(m["pattern_id"], pid)
+        self.assertEqual(m["difficulty"], 3)
+
     def test_add_mother_invalid_category(self):
         qid = self.seed_question()
         resp = self.client.post("/patterns/mother", json={

@@ -144,6 +144,20 @@ class PatternsHelperTest(unittest.TestCase):
         pattern = get_pattern(pid)
         self.assertEqual(pattern["mastery"]["need_check"], 1)
 
+    def test_pattern_difficulty_default_and_roundtrip(self):
+        init_mastery_db()
+        conn = patterns_mod._get_conn()
+        pid = _ensure_pattern_row(conn, "k1", "数列", "套路甲", difficulty=3)
+        pid2 = _ensure_pattern_row(conn, "k2", "数列", "套路乙")
+        conn.commit()
+        conn.close()
+
+        self.assertEqual(get_pattern(pid)["difficulty"], 3)
+        self.assertEqual(get_pattern(pid2)["difficulty"], 1)
+
+        updated = patterns_mod.update_pattern(pid, difficulty=0)
+        self.assertEqual(updated["difficulty"], 0)
+
 
 if __name__ == "__main__":
     unittest.main()

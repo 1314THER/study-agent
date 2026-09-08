@@ -889,10 +889,25 @@ def save_question(question_text: str, answer_dict: dict):
             old_od = answer_dict.get("overall_difficulty") or answer_dict.get("difficulty") or {}
             if isinstance(old_od, dict) and old_od and old_od != diff.UNKNOWN_DIFFICULTY:
                 answer_dict.setdefault("legacy_difficulty", old_od)
-            answer_dict["overall_difficulty"] = dict(diff.UNKNOWN_DIFFICULTY)
+            pdiffs = []
+            pids = []
             for cr in chunk_results:
-                if isinstance(cr, dict):
-                    cr["difficulty"] = dict(diff.UNKNOWN_DIFFICULTY)
+                if not isinstance(cr, dict):
+                    continue
+                cur = cr.get("difficulty") or {}
+                pd = cur.get("pattern_difficulty") if isinstance(cur, dict) else None
+                pid = cur.get("pattern_id") if isinstance(cur, dict) else None
+                if pd is not None:
+                    pdiffs.append(pd)
+                if pid is not None:
+                    pids.append(pid)
+                cr["difficulty"] = diff.combine_pattern_and_exec({}, pd, pid) if pd is not None else dict(diff.UNKNOWN_DIFFICULTY)
+            if pdiffs:
+                answer_dict["overall_difficulty"] = diff.combine_pattern_and_exec(
+                    {}, max(pdiffs), pids[-1] if pids else None,
+                )
+            else:
+                answer_dict["overall_difficulty"] = dict(diff.UNKNOWN_DIFFICULTY)
 
     # 处理 difficulty（清洗）
     difficulty = answer_dict.get("overall_difficulty") or answer_dict.get("difficulty", {})

@@ -269,6 +269,77 @@ class StepFlowTest(unittest.TestCase):
         self.assertTrue(result["formatter_fallback"])
         self.assertEqual(result["error"], "formatter_failed")
 
+    def test_call_formatter_attaches_pattern_difficulty(self):
+        import os
+        import tempfile
+        import backend.database as database_mod
+        import backend.patterns as patterns_mod
+
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        study = os.path.join(tmp.name, "study.db")
+        mp = os.path.join(tmp.name, "mastery.db")
+        py = os.path.join(tmp.name, "patterns.yaml")
+
+        with patch.object(database_mod, "DB_PATH", study), \
+             patch.object(patterns_mod, "MASTERY_DB", mp), \
+             patch.object(patterns_mod, "PATTERNS_YAML", py):
+            database_mod.init_db()
+            from backend.database import save_question
+            mother_aj = {
+                "category": {"level1": "数列"},
+                "chunk_results": [{
+                    "chunk_type": "大题", "category": {"level1": "数列"},
+                    "final_answer": "2n", "knowledge_points": ["等差数列"],
+                    "steps": [{"step_number": 1, "title": "判等差",
+                               "standard_writing": "公差恒定", "detailed_writing": "公差恒定",
+                               "knowledge_point": "等差数列"}],
+                }],
+                "final_answer": "2n",
+            }
+            mother_id = save_question("已知数列 a_n 公差为2，求通项。", mother_aj)
+            patterns_mod.add_mother_question(
+                mother_id, "数列", "等差数列通项公式", difficulty=2,
+            )
+
+            input_crs = [{
+                "chunk_id": 1, "chunk_type": "大题",
+                "category": {"level1": "数列", "level2": None},
+                "final_answer": "7", "knowledge_points": ["等差数列"],
+                "steps": [{"step_number": 1, "title": "判等差", "step_level1": None,
+                           "standard_writing": "公差恒定", "detailed_writing": "公差恒定",
+                           "knowledge_point": "等差数列"}],
+            }]
+            fmt = json.dumps({
+                "status": "可解",
+                "chunk_results": [{
+                    "chunk_id": 1, "chunk_type": "大题",
+                    "category": {"level1": "数列", "level2": None},
+                    "final_answer": "7", "knowledge_points": ["等差数列"],
+                    "steps": [{
+                        "step_number": 1, "title": "判等差", "step_level1": None,
+                        "standard_writing": "公差恒定", "detailed_writing": "公差恒定",
+                        "knowledge_point": "等差数列",
+                        "step_difficulty": {"dimensions": {
+                            "计算量": 1, "非常规程度": 0, "分类讨论": 0,
+                            "知识广度": 0, "条件转化难度": 0,
+                        }},
+                    }],
+                }],
+            }, ensure_ascii=False)
+
+            with patch.object(solver_mod, "call_deepseek",
+                              return_value=(fmt, {"total_tokens": 5})):
+                result, reason = solver_mod._call_formatter(
+                    "某大题", input_crs, {"total_tokens": 0}, "liangliang",
+                )
+
+            self.assertIsNone(reason)
+            chunk_diff = result["chunk_results"][0]["difficulty"]
+            self.assertEqual(chunk_diff["pattern_difficulty"], 2)
+            self.assertEqual(chunk_diff["pattern_id"], 1)
+            self.assertEqual(result["overall_difficulty"]["pattern_difficulty"], 2)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -289,6 +289,8 @@ function renderHeader() {
     html += '<div style="font-size:18px;font-weight:600;margin-top:10px;">' + escapeHtml(p.name) + '</div>';
     html += '<div class="loop-time-box"><label>单题限时（秒）</label><input id="maxTimeInput" type="number" min="10" value="' + (p.max_time_seconds || 120) + '">';
     html += '<button class="loop-btn secondary" onclick="saveMaxTime()">保存限时</button></div>';
+    html += '<div class="loop-time-box"><label>套路难度</label><select id="patternDifficultyInput">' + difficultyOptionsHtml(p.difficulty) + '</select>';
+    html += '<button class="loop-btn secondary" onclick="saveDifficulty()">保存难度</button></div>';
     if (due) html += '<div class="loop-banner">该套路已到复查时间，进入后开始复查。</div>';
     html += '</div>';
     document.getElementById('loopTitle').textContent = p.name;
@@ -302,6 +304,25 @@ async function saveMaxTime() {
         method: 'PUT',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({max_time_seconds: v})
+    });
+    loadLoop();
+}
+
+function difficultyOptionsHtml(selected) {
+    var v = String(selected == null ? 1 : selected);
+    var opts = [['0', '0 · 送分'], ['1', '1 · 常规'], ['2', '2 · 难题'], ['3', '3 · 压轴']];
+    return opts.map(function(o) {
+        return '<option value="' + o[0] + '"' + (v === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
+    }).join('');
+}
+
+async function saveDifficulty() {
+    var v = parseInt(document.getElementById('patternDifficultyInput').value);
+    if (isNaN(v)) return;
+    await api('/patterns/' + state.patternId, {
+        method: 'PUT',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({difficulty: v})
     });
     loadLoop();
 }

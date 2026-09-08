@@ -139,6 +139,46 @@ def difficulty_from_dims(dims) -> dict:
     }
 
 
+PATTERN_LEVEL_LABELS = ["容易", "中等", "困难", "极难"]
+_LEVEL_TO_BAND = {label: i for i, label in enumerate(PATTERN_LEVEL_LABELS)}
+
+
+def clamp_pattern_difficulty(value, default=1) -> int:
+    """套路难度只允许 0-3 整数；非法值回退到默认（默认 1=标准）。"""
+    try:
+        v = int(round(float(value)))
+    except (TypeError, ValueError):
+        return default
+    return max(0, min(3, v))
+
+
+def combine_pattern_and_exec(exec_dims, pattern_difficulty=None, pattern_id=None) -> dict:
+    """把"思路难度（套路难度，0-3，人工填）"与"执行难度（五维聚合）"合成为综合难度。
+
+    简单版：综合等级取两轴较高者（max），不额外做双高加成，因此不会重复计算。
+    - 套路难但计算量小 → 综合=套路难度（思路难占主导）
+    - 套路简单但计算量大 → 综合=五维执行难度（计算难占主导）
+    —"total_score" 仍保留五维执行总分（0-15），"pattern_difficulty" 单独作为一轴。
+    """
+    exec_diff = difficulty_from_dims(exec_dims)
+    p = clamp_pattern_difficulty(pattern_difficulty) if pattern_difficulty is not None else None
+    if p is None:
+        return {
+            "level": exec_diff["level"],
+            "total_score": exec_diff["total_score"],
+            "dimensions": exec_diff["dimensions"],
+            "pattern_difficulty": None,
+            "pattern_id": pattern_id,
+        }
+    merged_band = max(_LEVEL_TO_BAND.get(exec_diff["level"], 0), p)
+    return {
+        "level": PATTERN_LEVEL_LABELS[merged_band],
+        "total_score": exec_diff["total_score"],
+        "dimensions": exec_diff["dimensions"],
+        "pattern_difficulty": p,
+        "pattern_id": pattern_id,
+    }
+
 def step_difficulty_from_dims(dims) -> dict:
     normalized = normalize_dims(dims)
     score = score_from_dims(normalized)
@@ -152,6 +192,8 @@ def step_difficulty_from_dims(dims) -> dict:
 def aggregate_chunk_results(chunk_results: list) -> tuple:
     """重算每个块的难度与整题难度，并回填步骤分/等级。返回 (chunk_results, overall)。"""
     all_vectors = []
+    pattern_diffs = []
+    pattern_ids = []
     for cr in chunk_results:
         if not isinstance(cr, dict):
             continue
@@ -168,7 +210,16 @@ def aggregate_chunk_results(chunk_results: list) -> tuple:
             sd["level"] = level_from_score(sd["score"])
             step["step_difficulty"] = sd
             vectors.append(dims)
-        cr["difficulty"] = difficulty_from_dims(aggregate_dims(vectors))
+        old = cr.get("difficulty") or {}
+        old_pdiff = old.get("pattern_difficulty") if isinstance(old, dict) else None
+        old_pid = old.get("pattern_id") if isinstance(old, dict) else None
+        cr["difficulty"] = combine_pattern_and_exec(aggregate_dims(vectors), old_pdiff, old_pid)
+        if cr["difficulty"].get("pattern_difficulty") is not None:
+            pattern_diffs.append(cr["difficulty"]["pattern_difficulty"])
+        if cr["difficulty"].get("pattern_id") is not None:
+            pattern_ids.append(cr["difficulty"]["pattern_id"])
         all_vectors.extend(vectors)
-    overall = difficulty_from_dims(aggregate_dims(all_vectors))
+    overall_pdiff = max(pattern_diffs) if pattern_diffs else None
+    overall_pid = pattern_ids[-1] if pattern_ids else None
+    overall = combine_pattern_and_exec(aggregate_dims(all_vectors), overall_pdiff, overall_pid)
     return chunk_results, overall

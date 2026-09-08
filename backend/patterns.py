@@ -23,11 +23,23 @@ STATE_SECOND_PASS = "second_pass"
 STATE_THIRD_PASS = "third_pass"
 STATE_AGAIN_WRONG = "again_wrong"
 
+def _clamp_difficulty(value, default=1) -> int:
+    """套路难度只允许 0-3 整数；非法或缺省回退到默认（默认 1=标准）。"""
+    if value is None:
+        return default
+    try:
+        v = int(round(float(value)))
+    except (TypeError, ValueError):
+        return default
+    return max(0, min(3, v))
+
+
 _YAML_HEADER = """# 母题库：一级标题与 backend/categories.yaml 保持一致
 #
 # 每个套路的结构：
 #   套路名:
 #     key: 稳定编号（删除/重排题库后不失效）
+#     difficulty: 套路本身难度（0-3，由加入套路的人填写；0 送分 / 1 常规 / 2 难题 / 3 压轴）
 #     description: 套路说明
 #     mother_id: 当前母题在 study_agent.db 中的题目 ID
 #     variant_ids: [变式题 ID]
@@ -65,15 +77,18 @@ def _future_str(days: int) -> str:
     return (datetime.now() + timedelta(days=days)).strftime("%Y-%m-%d %H:%M:%S")
 
 
-def _ensure_pattern_row(conn, yaml_key: str, category: str, name: str, description: str = "") -> int:
+def _ensure_pattern_row(conn, yaml_key: str, category: str, name: str,
+                        description: str = "", difficulty=None) -> int:
+    difficulty = _clamp_difficulty(difficulty, default=1)
     conn.execute(
-        """INSERT INTO patterns (yaml_key, category, name, description)
-           VALUES (?, ?, ?, ?)
+        """INSERT INTO patterns (yaml_key, category, name, description, difficulty)
+           VALUES (?, ?, ?, ?, ?)
            ON CONFLICT(yaml_key) DO UPDATE SET
              category = excluded.category,
              name = excluded.name,
-             description = excluded.description""",
-        (yaml_key, category, name, description),
+             description = excluded.description,
+             difficulty = excluded.difficulty""",
+        (yaml_key, category, name, description, difficulty),
     )
     row = conn.execute("SELECT id FROM patterns WHERE yaml_key = ?", (yaml_key,)).fetchone()
     return row["id"]
@@ -240,6 +255,10 @@ def init_mastery_db() -> None:
         if "max_time_seconds" not in cols:
             conn.execute("ALTER TABLE patterns ADD COLUMN max_time_seconds INTEGER NOT NULL DEFAULT 120")
             conn.commit()
+        # 迁移：patterns 增加 difficulty（套路本身难度 0-3，人工填写）
+        if "difficulty" not in cols:
+            conn.execute("ALTER TABLE patterns ADD COLUMN difficulty INTEGER NOT NULL DEFAULT 1")
+            conn.commit()
         # 迁移：关卡说明
         level_cols = [r["name"] for r in conn.execute("PRAGMA table_info(board_levels)").fetchall()]
         if "description" not in level_cols:
@@ -273,7 +292,7 @@ def get_patterns() -> list:
     conn = _get_conn()
     try:
         rows = conn.execute(
-            "SELECT id, yaml_key, category, name, description, max_time_seconds FROM patterns ORDER BY category, name"
+            "SELECT id, yaml_key, category, name, description, max_time_seconds, difficulty FROM patterns ORDER BY category, name"
         ).fetchall()
         qrows = conn.execute(
             "SELECT pattern_id, question_id, role FROM pattern_questions ORDER BY role"
@@ -298,6 +317,7 @@ def get_patterns() -> list:
                 "name": row["name"],
                 "description": row["description"],
                 "max_time_seconds": row["max_time_seconds"] or 120,
+                "difficulty": row["difficulty"] if row["difficulty"] is not None else 1,
                 "mother_id": next((q["question_id"] for q in qlist if q["role"] == "mother"), None),
                 "variant_ids": [q["question_id"] for q in qlist if q["role"].startswith("variant")],
                 "mastery": mastery.get(row["id"], {"state": "never", "need_check": 0}),
@@ -308,7 +328,8 @@ def get_patterns() -> list:
 
 
 def add_mother_question(question_id: int, category: str, name: str,
-                        key: str = None, description: str = "") -> dict:
+                        key: str = None, description: str = "",
+                        difficulty=None) -> dict:
     question = get_question_by_id(question_id)
     if not question:
         raise ValueError(f"题目不存在: {question_id}")
@@ -317,6 +338,7 @@ def add_mother_question(question_id: int, category: str, name: str,
     name = name.strip()
     if not name:
         raise ValueError("套路名不能为空")
+    difficulty = _clamp_difficulty(difficulty, default=1)
 
     init_mastery_db()
     conn = _get_conn()
@@ -334,10 +356,18 @@ def add_mother_question(question_id: int, category: str, name: str,
             pattern_id = row["id"]
             yaml_key = row["yaml_key"]
             if description:
-                conn.execute("UPDATE patterns SET description = ? WHERE id = ?", (description, pattern_id))
+                conn.execute(
+                    "UPDATE patterns SET description = ?, difficulty = ? WHERE id = ?",
+                    (description, difficulty, pattern_id),
+                )
+            else:
+                conn.execute(
+                    "UPDATE patterns SET difficulty = ? WHERE id = ?",
+                    (difficulty, pattern_id),
+                )
         else:
             yaml_key = key or f"pat-{uuid.uuid4().hex[:10]}"
-            pattern_id = _ensure_pattern_row(conn, yaml_key, category, name, description)
+            pattern_id = _ensure_pattern_row(conn, yaml_key, category, name, description, difficulty)
             new_pattern = True
         if new_pattern:
             default_max = int(runtime_settings.get_limits().get("pattern_default_max_time_seconds", 120))
@@ -363,6 +393,7 @@ def add_mother_question(question_id: int, category: str, name: str,
         "yaml_key": yaml_key,
         "category": category,
         "name": name,
+        "difficulty": difficulty,
         "mother_id": question_id,
     }
 
@@ -374,7 +405,7 @@ def get_pattern(pattern_id: int) -> dict:
 
 def update_pattern(pattern_id: int, category: str = None, name: str = None,
                    description: str = None, key: str = None,
-                   max_time_seconds: int = None) -> dict:
+                   max_time_seconds: int = None, difficulty=None) -> dict:
     conn = _get_conn()
     try:
         row = conn.execute("SELECT * FROM patterns WHERE id = ?", (pattern_id,)).fetchone()
@@ -404,9 +435,10 @@ def update_pattern(pattern_id: int, category: str = None, name: str = None,
                 raise ValueError(f"套路编号已存在: {key}")
         new_max_time = max_time_seconds if max_time_seconds is not None else (row["max_time_seconds"] or 120)
         new_max_time = max(10, int(new_max_time))
+        new_difficulty = _clamp_difficulty(difficulty, default=row["difficulty"] if row["difficulty"] is not None else 1)
         conn.execute(
-            """UPDATE patterns SET category = ?, name = ?, description = ?, yaml_key = ?, max_time_seconds = ? WHERE id = ?""",
-            (new_category, new_name, new_desc, new_key, new_max_time, pattern_id),
+            """UPDATE patterns SET category = ?, name = ?, description = ?, yaml_key = ?, max_time_seconds = ?, difficulty = ? WHERE id = ?""",
+            (new_category, new_name, new_desc, new_key, new_max_time, new_difficulty, pattern_id),
         )
         if old_category != new_category:
             _recalc_category_mastery(conn, old_category)
@@ -485,6 +517,7 @@ def export_patterns_yaml() -> dict:
     for p in patterns:
         data.setdefault(p["category"], {})[p["name"]] = {
             "key": p["yaml_key"],
+            "difficulty": p.get("difficulty", 1),
             "description": p.get("description", ""),
             "mother_id": p.get("mother_id"),
             "variant_ids": p.get("variant_ids", []),
@@ -610,6 +643,78 @@ def _question_kps(q) -> set:
     return kps
 
 
+def _score_pattern_text(pattern, content="", category=None, kps=None, question_type=None):
+    """对一个套路打分：板块一致 + 题干相似度 + 知识点 + 套路名/说明命中。"""
+    score = 0.0
+    reasons = []
+    content = str(content or "")
+    kps = set(kps or [])
+    category = category or ""
+    question_type = question_type or ""
+    if pattern.get("category") == category:
+        score += 25
+        reasons.append("板块一致")
+    candidate_qids = []
+    if pattern.get("mother_id"):
+        candidate_qids.append(pattern["mother_id"])
+    candidate_qids.extend(pattern.get("variant_ids") or [])
+    candidates = [get_question_by_id(qid) for qid in candidate_qids]
+    candidates = [c for c in candidates if c]
+    sims = [_match_similarity(content, c.get("content") or "") for c in candidates]
+    best_sim = max(sims) if sims else 0.0
+    score += round(best_sim * 60, 1)
+    if best_sim >= 0.3:
+        reasons.append(f"题干相似度 {round(best_sim * 100)}%")
+    if candidates and candidates[0].get("question_type") == question_type:
+        score += 4
+        reasons.append("题型一致")
+    p_kps = set()
+    for c in candidates:
+        p_kps |= _question_kps(c)
+    matched_kps = kps & p_kps
+    if matched_kps:
+        score += min(15.0, 5.0 * len(matched_kps))
+        reasons.append("知识点：" + "、".join(sorted(matched_kps)[:3]))
+    name_kps = [
+        kp for kp in kps
+        if kp and (kp in (pattern.get("name") or "") or kp in (pattern.get("description") or ""))
+    ]
+    if name_kps:
+        score += min(10.0, 5.0 * len(name_kps))
+        reasons.append("套路名/说明命中")
+    return round(score, 1), reasons
+
+
+def match_question_to_pattern(content="", category=None, kps=None, question_type=None, threshold=35) -> dict:
+    """给一个块/整题匹配最合适的套路，用于 formatter 入库时继承套路的难度。
+
+    返回 {"pattern_id", "difficulty", "score", "matches"}；无匹配时 pattern_id/difficulty 为 None。
+    score 低于 threshold 的候选不返回，视为"无套路匹配"，此时难度仅由五维执行难度决定。
+    """
+    init_mastery_db()
+    kps = list(kps or [])
+    category = category or ""
+    matches = []
+    for p in get_patterns():
+        score, reasons = _score_pattern_text(p, content, category, kps, question_type)
+        if score >= threshold:
+            matches.append({
+                "pattern_id": p["id"],
+                "name": p.get("name"),
+                "difficulty": p.get("difficulty", 1),
+                "score": score,
+                "reasons": reasons,
+            })
+    matches.sort(key=lambda m: m["score"], reverse=True)
+    best = matches[0] if matches else None
+    return {
+        "pattern_id": best["pattern_id"] if best else None,
+        "difficulty": best["difficulty"] if best else None,
+        "score": best["score"] if best else 0.0,
+        "matches": matches[:8],
+    }
+
+
 def match_mother_for_wrong_question(question_id: int):
     """错题入库后自动匹配题库中的套路，按板块、题干相似度、知识点综合打分。"""
     init_mastery_db()
@@ -624,43 +729,14 @@ def match_mother_for_wrong_question(question_id: int):
     matches = []
 
     for p in get_patterns():
-        score = 0.0
-        reasons = []
-        if p.get("category") == q_cat:
-            score += 25
-            reasons.append("板块一致")
         qids = []
         if p.get("mother_id"):
             qids.append(p["mother_id"])
         qids.extend(p.get("variant_ids") or [])
-        candidates = [get_question_by_id(qid) for qid in qids]
-        candidates = [c for c in candidates if c]
+        score, reasons = _score_pattern_text(p, q_content, q_cat, q_kps, q_type)
         if question_id in qids:
             score += 100
-            reasons.append("该题已是此套路题目")
-        sims = [_match_similarity(q_content, c.get("content") or "") for c in candidates]
-        best_sim = max(sims) if sims else 0.0
-        score += round(best_sim * 60, 1)
-        if best_sim >= 0.3:
-            reasons.append(f"题干相似度 {round(best_sim * 100)}%")
-        if candidates and candidates[0].get("question_type") == q_type:
-            score += 4
-            reasons.append("题型一致")
-
-        p_kps = set()
-        for c in candidates:
-            p_kps |= _question_kps(c)
-        matched_kps = q_kps & p_kps
-        if matched_kps:
-            score += min(15.0, 5.0 * len(matched_kps))
-            reasons.append("知识点：" + "、".join(sorted(matched_kps)[:3]))
-        name_kps = [
-            kp for kp in q_kps
-            if kp and (kp in (p.get("name") or "") or kp in (p.get("description") or ""))
-        ]
-        if name_kps:
-            score += min(10.0, 5.0 * len(name_kps))
-            reasons.append("套路名/说明命中")
+            reasons = list(reasons) + ["该题已是此套路题目"]
 
         score = round(score, 1)
         if score >= 25:
