@@ -53,7 +53,22 @@
     .add-question-row button { white-space: nowrap; }
     .form-actions { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
     #motherStatus { min-height: 20px; font-size: 13px; color: #2e7d32; margin-top: 10px; }
+    /* 对应题目：直接把题目内容渲染在右侧 */
+    .question-card { border: 1px solid #e5e5e7; border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; background: #fafafa; }
+    .question-card-head { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 13px; flex-wrap: wrap; }
+    .question-card-head .q-role { font-weight: 700; color: #0071e3; }
+    .question-card-head .qid { font-weight: 600; color: #1d1d1f; }
+    .question-card-head .q-meta { color: #86868b; font-size: 12px; }
+    .question-card-head .q-remove { margin-left: auto; border: none; background: #fff0f0; color: #c62828; border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; }
+    .question-card-body { font-size: 14px; color: #1d1d1f; line-height: 1.9; max-height: 260px; overflow: auto; word-break: break-word; }
+    .question-card-body .katex { font-size: 1.05em; }
+    .question-card-ans { margin-top: 8px; padding-top: 8px; border-top: 1px dashed #e5e5e7; font-size: 13px; color: #515154; line-height: 1.7; }
+    .question-card-ans .q-ans-label { display: inline-block; background: #f0f7ff; color: #0071e3; border-radius: 6px; padding: 1px 8px; margin-right: 6px; font-size: 12px; }
+    .question-card-loading { color: #86868b; font-size: 13px; }
 </style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 </head>
 <body>
 <div class="app-layout">
@@ -131,6 +146,30 @@ function difficultyOptions(selected) {
     return opts.map(function(o) {
         return '<option value="' + o[0] + '"' + (v === o[0] ? ' selected' : '') + '>' + o[1] + '</option>';
     }).join('');
+}
+
+function apiGet(url) {
+    return fetch('http://127.0.0.1:8000' + url, {headers: {'Content-Type': 'application/json'}}).then(function(r) {
+        return r.json();
+    }).then(function(d) {
+        if (d && d.error) throw new Error(d.detail || d.error || '请求失败');
+        return d;
+    });
+}
+
+function renderMath(el) {
+    if (!el || !window.renderMathInElement) return;
+    try {
+        renderMathInElement(el, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '\\[', right: '\\]', display: true},
+                {left: '$', right: '$', display: false},
+                {left: '\\(', right: '\\)', display: false}
+            ],
+            ignoredTags: ['script', 'style', 'textarea']
+        });
+    } catch (e) {}
 }
 
 function checkReminders() {
@@ -254,7 +293,7 @@ function selectPattern(id) {
     html += '<div class="form-row"><div><label>单题限时（秒）</label><input id="patternMaxTime" type="number" min="10" value="' + (p.max_time_seconds || 120) + '"></div><div></div></div>';
     html += '<div class="form-row one"><label>套路难度</label><select id="patternDifficulty">' + difficultyOptions(p.difficulty) + '</select></div>';
     html += '<div class="form-row one"><label>套路说明</label><textarea id="patternDesc">' + escapeHtml(p.description || '') + '</textarea></div>';
-    html += '<div class="form-row one"><label>已关联题目</label><div id="questionLinks"></div>';
+    html += '<div class="form-row one"><label>对应题目</label><div id="questionLinks"></div>';
     html += '<div class="add-question-row"><div class="question-search-wrap" style="flex:1;"><input id="newQuestionIdSearch" type="text" class="question-search-input" data-target-id="newQuestionId" data-results-id="newQuestionIdResults" placeholder="搜索并选择题目..." autocomplete="off"><input type="hidden" id="newQuestionId"><div id="newQuestionIdResults" class="question-search-results"></div></div>';
     html += '<select id="newQuestionRole"><option value="mother">母题</option><option value="variant1">变式1</option><option value="variant2">变式2</option><option value="variant3">变式3</option></select>';
     html += '<button class="mother-btn" onclick="linkQuestion(' + p.id + ')">挂载</button></div></div>';
@@ -272,15 +311,60 @@ function selectPattern(id) {
 function renderQuestionLinks(p) {
     var box = document.getElementById('questionLinks');
     if (!box) return;
-    var html = '';
-    if (p.mother_id) html += '<div class="question-link"><span class="role">母题</span><span class="qid">#' + p.mother_id + '</span><button onclick="unlinkQuestion(' + p.id + ',' + p.mother_id + ',\'mother\')">移除</button></div>';
-    var roles = {variant1: '变式1', variant2: '变式2', variant3: '变式3'};
-    for (var i = 0; i < p.variant_ids.length; i++) {
-        var qid = p.variant_ids[i];
-        var role = 'variant' + (i + 1);
-        html += '<div class="question-link"><span class="role">' + roles[role] + '</span><span class="qid">#' + qid + '</span><button onclick="unlinkQuestion(' + p.id + ',' + qid + ',\'' + role + '\')">移除</button></div>';
+    var items = [];
+    if (p.mother_id) items.push({role: 'mother', label: '母题', qid: p.mother_id});
+    for (var i = 0; i < (p.variant_ids || []).length; i++) {
+        items.push({role: 'variant' + (i + 1), label: '变式' + (i + 1), qid: p.variant_ids[i]});
     }
-    box.innerHTML = html || '<div class="mother-empty" style="padding:6px;">暂无题目关联</div>';
+    if (!items.length) {
+        box.innerHTML = '<div class="mother-empty" style="padding:6px;">暂无题目关联</div>';
+        return;
+    }
+    box.innerHTML = items.map(function(it) {
+        return '<div class="question-card" id="qcard-' + it.qid + '">' +
+            '<div class="question-card-head"><span class="q-role">' + escapeHtml(it.label) + '</span>' +
+            '<span class="qid">#' + it.qid + '</span>' +
+            '<span class="q-meta question-card-loading">加载中...</span></div>' +
+            '<div class="question-card-body">加载中...</div></div>';
+    }).join('');
+    items.forEach(function(it) {
+        apiGet('/questions/' + it.qid).then(function(q) {
+            var card = document.getElementById('qcard-' + it.qid);
+            if (!card) return;
+            if (!q || q.error) {
+                card.innerHTML = '<div class="question-card-head"><span class="q-role">' + escapeHtml(it.label) + '</span><span class="qid">#' + it.qid + '</span><span class="q-meta" style="color:#c62828;">题目不存在</span></div>';
+                return;
+            }
+            var meta = [];
+            if (q.question_type) meta.push(q.question_type);
+            if (q.category_level1) meta.push(q.category_level1);
+            if (q.category_level2) meta.push(q.category_level2);
+            if (q.difficulty_level) meta.push(q.difficulty_level);
+            var aj = q.answer_json || {};
+            var finalAnswer = aj.final_answer ? String(aj.final_answer) : '';
+            if (!finalAnswer) {
+                var crs = aj.chunk_results || [];
+                var ans = [];
+                for (var i = 0; i < crs.length; i++) {
+                    if (crs[i] && crs[i].final_answer) ans.push(String(crs[i].final_answer));
+                }
+                finalAnswer = ans.join(' | ');
+            }
+            var html = '<div class="question-card-head"><span class="q-role">' + escapeHtml(it.label) + '</span>' +
+                '<span class="qid">#' + it.qid + '</span>' +
+                (meta.length ? '<span class="q-meta">' + escapeHtml(meta.join(' · ')) + '</span>' : '') +
+                '<button class="q-remove" onclick="unlinkQuestion(' + p.id + ',' + it.qid + ',\'' + it.role + '\')">移除</button></div>' +
+                '<div class="question-card-body">' + escapeHtml(q.content || '') + '</div>';
+            if (finalAnswer) html += '<div class="question-card-ans"><span class="q-ans-label">答案</span>' + escapeHtml(finalAnswer) + '</div>';
+            card.innerHTML = html;
+            renderMath(card);
+        }).catch(function(e) {
+            var card = document.getElementById('qcard-' + it.qid);
+            if (card) {
+                card.innerHTML = '<div class="question-card-head"><span class="q-role">' + escapeHtml(it.label) + '</span><span class="qid">#' + it.qid + '</span><span class="q-meta" style="color:#c62828;">加载失败</span></div>';
+            }
+        });
+    });
 }
 
 function newPattern() {

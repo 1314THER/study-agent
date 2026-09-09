@@ -9,11 +9,47 @@
 #     variant_ids: [变式题 ID]
 
 集合与逻辑用语:
+  元素的互异性与无序性:
+    key: pat-e630fc5719
+    difficulty: 1
+    description: ''
+    mother_id: 53
+    variant_ids: []
+  元素的确定性:
+    key: pat-3a4bcf2ce2
+    difficulty: 1
+    description: ''
+    mother_id: 52
+    variant_ids: []
   判断元素是否属于常用数集:
     key: pat-06dace51fe
     difficulty: 1
     description: ''
     mother_id: 2
+    variant_ids: []
+  利用二次方程判别式求集合参数:
+    key: pat-9919526daa
+    difficulty: 1
+    description: ''
+    mother_id: 58
+    variant_ids: []
+  利用互异性分类讨论解出参数:
+    key: pat-1164dd12b3
+    difficulty: 1
+    description: ''
+    mother_id: 54
+    variant_ids: []
+  利用集合中不等关系求参数:
+    key: pat-fb608151d3
+    difficulty: 1
+    description: ''
+    mother_id: 55
+    variant_ids: []
+  利用高次方程的解求集合参数:
+    key: pat-7c913614aa
+    difficulty: 1
+    description: ''
+    mother_id: 59
     variant_ids: []
   剩余类描述集合1:同一剩余类:
     key: pat-3bebbd69a0
@@ -39,11 +75,23 @@
     description: ''
     mother_id: 46
     variant_ids: []
-  直接提问集合的性质:
-    key: pat-74a8382628
+  对集合本身新定义:
+    key: pat-be3c787bf1
     difficulty: 1
     description: ''
-    mother_id: 1
+    mother_id: 57
+    variant_ids: []
+  对集合运算新定义:
+    key: pat-f4e49b94f1
+    difficulty: 1
+    description: ''
+    mother_id: 56
+    variant_ids: []
+  对集合间的关系进行新定义:
+    key: pat-10eb3654b0
+    difficulty: 1
+    description: ''
+    mother_id: 60
     variant_ids: []
   集合表示二元方程组的解:
     key: pat-ca51e7ec2d
