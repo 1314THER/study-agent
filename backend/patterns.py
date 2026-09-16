@@ -221,9 +221,12 @@ def init_mastery_db() -> None:
             CREATE TABLE IF NOT EXISTS board_nodes (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 board_id INTEGER NOT NULL REFERENCES boards(id),
-                question_id INTEGER NOT NULL,
+                question_id INTEGER,
+                pattern_id INTEGER REFERENCES patterns(id),
                 x REAL NOT NULL DEFAULT 0,
                 y REAL NOT NULL DEFAULT 0,
+                layout_x REAL,
+                layout_y REAL,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(board_id, question_id)
             );
@@ -244,6 +247,9 @@ def init_mastery_db() -> None:
                 board_id INTEGER NOT NULL REFERENCES boards(id),
                 level_index INTEGER NOT NULL,
                 name TEXT DEFAULT '',
+                description TEXT DEFAULT '',
+                layout_x REAL,
+                layout_y REAL,
                 created_at TEXT DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(board_id, level_index)
             );
@@ -259,11 +265,55 @@ def init_mastery_db() -> None:
         if "difficulty" not in cols:
             conn.execute("ALTER TABLE patterns ADD COLUMN difficulty INTEGER NOT NULL DEFAULT 1")
             conn.commit()
+        # 迁移：闯关地图允许先放置没有题目的空套路节点
+        board_cols = [r["name"] for r in conn.execute("PRAGMA table_info(board_nodes)").fetchall()]
+        if "pattern_id" not in board_cols:
+            conn.execute("ALTER TABLE board_nodes ADD COLUMN pattern_id INTEGER")
+            conn.commit()
+        # SQLite 不能直接移除旧 question_id 列的 NOT NULL，需重建表。
+        # 保留所有已有节点；新结构允许空套路先以 pattern_id 落位。
+        board_info = conn.execute("PRAGMA table_info(board_nodes)").fetchall()
+        question_col = next((r for r in board_info if r["name"] == "question_id"), None)
+        if question_col and question_col["notnull"]:
+            conn.executescript("""
+                ALTER TABLE board_nodes RENAME TO board_nodes_legacy;
+                CREATE TABLE board_nodes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    board_id INTEGER NOT NULL REFERENCES boards(id),
+                    question_id INTEGER,
+                    pattern_id INTEGER REFERENCES patterns(id),
+                    x REAL NOT NULL DEFAULT 0,
+                    y REAL NOT NULL DEFAULT 0,
+                    layout_x REAL,
+                    layout_y REAL,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    UNIQUE(board_id, question_id)
+                );
+                INSERT INTO board_nodes
+                    (id, board_id, question_id, pattern_id, x, y, created_at)
+                SELECT id, board_id, question_id, pattern_id, x, y, created_at
+                FROM board_nodes_legacy;
+                DROP TABLE board_nodes_legacy;
+                CREATE INDEX IF NOT EXISTS idx_board_nodes_board ON board_nodes(board_id);
+            """)
+            conn.commit()
+        # 迁移：思维导图节点坐标与闯关顺序坐标分开保存。
+        # x/y 继续表示关卡序号和套路顺序，layout_x/layout_y 只负责自由拖拽位置。
+        board_cols = [r["name"] for r in conn.execute("PRAGMA table_info(board_nodes)").fetchall()]
+        if "layout_x" not in board_cols:
+            conn.execute("ALTER TABLE board_nodes ADD COLUMN layout_x REAL")
+        if "layout_y" not in board_cols:
+            conn.execute("ALTER TABLE board_nodes ADD COLUMN layout_y REAL")
+        conn.commit()
         # 迁移：关卡说明
         level_cols = [r["name"] for r in conn.execute("PRAGMA table_info(board_levels)").fetchall()]
         if "description" not in level_cols:
             conn.execute("ALTER TABLE board_levels ADD COLUMN description TEXT DEFAULT ''")
-            conn.commit()
+        if "layout_x" not in level_cols:
+            conn.execute("ALTER TABLE board_levels ADD COLUMN layout_x REAL")
+        if "layout_y" not in level_cols:
+            conn.execute("ALTER TABLE board_levels ADD COLUMN layout_y REAL")
+        conn.commit()
         # 清理挂错板块的闯关节点：套路板块与地图板块不一致时移除
         conn.execute("""
             DELETE FROM board_nodes WHERE id IN (
@@ -327,12 +377,13 @@ def get_patterns() -> list:
         conn.close()
 
 
-def add_mother_question(question_id: int, category: str, name: str,
+def add_mother_question(question_id: int = None, category: str = "", name: str = "",
                         key: str = None, description: str = "",
                         difficulty=None) -> dict:
-    question = get_question_by_id(question_id)
-    if not question:
-        raise ValueError(f"题目不存在: {question_id}")
+    if question_id is not None:
+        question = get_question_by_id(question_id)
+        if not question:
+            raise ValueError(f"题目不存在: {question_id}")
     if category not in CATEGORIES:
         raise ValueError(f"未知板块: {category}")
     name = name.strip()
@@ -376,18 +427,20 @@ def add_mother_question(question_id: int, category: str, name: str,
                 (max(10, default_max), pattern_id),
             )
         _ensure_pattern_mastery(conn, pattern_id)
-        _link_question(conn, pattern_id, question_id, "mother")
+        if question_id is not None:
+            _link_question(conn, pattern_id, question_id, "mother")
         _recalc_category_mastery(conn, category)
         conn.commit()
     finally:
         conn.close()
 
-    update_question_source(question_id, "精选母题", {
-        "owner": "sqz",
-        "mother_id": str(question_id),
-        "category": category,
-        "pattern": name,
-    })
+    if question_id is not None:
+        update_question_source(question_id, "精选母题", {
+            "owner": "sqz",
+            "mother_id": str(question_id),
+            "category": category,
+            "pattern": name,
+        })
     return {
         "pattern_id": pattern_id,
         "yaml_key": yaml_key,
@@ -1129,7 +1182,7 @@ def get_boards() -> list:
         node_rows = conn.execute("SELECT * FROM board_nodes ORDER BY id").fetchall()
         edge_rows = conn.execute("SELECT * FROM board_edges ORDER BY id").fetchall()
         level_rows = conn.execute(
-            "SELECT board_id, level_index, name, description FROM board_levels ORDER BY level_index"
+            "SELECT board_id, level_index, name, description, layout_x, layout_y FROM board_levels ORDER BY level_index"
         ).fetchall()
         pq_rows = conn.execute(
             "SELECT pattern_id, question_id, role FROM pattern_questions"
@@ -1143,6 +1196,10 @@ def get_boards() -> list:
 
     mastery = {m["pattern_id"]: dict(m) for m in mrows}
     pattern_info = {p["id"]: dict(p) for p in prow_rows}
+    pattern_mother = {}
+    for pq in pq_rows:
+        if pq["role"] == "mother":
+            pattern_mother[pq["pattern_id"]] = pq["question_id"]
     pq_by_qid = {}
     for pq in pq_rows:
         pq_by_qid.setdefault(pq["question_id"], []).append(dict(pq))
@@ -1151,6 +1208,8 @@ def get_boards() -> list:
         level_data.setdefault(lv["board_id"], {})[lv["level_index"]] = {
             "name": lv["name"] or "",
             "description": lv["description"] or "",
+            "layout_x": lv["layout_x"],
+            "layout_y": lv["layout_y"],
         }
 
     boards = []
@@ -1159,9 +1218,10 @@ def get_boards() -> list:
         for n in node_rows:
             if n["board_id"] != b["id"]:
                 continue
-            q = get_question_by_id(n["question_id"])
-            links = pq_by_qid.get(n["question_id"], [])
-            pattern_id = next((l["pattern_id"] for l in links if l["role"] == "mother"), None)
+            node_qid = n["question_id"] or pattern_mother.get(n["pattern_id"])
+            q = get_question_by_id(node_qid) if node_qid else None
+            links = pq_by_qid.get(n["question_id"], []) if n["question_id"] else []
+            pattern_id = n["pattern_id"] or next((l["pattern_id"] for l in links if l["role"] == "mother"), None)
             pat = pattern_info.get(pattern_id, {}) if pattern_id else {}
             if not pat or pat.get("category") != b["category"]:
                 continue
@@ -1170,9 +1230,11 @@ def get_boards() -> list:
                 state = mastery[pattern_id].get("state", "never")
             nodes.append({
                 "node_id": n["id"],
-                "question_id": n["question_id"],
+                "question_id": node_qid,
                 "x": n["x"],
                 "y": n["y"],
+                "layout_x": n["layout_x"],
+                "layout_y": n["layout_y"],
                 "content": (q.get("content", "") if q else "")[:120],
                 "question_type": (q.get("question_type", "") if q else ""),
                 "knowledge_points": (q.get("knowledge_points") or []) if q else [],
@@ -1185,10 +1247,11 @@ def get_boards() -> list:
         for n in nodes:
             idx = int(round(n.get("x") or 0))
             by_level.setdefault(idx, []).append(n)
-        for idx in sorted(by_level):
+        board_level_meta = level_data.get(b["id"]) or {}
+        for idx in sorted(set(by_level) | set(board_level_meta)):
             kps = []
             seen = set()
-            for n in by_level[idx]:
+            for n in by_level.get(idx, []):
                 for kp in n.get("knowledge_points") or []:
                     if kp and kp not in seen:
                         seen.add(kp)
@@ -1197,6 +1260,8 @@ def get_boards() -> list:
                 "level_index": idx,
                 "name": (level_data.get(b["id"]) or {}).get(idx, {}).get("name", ""),
                 "description": (level_data.get(b["id"]) or {}).get(idx, {}).get("description", ""),
+                "layout_x": (level_data.get(b["id"]) or {}).get(idx, {}).get("layout_x"),
+                "layout_y": (level_data.get(b["id"]) or {}).get(idx, {}).get("layout_y"),
                 "knowledge_points": kps,
             })
         edges = [
@@ -1225,11 +1290,19 @@ def save_board_layout(board_id: int, nodes: list, edges: list, levels: list = No
         conn.execute("DELETE FROM board_nodes WHERE board_id = ?", (board_id,))
         for n in nodes or []:
             qid = int(n.get("question_id") or 0)
-            if not qid:
+            pattern_id = int(n.get("pattern_id") or 0)
+            if not qid and not pattern_id:
                 continue
             conn.execute(
-                "INSERT INTO board_nodes (board_id, question_id, x, y) VALUES (?, ?, ?, ?)",
-                (board_id, qid, float(n.get("x", 0)), float(n.get("y", 0))),
+                """INSERT INTO board_nodes
+                   (board_id, question_id, pattern_id, x, y, layout_x, layout_y)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    board_id, qid or None, pattern_id or None,
+                    float(n.get("x", 0)), float(n.get("y", 0)),
+                    float(n["layout_x"]) if n.get("layout_x") is not None else None,
+                    float(n["layout_y"]) if n.get("layout_y") is not None else None,
+                ),
             )
         for e in edges or []:
             fq = int(e.get("from_question_id") or 0)
@@ -1249,10 +1322,14 @@ def save_board_layout(board_id: int, nodes: list, edges: list, levels: list = No
                     continue
                 name = str(lv.get("name") or "").strip()
                 description = str(lv.get("description") or "").strip()
-                if name or description:
+                layout_x = float(lv["layout_x"]) if lv.get("layout_x") is not None else None
+                layout_y = float(lv["layout_y"]) if lv.get("layout_y") is not None else None
+                if name or description or layout_x is not None or layout_y is not None:
                     conn.execute(
-                        "INSERT INTO board_levels (board_id, level_index, name, description) VALUES (?, ?, ?, ?)",
-                        (board_id, idx, name, description),
+                        """INSERT INTO board_levels
+                           (board_id, level_index, name, description, layout_x, layout_y)
+                           VALUES (?, ?, ?, ?, ?, ?)""",
+                        (board_id, idx, name, description, layout_x, layout_y),
                     )
         conn.execute("UPDATE boards SET updated_at = CURRENT_TIMESTAMP WHERE id = ?", (board_id,))
         conn.commit()

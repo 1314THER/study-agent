@@ -5,115 +5,83 @@
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-cache">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>闯关地图 - 数学最强大脑</title>
+<title>闯关 - 数学最强大脑</title>
 <link rel="stylesheet" href="style.css?v=20260806board">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
 <style>
     body { background: #f5f5f7; }
-    .board-wrap { height: 100vh; display: flex; flex-direction: column; padding: 16px; box-sizing: border-box; }
-    .board-top { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
-    .board-top h1 { font-size: 22px; font-weight: 700; color: #1d1d1f; margin: 0; }
-    .board-btn { padding: 8px 16px; border: none; border-radius: 9px; font-size: 13px; font-weight: 600; cursor: pointer; background: #0071e3; color: white; }
-    .board-btn.secondary { background: #f5f5f7; color: #515154; }
-    .board-btn.danger { background: #c62828; color: white; }
-    .board-layout { display: grid; grid-template-columns: 230px minmax(220px, 280px) 1fr; gap: 12px; flex: 1; min-height: 0; }
-    @media (max-width: 1100px) { .board-layout { grid-template-columns: 230px 1fr; } .board-mid { grid-column: 1 / -1; max-height: 240px; } }
-    @media (max-width: 820px) { .board-layout { grid-template-columns: 1fr; } .board-mid { grid-column: auto; max-height: 220px; } }
-    .board-side { background: white; border: 1px solid #e5e5e7; border-radius: 12px; padding: 12px; overflow-y: auto; }
-    .board-side h2 { font-size: 14px; font-weight: 600; margin: 0 0 10px; }
-    .board-mid { min-height: 0; }
-    .board-detail { display: flex; flex-direction: column; }
-    .board-cat { display: block; width: 100%; text-align: left; padding: 9px 10px; border: none; border-radius: 8px; background: transparent; cursor: pointer; font-size: 13px; color: #1d1d1f; }
-    .board-cat:hover { background: #f0f7ff; }
-    .board-cat.active { background: #e8f4ff; color: #0071e3; font-weight: 600; }
-    .board-hint { font-size: 12px; color: #86868b; line-height: 1.6; margin-bottom: 8px; }
-    .board-status { font-size: 12px; color: #2e7d32; min-height: 18px; margin-top: 8px; }
-    .board-main { overflow-y: auto; min-height: 0; }
-    .level-list { display: flex; flex-direction: column; gap: 16px; padding-bottom: 48px; }
-    .level-band { border-top: 2px solid #0071e3; padding-top: 12px; }
-    .level-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-    .level-title { font-size: 16px; font-weight: 700; color: #1d1d1f; }
-    .level-status { font-size: 12px; padding: 3px 10px; border-radius: 999px; }
-    .level-status.open { background: #e8f4ff; color: #0071e3; }
-    .level-status.locked { background: #f3f4f6; color: #9ca3af; }
-    .level-status.done { background: #d1fae5; color: #047857; }
-    .level-patterns { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
-    .pattern-card { background: white; border: 1px solid #e5e5e7; border-radius: 8px; padding: 12px 14px; box-shadow: 0 1px 4px rgba(0,0,0,0.05); }
-    .pattern-card.done { border-color: #2e7d32; background: #f7fdf8; }
-    .pattern-card.progress { border-color: #b45309; background: #fffaf3; }
-    .pattern-card.locked { opacity: 0.6; }
-    .pattern-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
-    .pattern-name { font-size: 14px; font-weight: 700; color: #1d1d1f; word-break: break-word; line-height: 1.45; }
-    .pattern-desc { font-size: 12px; color: #86868b; margin-top: 6px; min-height: 16px; }
-    .pattern-actions { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
-    .pattern-actions button { border: none; border-radius: 6px; font-size: 12px; padding: 5px 10px; cursor: pointer; background: #f0f0f0; color: #1d1d1f; }
-    .pattern-actions button:disabled { opacity: 0.6; cursor: default; }
-    .pattern-actions .primary { background: #0071e3; color: white; }
-    .pattern-actions .danger { background: #fff0f0; color: #c62828; }
-    .rename-row { display: none; gap: 6px; margin-top: 8px; }
-    .rename-row input { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid #c7c7cc; border-radius: 6px; font-size: 12px; box-sizing: border-box; }
-    .rename-row button { border: none; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; background: #2e7d32; color: white; }
-    .level-add { margin-top: 12px; padding: 10px 12px; background: #fafafa; border: 1px dashed #c7c7cc; border-radius: 8px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-    .level-add select, .level-add input { padding: 7px 9px; border: 1px solid #c7c7cc; border-radius: 7px; font-size: 13px; background: white; box-sizing: border-box; }
-    .level-add select { min-width: 190px; max-width: 280px; }
-    .level-add input[type="number"] { width: 96px; }
-    .level-add input[type="text"] { width: 170px; }
-    .level-add button { border: none; border-radius: 7px; padding: 8px 12px; font-size: 13px; font-weight: 600; cursor: pointer; background: #0071e3; color: white; }
-    .level-add .cancel { background: #f5f5f7; color: #515154; }
-    .level-add .new-pattern-toggle { background: transparent; color: #0071e3; font-size: 13px; font-weight: 500; padding: 4px 6px; }
-    .new-pattern-box { display: none; gap: 8px; flex-wrap: wrap; align-items: center; }
-    .empty-board { padding: 30px 16px; text-align: center; color: #86868b; }
-    .state-badge { display: inline-block; padding: 2px 8px; border-radius: 999px; font-size: 11px; white-space: nowrap; }
-    .state-never { background: #f3f4f6; color: #6b7280; }
-    .state-first_pass { background: #fff7ed; color: #c2410c; }
-    .state-second_pass { background: #fef3c7; color: #b45309; }
-    .state-third_pass { background: #d1fae5; color: #047857; }
-    .state-again_wrong { background: #fee2e2; color: #b91c1c; }
-    .level-seq { font-size: 12px; color: #86868b; font-weight: 500; margin-left: 6px; }
-    .level-rename { display: none; gap: 6px; margin: 0 0 8px; }
-    .level-rename input { flex: 1; min-width: 0; padding: 6px 8px; border: 1px solid #c7c7cc; border-radius: 6px; font-size: 12px; box-sizing: border-box; }
-    .level-rename button { border: none; border-radius: 6px; padding: 5px 10px; font-size: 12px; cursor: pointer; background: #2e7d32; color: white; }
-    .level-nav-list { display: flex; flex-direction: column; gap: 8px; }
-    .level-nav-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid #e5e5e7; border-radius: 10px; background: white; cursor: pointer; text-align: left; }
-    .level-nav-item:hover { background: #f0f7ff; border-color: #0071e3; }
-    .level-nav-item.active { background: #e8f4ff; border-color: #0071e3; box-shadow: 0 0 0 1px #0071e3; }
-    .level-nav-seq { font-size: 12px; font-weight: 700; color: #0071e3; white-space: nowrap; }
-    .level-nav-name { flex: 1; font-size: 13px; font-weight: 600; color: #1d1d1f; word-break: break-word; line-height: 1.4; }
-    .level-detail { display: flex; flex-direction: column; gap: 14px; padding-bottom: 48px; }
-    .level-detail-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-    .level-detail-head h2 { font-size: 18px; font-weight: 700; color: #1d1d1f; margin: 0; }
-    .level-detail-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-left: auto; }
-    .level-detail-actions button { border: none; border-radius: 7px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; background: #f0f0f0; color: #1d1d1f; }
-    .level-detail-actions button.primary { background: #0071e3; color: white; }
-    .level-detail-actions button.danger { background: #fff0f0; color: #c62828; }
-    .level-desc-box { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px 14px; }
-    .level-desc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
-    .level-desc-head b { font-size: 13px; color: #334155; }
-    .level-desc-text { font-size: 13px; color: #1e293b; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
-    .level-desc-empty { font-size: 12px; color: #94a3b8; }
-    .level-desc-overlay { position: fixed; inset: 0; background: rgba(15,23,42,0.4); z-index: 3000; display: none; align-items: flex-start; justify-content: center; padding: 48px 16px; overflow-y: auto; }
-    .level-desc-overlay.show { display: flex; }
-    .level-desc-modal { width: min(680px, 100%); background: white; border-radius: 12px; box-shadow: 0 20px 60px rgba(0,0,0,0.2); padding: 18px 20px 20px; }
-    .level-desc-modal h3 { font-size: 16px; font-weight: 700; color: #1d1d1f; margin: 0 0 12px; }
-    .level-desc-modal textarea { width: 100%; min-height: 180px; box-sizing: border-box; padding: 10px 12px; border: 1px solid #c7c7cc; border-radius: 8px; font-size: 14px; line-height: 1.7; font-family: inherit; resize: vertical; }
-    .level-desc-modal .preview-title { font-size: 12px; font-weight: 600; color: #515154; margin: 12px 0 6px; }
-    .level-desc-preview { border: 1px solid #e2e8f0; border-radius: 8px; background: #f8fafc; padding: 10px 12px; min-height: 60px; font-size: 14px; line-height: 1.7; white-space: pre-wrap; word-break: break-word; }
-    .level-desc-modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
-    .stage-item { border: 1px solid #e5e5e7; border-radius: 8px; padding: 8px 10px; margin-bottom: 8px; cursor: pointer; background: #fafafa; }
-    .stage-item:hover { background: #f0f7ff; }
-    .stage-item.active { border-color: #0071e3; background: #e8f4ff; }
-    .stage-head { display: flex; align-items: center; gap: 6px; justify-content: space-between; }
-    .stage-name { font-size: 13px; font-weight: 600; color: #1d1d1f; word-break: break-word; }
-    .stage-status { font-size: 11px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
-    .stage-status.open { background: #e8f4ff; color: #0071e3; }
-    .stage-status.locked { background: #f3f4f6; color: #9ca3af; }
-    .stage-status.done { background: #d1fae5; color: #047857; }
-    .stage-kps { font-size: 11px; color: #86868b; line-height: 1.5; margin-top: 4px; word-break: break-word; }
-    .stage-actions { display: flex; gap: 6px; margin-top: 6px; }
-    .stage-actions button { border: none; border-radius: 6px; font-size: 11px; padding: 3px 8px; cursor: pointer; background: #f0f0f0; color: #1d1d1f; }
-    .stage-actions button:disabled { opacity: 0.5; cursor: default; }
+    .run-wrap { min-height: 100vh; padding: 24px 28px 48px; box-sizing: border-box; }
+    .run-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 22px; }
+    .run-title { margin: 0; color: #1d1d1f; font-size: 28px; letter-spacing: -0.02em; }
+    .run-subtitle { margin: 7px 0 0; color: #86868b; font-size: 13px; }
+    .run-actions { display: flex; gap: 8px; }
+    .run-btn { border: 0; border-radius: 9px; padding: 9px 15px; background: #0071e3; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
+    .run-btn.secondary { background: #fff; color: #515154; border: 1px solid #e5e5e7; }
+    .run-btn:hover { filter: brightness(.96); }
+    .run-layout { display: grid; grid-template-columns: 210px minmax(0, 1fr); gap: 18px; align-items: start; }
+    .run-side, .run-main { background: #fff; border: 1px solid #e5e5e7; border-radius: 16px; }
+    .run-side { padding: 14px; position: sticky; top: 18px; }
+    .run-side h2 { margin: 2px 4px 12px; font-size: 14px; color: #1d1d1f; }
+    .category-list { display: flex; flex-direction: column; gap: 5px; }
+    .category-button { border: 0; border-radius: 9px; padding: 10px 11px; background: transparent; color: #515154; text-align: left; font: inherit; font-size: 13px; cursor: pointer; }
+    .category-button:hover { background: #f5f9ff; }
+    .category-button.active { background: #e8f4ff; color: #0071e3; font-weight: 700; }
+    .category-count { float: right; color: #86868b; font-size: 12px; font-weight: 400; }
+    .category-button.active .category-count { color: #0071e3; }
+    .side-note { margin: 16px 4px 2px; color: #86868b; font-size: 12px; line-height: 1.7; }
+    .run-main { min-height: 620px; padding: 22px 24px 32px; overflow: hidden; }
+    .run-board-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding-bottom: 18px; border-bottom: 1px solid #f0f0f2; }
+    .run-board-name { color: #1d1d1f; font-size: 20px; font-weight: 700; }
+    .run-board-progress { color: #86868b; font-size: 13px; }
+    .run-board-progress b { color: #0071e3; }
+    .mission-map { position: relative; max-width: 900px; margin: 0 auto; padding: 28px 0 12px; }
+    .mission-map:before { content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 3px; transform: translateX(-50%); background: linear-gradient(#b9d9f8, #0071e3 18%, #b9d9f8 82%, transparent); border-radius: 5px; }
+    .map-start, .map-end { position: relative; z-index: 1; width: 76px; margin: 0 auto 24px; padding: 7px 0; border-radius: 999px; background: #0071e3; color: #fff; text-align: center; font-size: 12px; font-weight: 700; box-shadow: 0 4px 12px rgba(0,113,227,.2); }
+    .map-end { margin: 24px auto 0; background: #f0f7ff; color: #0071e3; border: 1px solid #b9d9f8; box-shadow: none; }
+    .mission-level { position: relative; display: grid; grid-template-columns: 1fr 60px 1fr; align-items: center; min-height: 148px; margin-bottom: 18px; }
+    .mission-level:nth-of-type(odd) .mission-box { grid-column: 1; grid-row: 1; }
+    .mission-level:nth-of-type(even) .mission-box { grid-column: 3; grid-row: 1; }
+    .mission-level:nth-of-type(odd) .mission-branch, .mission-level:nth-of-type(even) .mission-branch { grid-column: 2; grid-row: 1; }
+    .mission-branch { height: 3px; background: #b9d9f8; }
+    .mission-branch:before { content: ''; display: block; width: 12px; height: 12px; margin: -5px auto 0; border-radius: 50%; background: #0071e3; border: 3px solid #e8f4ff; box-sizing: border-box; }
+    .mission-box { width: min(100%, 360px); box-sizing: border-box; padding: 14px 16px; border: 1px solid #e5e5e7; border-radius: 13px; background: #fff; box-shadow: 0 5px 16px rgba(0,0,0,.05); }
+    .mission-box.available { cursor: pointer; }
+    .mission-box.available:hover { border-color: #0071e3; box-shadow: 0 7px 20px rgba(0,113,227,.12); }
+    .mission-box.locked { opacity: .58; filter: grayscale(.25); }
+    .mission-box.done { border-color: #74c69d; background: #f7fdf9; }
+    .mission-box.progress { border-color: #f2c27b; background: #fffaf3; }
+    .mission-level:nth-of-type(odd) .mission-box { justify-self: end; }
+    .mission-level:nth-of-type(even) .mission-box { justify-self: start; }
+    .mission-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+    .mission-number { color: #0071e3; font-size: 11px; font-weight: 800; letter-spacing: .08em; }
+    .mission-name { margin-top: 5px; color: #1d1d1f; font-size: 15px; font-weight: 700; line-height: 1.45; word-break: break-word; }
+    .mission-desc { margin-top: 7px; color: #86868b; font-size: 12px; line-height: 1.6; }
+    .mission-status { flex: 0 0 auto; padding: 3px 8px; border-radius: 999px; background: #f3f4f6; color: #6b7280; font-size: 11px; white-space: nowrap; }
+    .mission-status.done { background: #d1fae5; color: #047857; }
+    .mission-status.progress { background: #fef3c7; color: #b45309; }
+    .mission-status.locked { background: #f3f4f6; color: #9ca3af; }
+    .mission-empty { margin-top: 8px; color: #b45309; font-size: 12px; }
+    .mission-task { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 9px; padding-top: 9px; border-top: 1px solid #f0f0f2; color: #1d1d1f; font-size: 13px; line-height: 1.45; }
+    .mission-task small { color: #86868b; font-size: 11px; white-space: nowrap; }
+    .mission-task.clickable { cursor: pointer; }
+    .mission-task.clickable:hover span { color: #0071e3; }
+    .empty-run { padding: 80px 20px; color: #86868b; text-align: center; font-size: 14px; }
+    .run-error { color: #c62828; }
+    @media (max-width: 820px) {
+        .run-wrap { padding: 18px 14px 36px; }
+        .run-layout { grid-template-columns: 1fr; }
+        .run-side { position: static; }
+        .category-list { flex-direction: row; overflow-x: auto; padding-bottom: 2px; }
+        .category-button { flex: 0 0 auto; }
+        .side-note { display: none; }
+        .run-main { padding: 18px 12px 26px; }
+        .mission-map { margin: 0 4px; }
+        .mission-map:before { left: 18px; transform: none; }
+        .map-start, .map-end { margin-left: 0; }
+        .mission-level, .mission-level:nth-of-type(odd), .mission-level:nth-of-type(even) { display: grid; grid-template-columns: 36px 1fr; min-height: 120px; }
+        .mission-branch, .mission-level:nth-of-type(odd) .mission-branch, .mission-level:nth-of-type(even) .mission-branch { grid-column: 1; grid-row: 1; height: 3px; }
+        .mission-box, .mission-level:nth-of-type(odd) .mission-box, .mission-level:nth-of-type(even) .mission-box { grid-column: 2; grid-row: 1; justify-self: stretch; width: 100%; }
+        .mission-branch:before { margin-left: 12px; }
+    }
 </style>
 </head>
 <body class="theme-liangliang">
@@ -129,663 +97,112 @@
 <a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
 <a href="loop.html?v=20260807" class="nav-item" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
 <a href="calendar.html?v=20260807" class="nav-item" data-page="calendar" title="巩固日历"><span class="nav-icon">📅</span><span class="nav-label">巩固日历</span></a>
-<a href="board.html?v=20260807" class="nav-item active" data-page="board" title="闯关地图"><span class="nav-icon">🗺️</span><span class="nav-label">闯关地图</span></a>
+<a href="board.html?v=20260916" class="nav-item active" data-page="board" title="闯关"><span class="nav-icon">🗺️</span><span class="nav-label">闯关</span></a>
+<a href="level-editor.html?v=20260916" class="nav-item" data-page="level-editor" title="关卡编辑"><span class="nav-icon">🦴</span><span class="nav-label">关卡编辑</span></a>
 <a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
 <a href="grade.html" class="nav-item" data-page="grade" title="AI 改卷"><span class="nav-icon">✅</span><span class="nav-label">AI 改卷</span></a>
 <a href="settings.html" class="nav-item" data-page="settings" title="系统设置"><span class="nav-icon">⚙️</span><span class="nav-label">系统设置</span></a>
 </nav>
     </aside>
     <main class="main-content">
-        <div class="board-wrap">
-            <div class="board-top">
-                <h1>闯关地图</h1>
-                <button class="board-btn" onclick="saveBoard()">保存布局</button>
-                <button class="board-btn secondary" onclick="loadBoards()">刷新</button>
-                <span class="board-status" id="boardStatus"></span>
+        <div class="run-wrap">
+            <div class="run-top">
+                <div><h1 class="run-title">闯关</h1><p class="run-subtitle">沿着任务路线逐关挑战，完成前一关后解锁下一关。</p></div>
+                <div class="run-actions"><button class="run-btn secondary" onclick="loadBoards()">刷新</button><button class="run-btn" onclick="window.location.href='level-editor.html'">关卡编辑</button></div>
             </div>
-            <div class="board-layout">
-                <div class="board-side">
-                    <h2>板块地图</h2>
-                    <div id="boardList"></div>
-                    <div id="stageSection" style="margin-top:14px;display:none;">
-                        <h2>阶段</h2>
-                        <div id="stageList"></div>
-                    </div>
-                    <div class="board-hint" style="margin-top:12px;">按关卡布置套路：一关里可以放多个套路，后一关需要前一关全部通关后解锁。</div>
-                    <div class="board-hint">状态：已通关 / 进行中 / 未解锁 / 未挑战</div>
-                </div>
-                <div class="board-side board-mid">
-                    <h2>关卡</h2>
-                    <div id="levelList" class="level-nav-list"></div>
-                </div>
-                <div class="board-main board-detail">
-                    <div id="levelDetail" class="level-detail"></div>
-                </div>
+            <div class="run-layout">
+                <aside class="run-side"><h2>选择板块</h2><div id="categoryList" class="category-list"><div class="empty-run">加载中...</div></div><p class="side-note">每个任务关包含一个或多个套路。已通关的关卡会留下完成标记。</p></aside>
+                <section class="run-main"><div id="runBoard"><div class="empty-run">加载中...</div></div></section>
             </div>
         </div>
     </main>
 </div>
 <script src="nav.js?v=20260809e"></script>
-<script src="question-search.js?v=20260809"></script>
 <script>
 var boards = [];
-var currentBoard = null;
-var patterns = [];
-var _validCategories = [];
-var selectedLevelSeq = 0;
+var currentBoardId = null;
 
-function escapeHtml(s) {
-    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
-}
+function escapeHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+function stateLabel(s) { return {never:'未挑战', first_pass:'进行中', second_pass:'进行中', third_pass:'已完成', again_wrong:'需要重试'}[s] || '未挑战'; }
+function stateClass(s) { return s === 'third_pass' ? 'done' : (s === 'first_pass' || s === 'second_pass' || s === 'again_wrong' ? 'progress' : ''); }
+function api(path) { return fetch('http://127.0.0.1:8000' + path).then(function(r) { if (!r.ok) throw new Error('请求失败'); return r.json(); }); }
 
-async function api(path, opts) {
-    var r = await fetch('http://127.0.0.1:8000' + path, opts || {});
-    return r.json();
-}
-
-async function loadCategories() {
-    try {
-        var r = await fetch('http://127.0.0.1:8000/categories');
-        var data = await r.json();
-        _validCategories = (data || []).map(function(x) { return x.level1; });
-    } catch (e) {
-        _validCategories = [];
-    }
-}
-
-function validateBoards() {
-    var statusEl = document.getElementById('boardStatus');
-    if (!statusEl) return;
-    if (!_validCategories.length) {
-        statusEl.innerHTML = '<span style="color:#c62828;">板块栏目加载失败，请重试 <button class="board-btn secondary" onclick="loadBoards()">重试</button></span>';
-        return;
-    }
-    var bad = boards.filter(function(b) { return _validCategories.indexOf(b.category) < 0; }).map(function(b) { return b.category; });
-    if (bad.length) {
-        statusEl.innerHTML = '<span style="color:#c62828;">板块与栏目不一致：' + escapeHtml(bad.join('、')) + '，请重试 <button class="board-btn secondary" onclick="loadBoards()">重试</button></span>';
-        return;
-    }
-    statusEl.textContent = '';
-}
-
-async function loadPatterns() {
-    try {
-        var r = await fetch('http://127.0.0.1:8000/patterns');
-        patterns = await r.json();
-    } catch (e) {
-        patterns = [];
-    }
-}
-
-async function loadBoards() {
-    try {
-        boards = await api('/boards');
-    } catch (e) {
-        boards = [];
-    }
-    await loadCategories();
-    await loadPatterns();
-    validateBoards();
-    renderBoardList();
-    if (!currentBoard && boards.length) {
-        selectBoard(boards[0].id);
-    } else if (currentBoard) {
-        var fresh = boards.find(function(b) { return b.id === currentBoard.id; });
-        if (fresh) selectBoard(fresh.id);
-    }
-    validateBoards();
-}
-
-function renderBoardList() {
-    var html = '';
-    for (var i = 0; i < boards.length; i++) {
-        var b = boards[i];
-        var count = (b.nodes || []).filter(function(n) { return n.pattern_id; }).length;
-        html += '<button class="board-cat' + (currentBoard && currentBoard.id === b.id ? ' active' : '') + '" onclick="selectBoard(' + b.id + ')">' + escapeHtml(b.category) + ' <span style="color:#86868b;">(' + count + ')</span></button>';
-    }
-    document.getElementById('boardList').innerHTML = html || '<div class="empty-board">暂无地图</div>';
-}
-
-function selectBoard(id) {
-    currentBoard = boards.find(function(b) { return b.id === id; }) || null;
-    selectedLevelSeq = 0;
-    if (currentBoard) {
-        currentBoard.nodes = (currentBoard.nodes || []).filter(function(n) { return n.pattern_id; });
-        currentBoard.edges = currentBoard.edges || [];
-        currentBoard.levels = currentBoard.levels || [];
-    }
-    renderBoardList();
-    renderLevels();
-    renderStageList();
-}
-
-function stateLabel(s) {
-    return {never: '未挑战', first_pass: '第一次会', second_pass: '第二次会', third_pass: '已通关', again_wrong: '再次出错'}[s] || s || '未挑战';
-}
-
-function stateClass(s) {
-    return 'state-' + (s || 'never');
-}
-
-function getLevels() {
-    if (!currentBoard) return [];
-    var nodes = currentBoard.nodes || [];
-    var map = {};
-    for (var i = 0; i < nodes.length; i++) {
-        var n = nodes[i];
-        var level = Math.max(0, Math.round(n.x || 0));
-        if (!map[level]) map[level] = [];
-        map[level].push(n);
-    }
-    var keys = Object.keys(map).map(Number).sort(function(a, b) { return a - b; });
-    return keys.map(function(k) {
-        return {index: k, patterns: map[k].slice().sort(function(a, b) { return (a.y || 0) - (b.y || 0); })};
+function boardLevels(board) {
+    var byIndex = {};
+    (board.nodes || []).forEach(function(n) {
+        var index = Math.max(0, Math.round(n.x || 0));
+        (byIndex[index] = byIndex[index] || []).push(n);
     });
-}
-
-function getLevelData(levelIndex) {
-    var lvs = (currentBoard && currentBoard.levels) || [];
-    for (var i = 0; i < lvs.length; i++) {
-        if (Number(lvs[i].level_index) === Number(levelIndex)) return lvs[i];
-    }
-    return null;
-}
-
-function getLevelName(levelIndex) {
-    var lv = getLevelData(levelIndex);
-    return (lv && lv.name) || '';
-}
-
-function getLevelKps(levelIndex) {
-    var lv = getLevelData(levelIndex);
-    return (lv && lv.knowledge_points) || [];
-}
-
-function getLevelDescription(levelIndex) {
-    var lv = getLevelData(levelIndex);
-    return (lv && lv.description) || '';
+    (board.levels || []).forEach(function(l) {
+        var index = Number(l.level_index);
+        if (!byIndex[index]) byIndex[index] = [];
+    });
+    return Object.keys(byIndex).map(Number).sort(function(a,b) { return a-b; }).map(function(index) {
+        var meta = (board.levels || []).find(function(l) { return Number(l.level_index) === index; }) || {};
+        return {index:index, name:meta.name || '', description:meta.description || '', patterns:(byIndex[index] || []).slice().sort(function(a,b) { return (a.y || 0) - (b.y || 0); })};
+    });
 }
 
 function levelLocked(levels, seq) {
     for (var i = seq - 1; i >= 0; i--) {
-        var prev = levels[i];
-        if (!prev || !prev.patterns.length) continue;
-        return prev.patterns.some(function(n) { return n.state !== 'third_pass'; });
+        if (!levels[i].patterns.length) continue;
+        return levels[i].patterns.some(function(n) { return n.state !== 'third_pass'; });
     }
     return false;
 }
 
-function patternStatus(n, locked) {
-    if (locked) return 'locked';
-    if (n.state === 'third_pass') return 'done';
-    if (n.state === 'first_pass' || n.state === 'second_pass') return 'progress';
-    return 'available';
-}
-
-function renderLevels() {
-    var el = document.getElementById('levelList');
-    if (!el) return;
-    if (!currentBoard) {
-        el.innerHTML = '<div class="empty-board">请先选择左侧板块</div>';
-        var detailEl = document.getElementById('levelDetail');
-        if (detailEl) detailEl.innerHTML = '<div class="empty-board">请先选择左侧板块</div>';
-        return;
-    }
-    var levels = getLevels();
-    if (selectedLevelSeq > levels.length) selectedLevelSeq = levels.length;
-    var html = '';
-    for (var i = 0; i < levels.length; i++) {
-        var locked = levelLocked(levels, i);
-        var allDone = !locked && levels[i].patterns.length && levels[i].patterns.every(function(n) { return n.state === 'third_pass'; });
-        html += renderLevelNavItem(levels[i], i, locked, allDone, false);
-    }
-    var nextLevel = {index: levels.length ? levels[levels.length - 1].index + 1 : 0, patterns: []};
-    html += renderLevelNavItem(nextLevel, levels.length, false, false, true);
-    el.innerHTML = html;
-    renderLevelDetail();
-}
-
-function renderLevelNavItem(level, seq, locked, allDone, isNext) {
-    var lvName = getLevelName(level.index);
-    var name = lvName || ('第 ' + (seq + 1) + ' 关');
-    var lvLabel = isNext ? '空关卡' : (locked ? '未解锁' : (allDone ? '已通关' : '待挑战'));
-    var cls = isNext ? 'open' : (locked ? 'locked' : (allDone ? 'done' : 'open'));
-    return '<div class="level-nav-item' + (selectedLevelSeq === seq ? ' active' : '') + '" onclick="selectLevel(' + seq + ')">' +
-        '<span class="level-nav-seq">' + (isNext ? '＋' : '第 ' + (seq + 1) + ' 关') + '</span>' +
-        '<span class="level-nav-name">' + escapeHtml(name) + '</span>' +
-        '<span class="level-status ' + cls + '">' + escapeHtml(lvLabel) + '</span></div>';
-}
-
-function selectLevel(seq) {
-    selectedLevelSeq = seq;
-    renderLevels();
-    renderStageList();
-}
-
-function renderLevelDetail() {
-    var el = document.getElementById('levelDetail');
-    if (!el) return;
-    if (!currentBoard) {
-        el.innerHTML = '<div class="empty-board">请先选择左侧板块</div>';
-        return;
-    }
-    var levels = getLevels();
-    var seq = selectedLevelSeq;
-    if (seq > levels.length) seq = levels.length;
-    var isNext = seq >= levels.length;
-    var level = isNext ? {index: levels.length ? levels[levels.length - 1].index + 1 : 0, patterns: []} : levels[seq];
-    var locked = levelLocked(levels, seq);
-    var allDone = !isNext && level.patterns.length && level.patterns.every(function(n) { return n.state === 'third_pass'; });
-    var name = getLevelName(level.index) || ('第 ' + (seq + 1) + ' 关');
-    var desc = getLevelDescription(level.index) || '';
-    var status = isNext ? '空关卡' : (locked ? '未解锁' : (allDone ? '已通关' : '待挑战'));
-    var statusCls = isNext ? 'open' : (locked ? 'locked' : (allDone ? 'done' : 'open'));
-
-    var html = '<div class="level-detail-head"><h2>' + escapeHtml(name) + '</h2>';
-    html += '<span class="level-status ' + statusCls + '">' + escapeHtml(status) + '</span>';
-    html += '<div class="level-detail-actions">';
-    html += '<button class="primary" onclick="openLevelDescription(' + seq + ')">关卡说明</button>';
-    if (!isNext) {
-        html += '<button onclick="toggleLevelRename(' + level.index + ')">改名</button>';
-        html += '<button onclick="moveLevel(' + seq + ',-1)"' + (seq === 0 ? ' disabled' : '') + '>上移</button>';
-        html += '<button onclick="moveLevel(' + seq + ',1)"' + (seq === levels.length - 1 ? ' disabled' : '') + '>下移</button>';
-        html += '<button class="danger" onclick="removeLevel(' + seq + ')">删除本关</button>';
-    }
-    html += '</div></div>';
-
-    if (!isNext) {
-        html += '<div class="level-rename" id="levelRename_' + level.index + '">';
-        html += '<input id="levelNameInput_' + level.index + '" value="' + escapeHtml(name) + '" placeholder="输入关卡名">';
-        html += '<button onclick="saveLevelName(' + level.index + ')">保存</button>';
-        html += '</div>';
-    }
-
-    html += '<div class="level-desc-box">';
-    html += '<div class="level-desc-head"><b>关卡说明</b>';
-    html += '<button class="board-btn secondary" style="padding:4px 10px;font-size:12px;" onclick="openLevelDescription(' + seq + ')">' + (desc ? '编辑' : '添加') + '</button></div>';
-    if (desc) {
-        html += '<div class="level-desc-text" id="levelDescText_' + level.index + '">' + escapeHtml(desc) + '</div>';
-    } else {
-        html += '<div class="level-desc-empty">还没有关卡说明，点击添加后用 LaTeX 书写。</div>';
-    }
-    html += '</div>';
-
-    html += '<div class="level-patterns">';
-    for (var j = 0; j < level.patterns.length; j++) {
-        html += renderPatternCard(level.patterns[j], patternStatus(level.patterns[j], locked));
-    }
-    if (!level.patterns.length) {
-        html += '<div class="empty-board">这一关还没有题目，从下方添加套路。</div>';
-    }
-    html += '</div>';
-    html += renderLevelAdd(seq);
-    el.innerHTML = html;
-    if (window.renderMathInElement) {
-        try {
-            renderMathInElement(el, {delimiters: [
-                {left: '$$', right: '$$', display: true},
-                {left: '$', right: '$', display: false}
-            ], ignoredTags: []});
-        } catch (e) {}
-    }
-}
-
-function openLevelDescription(seq) {
-    var levels = getLevels();
-    var level = levels[seq];
-    if (!level && seq === levels.length) {
-        level = {index: levels.length ? levels[levels.length - 1].index + 1 : 0, patterns: []};
-    }
-    if (!level) return;
-    var name = getLevelName(level.index) || ('第 ' + (seq + 1) + ' 关');
-    var desc = getLevelDescription(level.index) || '';
-    var overlay = document.createElement('div');
-    overlay.className = 'level-desc-overlay show';
-    overlay.id = 'levelDescOverlay';
-    overlay.innerHTML = '<div class="level-desc-modal">' +
-        '<h3>关卡说明 · ' + escapeHtml(name) + '</h3>' +
-        '<textarea id="levelDescInput" placeholder="用 LaTeX 书写关卡说明，例如 $x^2+y^2=r^2$">' + escapeHtml(desc) + '</textarea>' +
-        '<div class="preview-title">预览</div><div class="level-desc-preview" id="levelDescPreview">' + escapeHtml(desc) + '</div>' +
-        '<div class="level-desc-modal-actions">' +
-        '<button class="board-btn secondary" onclick="closeLevelDescription()">取消</button>' +
-        '<button class="board-btn" onclick="saveLevelDescription(' + seq + ')">保存</button>' +
-        '</div></div>';
-    document.body.appendChild(overlay);
-    renderLevelDescriptionPreview();
-    overlay.querySelector('textarea').addEventListener('input', renderLevelDescriptionPreview);
-}
-
-function renderLevelDescriptionPreview() {
-    var input = document.getElementById('levelDescInput');
-    var preview = document.getElementById('levelDescPreview');
-    if (!input || !preview) return;
-    preview.textContent = input.value;
-    if (window.renderMathInElement) {
-        try {
-            renderMathInElement(preview, {delimiters: [
-                {left: '$$', right: '$$', display: true},
-                {left: '$', right: '$', display: false}
-            ], ignoredTags: []});
-        } catch (e) {}
-    }
-}
-
-function closeLevelDescription() {
-    var el = document.getElementById('levelDescOverlay');
-    if (el) el.remove();
-}
-
-async function saveLevelDescription(seq) {
-    var input = document.getElementById('levelDescInput');
-    var desc = input ? input.value : '';
-    var levels = getLevels();
-    var level = levels[seq];
-    if (!level && seq === levels.length) {
-        level = {index: levels.length ? levels[levels.length - 1].index + 1 : 0, patterns: []};
-    }
-    if (!level) return;
-    currentBoard.levels = currentBoard.levels || [];
-    var lv = getLevelData(level.index);
-    if (lv) {
-        lv.description = desc;
-    } else {
-        currentBoard.levels.push({level_index: level.index, name: getLevelName(level.index), knowledge_points: [], description: desc});
-    }
-    closeLevelDescription();
-    await saveBoard();
-}
-
-function renderPatternCard(n, status) {
-    var name = n.name || ('套路 #' + n.pattern_id);
-    var html = '<div class="pattern-card ' + status + '">';
-    html += '<div class="pattern-card-head"><div class="pattern-name">' + escapeHtml(name) + '</div>';
-    html += '<span class="state-badge ' + stateClass(n.state) + '">' + escapeHtml(stateLabel(n.state)) + '</span></div>';
-    html += '<div class="pattern-desc">' + escapeHtml(n.question_type || '') + '</div>';
-    html += '<div class="pattern-actions">';
-    if (status === 'locked') {
-        html += '<button disabled>未解锁</button>';
-    } else {
-        html += '<button class="primary" onclick="openLoop(' + n.pattern_id + ')">闯关</button>';
-    }
-    html += '<button onclick="toggleRename(' + n.pattern_id + ')">改名</button>';
-    html += '<button class="danger" onclick="removePatternFromLevel(' + n.pattern_id + ')">移除</button></div>';
-    html += '<div class="rename-row" id="rename_' + n.pattern_id + '" style="display:none;">';
-    html += '<input id="renameInput_' + n.pattern_id + '" value="' + escapeHtml(name) + '">';
-    html += '<button onclick="saveRename(' + n.pattern_id + ')">保存</button></div>';
-    html += '</div>';
-    return html;
-}
-
-function renderLevelAdd(seq) {
-    if (!currentBoard) return '';
-    var inBoard = currentBoard.nodes.map(function(n) { return n.pattern_id; });
-    var available = patterns.filter(function(p) {
-        return p.category === currentBoard.category && inBoard.indexOf(p.id) < 0;
+function loadBoards() {
+    api('/boards').then(function(data) {
+        boards = data || [];
+        if (!boards.length) { renderCategories(); renderBoard(null); return; }
+        if (!boards.some(function(b) { return b.id === currentBoardId; })) currentBoardId = boards[0].id;
+        renderCategories();
+        renderBoard(boards.find(function(b) { return b.id === currentBoardId; }));
+    }).catch(function(e) {
+        document.getElementById('categoryList').innerHTML = '<div class="empty-run run-error">加载失败</div>';
+        document.getElementById('runBoard').innerHTML = '<div class="empty-run run-error">' + escapeHtml(e.message) + '</div>';
     });
-    var html = '<div class="level-add">';
-    html += '<select id="addSelect_' + seq + '"><option value="">选择套路...</option>';
-    for (var i = 0; i < available.length; i++) {
-        html += '<option value="' + available[i].id + '">' + escapeHtml(available[i].name) + '</option>';
-    }
-    html += '</select>';
-    html += '<button onclick="addPatternToLevel(' + seq + ')">添加到本关</button>';
-    html += '<button class="new-pattern-toggle" onclick="toggleNewPattern(' + seq + ')">新建套路</button>';
-    html += '<span class="new-pattern-box" id="newPatternBox_' + seq + '" style="display:none;">';
-    html += '<input id="newPatternName_' + seq + '" type="text" placeholder="套路名">';
-    html += '<span class="question-search-wrap"><input id="newPatternSearch_' + seq + '" type="text" class="question-search-input" data-target-id="newPatternQid_' + seq + '" data-results-id="newPatternResults_' + seq + '" placeholder="搜索母题..." autocomplete="off"><input type="hidden" id="newPatternQid_' + seq + '"><div id="newPatternResults_' + seq + '" class="question-search-results"></div></span>';
-    html += '<button class="cancel" onclick="createPatternAndAdd(' + seq + ')">创建并添加</button>';
-    html += '</span>';
-    html += '</div>';
-    return html;
 }
 
-function toggleRename(pid) {
-    var box = document.getElementById('rename_' + pid);
-    if (!box) return;
-    box.style.display = box.style.display === 'flex' ? 'none' : 'flex';
+function renderCategories() {
+    var el = document.getElementById('categoryList');
+    el.innerHTML = boards.map(function(b) {
+        var count = (b.nodes || []).length;
+        return '<button class="category-button' + (b.id === currentBoardId ? ' active' : '') + '" onclick="selectBoard(' + b.id + ')">' + escapeHtml(b.category) + '<span class="category-count">' + count + '</span></button>';
+    }).join('') || '<div class="empty-run">暂无板块</div>';
 }
 
-function toggleNewPattern(seq) {
-    var box = document.getElementById('newPatternBox_' + seq);
-    if (!box) return;
-    box.style.display = box.style.display === 'inline-flex' ? 'none' : 'inline-flex';
-}
+function selectBoard(id) { currentBoardId = id; renderCategories(); renderBoard(boards.find(function(b) { return b.id === id; })); }
 
-function toggleLevelRename(levelIndex) {
-    var box = document.getElementById('levelRename_' + levelIndex);
-    if (!box) return;
-    box.style.display = box.style.display === 'flex' ? 'none' : 'flex';
-}
-
-async function saveLevelName(levelIndex) {
-    var input = document.getElementById('levelNameInput_' + levelIndex);
-    var name = input ? input.value.trim() : '';
-    currentBoard.levels = currentBoard.levels || [];
-    var lv = getLevelData(levelIndex);
-    if (lv) {
-        lv.name = name;
-    } else {
-        currentBoard.levels.push({level_index: levelIndex, name: name, knowledge_points: [], description: ''});
-    }
-    await saveBoard();
-}
-
-function renderStageList() {
-    var el = document.getElementById('stageList');
-    var section = document.getElementById('stageSection');
-    if (!el) return;
-    if (!currentBoard) {
-        if (section) section.style.display = 'none';
-        el.innerHTML = '';
-        return;
-    }
-    var levels = getLevels();
-    if (!levels.length) {
-        if (section) section.style.display = 'none';
-        el.innerHTML = '<div class="empty-board">还没有关卡</div>';
-        return;
-    }
-    if (section) section.style.display = 'block';
-    var html = '';
-    for (var i = 0; i < levels.length; i++) {
-        var locked = levelLocked(levels, i);
-        var allDone = levels[i].patterns.length && levels[i].patterns.every(function(n) { return n.state === 'third_pass'; });
-        var status = locked ? '未解锁' : (allDone ? '已通关' : '待挑战');
-        var name = getLevelName(levels[i].index) || ('第 ' + (i + 1) + ' 关');
-        var kps = getLevelKps(levels[i].index);
-        html += '<div class="stage-item' + (selectedLevelSeq === i ? ' active' : '') + '" onclick="selectLevel(' + i + ')">';
-        html += '<div class="stage-head"><span class="stage-name">' + escapeHtml(name) + '</span><span class="stage-status ' + (locked ? 'locked' : (allDone ? 'done' : 'open')) + '">' + escapeHtml(status) + '</span></div>';
-        if (kps.length) {
-            html += '<div class="stage-kps">' + escapeHtml(kps.join('、')) + '</div>';
-        }
-        html += '<div class="stage-actions">';
-        html += '<button onclick="event.stopPropagation();moveLevel(' + i + ',-1)"' + (i === 0 ? ' disabled' : '') + '>上移</button>';
-        html += '<button onclick="event.stopPropagation();moveLevel(' + i + ',1)"' + (i === levels.length - 1 ? ' disabled' : '') + '>下移</button>';
+function renderBoard(board) {
+    var el = document.getElementById('runBoard');
+    if (!board) { el.innerHTML = '<div class="empty-run">暂无闯关地图</div>'; return; }
+    var levels = boardLevels(board);
+    var mastered = (board.nodes || []).filter(function(n) { return n.state === 'third_pass'; }).length;
+    var total = (board.nodes || []).length;
+    var html = '<div class="run-board-head"><div class="run-board-name">' + escapeHtml(board.name || board.category) + '</div><div class="run-board-progress">已完成 <b>' + mastered + '</b> / ' + total + ' 个套路</div></div>';
+    if (!levels.length) { el.innerHTML = html + '<div class="empty-run">这个板块还没有关卡</div>'; return; }
+    html += '<div class="mission-map"><div class="map-start">开始</div>';
+    levels.forEach(function(level, seq) {
+        var locked = levelLocked(levels, seq);
+        var allDone = level.patterns.length > 0 && level.patterns.every(function(n) { return n.state === 'third_pass'; });
+        var status = locked ? '未解锁' : (allDone ? '已完成' : '待挑战');
+        var cls = locked ? 'locked' : (allDone ? 'done' : (level.patterns.some(function(n) { return n.state === 'first_pass' || n.state === 'second_pass' || n.state === 'again_wrong'; }) ? 'progress' : ''));
+        html += '<div class="mission-level"><div class="mission-branch"></div><div class="mission-box ' + cls + '">';
+        html += '<div class="mission-head"><div><div class="mission-number">MISSION ' + String(seq + 1).padStart(2, '0') + '</div><div class="mission-name">' + escapeHtml(level.name || ('第 ' + (seq + 1) + ' 关')) + '</div></div><span class="mission-status ' + cls + '">' + status + '</span></div>';
+        if (level.description) html += '<div class="mission-desc">' + escapeHtml(level.description) + '</div>';
+        if (!level.patterns.length) html += '<div class="mission-empty">本关还没有配置套路</div>';
+        level.patterns.forEach(function(n) {
+            html += '<div class="mission-task' + (n.question_id && !locked ? ' clickable' : '') + '"' + (n.question_id && !locked ? ' onclick="openLoop(' + n.pattern_id + ')"' : '') + '><span>' + escapeHtml(n.name || ('套路 #' + n.pattern_id)) + '</span><small>' + (n.question_id ? (n.question_type || '点击开始') : '待添加题目') + '</small></div>';
+        });
         html += '</div></div>';
-    }
+    });
+    html += '<div class="map-end">完成路线</div></div>';
     el.innerHTML = html;
 }
 
-function scrollToLevel(seq) {
-    selectLevel(seq);
-}
-
-async function moveLevel(seq, dir) {
-    var levels = getLevels();
-    var target = seq + dir;
-    if (target < 0 || target >= levels.length) return;
-    var a = levels[seq], b = levels[target];
-    for (var i = 0; i < a.patterns.length; i++) a.patterns[i].x = b.index;
-    for (var j = 0; j < b.patterns.length; j++) b.patterns[j].x = a.index;
-    currentBoard.levels = currentBoard.levels || [];
-    var la = getLevelData(a.index), lb = getLevelData(b.index);
-    if (!la) { la = {level_index: a.index, name: '', knowledge_points: [], description: ''}; currentBoard.levels.push(la); }
-    if (!lb) { lb = {level_index: b.index, name: '', knowledge_points: [], description: ''}; currentBoard.levels.push(lb); }
-    var tmpName = la.name; la.name = lb.name; lb.name = tmpName;
-    var tmpKps = la.knowledge_points; la.knowledge_points = lb.knowledge_points; lb.knowledge_points = tmpKps;
-    var tmpDesc = la.description; la.description = lb.description; lb.description = tmpDesc;
-    selectedLevelSeq = target;
-    await saveBoard();
-}
-
-async function saveRename(pid) {
-    var input = document.getElementById('renameInput_' + pid);
-    var name = input ? input.value.trim() : '';
-    if (!name) { setBoardStatus('套路名不能为空', true); return; }
-    try {
-        var r = await fetch('http://127.0.0.1:8000/patterns/' + pid, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({name: name})
-        });
-        var d = await r.json();
-        if (d.error) throw new Error(d.detail || d.error);
-        await loadBoards();
-    } catch (e) {
-        setBoardStatus('改名失败：' + e.message, true);
-    }
-}
-
-async function addPatternToLevel(seq) {
-    var sel = document.getElementById('addSelect_' + seq);
-    var pid = sel ? parseInt(sel.value) : 0;
-    if (!pid) { setBoardStatus('请先选择一个套路', true); return; }
-    await addPatternToLevelByPid(seq, pid);
-}
-
-async function addPatternToLevelByPid(seq, pid) {
-    var p = patterns.find(function(x) { return x.id === pid; });
-    if (!p) { setBoardStatus('套路不存在', true); return; }
-    if (!p.mother_id) { setBoardStatus('这个套路还没有母题，无法加入关卡', true); return; }
-    if (currentBoard.nodes.some(function(n) { return n.pattern_id === pid; })) {
-        setBoardStatus('这个套路已经在关卡里了', true);
-        return;
-    }
-    var levels = getLevels();
-    var levelIndex = seq < levels.length ? levels[seq].index : (levels.length ? levels[levels.length - 1].index + 1 : 0);
-    var inLevel = currentBoard.nodes.filter(function(n) { return Math.round(n.x || 0) === levelIndex; });
-    currentBoard.nodes.push({
-        question_id: p.mother_id,
-        x: levelIndex,
-        y: inLevel.length,
-        pattern_id: p.id,
-        state: (p.mastery || {}).state || 'never',
-        name: p.name,
-        question_type: ''
-    });
-    await saveBoard();
-}
-
-async function createPatternAndAdd(seq) {
-    var nameInput = document.getElementById('newPatternName_' + seq);
-    var qidInput = document.getElementById('newPatternQid_' + seq);
-    var name = nameInput ? nameInput.value.trim() : '';
-    var qid = qidInput ? parseInt(qidInput.value) : 0;
-    if (!name || !qid) { setBoardStatus('请填写套路名并搜索选择母题', true); return; }
-    try {
-        var r = await fetch('http://127.0.0.1:8000/patterns/mother', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({question_id: qid, category: currentBoard.category, name: name})
-        });
-        var d = await r.json();
-        if (d.error) throw new Error(d.detail || d.error);
-        patterns.push({
-            id: d.pattern_id, category: currentBoard.category, name: name, mother_id: qid,
-            mastery: {state: 'never'}, description: '', max_time_seconds: 120, variant_ids: []
-        });
-        var box = document.getElementById('newPatternBox_' + seq);
-        if (box) box.style.display = 'none';
-        await addPatternToLevelByPid(seq, d.pattern_id);
-    } catch (e) {
-        setBoardStatus('新建套路失败：' + e.message, true);
-    }
-}
-
-async function removePatternFromLevel(pid) {
-    if (!confirm('确定把这个套路从本关移除吗？')) return;
-    currentBoard.nodes = currentBoard.nodes.filter(function(n) { return n.pattern_id !== pid; });
-    await saveBoard();
-}
-
-async function removeLevel(seq) {
-    var levels = getLevels();
-    if (seq >= levels.length) return;
-    if (!confirm('确定删除这一关及其中的套路吗？')) return;
-    var lv = levels[seq];
-    currentBoard.nodes = currentBoard.nodes.filter(function(n) { return Math.round(n.x || 0) !== lv.index; });
-    renumberLevels();
-    await saveBoard();
-}
-
-function renumberLevels() {
-    var levels = getLevels();
-    var oldLevels = currentBoard.levels || [];
-    var nameByIndex = {};
-    for (var k = 0; k < oldLevels.length; k++) {
-        nameByIndex[Number(oldLevels[k].level_index)] = oldLevels[k];
-    }
-    var nextLevels = [];
-    for (var i = 0; i < levels.length; i++) {
-        for (var j = 0; j < levels[i].patterns.length; j++) {
-            levels[i].patterns[j].x = i;
-        }
-        var old = nameByIndex[levels[i].index] || {};
-        nextLevels.push({
-            level_index: i,
-            name: old.name || '',
-            knowledge_points: old.knowledge_points || [],
-            description: old.description || ''
-        });
-    }
-    currentBoard.levels = nextLevels;
-}
-
-async function saveBoard() {
-    if (!currentBoard) return;
-    var keepSeq = selectedLevelSeq;
-    var payload = {
-        nodes: currentBoard.nodes.map(function(n) {
-            return {question_id: n.question_id, x: Math.round(n.x || 0), y: Math.round(n.y || 0)};
-        }),
-        edges: [],
-        levels: (currentBoard.levels || []).map(function(l) {
-            return {level_index: l.level_index, name: l.name || '', description: l.description || ''};
-        })
-    };
-    try {
-        var d = await api('/boards/' + currentBoard.id, {
-            method: 'PUT',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify(payload)
-        });
-        if (d && d.id) {
-            await loadBoards();
-            selectedLevelSeq = Math.min(keepSeq, getLevels().length);
-            renderLevels();
-            setBoardStatus('已保存');
-        } else {
-            setBoardStatus('保存失败：' + ((d && d.detail) || '未知错误'), true);
-        }
-    } catch (e) {
-        setBoardStatus('保存失败：' + e.message, true);
-    }
-}
-
-function openLoop(patternId) {
-    window.open('loop.html?v=20260807&pattern_id=' + patternId, '_blank');
-}
-
-function setBoardStatus(msg, isError) {
-    var el = document.getElementById('boardStatus');
-    if (!el) return;
-    el.textContent = msg;
-    el.style.color = isError ? '#c62828' : '#2e7d32';
-}
-
-document.addEventListener('DOMContentLoaded', function() {
-    loadBoards();
-});
+function openLoop(patternId) { window.open('loop.html?v=20260807&pattern_id=' + patternId, '_blank'); }
+document.addEventListener('DOMContentLoaded', loadBoards);
 </script>
 </body>
 </html>

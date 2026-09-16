@@ -9,6 +9,18 @@
 #     variant_ids: [变式题 ID]
 
 集合与逻辑用语:
+  '1':
+    key: pat-da0e15ec80
+    difficulty: 1
+    description: ''
+    mother_id: null
+    variant_ids: []
+  '123':
+    key: pat-deaf0f8bfe
+    difficulty: 1
+    description: ''
+    mother_id: null
+    variant_ids: []
   元素的互异性与无序性:
     key: pat-e630fc5719
     difficulty: 1
@@ -21,11 +33,23 @@
     description: ''
     mother_id: 52
     variant_ids: []
+  全集不是U的补集问题:
+    key: pat-b45eb62903
+    difficulty: 1
+    description: ''
+    mother_id: 68
+    variant_ids: []
   判断元素是否属于常用数集:
     key: pat-06dace51fe
     difficulty: 1
     description: ''
     mother_id: 2
+    variant_ids: []
+  判断集合间的关系:
+    key: pat-78e3ca7499
+    difficulty: 1
+    description: ''
+    mother_id: 61
     variant_ids: []
   利用二次方程判别式求集合参数:
     key: pat-9919526daa
@@ -75,6 +99,30 @@
     description: ''
     mother_id: 46
     variant_ids: []
+  含参子集与区间:
+    key: pat-0182e09be1
+    difficulty: 1
+    description: ''
+    mother_id: 66
+    variant_ids: []
+  多重补集运算:
+    key: pat-31b5c88476
+    difficulty: 1
+    description: ''
+    mother_id: 64
+    variant_ids: []
+  子集个数问题:
+    key: pat-539c9595d7
+    difficulty: 1
+    description: ''
+    mother_id: 63
+    variant_ids: []
+  子集问题:
+    key: pat-50cc380df5
+    difficulty: 1
+    description: ''
+    mother_id: 62
+    variant_ids: []
   对集合本身新定义:
     key: pat-be3c787bf1
     difficulty: 1
@@ -92,6 +140,42 @@
     difficulty: 1
     description: ''
     mother_id: 60
+    variant_ids: []
+  枚举法解决子集问题:
+    key: pat-0a43ae084d
+    difficulty: 1
+    description: ''
+    mother_id: 70
+    variant_ids: []
+  根据集合相等求参数:
+    key: pat-8979e9df0b
+    difficulty: 1
+    description: ''
+    mother_id: 67
+    variant_ids: []
+  空集问题:
+    key: pat-b72bbddc0a
+    difficulty: 1
+    description: ''
+    mother_id: 65
+    variant_ids: []
+  集合交集与并集的概念:
+    key: pat-e21f716e3b
+    difficulty: 1
+    description: ''
+    mother_id: null
+    variant_ids: []
+  集合子集个数与二进制:
+    key: pat-4e7d36c89e
+    difficulty: 1
+    description: ''
+    mother_id: 69
+    variant_ids: []
+  集合的交集与并集:
+    key: pat-6539f4a460
+    difficulty: 1
+    description: ''
+    mother_id: null
     variant_ids: []
   集合表示二元方程组的解:
     key: pat-ca51e7ec2d

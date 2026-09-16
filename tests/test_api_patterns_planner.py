@@ -7,6 +7,38 @@ from tests.api_base import ApiTestCase
 
 
 class PatternApiTest(ApiTestCase):
+    def test_legacy_board_nodes_migrates_question_id_to_nullable(self):
+        from backend import patterns as patterns_mod
+
+        patterns_mod.init_mastery_db()
+        conn = patterns_mod._get_conn()
+        try:
+            conn.executescript("""
+                DROP TABLE board_nodes;
+                CREATE TABLE board_nodes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    board_id INTEGER NOT NULL REFERENCES boards(id),
+                    question_id INTEGER NOT NULL,
+                    x REAL NOT NULL DEFAULT 0,
+                    y REAL NOT NULL DEFAULT 0,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                    pattern_id INTEGER,
+                    UNIQUE(board_id, question_id)
+                );
+            """)
+            conn.commit()
+        finally:
+            conn.close()
+
+        patterns_mod.init_mastery_db()
+        conn = patterns_mod._get_conn()
+        try:
+            columns = {r["name"]: r for r in conn.execute("PRAGMA table_info(board_nodes)").fetchall()}
+            self.assertEqual(columns["question_id"]["notnull"], 0)
+            self.assertIn("pattern_id", columns)
+        finally:
+            conn.close()
+
     def test_add_mother_and_list(self):
         qid = self.seed_question()
         resp = self.client.post("/patterns/mother", json={
@@ -56,6 +88,36 @@ class PatternApiTest(ApiTestCase):
         })
         self.assertEqual(resp.status_code, 400)
         self.assertEqual(resp.json()["error"], "invalid_mother")
+
+    def test_add_empty_pattern(self):
+        resp = self.client.post("/patterns/mother", json={
+            "category": "集合与逻辑用语",
+            "name": "待补题套路",
+        })
+        self.assertEqual(resp.status_code, 200)
+        self.assertIsNone(resp.json()["mother_id"])
+        listed = [p for p in self.client.get("/patterns").json() if p["id"] == resp.json()["pattern_id"]][0]
+        self.assertIsNone(listed["mother_id"])
+
+    def test_empty_pattern_can_be_added_to_board_and_then_receive_mother(self):
+        pattern = self.client.post("/patterns/mother", json={
+            "category": "集合与逻辑用语", "name": "地图待补题套路",
+        }).json()
+        boards = self.client.get("/boards").json()
+        board = next(b for b in boards if b["category"] == "集合与逻辑用语")
+        saved = self.client.put(f"/boards/{board['id']}", json={
+            "nodes": [{"pattern_id": pattern["pattern_id"], "question_id": None, "x": 0, "y": 0}],
+            "edges": [], "levels": [],
+        })
+        self.assertEqual(saved.status_code, 200)
+        self.assertIsNone(saved.json()["nodes"][0]["question_id"])
+        qid = self.seed_question("地图里补上的第一道题")
+        linked = self.client.post(f"/patterns/{pattern['pattern_id']}/questions", json={
+            "question_id": qid, "role": "mother",
+        })
+        self.assertEqual(linked.status_code, 200)
+        board_after = next(b for b in self.client.get("/boards").json() if b["id"] == board["id"])
+        self.assertEqual(board_after["nodes"][0]["question_id"], qid)
 
     def test_update_and_delete_pattern(self):
         pattern = self.create_pattern()
@@ -206,6 +268,40 @@ class PatternApiTest(ApiTestCase):
 
 
 class BoardApiTest(ApiTestCase):
+    def test_empty_level_is_persisted(self):
+        from backend.patterns import get_boards, save_board_layout
+
+        board = next(b for b in get_boards() if b["category"] == "数列")
+        saved = save_board_layout(
+            board["id"], [], [],
+            [{"level_index": 0, "name": "待配置关", "description": "先整理基础知识"}],
+        )
+        self.assertEqual(saved["levels"][0]["name"], "待配置关")
+
+    def test_mindmap_coordinates_are_persisted_separately_from_order(self):
+        from backend.patterns import get_boards, save_board_layout
+
+        pattern = self.create_pattern(category="数列", name="等差数列套路")
+        board = next(b for b in get_boards() if b["category"] == "数列")
+        saved = save_board_layout(
+            board["id"],
+            [{
+                "pattern_id": pattern["pattern_id"], "question_id": pattern["mother_id"],
+                "x": 2, "y": 3, "layout_x": 712, "layout_y": 284,
+            }],
+            [],
+            [{
+                "level_index": 2, "name": "数列进阶", "description": "",
+                "layout_x": 326, "layout_y": 241,
+            }],
+        )
+        self.assertEqual(saved["nodes"][0]["x"], 2)
+        self.assertEqual(saved["nodes"][0]["y"], 3)
+        self.assertEqual(saved["nodes"][0]["layout_x"], 712)
+        self.assertEqual(saved["nodes"][0]["layout_y"], 284)
+        self.assertEqual(saved["levels"][0]["layout_x"], 326)
+        self.assertEqual(saved["levels"][0]["layout_y"], 241)
+
     def test_get_boards(self):
         with patch("backend.patterns.get_boards", return_value=[{"id": 1, "category": "数列"}]):
             resp = self.client.get("/boards")
@@ -216,13 +312,14 @@ class BoardApiTest(ApiTestCase):
         fixture = {"saved": 1}
         with patch("backend.patterns.save_board_layout", return_value=fixture) as mock:
             resp = self.client.put("/boards/1", json={
-                "nodes": [{"question_id": 1, "x": 10, "y": 20}],
+                "nodes": [{"question_id": 1, "x": 10, "y": 20, "layout_x": 640, "layout_y": 180}],
                 "edges": [{"from_question_id": 1, "to_question_id": 2}],
             })
         self.assertEqual(resp.status_code, 200)
         self.assertEqual(resp.json()["saved"], 1)
         nodes, edges = mock.call_args[0][1], mock.call_args[0][2]
         self.assertEqual(nodes[0]["x"], 10)
+        self.assertEqual(nodes[0]["layout_x"], 640)
         self.assertEqual(edges[0]["to_question_id"], 2)
 
         with patch("backend.patterns.save_board_layout", side_effect=ValueError("bad")):
@@ -235,11 +332,14 @@ class BoardApiTest(ApiTestCase):
             resp = self.client.put("/boards/1", json={
                 "nodes": [{"question_id": 1, "x": 0, "y": 0}],
                 "edges": [],
-                "levels": [{"level_index": 0, "name": "基础关", "description": "$x^2$"}],
+                "levels": [{"level_index": 0, "name": "基础关", "description": "$x^2$", "layout_x": 300, "layout_y": 120}],
             })
         self.assertEqual(resp.status_code, 200)
         levels = mock.call_args[0][3]
-        self.assertEqual(levels, [{"level_index": 0.0, "name": "基础关", "description": "$x^2$"}])
+        self.assertEqual(levels, [{
+            "level_index": 0.0, "name": "基础关", "description": "$x^2$",
+            "layout_x": 300.0, "layout_y": 120.0,
+        }])
 
 
 class PlannerApiTest(ApiTestCase):

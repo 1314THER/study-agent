@@ -192,7 +192,7 @@
             home: 'home.html', solve: 'index.html', multimodal: 'multimodal.html',
             teach: 'teach.html', history: 'history.html', exam: 'exam.html',
             grade: 'grade.html', settings: 'settings.html', mother: 'mother.html',
-            loop: 'loop.html', calendar: 'calendar.html', board: 'board.html'
+            loop: 'loop.html', calendar: 'calendar.html', board: 'board.html', 'level-editor': 'level-editor.html'
         };
         var p = a.params || {};
         var url = map[a.page] || 'home.html';

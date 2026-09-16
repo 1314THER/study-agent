@@ -24,7 +24,8 @@ PAGES = {
     "mother": {"url": "mother.html", "name": "母题看板", "aliases": ["母题看板", "母题", "看板"]},
     "loop": {"url": "loop.html", "name": "套路循环", "aliases": ["套路循环", "套路", "循环"]},
     "calendar": {"url": "calendar.html", "name": "巩固日历", "aliases": ["巩固日历", "日历", "复习日历"]},
-    "board": {"url": "board.html", "name": "闯关地图", "aliases": ["闯关地图", "闯关", "地图"]},
+    "board": {"url": "board.html", "name": "闯关", "aliases": ["闯关地图", "闯关", "地图"]},
+    "level-editor": {"url": "level-editor.html", "name": "关卡编辑", "aliases": ["关卡编辑", "编辑关卡", "鱼骨图", "任务编辑"]},
 }
 
 _PAGE_ALIASES = {}

@@ -436,7 +436,7 @@ def api_delete_question(qid: int):
 
 
 class AddMotherQuestionRequest(BaseModel):
-    question_id: int
+    question_id: Optional[int] = Field(None, description="可选：初始母题；为空时创建空套路")
     category: str
     name: str
     key: Optional[str] = Field(None, description="套路稳定编号")
@@ -710,9 +710,12 @@ def api_get_boards():
 
 
 class BoardNodePayload(BaseModel):
-    question_id: int
+    question_id: Optional[int] = None
+    pattern_id: Optional[int] = None
     x: float = 0
     y: float = 0
+    layout_x: Optional[float] = None
+    layout_y: Optional[float] = None
 
 
 class BoardEdgePayload(BaseModel):
@@ -724,6 +727,8 @@ class BoardLevelPayload(BaseModel):
     level_index: float = 0
     name: str = ""
     description: str = ""
+    layout_x: Optional[float] = None
+    layout_y: Optional[float] = None
 
 
 class BoardLayoutRequest(BaseModel):
@@ -739,9 +744,11 @@ def api_save_board_layout(board_id: int, req: BoardLayoutRequest):
     try:
         result = save_board_layout(
             board_id,
-            [{"question_id": n.question_id, "x": n.x, "y": n.y} for n in req.nodes],
+            [{"question_id": n.question_id, "pattern_id": n.pattern_id, "x": n.x, "y": n.y,
+              "layout_x": n.layout_x, "layout_y": n.layout_y} for n in req.nodes],
             [{"from_question_id": e.from_question_id, "to_question_id": e.to_question_id} for e in req.edges],
-            [{"level_index": lv.level_index, "name": lv.name, "description": lv.description} for lv in req.levels],
+            [{"level_index": lv.level_index, "name": lv.name, "description": lv.description,
+              "layout_x": lv.layout_x, "layout_y": lv.layout_y} for lv in req.levels],
         )
         logger.info("保存闯关地图：board %s，节点 %s，关卡 %s", board_id, len(req.nodes), len(req.levels))
         return result
