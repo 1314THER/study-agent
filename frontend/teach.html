@@ -499,7 +499,7 @@ function restoreSession(){
     setTimeout(function(){var cc=document.getElementById("teachChat");if(cc&&window.renderMathInElement){try{renderMathInElement(cc,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}],ignoredTags:["script","style"]})}catch(e){}}},300);
     updateProgress();updateInfoPanel();setInputEnabled(true);saveSession();
     // Try to get fresh session data from backend
-    fetch("http://127.0.0.1:8000/teach/session/"+_sessionId).then(function(r){return r.json()}).then(function(sd){
+    fetch("/teach/session/"+_sessionId).then(function(r){return r.json()}).then(function(sd){
       if(sd&&sd.steps&&sd.steps.length){_sessionSteps=sd.steps;_sessionChunkResults=sd.chunk_results||[];updateInfoPanel();saveSession();}
     }).catch(function(){});
     return true;
@@ -557,7 +557,7 @@ async function startTeaching(){
   document.getElementById("teachStartBtn").disabled=true;
   document.getElementById("teachProgressArea").style.display="block";
   try{
-    var r=await fetch("http://127.0.0.1:8000/teach/find",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,teacher:_selectedTeacher})});
+    var r=await fetch("/teach/find",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,teacher:_selectedTeacher})});
     var findRes=await r.json();
     if(findRes.found&&findRes.chunk_results&&findRes.chunk_results.length){
       // Question already in DB - go directly to stage 2
@@ -570,14 +570,14 @@ async function startTeaching(){
       await new Promise(function(resolve){_pendingResolve=resolve;});
       startStepTimer();
       setProgressStage(1,"\u6B63\u5728\u89E3\u9898");
-      var s1=await fetch("http://127.0.0.1:8000/solve/step1",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,teacher:_selectedTeacher})});
+      var s1=await fetch("/solve/step1",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,teacher:_selectedTeacher})});
       var d1=await s1.json();
       if(d1.error){showError(d1.detail||"无法解答");resetStartBtn();return;}
       setProgressStage(2,"正在检查步骤…");
-      var s2=await fetch("http://127.0.0.1:8000/solve/step2",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,content:d1.content,category:d1.category||null,teacher:_selectedTeacher})});
+      var s2=await fetch("/solve/step2",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,content:d1.content,category:d1.category||null,teacher:_selectedTeacher})});
       var d2=await s2.json();
       if(d2.error){showError(d2.detail||"步骤检查失败");resetStartBtn();return;}
-      var s3=await fetch("http://127.0.0.1:8000/solve/step3",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,chunk_results:JSON.stringify(d2.chunk_results),teacher:_selectedTeacher,save:true})});
+      var s3=await fetch("/solve/step3",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,chunk_results:JSON.stringify(d2.chunk_results),teacher:_selectedTeacher,save:true})});
       await s3.json();
       stopStepTimer();
       setProgressStage(3,"\u6B63\u5728\u4F18\u5316\u6559\u5B66\u5F15\u5BFC");
@@ -590,7 +590,7 @@ function showError(m){var e=document.getElementById("teachError");e.textContent=
 
 async function startTeachSession(q){
   try{
-    var r=await fetch("http://127.0.0.1:8000/teach/session/start",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,teacher:_selectedTeacher})});
+    var r=await fetch("/teach/session/start",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,teacher:_selectedTeacher})});
     var data=await r.json();
     if(data.error){showError(data.detail||"无法创建教学会话");resetStartBtn();return;}
     _sessionId=data.session_id;_totalSteps=data.total_steps||0;_currentStepIndex=0;
@@ -613,7 +613,7 @@ async function startTeachSession(q){
 async function ackTeachPrompt(){
   if(!_sessionId)return;
   try{
-    await fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/ack",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
+    await fetch("/teach/session/"+_sessionId+"/ack",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}"});
   }catch(e){console.error("Ack prompt failed:",e);}
 }
 
@@ -621,7 +621,7 @@ async function sendMessage(){
   if(_isWaiting)return;var i=document.getElementById("teachChatInput");var m=i.value.trim();if(!m||!_sessionId)return;
   i.value="";i.style.height="auto";addChatMessage("student",m);_isWaiting=true;setInputEnabled(false);addLoadingMessage();
   try{
-    var r=await fetch("http://127.0.0.1:8000/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:m})});
+    var r=await fetch("/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:m})});
     var d=await r.json();removeLoadingMessage();
     if(d.error){addChatMessage("teacher","\u62B1\u6B49\uFF0C\u51FA\u4E86\u70B9\u95EE\u9898\uFF0C\u8BF7\u518D\u8BD5\u4E00\u6B21\u3002");_isWaiting=false;setInputEnabled(true);saveSession();return;}
     var a=d.action||"guide";
@@ -660,7 +660,7 @@ async function uploadTeachHandwriting(){
   var fd=new FormData();
   fd.append("file",input.files[0]);
   try{
-    var r=await fetch("http://127.0.0.1:8000/ocr/answer",{method:"POST",body:fd});
+    var r=await fetch("/ocr/answer",{method:"POST",body:fd});
     var d=await r.json();
     if(d.error){alert("\u8BC6\u522B\u5931\u8D25\uFF1A"+(d.detail||d.error||"\u672A\u77E5\u9519\u8BEF"));return;}
     ta.value=d.text||"";
@@ -721,7 +721,7 @@ async function saveTeachingResults(){
       var first_cr=_sessionChunkResults[0];
       if(first_cr.difficulty)aj.overall_difficulty=first_cr.difficulty;
     }
-    var r=await fetch("http://127.0.0.1:8000/questions/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,answer_json:aj})});
+    var r=await fetch("/questions/save",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,answer_json:aj})});
     var data=await r.json();
     if(data.saved&&data.id){
       var qid=data.id;
@@ -734,7 +734,7 @@ async function saveTeachingResults(){
         var err=_stepErrorData[errKeys[i]];
         if(err&&err.error_type){
           try{
-            await fetch("http://127.0.0.1:8000/questions/"+qid+"/step-error",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({step_number:stepNum,chunk_id:chunkId,mistake_type:err.error_type,mistake_detail:err.error_detail||"",student_input:err.student_input||""})});
+            await fetch("/questions/"+qid+"/step-error",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({step_number:stepNum,chunk_id:chunkId,mistake_type:err.error_type,mistake_detail:err.error_detail||"",student_input:err.student_input||""})});
           }catch(e){console.error("Save step error failed:",e);}
         }
       }
@@ -782,13 +782,13 @@ async function startAiGenJob(qid){
   ov.style.display="flex";
   ct.innerHTML=aiGenProgressHtml(0,"generating","正在启动 AI 仿题");
   try{
-    var r=await fetch("http://127.0.0.1:8000/questions/"+qid+"/generate/async",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({count:null,teacher:"liangliang"})});
+    var r=await fetch("/questions/"+qid+"/generate/async",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({count:null,teacher:"liangliang"})});
     var sj=await r.json();
     if(sj.error||!sj.job_id){ct.innerHTML=aiGenErrorHtml(sj.detail||sj.error||"启动生成任务失败");return;}
     var jobId=sj.job_id;
     async function poll(){
       try{
-        var pr=await fetch("http://127.0.0.1:8000/generate-jobs/"+jobId);
+        var pr=await fetch("/generate-jobs/"+jobId);
         var pj=await pr.json();
         if(pj.status==="done"){_aiGenTimer=null;renderAiGenResult(pj.result);}
         else if(pj.status==="error"){_aiGenTimer=null;ct.innerHTML=aiGenErrorHtml(pj.detail||pj.error||"生成失败");}

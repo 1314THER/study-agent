@@ -40,7 +40,7 @@
     async function search(input, q, box) {
         if (!box) return;
         try {
-            var r = await fetch('http://127.0.0.1:8000/questions/search?q=' + encodeURIComponent(q) + '&limit=8&page_size=8');
+            var r = await fetch('/questions/search?q=' + encodeURIComponent(q) + '&limit=8&page_size=8');
             var data = await r.json();
             var list = (data && data.data) || data || [];
             if (!list.length) {

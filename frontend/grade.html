@@ -233,7 +233,7 @@ function renderMath(el) {
 }
 
 async function api(path, opts) {
-    var r = await fetch('http://127.0.0.1:8000' + path, opts || {});
+    var r = await fetch('' + path, opts || {});
     return r.json();
 }
 
@@ -248,7 +248,7 @@ async function uploadGradeHandwriting() {
     var fd = new FormData();
     fd.append('file', input.files[0]);
     try {
-        var r = await fetch('http://127.0.0.1:8000/ocr/answer', { method: 'POST', body: fd });
+        var r = await fetch('/ocr/answer', { method: 'POST', body: fd });
         var d = await r.json();
         if (d.error) {
             if (statusEl) statusEl.textContent = '识别失败：' + (d.detail || d.error || '未知错误');

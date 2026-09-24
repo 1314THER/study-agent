@@ -88,7 +88,7 @@
                 <h1>巩固日历</h1>
                 <div class="cal-toolbar">
                     <button class="cal-btn" onclick="openAddModal()">添加巩固</button>
-                    <a class="cal-btn amber" href="http://127.0.0.1:8000/patterns/calendar.ics" download>下载 ICS 导入日历</a>
+                    <a class="cal-btn amber" href="/patterns/calendar.ics" download>下载 ICS 导入日历</a>
                     <span class="cal-note">时区：Asia/Shanghai（UTC+8）</span>
                 </div>
             </div>
@@ -123,7 +123,7 @@ function escapeHtml(s) {
 }
 
 async function api(path, opts) {
-    var r = await fetch('http://127.0.0.1:8000' + path, opts || {});
+    var r = await fetch('' + path, opts || {});
     return r.json();
 }
 
@@ -281,7 +281,7 @@ async function loadPatternOptions() {
     var sel = document.getElementById('calAddPattern');
     if (!sel) return;
     try {
-        var r = await fetch('http://127.0.0.1:8000/patterns');
+        var r = await fetch('/patterns');
         var patterns = await r.json();
         var scheduled = new Set((_data.items || []).map(function(x) { return x.pattern_id; }));
         var html = '<option value="">选择套路...</option>';

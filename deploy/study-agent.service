@@ -1,0 +1,19 @@
+[Unit]
+Description=Study Agent FastAPI service
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=studyagent
+Group=studyagent
+WorkingDirectory=/opt/study-agent
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/opt/study-agent/.venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

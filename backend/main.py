@@ -7,7 +7,6 @@ from fastapi.responses import RedirectResponse, StreamingResponse
 
 from pydantic import BaseModel, Field
 from typing import Optional, List
-from fastapi.middleware.cors import CORSMiddleware
 from backend.solver import step_solver_only, step_verify_all, step_final_check, _xuebile, _extract_solver_status
 from backend.teach import teach_start, teach_check, teach_find_or_format, teach_session_start, teach_session_chat, teach_get_session
 from backend.multimodal import parse_file, get_supported_extensions
@@ -28,7 +27,6 @@ setup_logging()
 logger = logging.getLogger("backend.main")
 
 app = FastAPI(title="你好，我是张雪峰老师")
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
 
 
 @app.middleware("http")

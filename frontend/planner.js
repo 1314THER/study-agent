@@ -2,7 +2,7 @@
     if (window.PlannerGlobal) return;
     window.PlannerGlobal = true;
 
-    var API_BASE = 'http://127.0.0.1:8000';
+    var API_BASE = '';
     var TEMPLATES = [
         { key: 'daily1', name: '每天 1 个', desc: '稳妥推进' },
         { key: 'daily2', name: '每天 2 个', desc: '加速复习' },

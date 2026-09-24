@@ -153,7 +153,7 @@ var COL_ROOT_X = 24, COL_LEVEL_X = 208, COL_PATTERN_X = 424;
 var PATTERN_STEP = 62, GROUP_GAP = 30;
 
 function escapeHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
-function api(path, opts) { return fetch('http://127.0.0.1:8000' + path, opts || {}).then(function(r) { return r.json().then(function(d) { if (!r.ok || (d && d.error)) throw new Error((d && (d.detail || d.error)) || '请求失败'); return d; }); }); }
+function api(path, opts) { return fetch('' + path, opts || {}).then(function(r) { return r.json().then(function(d) { if (!r.ok || (d && d.error)) throw new Error((d && (d.detail || d.error)) || '请求失败'); return d; }); }); }
 function setStatus(msg, error) { var el = document.getElementById('editStatus'); el.textContent = msg || ''; el.style.color = error ? '#c62828' : '#2e7d32'; }
 function stateLabel(s) { return {never:'未挑战', first_pass:'第一次会', second_pass:'第二次会', third_pass:'已通关', again_wrong:'再次出错'}[s] || '未挑战'; }
 function rootStorageKey() { return 'mindmap-root2-' + (currentBoard ? currentBoard.id : 'none'); }

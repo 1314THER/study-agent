@@ -182,7 +182,7 @@ function renderMath(el) {
 }
 
 async function api(path, opts) {
-    var r = await fetch('http://127.0.0.1:8000' + path, opts || {});
+    var r = await fetch('' + path, opts || {});
     return r.json();
 }
 

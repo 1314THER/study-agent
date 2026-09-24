@@ -319,7 +319,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
         };
 
         function initFilters() {
-            fetch('http://127.0.0.1:8000/categories')
+            fetch('/categories')
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     _categoryData = data || [];
@@ -613,9 +613,9 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
             }
             var url;
             if (listTarget !== null) {
-                url = 'http://127.0.0.1:8000/question-lists/' + listTarget + '/questions' + (params.length ? '?' + params.join('&') : '');
+                url = '/question-lists/' + listTarget + '/questions' + (params.length ? '?' + params.join('&') : '');
             } else {
-                url = 'http://127.0.0.1:8000/questions/search' + (params.length ? '?' + params.join('&') : '');
+                url = '/questions/search' + (params.length ? '?' + params.join('&') : '');
             }
             fetch(url)
                 .then(function(r) { return r.json(); })
@@ -817,7 +817,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
             closeConfirm();
             var removeOnly = mode === 'remove' && _selectedListId !== null && _selectedListId !== '__wrong__' && !isAllListView();
             if (removeOnly) {
-                var removeUrl = 'http://127.0.0.1:8000/questions/' + id + '/lists/' + _selectedListId;
+                var removeUrl = '/questions/' + id + '/lists/' + _selectedListId;
                 fetch(removeUrl, { method: 'DELETE' })
                     .then(function(r) { return r.json(); })
                     .then(function(data) {
@@ -833,7 +833,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
                     });
                 return;
             }
-            var url = 'http://127.0.0.1:8000/questions/' + id;
+            var url = '/questions/' + id;
             fetch(url, { method: 'DELETE' })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
@@ -882,7 +882,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
             delBtn.onclick = function() { confirmDelete(id); };
             backBtn.parentNode.insertBefore(delBtn, backBtn.nextSibling);
 
-            fetch('http://127.0.0.1:8000/questions/' + id)
+            fetch('/questions/' + id)
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data.error) {
@@ -1169,7 +1169,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
         // ---- Step Error Functions ----
         function refreshStepErrors() {
             if (!_detailQuestionId) return;
-            fetch('http://127.0.0.1:8000/questions/' + _detailQuestionId)
+            fetch('/questions/' + _detailQuestionId)
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     if (data.error) return;
@@ -1244,7 +1244,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
             var detail = document.getElementById('errorDialogDetail').value.trim();
             if (!type) { alert('请选择一级错因'); return; }
             
-            fetch('http://127.0.0.1:8000/questions/' + state.questionId + '/step-error', {
+            fetch('/questions/' + state.questionId + '/step-error', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -1266,7 +1266,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
 
         function deleteStepError(qid, eid) {
             if (!confirm('确定删除这条错因吗？')) return;
-            fetch('http://127.0.0.1:8000/questions/' + qid + '/step-error/' + eid, {
+            fetch('/questions/' + qid + '/step-error/' + eid, {
                 method: 'DELETE'
             })
             .then(function(r) { return r.json(); })
@@ -1370,7 +1370,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
         
         function addToExam(qid, silent) {
             // Track exam time
-            fetch('http://127.0.0.1:8000/questions/' + qid + '/exam-touch', { method: 'POST' }).catch(function() {});
+            fetch('/questions/' + qid + '/exam-touch', { method: 'POST' }).catch(function() {});
             
             var questions = getExamCart();
             if (questions.find(function(q) { return q.id === qid; })) {
@@ -1569,7 +1569,7 @@ function safeParseKps(kps){
         var _listData = [];
         
         function loadLists() {
-            fetch('http://127.0.0.1:8000/question-lists')
+            fetch('/question-lists')
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     _listData = data || [];
@@ -1674,7 +1674,7 @@ function safeParseKps(kps){
             if (!inp) inp = el;
             var name = inp.value.trim();
             if (!name) { inp.focus(); return; }
-            fetch('http://127.0.0.1:8000/question-lists', {
+            fetch('/question-lists', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({name: name})
@@ -1704,7 +1704,7 @@ function safeParseKps(kps){
             function save() {
                 var newName = inp.value.trim();
                 if (newName && newName !== currentName) {
-                    fetch('http://127.0.0.1:8000/question-lists/' + id, {
+                    fetch('/question-lists/' + id, {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({name: newName})
@@ -1723,7 +1723,7 @@ function safeParseKps(kps){
         
         function confirmDeleteList(id, name) {
             if (!confirm('确定删除题单 "' + name + '" 吗？题单中的题目不会被删除。')) return;
-            fetch('http://127.0.0.1:8000/question-lists/' + id, { method: 'DELETE' })
+            fetch('/question-lists/' + id, { method: 'DELETE' })
             .then(function(r) { return r.json(); })
             .then(function(data) {
                 if (data.ok) {
@@ -1751,11 +1751,11 @@ function safeParseKps(kps){
             sourceType = _detailSourceType || sourceType || '';
             sourceMeta = _detailSourceMeta || sourceMeta || {};
             // Fetch available lists
-            fetch('http://127.0.0.1:8000/question-lists')
+            fetch('/question-lists')
                 .then(function(r) { return r.json(); })
                 .then(function(lists) {
                     // Also fetch current list membership
-                    fetch('http://127.0.0.1:8000/questions/' + questionId + '/lists')
+                    fetch('/questions/' + questionId + '/lists')
                         .then(function(r) { return r.json(); })
                         .then(function(memberData) {
                             var memberIds = memberData.list_ids || [];
@@ -1900,7 +1900,7 @@ function safeParseKps(kps){
         }
 
         function populateMotherCategoryOptions() {
-            fetch('http://127.0.0.1:8000/categories')
+            fetch('/categories')
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     var cats = (data || []).map(function(x) { return x.level1; });
@@ -1921,7 +1921,7 @@ function safeParseKps(kps){
         async function registerMotherQuestion(questionId, srcMeta) {
             if (!srcMeta || !srcMeta.category || !srcMeta.pattern) return;
             try {
-                await fetch('http://127.0.0.1:8000/patterns/mother', {
+                await fetch('/patterns/mother', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({question_id: questionId, category: srcMeta.category, name: srcMeta.pattern})
@@ -1950,7 +1950,7 @@ function safeParseKps(kps){
             var inp = document.getElementById('saveDialogNewList');
             var name = inp.value.trim();
             if (!name) return;
-            fetch('http://127.0.0.1:8000/question-lists', {
+            fetch('/question-lists', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({name: name})
@@ -1969,7 +1969,7 @@ function safeParseKps(kps){
                         var activeEl = overlay.querySelector('.source-type-option.active');
                         if (activeEl) currentSrc = activeEl.dataset.value;
                         // Re-fetch and re-render
-                        fetch('http://127.0.0.1:8000/questions/' + qid + '/lists')
+                        fetch('/questions/' + qid + '/lists')
                             .then(function(r) { return r.json(); })
                             .then(function(md) {
                                 showSaveDialog(parseInt(qid), '', currentSrc, _selectedSourceMeta);
@@ -1999,7 +1999,7 @@ function safeParseKps(kps){
             else if (!remember) clearRememberedSource();
             try {
                 if (srcType) {
-                    var sr = await fetch('http://127.0.0.1:8000/questions/' + questionId + '/source-type', {
+                    var sr = await fetch('/questions/' + questionId + '/source-type', {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({source_type: srcType, source_meta: srcMeta})
@@ -2015,7 +2015,7 @@ function safeParseKps(kps){
             
             try {
                 if (listIds.length > 0) {
-                    var r = await fetch('http://127.0.0.1:8000/questions/' + questionId + '/lists', {
+                    var r = await fetch('/questions/' + questionId + '/lists', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({list_ids: listIds})
@@ -2078,7 +2078,7 @@ function safeParseKps(kps){
             ov.style.display = 'flex';
             ct.innerHTML = aiGenProgressHtml(0, 'generating', '正在启动 AI 仿题');
             try {
-                var r = await fetch('http://127.0.0.1:8000/questions/' + qid + '/generate/async', {
+                var r = await fetch('/questions/' + qid + '/generate/async', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ count: null, teacher: 'liangliang' })
@@ -2091,7 +2091,7 @@ function safeParseKps(kps){
                 var jobId = sj.job_id;
                 async function poll() {
                     try {
-                        var pr = await fetch('http://127.0.0.1:8000/generate-jobs/' + jobId);
+                        var pr = await fetch('/generate-jobs/' + jobId);
                         var pj = await pr.json();
                         if (pj.status === 'done') {
                             _aiGenTimer = null;

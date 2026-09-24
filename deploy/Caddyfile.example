@@ -1,0 +1,8 @@
+# Use only after 150.chat has passed ICP filing and points to this server.
+# Ubuntu 26.04 ships Caddy 2.6, which uses `basicauth`.
+150.chat {
+	basicauth {
+		studyadmin REPLACE_WITH_CADDY_HASH_PASSWORD_OUTPUT
+	}
+	reverse_proxy 127.0.0.1:8000
+}

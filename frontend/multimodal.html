@@ -217,7 +217,7 @@ var _sessionTimers = {};
 
 async function applyLimits() {
     try {
-        var r = await fetch('http://127.0.0.1:8000/settings');
+        var r = await fetch('/settings');
         var d = await r.json();
         var lim = (d && d.limits) || {};
         if (lim.multimodal_concurrency) {
@@ -316,7 +316,7 @@ function collectSourceFields(sourceType, prefix){
     return m;
 }
 function populateMotherCategoryOptions(){
-    fetch('http://127.0.0.1:8000/categories')
+    fetch('/categories')
         .then(function(r){return r.json();})
         .then(function(data){
             var cats=(data||[]).map(function(x){return x.level1;});
@@ -334,7 +334,7 @@ function populateMotherCategoryOptions(){
 async function registerMotherQuestion(questionId, srcMeta){
     if(!srcMeta||!srcMeta.category||!srcMeta.pattern)return;
     try{
-        await fetch('http://127.0.0.1:8000/patterns/mother',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question_id:questionId,category:srcMeta.category,name:srcMeta.pattern})});
+        await fetch('/patterns/mother',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question_id:questionId,category:srcMeta.category,name:srcMeta.pattern})});
     }catch(e){console.error('登记母题失败:',e);}
 }
 function sourceChipsHtml(activeType, prefix){
@@ -593,7 +593,7 @@ async function addSingleToExam(idx){
         var savePayload={question:_questions[idx].latex,answer_json:s.data};
         if(_questions[idx].source_type)savePayload.source_type=_questions[idx].source_type;
         if(_questions[idx].source_meta)savePayload.source_meta=_questions[idx].source_meta;
-        var r=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(savePayload)});
+        var r=await fetch('/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(savePayload)});
         var d=await r.json();if(d.id){qid=d.id;s.saved=true;s.data.saved_question_id=qid;}}catch(e){return;}
     }
     if(!qid)return;
@@ -623,7 +623,7 @@ async function uploadFiles(files){
         if(loadingText)loadingText.textContent=files.length>1?'正在解析 ('+(i+1)+'/'+files.length+') '+f.name+'...':'正在解析 '+f.name+'，请稍候...';
         try{
             var fd=new FormData();fd.append('file',f);
-            var r=await fetch('http://127.0.0.1:8000/multimodal/parse',{method:'POST',body:fd});
+            var r=await fetch('/multimodal/parse',{method:'POST',body:fd});
             var data=await r.json();
             if(data.error){alert('文件 "'+f.name+'" 解析失败: '+data.error);continue;}
             allQuestions=allQuestions.concat(data.questions||[]);
@@ -832,19 +832,19 @@ async function startSingleSolve(idx){
         _sessions[idx].saved=false;startTimer(idx);
         // Step 1
         renderProgress(idx,13,'\u6b65\u9aa4 1/3: \u6b63\u5728\u601d\u8003...',0);
-        var r1=await fetch('http://127.0.0.1:8000/solve/step1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,question_type:'',teacher})});
+        var r1=await fetch('/solve/step1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,question_type:'',teacher})});
         var d1=await r1.json();
         if(d1.error)throw new Error(d1.detail||d1.status||'无法解答');
 
         // Step 2
         renderProgress(idx,78,'\u6b65\u9aa4 2/3: \u6b63\u5728\u5206\u7c7b\u77e5\u8bc6\u70b9...',d1.token_usage?.total_tokens);
-        var r2=await fetch('http://127.0.0.1:8000/solve/step2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,content:d1.content,category:d1.category||null,question_type:'',teacher})});
+        var r2=await fetch('/solve/step2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,content:d1.content,category:d1.category||null,question_type:'',teacher})});
         var d2=await r2.json();
         if(d2.error)throw new Error('无法分类');
 
         // Step 3
         renderProgress(idx,91,'\u6b65\u9aa4 3/3: \u6b63\u5728\u68c0\u67e5...',d2.token_usage?.total_tokens);
-        var r3=await fetch('http://127.0.0.1:8000/solve/step3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,chunk_results:JSON.stringify(d2.chunk_results),teacher,save:false,content:d1.content,category:d1.category||null,question_type:''})});
+        var r3=await fetch('/solve/step3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,chunk_results:JSON.stringify(d2.chunk_results),teacher,save:false,content:d1.content,category:d1.category||null,question_type:''})});
         var d3=await r3.json();
         if(d3.error&&!d3.chunk_results)throw new Error('无法完成');
 
@@ -860,7 +860,7 @@ async function startSingleSolve(idx){
                 var overridePayload={question:_questions[idx].latex,answer_json:overrideData};
                 if(_questions[idx].source_type)overridePayload.source_type=_questions[idx].source_type;
                 if(_questions[idx].source_meta)overridePayload.source_meta=_questions[idx].source_meta;
-                var saveResp=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(overridePayload)});
+                var saveResp=await fetch('/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(overridePayload)});
                 var saveData=await saveResp.json();
                 if(saveData.id){_sessions[idx].saved=true;_sessions[idx].data.saved_question_id=saveData.id;}
             }catch(e){}
@@ -1044,7 +1044,7 @@ async function performSaveToBank(idx, sourceType, sourceMeta){
     try{
         var payload={question:q.latex,answer_json:data};
         if(sourceType){payload.source_type=sourceType;payload.source_meta=sourceMeta||{};}
-        var r=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+        var r=await fetch('/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
         var d=await r.json();
         if(d.id){
             var s=_sessions[idx];s.saved=true;s.data.saved_question_id=d.id;
@@ -1261,7 +1261,7 @@ async function showErrorDialog(idx,stepNumber,chunkId){
         var errSavePayload={question:_questions[idx].latex,answer_json:_sessions[idx].data};
         if(_questions[idx].source_type)errSavePayload.source_type=_questions[idx].source_type;
         if(_questions[idx].source_meta)errSavePayload.source_meta=_questions[idx].source_meta;
-        var r=await fetch('http://127.0.0.1:8000/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(errSavePayload)});
+        var r=await fetch('/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(errSavePayload)});
         var d=await r.json();if(d.id){qid=d.id;_sessions[idx].saved=true;_sessions[idx].data.saved_question_id=d.id;renderQuestionList();}}catch(e){alert('保存失败，无法添加错因');return;}
     }
     if(!qid){alert('请先解答题目再添加错因');return;}
@@ -1275,19 +1275,19 @@ function confirmAddError(){
     var s=_errorDialogState;var type=document.getElementById('errorDialogType').value;
     var detail=document.getElementById('errorDialogDetail').value.trim();
     if(!type){alert('请选择一级错因');return;}
-    fetch('http://127.0.0.1:8000/questions/'+s.questionId+'/step-error',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step_number:s.stepNumber,chunk_id:s.chunkId,mistake_type:type,mistake_detail:detail})})
+    fetch('/questions/'+s.questionId+'/step-error',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({step_number:s.stepNumber,chunk_id:s.chunkId,mistake_type:type,mistake_detail:detail})})
     .then(function(r){return r.json()})
     .then(function(){closeErrorDialog();refreshErrors(s.questionId,s.idx);})
     .catch(function(err){alert('添加失败: '+err.message);});
 }
 function deleteStepError(qid,eid,idx){
     if(!confirm('确定删除这条错因吗？'))return;
-    fetch('http://127.0.0.1:8000/questions/'+qid+'/step-error/'+eid,{method:'DELETE'})
+    fetch('/questions/'+qid+'/step-error/'+eid,{method:'DELETE'})
     .then(function(r){return r.json()})
     .then(function(data){if(data.deleted)refreshErrors(qid,idx);});
 }
 function refreshErrors(qid,idx){
-    fetch('http://127.0.0.1:8000/questions/'+qid).then(function(r){return r.json()}).then(function(data){
+    fetch('/questions/'+qid).then(function(r){return r.json()}).then(function(data){
         if(data.error)return;
         var errors=data.step_errors||[];
         var steps=document.querySelectorAll('#session_'+idx+' .step[data-step-number]');
