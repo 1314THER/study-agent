@@ -29,6 +29,24 @@ cd study-agent
 
 ---
 
+## Ubuntu 服务器与邀请预览
+
+上面的 `start.sh` / `start.bat` 会在**自己的电脑上**运行一份本地服务。Ubuntu ECS 的安装、自启动、数据迁移和备案完成后的 HTTPS 配置见 [deploy/ubuntu.md](deploy/ubuntu.md)。服务器上的 FastAPI 只监听 `127.0.0.1:8000`。
+
+备案期间，可以通过 SSH 邀请朋友连接服务器上的同一份题库：
+
+| 使用者 | 项目内文件 | 用法 |
+|--------|------------|------|
+| 主人（Mac） | [deploy/connect-owner.command](deploy/connect-owner.command) | 需要已获授权的 `~/.ssh/study-agent-ecs` 密钥；双击后输入密钥口令，保持终端窗口打开 |
+| 朋友（Mac） | [deploy/share-preview/connect-study-agent.command](deploy/share-preview/connect-study-agent.command) | 首次双击生成专用公钥，发给主人授权；再次双击连接 |
+| 朋友（Windows） | [deploy/share-preview/connect-study-agent.cmd](deploy/share-preview/connect-study-agent.cmd) 和同目录的 `.ps1` | 两个文件放在同一文件夹，双击 `.cmd`；首次生成公钥，授权后再次双击 |
+
+朋友的完整操作见 [分享说明](deploy/share-preview/README-zh.txt)。主人在服务器以 root 身份运行 [授权脚本](deploy/authorize-preview-key.sh)，按提示粘贴每位朋友的公钥；只接收公钥，不共享私钥。授权脚本把朋友的 SSH 权限限制为转发到本应用。连接后浏览器会打开 `http://127.0.0.1:18000/home.html`：这个地址在**各自电脑上**，访问的却是服务器上的同一份题库。被邀请的人可以编辑题库和设置，也会使用服务器配置的 AI 接口。
+
+当前上海 ECS 的域名仍在 ICP 备案审核中。备案成功并完成 HTTPS 配置后再开放域名访问；备案前不要把网站通过公网 IP、域名或临时公网网址开放。SSH 预览无需开放应用的 8000 端口。
+
+---
+
 ## 核心流程
 
 ```text
@@ -230,6 +248,8 @@ study-agent/
 │   ├── level-editor.html    # 关卡编辑（自由思维导图）
 │   └── settings.html        # 系统设置：评分公式 / 老师模型 / API 密钥 / 服务商切换
 ├── demo-data/               # 完整使用快照：题库与学习记录
+├── deploy/                  # Ubuntu 服务配置、数据迁移、SSH 预览与朋友授权脚本
+│   └── share-preview/       # Mac / Windows 朋友连接脚本与说明
 ├── scripts/run.py           # 两平台共用的环境准备和启动逻辑
 ├── study_agent.db           # 本地 SQLite（首次运行时复制，不提交）
 ├── mastery.db               # 本地套路与闯关数据（不提交）
@@ -301,7 +321,7 @@ study-agent/
 
 解题与教学接口可传 `teacher`：`liangliang` / `taotao` / `xuefeng` / `ji`，默认梁梁。
 
-前端静态文件由后端 `StaticFiles` 挂载在 `/` 下，所有页面通过 `http://127.0.0.1:8000` 访问，同源共享 localStorage。
+前端静态文件由后端 `StaticFiles` 挂载在 `/` 下。页面与 API 使用同源地址：本机直接运行时为 `http://127.0.0.1:8000`，SSH 预览时为各自电脑上的 `http://127.0.0.1:18000`，部署 HTTPS 后为配置的域名。浏览器的 localStorage 按网址分别保存；服务器数据库由所有获授权的访问者共享。
 
 ---
 
