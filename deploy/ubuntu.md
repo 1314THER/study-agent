@@ -19,6 +19,12 @@ runuser -u studyagent -- python3 scripts/run.py --smoke
 
 `--prepare-only` 会安装 Python 依赖，并从 `demo-data/` 复制两个演示数据库到项目根目录；之后不会覆盖数据库。`--smoke` 会启动服务、检查接口，然后退出。首次运行依赖于服务器访问 GitHub 和 PyPI。Ubuntu 26.04 默认 Python 3.14，本项目的 CI 目前只验证了 Python 3.11。如果依赖安装或冒烟检查失败，先记录完整报错，不要反复安装到系统 Python。
 
+若服务器下载官方 PyPI 超时，可以仅对本次准备命令使用清华镜像：
+
+```bash
+runuser -u studyagent -- env PIP_INDEX_URL=https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple PIP_DEFAULT_TIMEOUT=120 PIP_RETRIES=10 python3 scripts/run.py --prepare-only
+```
+
 安装自启动服务：
 
 ```bash
@@ -56,6 +62,12 @@ systemctl reload caddy
 现在打开 `https://150.chat/home.html`，浏览器应先要求输入 `studyadmin` 和你刚才设置的密码。Caddy 在域名正确解析、80/443 可达时自动申请并续期 HTTPS 证书。确认后再在网站设置页填写自己的 API 密钥；不要将 `.env` 或 `backend/settings.json` 提交到 Git。
 
 ## 3. 更新与备份
+
+### 从 Mac 迁移当前数据
+
+在 Mac 上用 SQLite 备份 API 制作两个数据库快照，再将它们与 `patterns.yaml`、`settings.json`、`.env` 打包为恰好五个文件。通过 SSH 将压缩包上传至服务器。验证压缩包 SHA-256 后，在服务器上运行 `deploy/import-local-data.sh 压缩包路径`。该脚本先验证数据库及配置，然后停止服务、备份服务器原有数据、导入、重启并检查接口；失败时尝试恢复原数据。若 Workbench 容易断线，可通过 `systemd-run --unit=study-agent-import /bin/bash /opt/study-agent/deploy/import-local-data.sh 压缩包路径` 独立运行，并用 `journalctl -u study-agent-import -n 80 --no-pager` 查看结果。成功后删除 `studyviewer` 家目录里的上传压缩包，因为它包含 API 密钥。
+
+### 日常更新
 
 更新前备份 `study_agent.db`、`mastery.db`、`backend/patterns.yaml`、`backend/settings.json` 和 `.env`。其中 `backend/patterns.yaml` 既是 Git 跟踪文件又会在运行时修改，所以更新时可能与上游冲突；不要用 `git reset --hard` 覆盖它。代码拉取后执行 `runuser -u studyagent -- python3 scripts/run.py --prepare-only`，再 `systemctl restart study-agent`。
 
