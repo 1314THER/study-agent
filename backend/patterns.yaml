@@ -26,7 +26,10 @@
     difficulty: 1
     description: ''
     mother_id: 53
-    variant_ids: []
+    variant_ids:
+    - 73
+    - 74
+    - 75
   元素的确定性:
     key: pat-3a4bcf2ce2
     difficulty: 1
