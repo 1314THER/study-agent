@@ -9,84 +9,102 @@
 <link rel="stylesheet" href="style.css?v=20260806board">
 <style>
     body { background: #f5f5f7; }
-    .edit-wrap { min-height: 100vh; padding: 20px 24px 42px; box-sizing: border-box; }
-    .edit-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 14px; flex-wrap: wrap; margin-bottom: 18px; }
-    .edit-title { margin: 0; color: #1d1d1f; font-size: 25px; }
-    .edit-subtitle { margin: 6px 0 0; color: #86868b; font-size: 13px; }
-    .edit-actions { display: flex; gap: 8px; }
-    .edit-btn { border: 0; border-radius: 9px; padding: 9px 15px; background: #0071e3; color: #fff; font-size: 13px; font-weight: 600; cursor: pointer; }
-    .edit-btn.secondary { background: #fff; color: #515154; border: 1px solid #e5e5e7; }
-    .edit-btn.danger { background: #fff0f0; color: #c62828; }
-    .edit-status { min-height: 18px; color: #2e7d32; font-size: 12px; }
-    .edit-layout { display: grid; grid-template-columns: 190px minmax(0, 1fr); gap: 16px; align-items: start; }
-    .edit-side, .edit-main { background: #fff; border: 1px solid #e5e5e7; border-radius: 15px; }
-    .edit-side { padding: 13px; position: sticky; top: 16px; }
-    .edit-side h2 { margin: 3px 4px 12px; color: #1d1d1f; font-size: 14px; }
-    .board-choice { display: flex; flex-direction: column; gap: 5px; }
-    .board-choice button { border: 0; border-radius: 8px; padding: 9px 10px; background: transparent; color: #515154; text-align: left; font: inherit; font-size: 13px; cursor: pointer; }
+    .main-content { padding: 0; min-width: 0; display: flex; flex-direction: column; }
+    .edit-wrap { flex: 1; height: 100vh; min-width: 0; display: flex; flex-direction: column; gap: 10px; padding: 12px 14px 14px; overflow: hidden; }
+    .edit-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .edit-title { margin: 0; color: #1d1d1f; font-size: 17px; font-weight: 800; }
+    .edit-subtitle { color: #86868b; font-size: 12px; }
+    .edit-spacer { flex: 1; }
+    .edit-status { min-height: 16px; color: #2e7d32; font-size: 12px; }
+    .edit-actions { display: flex; gap: 6px; }
+    .edit-btn { border: 0; border-radius: 8px; padding: 6px 12px; background: #0071e3; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; transition: filter .15s, transform .06s; }
+    .edit-btn:hover { filter: brightness(1.08); }
+    .edit-btn:active { transform: scale(.97); }
+    .edit-btn.secondary { background: #fff; color: #515154; border: 1px solid #e0e0e3; }
+    .edit-layout { flex: 1; min-height: 0; display: grid; grid-template-columns: 148px minmax(0, 1fr) 292px; gap: 10px; }
+    .edit-side, .edit-main, .edit-tools { background: #fff; border: 1px solid #e5e5e7; border-radius: 13px; min-height: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .edit-side { padding: 10px 8px 8px; }
+    .edit-side h2 { margin: 2px 6px 8px; color: #86868b; font-size: 11px; font-weight: 700; letter-spacing: .08em; }
+    .board-choice { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+    .board-choice button { border: 0; border-radius: 8px; padding: 7px 9px; background: transparent; color: #515154; text-align: left; font: inherit; font-size: 12.5px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .board-choice button:hover { background: #f5f9ff; }
     .board-choice button.active { background: #e8f4ff; color: #0071e3; font-weight: 700; }
-    .edit-side-note { margin: 16px 4px 4px; color: #86868b; font-size: 12px; line-height: 1.7; }
-    .edit-main { min-width: 0; padding: 18px 20px 26px; overflow: hidden; }
-    .editor-board-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-    .editor-board-name { color: #1d1d1f; font-size: 19px; font-weight: 700; }
-    .editor-board-count { color: #86868b; font-size: 12px; }
-    .mindmap-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin: 12px 0 8px; color: #86868b; font-size: 12px; }
-    .mindmap-scroll { margin: 0 -20px; padding: 0 20px 16px; overflow: auto; overscroll-behavior: contain; }
-    .mindmap-canvas { position: relative; min-width: 1120px; min-height: 620px; border: 1px solid #e5e5e7; border-radius: 16px; overflow: hidden; background-color: #fbfcff; background-image: radial-gradient(#cbd8e8 1px, transparent 1px); background-size: 22px 22px; }
+    .edit-side-note { margin-top: 8px; padding: 8px 6px 2px; border-top: 1px dashed #ececef; color: #a1a1a6; font-size: 10.5px; line-height: 1.65; }
+    .edit-main { padding: 10px 12px 12px; }
+    .canvas-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+    .editor-board-name { color: #1d1d1f; font-size: 15px; font-weight: 800; }
+    .editor-board-count { color: #86868b; font-size: 11px; }
+    .canvas-hint { margin-left: auto; color: #b9bec6; font-size: 10.5px; }
+    .canvas-head .edit-btn { margin-left: 4px; }
+    .canvas-wrap { flex: 1; min-height: 0; position: relative; }
+    .mindmap-scroll { position: absolute; inset: 0; overflow: auto; overscroll-behavior: contain; border: 1px solid #e5e5e7; border-radius: 12px; background: #fbfcff; }
+    .mindmap-canvas { position: relative; min-width: 600px; min-height: 400px; cursor: grab; background-image: radial-gradient(#d5e0ee 1px, transparent 1px); background-size: 18px 18px; }
+    .mindmap-canvas.panning { cursor: grabbing; }
     .mindmap-lines { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: visible; }
-    .mindmap-lines path { fill: none; stroke: #b7c9df; stroke-width: 2.5; stroke-linecap: round; }
-    .map-node { position: absolute; z-index: 2; box-sizing: border-box; touch-action: none; user-select: none; cursor: grab; box-shadow: 0 7px 22px rgba(35,57,83,.10); transition: box-shadow .15s, border-color .15s; }
-    .map-node:hover { box-shadow: 0 10px 28px rgba(35,57,83,.16); }
-    .map-node.dragging { z-index: 5; cursor: grabbing; box-shadow: 0 14px 34px rgba(0,113,227,.22); }
-    .root-node { width: 190px; min-height: 82px; display: flex; flex-direction: column; justify-content: center; padding: 14px 16px; border: 1px solid #086ac4; border-radius: 20px; color: #fff; background: linear-gradient(145deg, #1684eb, #0066c7); }
-    .root-node small { opacity: .78; font-size: 10px; letter-spacing: .12em; }
-    .root-node strong { margin-top: 5px; font-size: 17px; line-height: 1.35; }
-    .level-node { width: 220px; min-height: 88px; padding: 12px 13px; border: 2px solid #bad9f7; border-radius: 15px; background: #fff; }
-    .level-node.selected { border-color: #0071e3; box-shadow: 0 0 0 3px #e8f4ff, 0 9px 24px rgba(0,113,227,.14); }
-    .level-node-head { display: flex; align-items: flex-start; gap: 7px; }
-    .level-node-index { flex: 0 0 auto; color: #0071e3; font-size: 11px; font-weight: 800; letter-spacing: .05em; }
-    .level-node-name { flex: 1; min-width: 0; color: #1d1d1f; font-size: 14px; font-weight: 700; line-height: 1.4; word-break: break-word; }
-    .level-node-tools { display: flex; gap: 3px; }
-    .level-node-desc { margin: 7px 0 0; color: #86868b; font-size: 11px; line-height: 1.45; max-height: 32px; overflow: hidden; }
-    .level-node-count { margin-top: 7px; color: #0071e3; font-size: 11px; }
-    .pattern-node { width: 210px; min-height: 66px; padding: 11px 13px; border: 1px solid #d7e1ed; border-left: 5px solid #80bfff; border-radius: 13px; background: #fff; }
+    .mindmap-lines path { fill: none; stroke: #b7c9df; stroke-width: 2; stroke-linecap: round; }
+    .map-node { position: absolute; z-index: 2; box-sizing: border-box; touch-action: none; user-select: none; -webkit-user-select: none; cursor: grab; box-shadow: 0 4px 14px rgba(35,57,83,.10); transition: box-shadow .15s; }
+    .map-node:hover { box-shadow: 0 7px 18px rgba(35,57,83,.16); }
+    .map-node.dragging { z-index: 5; cursor: grabbing; box-shadow: 0 12px 28px rgba(0,113,227,.25); }
+    .root-node { width: 150px; min-height: 62px; display: flex; flex-direction: column; justify-content: center; padding: 10px 12px; border: 1px solid #086ac4; border-radius: 14px; color: #fff; background: linear-gradient(145deg, #1684eb, #0066c7); }
+    .root-node small { opacity: .8; font-size: 9px; letter-spacing: .12em; }
+    .root-node strong { margin-top: 3px; font-size: 13.5px; line-height: 1.35; }
+    .level-node { width: 185px; min-height: 62px; padding: 8px 9px; border: 1.5px solid #bad9f7; border-radius: 11px; background: #fff; }
+    .level-node.selected { border-color: #0071e3; box-shadow: 0 0 0 2px #dbeeff, 0 6px 16px rgba(0,113,227,.12); }
+    .level-node-head { display: flex; align-items: flex-start; gap: 6px; }
+    .level-node-index { flex: 0 0 auto; margin-top: 1px; color: #0071e3; font-size: 10px; font-weight: 800; letter-spacing: .04em; }
+    .level-node-name { flex: 1; min-width: 0; color: #1d1d1f; font-size: 12px; font-weight: 700; line-height: 1.35; word-break: break-word; }
+    .level-node-tools { display: flex; gap: 2px; flex: 0 0 auto; }
+    .level-node-desc { margin: 4px 0 0; color: #86868b; font-size: 10px; line-height: 1.45; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .level-node-count { margin-top: 5px; color: #0071e3; font-size: 10px; }
+    .pattern-node { width: 172px; min-height: 46px; padding: 7px 9px; border: 1px solid #d7e1ed; border-left: 4px solid #80bfff; border-radius: 9px; background: #fff; }
     .pattern-node.state-third_pass { border-left-color: #36a269; }
     .pattern-node.state-again_wrong { border-left-color: #e05a5a; }
-    .pattern-node-title { color: #1d1d1f; font-size: 13px; font-weight: 700; line-height: 1.4; word-break: break-word; }
-    .pattern-node-meta { display: flex; gap: 8px; margin-top: 6px; color: #86868b; font-size: 10px; }
-    .icon-btn { border: 0; border-radius: 5px; padding: 2px 5px; background: #f3f4f6; color: #515154; cursor: pointer; font-size: 11px; }
+    .pattern-node-title { color: #1d1d1f; font-size: 11.5px; font-weight: 700; line-height: 1.35; word-break: break-word; }
+    .pattern-node-meta { display: flex; gap: 6px; margin-top: 4px; color: #86868b; font-size: 9.5px; }
+    .icon-btn { border: 0; border-radius: 5px; padding: 1px 4px; background: #f3f4f6; color: #515154; cursor: pointer; font-size: 10px; line-height: 1.5; }
     .icon-btn:hover { background: #e8f4ff; color: #0071e3; }
     .icon-btn.danger:hover { background: #fff0f0; color: #c62828; }
-    .editor-tools { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; margin-top: 6px; }
-    .tool-card { padding: 14px; border: 1px solid #e5e5e7; border-radius: 12px; background: #fafafa; }
-    .tool-card h3 { margin: 0 0 10px; color: #1d1d1f; font-size: 14px; }
-    .tool-card label { display: block; margin: 8px 0 4px; color: #86868b; font-size: 11px; }
-    .tool-card input, .tool-card select, .tool-card textarea { width: 100%; box-sizing: border-box; padding: 7px 9px; border: 1px solid #c7c7cc; border-radius: 7px; background: #fff; font: inherit; font-size: 13px; }
-    .tool-card textarea { min-height: 64px; resize: vertical; }
-    .tool-row { display: flex; align-items: end; gap: 7px; flex-wrap: wrap; }
-    .tool-row > * { flex: 1; min-width: 130px; }
-    .tool-btn { border: 0; border-radius: 7px; padding: 8px 11px; background: #0071e3; color: #fff; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .edit-tools { padding: 12px; overflow-y: auto; }
+    .panel-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 10px; }
+    .panel-title { color: #1d1d1f; font-size: 14px; font-weight: 800; }
+    .panel-sub { color: #b9bec6; font-size: 10.5px; }
+    .tool-section { padding: 10px 11px 11px; border: 1px solid #ececf0; border-radius: 10px; background: #fafafa; margin-bottom: 10px; }
+    .tool-section h3 { margin: 0 0 7px; color: #1d1d1f; font-size: 12px; font-weight: 700; }
+    .tool-section label { display: block; margin: 6px 0 3px; color: #86868b; font-size: 10.5px; }
+    .tool-section input, .tool-section select, .tool-section textarea { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid #cfcfd4; border-radius: 7px; background: #fff; font: inherit; font-size: 12px; }
+    .tool-section textarea { min-height: 46px; resize: vertical; line-height: 1.5; }
+    .tool-row { display: flex; align-items: stretch; gap: 6px; }
+    .tool-row select { flex: 1; min-width: 0; }
+    .tool-btn { border: 0; border-radius: 7px; padding: 6px 11px; background: #0071e3; color: #fff; font-size: 11.5px; font-weight: 600; cursor: pointer; }
+    .tool-btn:hover { filter: brightness(1.08); }
     .tool-btn.secondary { background: #e8e8ed; color: #515154; }
-    .pattern-list { display: flex; flex-direction: column; gap: 6px; margin-top: 9px; }
-    .pattern-row { padding: 8px 9px; border: 1px solid #e5e5e7; border-radius: 8px; background: #fff; }
-    .pattern-row-head { display: flex; align-items: center; gap: 6px; }
-    .pattern-row-name { flex: 1; min-width: 0; color: #1d1d1f; font-size: 12px; font-weight: 600; word-break: break-word; }
-    .pattern-row-meta { color: #86868b; font-size: 11px; }
-    .pattern-row-tools { display: flex; gap: 4px; }
-    .pattern-question-box { display: none; margin-top: 7px; }
+    .pattern-list { display: flex; flex-direction: column; gap: 5px; margin-bottom: 8px; }
+    .pattern-row { padding: 6px 8px; border: 1px solid #e5e5e7; border-radius: 8px; background: #fff; }
+    .pattern-row-head { display: flex; align-items: center; gap: 5px; }
+    .pattern-row-name { flex: 1; min-width: 0; color: #1d1d1f; font-size: 11.5px; font-weight: 600; word-break: break-word; }
+    .pattern-row-meta { flex: 0 0 auto; color: #86868b; font-size: 10px; }
+    .pattern-row-tools { display: flex; gap: 3px; flex: 0 0 auto; }
+    .pattern-question-box { display: none; margin-top: 6px; }
     .pattern-question-box.show { display: block; }
-    .pattern-question-box .question-search-wrap { display: block; }
-    .pattern-question-box .question-search-input { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid #c7c7cc; border-radius: 6px; font-size: 12px; }
-    .pattern-question-box button { margin-top: 6px; border: 0; border-radius: 6px; padding: 5px 9px; background: #0071e3; color: #fff; font-size: 11px; cursor: pointer; }
-    .new-pattern-box { display: none; margin-top: 9px; padding-top: 9px; border-top: 1px dashed #d9d9dc; }
+    .pattern-question-box .question-search-input { width: 100%; box-sizing: border-box; padding: 5px 7px; border: 1px solid #c7c7cc; border-radius: 6px; font-size: 11px; }
+    .pattern-question-box button { margin-top: 5px; border: 0; border-radius: 6px; padding: 4px 9px; background: #0071e3; color: #fff; font-size: 10.5px; cursor: pointer; }
+    .new-pattern-box { display: none; margin-top: 8px; padding-top: 8px; border-top: 1px dashed #d9d9dc; }
     .new-pattern-box.show { display: block; }
-    .new-pattern-box .question-search-wrap { display: block; margin-top: 7px; }
-    .new-pattern-box .question-search-input { width: 100%; box-sizing: border-box; padding: 7px 9px; border: 1px solid #c7c7cc; border-radius: 7px; font-size: 12px; }
-    .no-level { padding: 60px 20px; color: #86868b; text-align: center; }
-    .editor-empty { padding: 60px 20px; color: #86868b; text-align: center; }
-    @media (max-width: 900px) { .edit-layout { grid-template-columns: 1fr; } .edit-side { position: static; } .board-choice { flex-direction: row; overflow-x: auto; } .board-choice button { flex: 0 0 auto; } }
-    @media (max-width: 700px) { .edit-wrap { padding: 16px 12px 32px; } .edit-main { padding: 15px 13px 24px; } .mindmap-scroll { margin-left: -13px; margin-right: -13px; padding-left: 13px; padding-right: 13px; } .editor-tools { grid-template-columns: 1fr; } }
+    .new-pattern-box input[type=text], .new-pattern-box > input { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid #c7c7cc; border-radius: 7px; font-size: 12px; }
+    .new-pattern-box .question-search-wrap { display: block; margin-top: 6px; }
+    .new-pattern-box .question-search-input { width: 100%; box-sizing: border-box; padding: 6px 8px; border: 1px solid #c7c7cc; border-radius: 7px; font-size: 12px; }
+    .tool-empty { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; color: #86868b; font-size: 12px; }
+    .editor-empty { padding: 40px 16px; color: #86868b; text-align: center; font-size: 12px; }
+    @media (max-width: 1020px) {
+        .edit-wrap { height: auto; min-height: 100vh; overflow: visible; }
+        .edit-layout { grid-template-columns: 1fr; }
+        .edit-side { flex: 0 0 auto; }
+        .board-choice { flex-direction: row; overflow-x: auto; }
+        .board-choice button { flex: 0 0 auto; }
+        .canvas-wrap { height: 58vh; flex: 0 0 auto; }
+        .canvas-hint { display: none; }
+        .edit-tools { max-height: none; }
+    }
 </style>
 </head>
 <body class="theme-liangliang">
@@ -103,7 +121,7 @@
 <a href="loop.html?v=20260807" class="nav-item" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
 <a href="calendar.html?v=20260807" class="nav-item" data-page="calendar" title="巩固日历"><span class="nav-icon">📅</span><span class="nav-label">巩固日历</span></a>
 <a href="board.html?v=20260916" class="nav-item" data-page="board" title="闯关"><span class="nav-icon">🗺️</span><span class="nav-label">闯关</span></a>
-<a href="level-editor.html?v=20260916" class="nav-item active" data-page="level-editor" title="关卡编辑"><span class="nav-icon">🧩</span><span class="nav-label">关卡编辑</span></a>
+<a href="level-editor.html?v=20260917" class="nav-item active" data-page="level-editor" title="关卡编辑"><span class="nav-icon">🧩</span><span class="nav-label">关卡编辑</span></a>
 <a href="index.html" class="nav-item" data-page="solve" title="单题解答"><span class="nav-icon">🔍</span><span class="nav-label">单题解答</span></a>
 <a href="grade.html" class="nav-item" data-page="grade" title="AI 改卷"><span class="nav-icon">✅</span><span class="nav-label">AI 改卷</span></a>
 <a href="settings.html" class="nav-item" data-page="settings" title="系统设置"><span class="nav-icon">⚙️</span><span class="nav-label">系统设置</span></a>
@@ -112,13 +130,16 @@
     <main class="main-content">
         <div class="edit-wrap">
             <div class="edit-top">
-                <div><h1 class="edit-title">关卡编辑</h1><p class="edit-subtitle">用自由思维导图整理关卡和套路，所有节点都可以拖动。</p></div>
-                <div class="edit-actions"><button class="edit-btn secondary" onclick="loadAll()">刷新</button><button class="edit-btn" onclick="saveBoard()">保存布局</button></div>
+                <h1 class="edit-title">🧩 关卡编辑</h1>
+                <span class="edit-subtitle">拖动节点自由排版，点击关卡或套路编辑内容</span>
+                <span class="edit-spacer"></span>
+                <span id="editStatus" class="edit-status"></span>
+                <div class="edit-actions"><button class="edit-btn secondary" onclick="resetLayout()">自动整理</button><button class="edit-btn secondary" onclick="loadAll()">刷新</button><button class="edit-btn" onclick="saveBoard()">保存布局</button></div>
             </div>
-            <div id="editStatus" class="edit-status"></div>
             <div class="edit-layout">
-                <aside class="edit-side"><h2>选择板块</h2><div id="boardChoice" class="board-choice"><div class="editor-empty">加载中...</div></div><p class="edit-side-note">拖动节点自由排版，点击关卡进入编辑。套路会作为独立子节点显示，空套路也可以先加入，之后再补题。</p></aside>
-                <section class="edit-main"><div id="editorContent"><div class="editor-empty">加载中...</div></div></section>
+                <aside class="edit-side"><h2>选择板块</h2><div id="boardChoice" class="board-choice"><div class="editor-empty">加载中...</div></div><p class="edit-side-note">套路会作为独立子节点显示，空套路也可以先加入，之后再补题。</p></aside>
+                <section class="edit-main" id="editorMain"><div class="editor-empty" style="margin:auto;">加载中...</div></section>
+                <aside class="edit-tools" id="editorTools"><div class="editor-empty" style="margin:auto;">加载中...</div></aside>
             </div>
         </div>
     </main>
@@ -126,15 +147,17 @@
 <script src="nav.js?v=20260809e"></script>
 <script src="question-search.js?v=20260809"></script>
 <script>
-var boards = [], patterns = [], currentBoard = null, selectedLevelSeq = 0;
-var ROOT_WIDTH = 190, LEVEL_WIDTH = 220, PATTERN_WIDTH = 210;
+var boards = [], patterns = [], currentBoard = null, selectedLevelSeq = 0, scrollMemory = null;
+var ROOT_WIDTH = 150, LEVEL_WIDTH = 185, PATTERN_WIDTH = 172;
+var COL_ROOT_X = 24, COL_LEVEL_X = 208, COL_PATTERN_X = 424;
+var PATTERN_STEP = 62, GROUP_GAP = 30;
 
 function escapeHtml(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function api(path, opts) { return fetch('http://127.0.0.1:8000' + path, opts || {}).then(function(r) { return r.json().then(function(d) { if (!r.ok || (d && d.error)) throw new Error((d && (d.detail || d.error)) || '请求失败'); return d; }); }); }
 function setStatus(msg, error) { var el = document.getElementById('editStatus'); el.textContent = msg || ''; el.style.color = error ? '#c62828' : '#2e7d32'; }
 function stateLabel(s) { return {never:'未挑战', first_pass:'第一次会', second_pass:'第二次会', third_pass:'已通关', again_wrong:'再次出错'}[s] || '未挑战'; }
-function rootStorageKey() { return 'mindmap-root-' + (currentBoard ? currentBoard.id : 'none'); }
-function getRootPosition() { try { return JSON.parse(localStorage.getItem(rootStorageKey())) || {x:38,y:260}; } catch (e) { return {x:38,y:260}; } }
+function rootStorageKey() { return 'mindmap-root2-' + (currentBoard ? currentBoard.id : 'none'); }
+function getRootPosition() { try { return JSON.parse(localStorage.getItem(rootStorageKey())) || {x:COL_ROOT_X,y:200}; } catch (e) { return {x:COL_ROOT_X,y:200}; } }
 function setRootPosition(x, y) { localStorage.setItem(rootStorageKey(), JSON.stringify({x:x,y:y})); }
 
 function getLevels() {
@@ -149,50 +172,68 @@ function getLevels() {
 }
 
 function autoArrange(force) {
-    var levels = getLevels(), cursor = 42;
+    var levels = getLevels(), cursor = 28;
     levels.forEach(function(level) {
-        var groupHeight = Math.max(112, level.patterns.length * 88);
+        var groupHeight = Math.max(72, level.patterns.length * PATTERN_STEP);
         if (force || level.meta.layout_x == null || level.meta.layout_y == null) {
-            level.meta.layout_x = 305;
-            level.meta.layout_y = cursor + Math.max(0, (groupHeight - 88) / 2);
+            level.meta.layout_x = COL_LEVEL_X;
+            level.meta.layout_y = cursor + Math.max(0, (groupHeight - 62) / 2);
         }
         level.patterns.forEach(function(node, i) {
             if (force || node.layout_x == null || node.layout_y == null) {
-                node.layout_x = 650;
-                node.layout_y = cursor + i * 88 + Math.max(0, (groupHeight - level.patterns.length * 88) / 2);
+                node.layout_x = COL_PATTERN_X;
+                node.layout_y = cursor + i * PATTERN_STEP + Math.max(0, (groupHeight - level.patterns.length * PATTERN_STEP) / 2);
             }
         });
-        cursor += groupHeight + 42;
+        cursor += groupHeight + GROUP_GAP;
     });
-    if (force || !localStorage.getItem(rootStorageKey())) setRootPosition(44, Math.max(42, cursor / 2 - 62));
+    if (force || !localStorage.getItem(rootStorageKey())) setRootPosition(COL_ROOT_X, 28);
 }
 
 function mapSize(levels) {
-    var maxX = 1040, maxY = 600;
-    var root = getRootPosition(); maxX = Math.max(maxX, root.x + ROOT_WIDTH + 80); maxY = Math.max(maxY, root.y + 130);
+    var maxX = 620, maxY = 420;
+    var root = getRootPosition(); maxX = Math.max(maxX, root.x + ROOT_WIDTH + 60); maxY = Math.max(maxY, root.y + 100);
     levels.forEach(function(level) {
-        maxX = Math.max(maxX, Number(level.meta.layout_x || 0) + LEVEL_WIDTH + 100);
-        maxY = Math.max(maxY, Number(level.meta.layout_y || 0) + 150);
-        level.patterns.forEach(function(node) { maxX = Math.max(maxX, Number(node.layout_x || 0) + PATTERN_WIDTH + 100); maxY = Math.max(maxY, Number(node.layout_y || 0) + 120); });
+        maxX = Math.max(maxX, Number(level.meta.layout_x || 0) + LEVEL_WIDTH + 70);
+        maxY = Math.max(maxY, Number(level.meta.layout_y || 0) + 110);
+        level.patterns.forEach(function(node) { maxX = Math.max(maxX, Number(node.layout_x || 0) + PATTERN_WIDTH + 70); maxY = Math.max(maxY, Number(node.layout_y || 0) + 95); });
     });
     return {width:maxX, height:maxY};
 }
 
+// 旧版编辑器的自动排布坐标更稀疏，首次进入新版时重排一次
+async function maybeMigrate() {
+    if (!currentBoard) return;
+    var migKey = 'mindmap-migrated-' + currentBoard.id;
+    if (localStorage.getItem(migKey)) return;
+    localStorage.setItem(migKey, '1');
+    var levels = getLevels();
+    var stale = levels.length
+        && levels.every(function(l) { return Number(l.meta.layout_x) === 305; })
+        && (currentBoard.nodes || []).every(function(n) { return Number(n.layout_x) === 650; });
+    if (!stale) return;
+    localStorage.removeItem(rootStorageKey());
+    autoArrange(true);
+    await saveBoard();
+    setStatus('');
+}
+
 function loadAll() {
-    Promise.all([api('/boards'), api('/patterns')]).then(function(data) {
+    Promise.all([api('/boards'), api('/patterns')]).then(async function(data) {
         boards = data[0] || []; patterns = data[1] || [];
         var oldId = currentBoard && currentBoard.id;
         currentBoard = boards.find(function(b) { return b.id === oldId; }) || boards[0] || null;
         if (currentBoard) selectedLevelSeq = Math.min(selectedLevelSeq, Math.max(0, getLevels().length - 1));
+        await maybeMigrate();
         renderBoardChoice(); renderEditor(); setStatus('');
-    }).catch(function(e) { document.getElementById('editorContent').innerHTML = '<div class="editor-empty" style="color:#c62828;">加载失败：' + escapeHtml(e.message) + '</div>'; });
+    }).catch(function(e) { document.getElementById('editorMain').innerHTML = '<div class="editor-empty" style="margin:auto;color:#c62828;">加载失败：' + escapeHtml(e.message) + '</div>'; });
 }
 
 function renderBoardChoice() {
     var el = document.getElementById('boardChoice');
     el.innerHTML = boards.map(function(b) { return '<button class="' + (currentBoard && b.id === currentBoard.id ? 'active' : '') + '" onclick="selectBoard(' + b.id + ')">' + escapeHtml(b.category) + '</button>'; }).join('') || '<div class="editor-empty">暂无板块</div>';
 }
-function selectBoard(id) { currentBoard = boards.find(function(b) { return b.id === id; }) || null; selectedLevelSeq = 0; renderBoardChoice(); renderEditor(); }
+async function selectBoard(id) { currentBoard = boards.find(function(b) { return b.id === id; }) || null; selectedLevelSeq = 0; scrollMemory = {x:0, y:0}; await maybeMigrate(); renderBoardChoice(); renderEditor(); }
 
 function renderLevelNode(level, seq) {
     var selected = seq === selectedLevelSeq;
@@ -208,36 +249,42 @@ function renderPatternNode(node, levelSeq) {
 }
 
 function renderEditor() {
-    var el = document.getElementById('editorContent');
-    if (!currentBoard) { el.innerHTML = '<div class="editor-empty">暂无板块</div>'; return; }
+    var mainEl = document.getElementById('editorMain'), toolsEl = document.getElementById('editorTools');
+    if (!currentBoard) { mainEl.innerHTML = '<div class="editor-empty" style="margin:auto;">暂无板块</div>'; toolsEl.innerHTML = '<div class="tool-empty">暂无可编辑的关卡</div>'; return; }
     autoArrange(false);
     var levels = getLevels(), size = mapSize(levels), root = getRootPosition();
-    var html = '<div class="editor-board-head"><div class="editor-board-name">' + escapeHtml(currentBoard.name || currentBoard.category) + '</div><div class="editor-board-count">' + levels.length + ' 个关卡 · ' + (currentBoard.nodes || []).length + ' 个套路</div></div>';
-    html += '<div class="mindmap-toolbar"><span>拖动任意节点自由排版，点击关卡或套路编辑内容</span><button class="edit-btn secondary" onclick="resetLayout()">自动整理</button></div>';
-    html += '<div class="mindmap-scroll"><div id="mindmapCanvas" class="mindmap-canvas" style="width:' + size.width + 'px;height:' + size.height + 'px"><svg id="mindmapLines" class="mindmap-lines" width="' + size.width + '" height="' + size.height + '"></svg>';
+    var prev = document.getElementById('canvasScroll');
+    var target = scrollMemory || (prev ? {x:prev.scrollLeft, y:prev.scrollTop} : {x:0, y:0});
+    scrollMemory = null;
+    var html = '<div class="canvas-head"><span class="editor-board-name">' + escapeHtml(currentBoard.name || currentBoard.category) + '</span><span class="editor-board-count">' + levels.length + ' 个关卡 · ' + (currentBoard.nodes || []).length + ' 个套路</span><span class="canvas-hint">拖节点排版 · 拖空白平移 · 滚轮滚动</span><button class="edit-btn" onclick="newLevel()">＋ 新建关卡</button></div>';
+    html += '<div class="canvas-wrap"><div class="mindmap-scroll" id="canvasScroll"><div id="mindmapCanvas" class="mindmap-canvas" style="width:' + size.width + 'px;height:' + size.height + 'px"><svg id="mindmapLines" class="mindmap-lines" width="' + size.width + '" height="' + size.height + '"></svg>';
     html += '<div class="map-node root-node" id="rootNode" data-node-type="root" data-node-key="root" style="left:' + root.x + 'px;top:' + root.y + 'px"><small>知识板块</small><strong>' + escapeHtml(currentBoard.name || currentBoard.category) + '</strong></div>';
     levels.forEach(function(level, seq) { html += renderLevelNode(level, seq); level.patterns.forEach(function(node) { html += renderPatternNode(node, seq); }); });
-    html += '</div></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;"><button class="edit-btn" onclick="newLevel()">＋ 新建关卡</button>';
-    if (levels.length) html += '<button class="edit-btn secondary" onclick="selectLevel(' + selectedLevelSeq + ')">编辑当前关卡</button>';
-    html += '</div>';
-    if (levels.length) html += renderTools(levels[Math.min(selectedLevelSeq, levels.length - 1)], Math.min(selectedLevelSeq, levels.length - 1));
-    el.innerHTML = html;
-    requestAnimationFrame(function() { bindMindmapDrag(); drawConnections(); });
+    html += '</div></div></div>';
+    mainEl.innerHTML = html;
+    var seq = levels.length ? Math.min(selectedLevelSeq, levels.length - 1) : -1;
+    toolsEl.innerHTML = seq >= 0 ? renderTools(levels[seq], seq) : '<div class="tool-empty"><span>还没有关卡</span><button class="edit-btn" onclick="newLevel()">＋ 新建第一关</button></div>';
+    requestAnimationFrame(function() {
+        var wrap = document.getElementById('canvasScroll');
+        if (wrap) { wrap.scrollLeft = target.x; wrap.scrollTop = target.y; }
+        bindMindmapDrag(); drawConnections();
+    });
 }
 
 function renderTools(level, seq) {
     var inBoard = (currentBoard.nodes || []).map(function(n) { return n.pattern_id; });
     var available = patterns.filter(function(p) { return p.category === currentBoard.category && inBoard.indexOf(p.id) < 0; });
-    var html = '<div class="editor-tools"><div class="tool-card"><h3>编辑关卡 · 第 ' + (seq + 1) + ' 关</h3><label>关卡名称</label><input id="levelNameInput" value="' + escapeHtml(level.name || '') + '" placeholder="例如：集合基础任务"><label>关卡说明</label><textarea id="levelDescInput" placeholder="记录这一关的知识点或通关目标">' + escapeHtml(level.description || '') + '</textarea><div style="margin-top:9px;"><button class="tool-btn" onclick="saveLevelMeta(' + seq + ')">保存关卡信息</button></div></div>';
-    html += '<div class="tool-card"><h3>本关套路 · ' + level.patterns.length + '</h3><div class="pattern-list">' + (level.patterns.map(function(n, i) { return renderPatternRow(n, i, level.patterns.length); }).join('') || '<div class="editor-empty" style="padding:15px 4px;">本关暂无套路</div>') + '</div>';
+    var html = '<div class="panel-head"><span class="panel-title">编辑 · 第 ' + (seq + 1) + ' 关</span><span class="panel-sub">点击画布节点可切换</span></div>';
+    html += '<div class="tool-section"><h3>关卡信息</h3><input id="levelNameInput" value="' + escapeHtml(level.name || '') + '" placeholder="关卡名称，例如：集合基础任务"><textarea id="levelDescInput" placeholder="这一关的知识点或通关目标（可选）">' + escapeHtml(level.description || '') + '</textarea><button class="tool-btn" style="margin-top:7px;" onclick="saveLevelMeta(' + seq + ')">保存关卡信息</button></div>';
+    html += '<div class="tool-section"><h3>本关套路 · ' + level.patterns.length + '</h3><div class="pattern-list">' + (level.patterns.map(function(n, i) { return renderPatternRow(n, i, level.patterns.length); }).join('') || '<div class="editor-empty" style="padding:12px 4px;">本关暂无套路</div>') + '</div>';
     html += '<label>添加已有套路</label><div class="tool-row"><select id="availablePatternSelect"><option value="">选择套路...</option>' + available.map(function(p) { return '<option value="' + p.id + '">' + escapeHtml(p.name) + '</option>'; }).join('') + '</select><button class="tool-btn" onclick="addExistingPattern(' + seq + ')">添加</button></div>';
-    html += '<button class="tool-btn secondary" style="margin-top:9px;" onclick="toggleNewPatternBox()">＋ 新建套路</button><div id="newPatternBox" class="new-pattern-box"><input id="newPatternName" placeholder="套路名称"><div class="question-search-wrap"><input id="newPatternSearch" class="question-search-input" data-target-id="newPatternQid" data-results-id="newPatternResults" placeholder="可选：搜索并绑定第一道题"><input type="hidden" id="newPatternQid"><div id="newPatternResults" class="question-search-results"></div></div><button class="tool-btn" style="margin-top:7px;" onclick="createPattern(' + seq + ')">创建并加入本关</button></div></div></div>';
+    html += '<button class="tool-btn secondary" style="margin-top:8px;" onclick="toggleNewPatternBox()">＋ 新建套路</button><div id="newPatternBox" class="new-pattern-box"><input id="newPatternName" placeholder="套路名称"><div class="question-search-wrap"><input id="newPatternSearch" class="question-search-input" data-target-id="newPatternQid" data-results-id="newPatternResults" placeholder="可选：搜索并绑定第一道题"><input type="hidden" id="newPatternQid"><div id="newPatternResults" class="question-search-results"></div></div><button class="tool-btn" style="margin-top:6px;" onclick="createPattern(' + seq + ')">创建并加入本关</button></div></div>';
     return html;
 }
 
 function renderPatternRow(n, index, total) {
     var html = '<div class="pattern-row"><div class="pattern-row-head"><span class="pattern-row-name">' + escapeHtml(n.name || ('套路 #' + n.pattern_id)) + '</span><span class="pattern-row-meta">' + (n.question_id ? '已绑定' : '空套路') + '</span><span class="pattern-row-tools"><button class="icon-btn" onclick="movePattern(' + n.pattern_id + ',-1)"' + (index === 0 ? ' disabled' : '') + '>↑</button><button class="icon-btn" onclick="movePattern(' + n.pattern_id + ',1)"' + (index === total - 1 ? ' disabled' : '') + '>↓</button><button class="icon-btn danger" onclick="removePattern(' + n.pattern_id + ')">移出</button></span></div>';
-    if (!n.question_id) html += '<div class="pattern-question-box" id="patternQuestionBox_' + n.pattern_id + '"><div class="question-search-wrap"><input id="patternQuestionSearch_' + n.pattern_id + '" class="question-search-input" data-target-id="patternQuestionId_' + n.pattern_id + '" data-results-id="patternQuestionResults_' + n.pattern_id + '" placeholder="搜索并选择第一道题"><input type="hidden" id="patternQuestionId_' + n.pattern_id + '"><div id="patternQuestionResults_' + n.pattern_id + '" class="question-search-results"></div></div><button onclick="addQuestionToPattern(' + n.pattern_id + ')">挂载母题</button></div><button class="icon-btn" style="margin-top:6px;" onclick="toggleQuestionBox(' + n.pattern_id + ')">＋ 添加第一道题</button>';
+    if (!n.question_id) html += '<div class="pattern-question-box" id="patternQuestionBox_' + n.pattern_id + '"><div class="question-search-wrap"><input id="patternQuestionSearch_' + n.pattern_id + '" class="question-search-input" data-target-id="patternQuestionId_' + n.pattern_id + '" data-results-id="patternQuestionResults_' + n.pattern_id + '" placeholder="搜索并选择第一道题"><input type="hidden" id="patternQuestionId_' + n.pattern_id + '"><div id="patternQuestionResults_' + n.pattern_id + '" class="question-search-results"></div></div><button onclick="addQuestionToPattern(' + n.pattern_id + ')">挂载母题</button></div><button class="icon-btn" style="margin-top:5px;" onclick="toggleQuestionBox(' + n.pattern_id + ')">＋ 添加第一道题</button>';
     html += '</div>';
     return html;
 }
@@ -252,7 +299,7 @@ function drawConnections() {
         var x1 = a.right - canvasRect.left, y1 = a.top - canvasRect.top + a.height / 2;
         var x2 = b.left - canvasRect.left, y2 = b.top - canvasRect.top + b.height / 2;
         if (x2 < x1) { x1 = a.left - canvasRect.left; x2 = b.right - canvasRect.left; }
-        var bend = Math.max(45, Math.abs(x2 - x1) * .45);
+        var bend = Math.max(36, Math.abs(x2 - x1) * .45);
         paths.push('<path d="M ' + x1 + ' ' + y1 + ' C ' + (x1 + (x2 >= x1 ? bend : -bend)) + ' ' + y1 + ', ' + (x2 - (x2 >= x1 ? bend : -bend)) + ' ' + y2 + ', ' + x2 + ' ' + y2 + '"></path>');
     }
     getLevels().forEach(function(level, seq) {
@@ -275,25 +322,66 @@ function updateNodePosition(type, key, x, y) {
 }
 
 function bindMindmapDrag() {
-    var canvas = document.getElementById('mindmapCanvas');
-    if (!canvas) return;
+    var wrap = document.getElementById('canvasScroll'), canvas = document.getElementById('mindmapCanvas');
+    if (!wrap || !canvas) return;
+    // 拖画布空白处平移
+    var pan = null;
+    canvas.addEventListener('pointerdown', function(e) {
+        if (e.button !== 0 || e.target.closest('.map-node')) return;
+        pan = {x:e.clientX, y:e.clientY, sl:wrap.scrollLeft, st:wrap.scrollTop};
+        canvas.classList.add('panning');
+        try { canvas.setPointerCapture(e.pointerId); } catch (err) {}
+    });
+    canvas.addEventListener('pointermove', function(e) {
+        if (!pan) return;
+        wrap.scrollLeft = Math.max(0, pan.sl - (e.clientX - pan.x));
+        wrap.scrollTop = Math.max(0, pan.st - (e.clientY - pan.y));
+    });
+    function panEnd() { if (!pan) return; pan = null; canvas.classList.remove('panning'); }
+    canvas.addEventListener('pointerup', panEnd);
+    canvas.addEventListener('pointercancel', panEnd);
+    // 拖节点排版：位置由指针内容坐标决定，靠近边缘自动滚动，超出时画布自动变大
     canvas.querySelectorAll('.map-node').forEach(function(node) {
         node.addEventListener('click', function(e) { if (node._dragMoved) { e.preventDefault(); e.stopImmediatePropagation(); } }, true);
         node.addEventListener('pointerdown', function(e) {
             if (e.button !== 0 || e.target.closest('button,input,textarea,select')) return;
             e.preventDefault();
-            var startLeft = parseFloat(node.style.left) || 0, startTop = parseFloat(node.style.top) || 0;
-            var startX = e.clientX, startY = e.clientY;
-            node._dragMoved = false; node.classList.add('dragging'); node.setPointerCapture(e.pointerId);
+            var rect = node.getBoundingClientRect();
+            var grabX = e.clientX - rect.left, grabY = e.clientY - rect.top;
+            node._dragMoved = false; node.classList.add('dragging');
+            try { node.setPointerCapture(e.pointerId); } catch (err) {}
+            var last = e, raf = 0;
+            function place(ev) {
+                var wr = wrap.getBoundingClientRect();
+                var left = Math.max(4, Math.round(ev.clientX - wr.left + wrap.scrollLeft - grabX));
+                var top = Math.max(4, Math.round(ev.clientY - wr.top + wrap.scrollTop - grabY));
+                node.style.left = left + 'px'; node.style.top = top + 'px';
+                var needW = left + node.offsetWidth + 36, needH = top + node.offsetHeight + 28;
+                if (needW > (parseFloat(canvas.style.width) || 0)) canvas.style.width = needW + 'px';
+                if (needH > (parseFloat(canvas.style.height) || 0)) canvas.style.height = needH + 'px';
+                drawConnections();
+            }
+            function edge() {
+                if (!raf) return;
+                var wr = wrap.getBoundingClientRect(), m = 30, sp = 14, x = last.clientX, y = last.clientY, vx = 0, vy = 0;
+                if (y - wr.top < m) vy = -sp; else if (wr.bottom - y < m) vy = sp;
+                if (x - wr.left < m) vx = -sp; else if (wr.right - x < m) vx = sp;
+                if (vx || vy) {
+                    wrap.scrollLeft = Math.max(0, Math.min(wrap.scrollWidth - wrap.clientWidth, wrap.scrollLeft + vx));
+                    wrap.scrollTop = Math.max(0, Math.min(wrap.scrollHeight - wrap.clientHeight, wrap.scrollTop + vy));
+                    place(last);
+                }
+                raf = requestAnimationFrame(edge);
+            }
             function move(ev) {
-                var dx = ev.clientX - startX, dy = ev.clientY - startY;
-                if (Math.abs(dx) + Math.abs(dy) > 4) node._dragMoved = true;
-                var left = Math.max(8, Math.min(canvas.clientWidth - node.offsetWidth - 8, startLeft + dx));
-                var top = Math.max(8, Math.min(canvas.clientHeight - node.offsetHeight - 8, startTop + dy));
-                node.style.left = Math.round(left) + 'px'; node.style.top = Math.round(top) + 'px'; drawConnections();
+                last = ev;
+                if (Math.abs(ev.clientX - e.clientX) + Math.abs(ev.clientY - e.clientY) > 4) node._dragMoved = true;
+                place(ev);
             }
             function end(ev) {
-                node.classList.remove('dragging'); node.releasePointerCapture(ev.pointerId);
+                cancelAnimationFrame(raf); raf = 0;
+                node.classList.remove('dragging');
+                try { node.releasePointerCapture(ev.pointerId); } catch (err) {}
                 node.removeEventListener('pointermove', move); node.removeEventListener('pointerup', end); node.removeEventListener('pointercancel', end);
                 if (node._dragMoved) {
                     updateNodePosition(node.dataset.nodeType, node.dataset.nodeKey, parseFloat(node.style.left), parseFloat(node.style.top));
@@ -302,11 +390,12 @@ function bindMindmapDrag() {
                 }
             }
             node.addEventListener('pointermove', move); node.addEventListener('pointerup', end); node.addEventListener('pointercancel', end);
+            raf = requestAnimationFrame(edge);
         });
     });
 }
 
-function resetLayout() { autoArrange(true); renderEditor(); setStatus('已自动整理，点击右上角“保存布局”即可保存'); }
+function resetLayout() { autoArrange(true); scrollMemory = {x:0, y:0}; renderEditor(); setStatus('已自动整理，点击右上角“保存布局”即可保存'); }
 function selectLevel(seq) { selectedLevelSeq = seq; renderEditor(); }
 function toggleNewPatternBox() { var el = document.getElementById('newPatternBox'); if (el) el.classList.toggle('show'); }
 
@@ -315,7 +404,7 @@ async function newLevel() {
     var levels = getLevels();
     var next = levels.length ? Math.max.apply(null, levels.map(function(l) { return l.index; })) + 1 : 0;
     currentBoard.levels = currentBoard.levels || [];
-    currentBoard.levels.push({level_index:next, name:'', description:'', knowledge_points:[], layout_x:305, layout_y:50 + levels.length * 150});
+    currentBoard.levels.push({level_index:next, name:'', description:'', knowledge_points:[], layout_x:COL_LEVEL_X, layout_y:28 + levels.length * 108});
     selectedLevelSeq = levels.length;
     await saveBoard();
 }
@@ -361,7 +450,7 @@ async function addExistingPattern(seq) {
     if (!p) { setStatus('请选择套路', true); return; }
     var levels = getLevels(), level = levels[seq];
     if (!level) return;
-    currentBoard.nodes.push({pattern_id:p.id, question_id:p.mother_id || null, x:level.index, y:level.patterns.length, layout_x:Number(level.meta.layout_x || 305) + 345, layout_y:Number(level.meta.layout_y || 50) + level.patterns.length * 78, name:p.name, state:(p.mastery || {}).state || 'never', question_type:''});
+    currentBoard.nodes.push({pattern_id:p.id, question_id:p.mother_id || null, x:level.index, y:level.patterns.length, layout_x:Number(level.meta.layout_x || COL_LEVEL_X) + 216, layout_y:Number(level.meta.layout_y || 28) + level.patterns.length * PATTERN_STEP, name:p.name, state:(p.mastery || {}).state || 'never', question_type:''});
     await saveBoard();
 }
 
@@ -372,7 +461,7 @@ async function createPattern(seq) {
     try {
         var p = await api('/patterns/mother', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({question_id:qid, category:currentBoard.category, name:name})});
         var levels = getLevels(), level = levels[seq];
-        currentBoard.nodes.push({pattern_id:p.pattern_id, question_id:p.mother_id || null, x:level.index, y:level.patterns.length, layout_x:Number(level.meta.layout_x || 305) + 345, layout_y:Number(level.meta.layout_y || 50) + level.patterns.length * 78, name:p.name, state:'never', question_type:''});
+        currentBoard.nodes.push({pattern_id:p.pattern_id, question_id:p.mother_id || null, x:level.index, y:level.patterns.length, layout_x:Number(level.meta.layout_x || COL_LEVEL_X) + 216, layout_y:Number(level.meta.layout_y || 28) + level.patterns.length * PATTERN_STEP, name:p.name, state:'never', question_type:''});
         await saveBoard();
     } catch (e) { setStatus('创建失败：' + e.message, true); }
 }

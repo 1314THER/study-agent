@@ -1,8 +1,31 @@
 # 成为数学高手 — AI 学习伴侣
 
-> 当前版本：v0.9.6（2026-08-09）
+> 持续开发中；当前仓库基于 v1.1.4.2。
 
 面向高中生的 AI 数学学习系统。基于 DeepSeek V4 多老师路由与 Solver → Verifier → Formatter 三段流水线，同时提供首页教练台、全局智能体、手写作答识别、一键规划、多模态切题、手把手教学、AI 仿题、个人题库、题单、错题与组卷系统。完整开发路线见 [ROADMAP.md](ROADMAP.md)。
+
+---
+
+## 新成员快速开始
+
+需要 Git、Python 3.9 或更新版本，以及首次安装依赖时的网络连接。克隆仓库后，在项目目录运行对应脚本：
+
+| 系统 | 命令 |
+|------|------|
+| macOS（终端） | `./start.sh` |
+| Windows（命令提示符或 PowerShell） | `start.bat` 或 `./start.bat` |
+
+```bash
+git clone https://github.com/1314THER/study-agent.git
+cd study-agent
+./start.sh                 # macOS；Windows 改用 start.bat
+```
+
+首次运行会创建 `.venv`、安装 `requirements.txt`，并从 `demo-data/` 复制题库和学习记录快照到本地；随后启动服务并打开[首页](http://127.0.0.1:8000/home.html)。再次运行不会覆盖本地数据库。终端按 `Ctrl+C` 停止服务。克隆后的题库已有 25 道题，以及套路、闯关和练习记录，便于直接查看各页面。
+
+**AI 功能需要使用自己的 API 密钥。**在[系统设置](http://127.0.0.1:8000/settings.html)填写，或将 `.env.example` 复制为 `.env` 后填写 `DEEPSEEK_API_KEY`；多模态功能另需 `DASHSCOPE_API_KEY`。仅浏览现有题库、记录和页面无需密钥。`.env`、运行时 `backend/settings.json` 和本地数据库不会提交到 Git。
+
+如需参与开发，请看 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
 ---
 
@@ -84,7 +107,7 @@
 
 ## 路线图
 
-当前处于 v0.9.7（首页教练台、全局智能体工具循环、手写作答识别、一键规划已上线）。接下来的产品路线以两套学习系统为主线：母题计划（覆盖高考 130+ 分套路题）与个人错题本；以 AI 改题/改卷和 OCR 作答识别为两大能力，最终由全局智能体总控。
+当前仓库已迭代至 v1.1.4.2；下表保留了早期路线图，后续方向详见 [ROADMAP.md](ROADMAP.md)。
 
 | 版本 | 主题 | 重点 |
 |------|------|------|
@@ -176,7 +199,6 @@ study-agent/
 │   ├── main.py              # FastAPI 服务器（路由 + 静态文件服务）
 │   ├── agent.py             # 全局智能体：指令 → 结构化动作（规则 + DeepSeek 决策）
 │   ├── planner.py           # 一键规划：板块顺序 + 板内顺序 → 巩固日历
-│   ├── board_order.yaml     # 板块顺序配置（含板内 question_id 精确顺序）
 │   ├── settings.py          # 运行时设置：评分公式 / 老师模型 / API 密钥（settings.json 热加载）
 │   ├── solver.py            # TEACHER_CONFIG + 三阶流水线 + 解析/清洗/校验
 │   ├── teach.py             # 手把手教学：步骤生成、逐题检查、对话式会话
@@ -218,12 +240,16 @@ study-agent/
 │   ├── board.html           # 闯关（只读任务路线）
 │   ├── level-editor.html    # 关卡编辑（自由思维导图）
 │   └── settings.html        # 系统设置：评分公式 / 老师模型 / API 密钥 / 服务商切换
-├── study_agent.db           # SQLite（自动创建）
+├── demo-data/               # 完整使用快照：题库与学习记录
+├── scripts/run.py           # 两平台共用的环境准备和启动逻辑
+├── study_agent.db           # 本地 SQLite（首次运行时复制，不提交）
+├── mastery.db               # 本地套路与闯关数据（不提交）
 ├── requirements.txt
-├── .env                     # DEEPSEEK_API_KEY / DASHSCOPE_API_KEY（已 .gitignore）
+├── .env.example             # API 密钥配置示例
 ├── .gitignore
-├── start.sh                 # 启动后端
-├── stop.sh                  # 停止后端
+├── start.sh                 # macOS 启动入口
+├── start.bat                # Windows 启动入口
+├── CONTRIBUTING.md          # 协作开发说明
 ├── ROADMAP.md               # 开发路线图（详细）
 └── README.md
 ```
@@ -359,20 +385,15 @@ Verifier 输出的步骤名会与 `steps.yaml` 比对，非法步骤名被重置
 
 ---
 
-## 启动
+## 启动与排查
 
-```bash
-cd study-agent
-pip install -r requirements.txt
-# .env 中配置：
-# DEEPSEEK_API_KEY=sk-xxx
-# DASHSCOPE_API_KEY=sk-xxx（多模态切题用）
-# 密钥也可以在网页「系统设置」里配置并持久化到 backend/settings.json
-# （该文件优先级高于 .env，已 .gitignore；支持 DeepSeek / Qwen / 豆包一键切换）
-uvicorn backend.main:app --host 127.0.0.1 --port 8000
-```
+使用上方的 `start.sh` 或 `start.bat`。依赖文件发生变化时，启动器会自动补装；只想准备环境和数据，可运行 `./start.sh --prepare-only` 或 `start.bat --prepare-only`。
 
-> 注：docx 解析需要 `python-docx`，若当前环境未安装可执行 `pip install python-docx`。
+- **找不到 Python**：安装 Python 3.9+；Windows 安装时勾选“Add Python to PATH”，然后重新打开终端。
+- **8000 端口被占用**：先关闭先前启动的服务，再运行启动脚本；服务只监听本机 `127.0.0.1`。
+- **依赖下载失败**：检查网络后重新运行脚本；安装成功前不会记录依赖已就绪。
+- **需要重新体验初始数据**：先备份自己的 `study_agent.db`、`mastery.db`，移走需要重置的数据库，再运行启动脚本。启动器不会覆盖现有文件。
+- **AI 功能提示缺少密钥**：在设置页或 `.env` 配置自己的密钥。不要将密钥提交到仓库。
 
 ### 日志
 
@@ -402,14 +423,15 @@ tail -f logs/app.log   # 实时查看当前日志
 
 ## 测试
 
-项目内置了 280 个后端测试和 1 个前端端到端冒烟脚本，覆盖全部 API 路由、
+项目内置了 303 个后端测试和 1 个前端端到端冒烟脚本，覆盖全部 API 路由、
 全局 agent 全函数、数据库、解题/教学/改卷/规划/套路/设置/多模态/仿题等模块。
 测试使用临时数据库和 mock，不污染 `study_agent.db`、`mastery.db`、
 `settings.json` 或 `patterns.yaml`。
 
 ```bash
 # 后端全量测试（无需额外依赖）
-python3 -m unittest discover -s tests -v
+./.venv/bin/python -m unittest discover -s tests -v   # macOS
+# Windows: .venv\Scripts\python.exe -m unittest discover -s tests -v
 
 # 前端端到端（需要后端已启动，且本机可用 Playwright/Chrome）
 BASE_URL=http://127.0.0.1:8000 node tests/e2e/agent_flow.mjs

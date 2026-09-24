@@ -1,0 +1,38 @@
+name: New contributor setup
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  fresh-clone:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-latest
+            python: ./.venv/bin/python
+          - os: windows-latest
+            python: ./.venv/Scripts/python.exe
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: First launch preparation (macOS)
+        if: runner.os == 'macOS'
+        run: ./start.sh --prepare-only
+      - name: First launch preparation (Windows)
+        if: runner.os == 'Windows'
+        run: .\start.bat --prepare-only
+      - name: Add a local-only data marker
+        run: ${{ matrix.python }} -c "import sqlite3; c=sqlite3.connect('study_agent.db'); c.execute('CREATE TABLE local_only (id INTEGER)'); c.commit(); c.close()"
+      - name: Prepare again
+        run: ${{ matrix.python }} scripts/run.py --prepare-only
+      - name: Check local data was preserved
+        run: ${{ matrix.python }} -c "import sqlite3; c=sqlite3.connect('study_agent.db'); assert c.execute('SELECT COUNT(*) FROM sqlite_master WHERE name=?', ('local_only',)).fetchone()[0] == 1; c.close()"
+      - name: Backend tests
+        run: ${{ matrix.python }} -m unittest discover -s tests -q
+      - name: Server smoke check
+        run: ${{ matrix.python }} scripts/run.py --smoke

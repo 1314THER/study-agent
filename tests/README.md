@@ -13,7 +13,7 @@
   `backend/rescore_questions.py` 的纯函数与关键流程，包括套路状态机、
   错题匹配、巩固日历、AI 仿题异步任务、PDF/图片/Word/文本切题和手写 OCR。
 
-当前共 280 个后端测试，外加 `tests/e2e/agent_flow.mjs` 前端端到端冒烟。
+当前共 303 个后端测试，外加 `tests/e2e/agent_flow.mjs` 前端端到端冒烟。
 
 测试会 mock 掉 DeepSeek 调用；涉及数据库的用例使用临时 SQLite，
 不会污染 `study_agent.db`、`mastery.db`、`settings.json` 或 `patterns.yaml`。

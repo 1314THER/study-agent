@@ -1,8 +1,28 @@
+# Local configuration and credentials
 .env
 backend/settings.json
 backend/settings.json.tmp
-node modules/
-study_agent.db
-*.db
-.DS_Store
+
+# Runtime data (demo-data/ contains versioned snapshots)
+/*.db
+/*.db-journal
+/*.db-wal
+/*.db-shm
 logs/
+
+# Local Python and JavaScript environments
+.venv/
+__pycache__/
+*.py[cod]
+node_modules/
+
+# Local macOS and editor files
+.DS_Store
+*.swp
+frontend/*.bak
+backend/test_write.txt
+desktop-launcher.applescript
+desktop-launcher.py
+close-helper.applescript
+close-helper.py
+fill_denghui.py

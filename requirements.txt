@@ -4,3 +4,4 @@ python-multipart==0.0.6
 httpx==0.25.2
 PyMuPDF
 PyYAML
+python-docx==1.1.2
