@@ -113,6 +113,13 @@ def start(open_browser: bool, smoke: bool = False) -> int:
 
 
 def main() -> int:
+    if os.name == "nt":
+        # Windows terminals and CI can default to a code page that cannot print Chinese.
+        os.environ["PYTHONUTF8"] = "1"
+        for stream in (sys.stdout, sys.stderr):
+            if hasattr(stream, "reconfigure"):
+                stream.reconfigure(encoding="utf-8", errors="replace")
+
     parser = argparse.ArgumentParser(description="安装依赖、复制演示数据并启动学习助手")
     parser.add_argument("--prepare-only", action="store_true", help="仅准备环境和数据")
     parser.add_argument("--no-browser", action="store_true", help="启动时不打开浏览器")
