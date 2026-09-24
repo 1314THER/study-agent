@@ -47,7 +47,7 @@ echo "连接成功后自动打开网页；保持此窗口打开。"
 ) &
 opener_pid=$!
 
-/usr/bin/ssh -i "$KEY" -o IdentitiesOnly=yes -o ExitOnForwardFailure=yes \
+/usr/bin/ssh -i "$KEY" -o IdentitiesOnly=yes -o HostKeyAlgorithms=ssh-ed25519 -o ExitOnForwardFailure=yes \
     -N -L 127.0.0.1:18000:127.0.0.1:8000 studyviewer@47.117.107.156
 result=$?
 kill "$opener_pid" 2>/dev/null || true

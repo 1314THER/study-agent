@@ -41,7 +41,7 @@ if (Test-StudyAgent) {
 Write-Host '首次连接时，请在弹出的 SSH 窗口核对服务器 ED25519 指纹：'
 Write-Host 'SHA256:/jN3UQmpWPnPXFvFDTi2FVEQwZ/JrtRBDiB0IJliwi4'
 Write-Host 'SSH 窗口需要保持打开，关闭它就会断开网页连接。'
-$sshArgs = '-i "{0}" -o IdentitiesOnly=yes -o ExitOnForwardFailure=yes -N -L 127.0.0.1:18000:127.0.0.1:8000 studyviewer@47.117.107.156' -f $key
+$sshArgs = '-i "{0}" -o IdentitiesOnly=yes -o HostKeyAlgorithms=ssh-ed25519 -o ExitOnForwardFailure=yes -N -L 127.0.0.1:18000:127.0.0.1:8000 studyviewer@47.117.107.156' -f $key
 $process = Start-Process -FilePath $ssh -ArgumentList $sshArgs -PassThru
 
 for ($i = 0; $i -lt 120; $i++) {
