@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="145mm" height="203mm" viewBox="0 0 1000 1400">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#4a6175"/>
+    </marker>
+    <style>
+      .title { font: 600 34px "Hiragino Sans GB", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #17324d; }
+      .group-title { font: 600 24px "Hiragino Sans GB", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #17324d; }
+      .node-title { font: 600 21px "Hiragino Sans GB", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #20384f; }
+      .node-text { font: 400 18px "Hiragino Sans GB", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #334e63; }
+      .small { font: 400 16px "Hiragino Sans GB", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #51697c; }
+      .box { fill: #f7fafc; stroke: #8da7ba; stroke-width: 2; }
+      .implemented { fill: #eef6fc; stroke: #4f87ad; stroke-width: 2.2; }
+      .prototype { fill: #fff7e8; stroke: #c99a43; stroke-width: 2.2; }
+      .placeholder { fill: #f4f5f6; stroke: #8d969e; stroke-width: 2; stroke-dasharray: 8 6; }
+      .group { fill: #ffffff; stroke: #bfd0dd; stroke-width: 2; }
+      .arrow { fill: none; stroke: #4a6175; stroke-width: 3; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1000" height="1400" fill="#ffffff"/>
+  <text x="500" y="58" text-anchor="middle" class="title">当前项目结构</text>
+
+  <rect x="90" y="90" width="820" height="118" rx="16" class="group"/>
+  <text x="120" y="122" class="group-title">输入与使用者</text>
+  <rect x="125" y="142" width="330" height="48" rx="11" class="implemented"/>
+  <text x="290" y="173" text-anchor="middle" class="node-text">单用户学生</text>
+  <rect x="545" y="142" width="330" height="48" rx="11" class="implemented"/>
+  <text x="710" y="163" text-anchor="middle" class="small">文本、图片、PDF、DOCX、TXT</text>
+  <text x="710" y="183" text-anchor="middle" class="small">以及手写作答图片</text>
+
+  <path d="M500 208 L500 244" class="arrow"/>
+
+  <rect x="90" y="250" width="820" height="245" rx="16" class="group"/>
+  <text x="120" y="284" class="group-title">Web 学生端</text>
+  <rect x="125" y="307" width="365" height="72" rx="12" class="implemented"/>
+  <text x="307" y="335" text-anchor="middle" class="node-title">学习与诊断</text>
+  <text x="307" y="360" text-anchor="middle" class="small">单题解答 · 多模态切题 · 教学 · 批改</text>
+  <rect x="510" y="307" width="365" height="72" rx="12" class="implemented"/>
+  <text x="692" y="335" text-anchor="middle" class="node-title">题目管理</text>
+  <text x="692" y="360" text-anchor="middle" class="small">题库 · 题单 · 错题 · 组卷 · PDF</text>
+  <rect x="125" y="399" width="365" height="72" rx="12" class="prototype"/>
+  <text x="307" y="427" text-anchor="middle" class="node-title">训练闭环（雏形）</text>
+  <text x="307" y="452" text-anchor="middle" class="small">母题 · 套路 · 日历 · 闯关 · 规划</text>
+  <rect x="510" y="399" width="365" height="72" rx="12" class="prototype"/>
+  <text x="692" y="427" text-anchor="middle" class="node-title">智能入口（雏形）</text>
+  <text x="692" y="452" text-anchor="middle" class="small">首页教练 · 站内智能体 · 工具调用</text>
+
+  <path d="M500 495 L500 532" class="arrow"/>
+
+  <rect x="190" y="538" width="620" height="74" rx="14" class="implemented"/>
+  <text x="500" y="568" text-anchor="middle" class="node-title">FastAPI 单体后端</text>
+  <text x="500" y="593" text-anchor="middle" class="small">统一承接页面接口、业务逻辑和模型调用</text>
+
+  <path d="M500 612 L500 649" class="arrow"/>
+
+  <rect x="90" y="655" width="820" height="272" rx="16" class="group"/>
+  <text x="120" y="690" class="group-title">AI 与业务能力</text>
+  <rect x="125" y="716" width="365" height="78" rx="12" class="implemented"/>
+  <text x="307" y="744" text-anchor="middle" class="node-title">解题流水线</text>
+  <text x="307" y="770" text-anchor="middle" class="small">Solver → Verifier → Formatter</text>
+  <rect x="510" y="716" width="365" height="78" rx="12" class="implemented"/>
+  <text x="692" y="744" text-anchor="middle" class="node-title">作答处理</text>
+  <text x="692" y="770" text-anchor="middle" class="small">OCR · 分步教学 · 单题判分 · 变式生成</text>
+  <rect x="125" y="815" width="365" height="78" rx="12" class="prototype"/>
+  <text x="307" y="843" text-anchor="middle" class="node-title">学习调度（雏形）</text>
+  <text x="307" y="869" text-anchor="middle" class="small">套路掌握 · 日历规划 · 关卡管理</text>
+  <rect x="510" y="815" width="365" height="78" rx="12" class="implemented"/>
+  <text x="692" y="843" text-anchor="middle" class="node-title">外部模型接口</text>
+  <text x="692" y="869" text-anchor="middle" class="small">DeepSeek / Qwen 在线 API</text>
+
+  <path d="M500 927 L500 964" class="arrow"/>
+
+  <rect x="90" y="970" width="820" height="222" rx="16" class="group"/>
+  <text x="120" y="1005" class="group-title">本地数据底座</text>
+  <rect x="125" y="1030" width="365" height="70" rx="12" class="implemented"/>
+  <text x="307" y="1057" text-anchor="middle" class="node-title">题库与练习 SQLite</text>
+  <text x="307" y="1082" text-anchor="middle" class="small">题目 · 步骤错因 · 题单 · 练习记录</text>
+  <rect x="510" y="1030" width="365" height="70" rx="12" class="implemented"/>
+  <text x="692" y="1057" text-anchor="middle" class="node-title">套路与掌握 SQLite</text>
+  <text x="692" y="1082" text-anchor="middle" class="small">母题/变式 · 状态 · 日历 · 关卡</text>
+  <rect x="125" y="1120" width="750" height="48" rx="11" class="implemented"/>
+  <text x="500" y="1151" text-anchor="middle" class="node-text">YAML 内容文件：知识点、步骤目录与套路目录</text>
+
+  <path d="M500 1192 L500 1223" class="arrow"/>
+
+  <rect x="90" y="1229" width="820" height="111" rx="16" class="placeholder"/>
+  <text x="500" y="1263" text-anchor="middle" class="node-title">当前边界</text>
+  <text x="500" y="1293" text-anchor="middle" class="node-text">整卷诊断、多用户权限、教师端、RAG / MCP、独立 Benchmark 待建</text>
+  <text x="500" y="1321" text-anchor="middle" class="small">语义搜索与 AI 一键组卷目前为占位接口</text>
+
+  <rect x="214" y="1363" width="18" height="18" rx="4" class="implemented"/>
+  <text x="242" y="1378" class="small">已实现</text>
+  <rect x="414" y="1363" width="18" height="18" rx="4" class="prototype"/>
+  <text x="442" y="1378" class="small">功能雏形</text>
+  <rect x="650" y="1363" width="18" height="18" rx="4" class="placeholder"/>
+  <text x="678" y="1378" class="small">待建设 / 占位</text>
+</svg>

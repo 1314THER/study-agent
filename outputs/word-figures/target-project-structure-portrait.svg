@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="145mm" height="203mm" viewBox="0 0 1000 1400">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#476176"/>
+    </marker>
+    <style>
+      .title { font: 600 34px "Hiragino Sans GB", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #17324d; }
+      .group-title { font: 600 24px "Hiragino Sans GB", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #17324d; }
+      .node-title { font: 600 21px "Hiragino Sans GB", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #20384f; }
+      .node-text { font: 400 18px "Hiragino Sans GB", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #334e63; }
+      .small { font: 400 16px "Hiragino Sans GB", "PingFang SC", "Microsoft YaHei", sans-serif; fill: #51697c; }
+      .group { fill: #ffffff; stroke: #bfd0dd; stroke-width: 2; }
+      .user { fill: #eef6fc; stroke: #4f87ad; stroke-width: 2.2; }
+      .content { fill: #f0f8f5; stroke: #57977d; stroke-width: 2.2; }
+      .ai { fill: #f2f0fb; stroke: #786bad; stroke-width: 2.2; }
+      .evidence { fill: #fff7e8; stroke: #c79742; stroke-width: 2.2; }
+      .govern { fill: #f4f5f6; stroke: #7d8992; stroke-width: 2; }
+      .arrow { fill: none; stroke: #476176; stroke-width: 3; marker-end: url(#arrow); }
+      .feedback { fill: none; stroke: #57977d; stroke-width: 2.5; stroke-dasharray: 8 6; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1000" height="1400" fill="#ffffff"/>
+  <text x="500" y="58" text-anchor="middle" class="title">目标项目结构</text>
+
+  <rect x="90" y="90" width="820" height="125" rx="16" class="group"/>
+  <text x="120" y="122" class="group-title">用户与终端</text>
+  <rect x="115" y="143" width="230" height="48" rx="11" class="user"/>
+  <text x="230" y="174" text-anchor="middle" class="node-text">学生端 Web / App</text>
+  <rect x="385" y="143" width="230" height="48" rx="11" class="user"/>
+  <text x="500" y="174" text-anchor="middle" class="node-text">教师端</text>
+  <rect x="655" y="143" width="230" height="48" rx="11" class="user"/>
+  <text x="770" y="174" text-anchor="middle" class="node-text">教研与评测端</text>
+
+  <path d="M500 215 L500 250" class="arrow"/>
+
+  <rect x="90" y="256" width="820" height="190" rx="16" class="group"/>
+  <text x="120" y="290" class="group-title">统一输入与内容底座</text>
+  <rect x="125" y="314" width="365" height="102" rx="12" class="content"/>
+  <text x="307" y="342" text-anchor="middle" class="node-title">统一采集层</text>
+  <text x="307" y="369" text-anchor="middle" class="small">题目 · 作答 · 试卷 · 手写笔迹</text>
+  <text x="307" y="393" text-anchor="middle" class="small">题号 · 提示 · 时间事件</text>
+  <rect x="510" y="314" width="365" height="102" rx="12" class="content"/>
+  <text x="692" y="342" text-anchor="middle" class="node-title">审核内容库</text>
+  <text x="692" y="369" text-anchor="middle" class="small">知识点 · 方法 · 母题/变式 · 解法</text>
+  <text x="692" y="393" text-anchor="middle" class="small">步骤 · 错因 · 难度 · 内容版本</text>
+
+  <path d="M307 416 L307 472" class="arrow"/>
+  <path d="M692 416 L692 472" class="arrow"/>
+
+  <rect x="90" y="478" width="820" height="282" rx="16" class="group"/>
+  <text x="120" y="513" class="group-title">统一 AI 诊断与教学引擎</text>
+  <rect x="125" y="538" width="365" height="80" rx="12" class="ai"/>
+  <text x="307" y="566" text-anchor="middle" class="node-title">多解法求解与验证</text>
+  <text x="307" y="592" text-anchor="middle" class="small">Solver → Verifier → Formatter</text>
+  <rect x="510" y="538" width="365" height="80" rx="12" class="ai"/>
+  <text x="692" y="566" text-anchor="middle" class="node-title">步骤级评价</text>
+  <text x="692" y="592" text-anchor="middle" class="small">路径对齐 · 正确异解 · 部分得分</text>
+  <rect x="125" y="641" width="365" height="86" rx="12" class="ai"/>
+  <text x="307" y="669" text-anchor="middle" class="node-title">训练与整卷分析</text>
+  <text x="307" y="694" text-anchor="middle" class="small">六步训练 · 变式校验 · 延迟复查</text>
+  <text x="307" y="716" text-anchor="middle" class="small">试卷质量与学生整卷诊断</text>
+  <rect x="510" y="641" width="365" height="86" rx="12" class="ai"/>
+  <text x="692" y="669" text-anchor="middle" class="node-title">开放与调度能力</text>
+  <text x="692" y="694" text-anchor="middle" class="small">专用 Agent · RAG · API / MCP</text>
+  <text x="692" y="716" text-anchor="middle" class="small">低置信度转人工复核</text>
+
+  <path d="M500 760 L500 793" class="arrow"/>
+
+  <rect x="90" y="799" width="820" height="230" rx="16" class="group"/>
+  <text x="120" y="834" class="group-title">学习证据与个性化决策</text>
+  <rect x="165" y="854" width="670" height="48" rx="11" class="evidence"/>
+  <text x="500" y="884" text-anchor="middle" class="node-text">可追溯学习证据：得分、首次错误、错因、提示、用时与人工修改</text>
+  <path d="M500 902 L500 922" class="arrow"/>
+  <rect x="165" y="928" width="670" height="48" rx="11" class="evidence"/>
+  <text x="500" y="958" text-anchor="middle" class="node-text">掌握度估计：关键步骤 → 解题方法 → 知识点</text>
+  <path d="M500 976 L500 996" class="arrow"/>
+  <rect x="165" y="1002" width="670" height="48" rx="11" class="evidence"/>
+  <text x="500" y="1032" text-anchor="middle" class="node-text">个性化计划：学习、重做、变式迁移与延迟复查</text>
+
+  <path d="M500 1050 L500 1080" class="arrow"/>
+
+  <rect x="90" y="1086" width="820" height="146" rx="16" class="group"/>
+  <text x="120" y="1120" class="group-title">应用闭环</text>
+  <rect x="125" y="1142" width="365" height="66" rx="12" class="user"/>
+  <text x="307" y="1169" text-anchor="middle" class="node-title">学生端</text>
+  <text x="307" y="1193" text-anchor="middle" class="small">单题反馈 · 六步训练 · 整卷报告</text>
+  <rect x="510" y="1142" width="365" height="66" rx="12" class="user"/>
+  <text x="692" y="1169" text-anchor="middle" class="node-title">教师与教研端</text>
+  <text x="692" y="1193" text-anchor="middle" class="small">人工复核 · 班级报告 · 内容审核</text>
+
+  <path d="M307 1208 C307 1260 945 1250 945 830 L945 365 C945 330 925 328 883 328" class="feedback"/>
+  <text x="966" y="835" transform="rotate(-90 966 835)" text-anchor="middle" class="small">新作答与复查结果持续回流</text>
+
+  <path d="M500 1232 L500 1260" class="arrow"/>
+
+  <rect x="90" y="1266" width="820" height="102" rx="16" class="govern"/>
+  <text x="500" y="1298" text-anchor="middle" class="node-title">科研评测与横向治理</text>
+  <text x="500" y="1326" text-anchor="middle" class="node-text">独立 Benchmark · 基线对照 · 错误分析 · 离线回放 / 真人试用</text>
+  <text x="500" y="1353" text-anchor="middle" class="small">账号权限 · 数据隔离与脱敏 · 内容/模型版本审计</text>
+</svg>

@@ -1,0 +1,169 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="145mm" height="242.5mm" viewBox="0 0 1100 1840">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#496277"/>
+    </marker>
+    <style>
+      .title { font: 700 34px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; fill: #17324d; }
+      .group-title { font: 700 23px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; fill: #17324d; }
+      .node-title { font: 700 20px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; fill: #20384f; }
+      .node-text { font: 400 18px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; fill: #334e63; }
+      .small { font: 400 16px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; fill: #4c6578; }
+      .tiny { font: 400 15px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; fill: #587084; }
+      .mono { font: 400 15px "SFMono-Regular", Menlo, Consolas, monospace; fill: #4c6578; }
+      .group { fill: #ffffff; stroke: #bdcedb; stroke-width: 2; }
+      .implemented { fill: #eef6fc; stroke: #4f87ad; stroke-width: 2.2; }
+      .prototype { fill: #fff7e8; stroke: #c99a43; stroke-width: 2.2; }
+      .placeholder { fill: #f5f6f7; stroke: #89949e; stroke-width: 2; stroke-dasharray: 8 6; }
+      .external { fill: #f2f0fb; stroke: #786bad; stroke-width: 2.2; }
+      .data { fill: #f0f8f5; stroke: #57977d; stroke-width: 2.2; }
+      .arrow { fill: none; stroke: #496277; stroke-width: 3; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1100" height="1840" fill="#ffffff"/>
+  <text x="550" y="51" text-anchor="middle" class="title">当前项目结构（按现有代码与数据核验）</text>
+
+  <!-- Current access and inputs -->
+  <rect x="60" y="78" width="980" height="142" rx="16" class="group"/>
+  <text x="88" y="111" class="group-title">当前接入形态</text>
+  <rect x="90" y="132" width="445" height="64" rx="11" class="implemented"/>
+  <text x="312" y="158" text-anchor="middle" class="node-title">本地 Web 学习应用</text>
+  <text x="312" y="182" text-anchor="middle" class="small">无账号/权限隔离；浏览器 localStorage 保存临时状态</text>
+  <rect x="565" y="132" width="445" height="64" rx="11" class="implemented"/>
+  <text x="787" y="158" text-anchor="middle" class="node-title">现有输入</text>
+  <text x="787" y="182" text-anchor="middle" class="small">文本、图片、PDF、DOCX、TXT、手写作答图</text>
+
+  <path d="M550 220 L550 239" class="arrow"/>
+
+  <!-- Frontend -->
+  <rect x="60" y="245" width="980" height="345" rx="16" class="group"/>
+  <text x="88" y="279" class="group-title">Web 前端：现有页面与入口</text>
+
+  <rect x="90" y="301" width="445" height="76" rx="11" class="prototype"/>
+  <text x="312" y="327" text-anchor="middle" class="node-title">首页学习教练与站内智能体</text>
+  <text x="312" y="350" text-anchor="middle" class="small">6 项服务端工具 · NDJSON 流；导航与组卷动作</text>
+  <text x="312" y="369" text-anchor="middle" class="mono">home.html</text>
+
+  <rect x="565" y="301" width="445" height="76" rx="11" class="implemented"/>
+  <text x="787" y="327" text-anchor="middle" class="node-title">解题、切题、教学与批改</text>
+  <text x="787" y="350" text-anchor="middle" class="small">单题解答 · 文件切题 · 分步教学 · 文本单题批改</text>
+  <text x="787" y="369" text-anchor="middle" class="mono">index · multimodal · teach · grade</text>
+
+  <rect x="90" y="395" width="445" height="76" rx="11" class="implemented"/>
+  <text x="312" y="421" text-anchor="middle" class="node-title">个人题库与组卷</text>
+  <text x="312" y="444" text-anchor="middle" class="small">题库、题单、错题；浏览器购物车手工组卷与 PDF</text>
+  <text x="312" y="463" text-anchor="middle" class="mono">history.html · exam.html</text>
+
+  <rect x="565" y="395" width="445" height="76" rx="11" class="prototype"/>
+  <text x="787" y="421" text-anchor="middle" class="node-title">母题与套路训练闭环</text>
+  <text x="787" y="444" text-anchor="middle" class="small">母题/变式、状态机、1/7/30 日复查与 ICS</text>
+  <text x="787" y="463" text-anchor="middle" class="mono">mother · loop · calendar</text>
+
+  <rect x="90" y="489" width="445" height="76" rx="11" class="prototype"/>
+  <text x="312" y="515" text-anchor="middle" class="node-title">挑战板、关卡与一键规划</text>
+  <text x="312" y="538" text-anchor="middle" class="small">挑战板展示、关卡编辑、未掌握套路排序</text>
+  <text x="312" y="557" text-anchor="middle" class="mono">board · level-editor</text>
+
+  <rect x="565" y="489" width="445" height="76" rx="11" class="implemented"/>
+  <text x="787" y="515" text-anchor="middle" class="node-title">模型与 API 设置</text>
+  <text x="787" y="538" text-anchor="middle" class="small">文本模型和视觉模型连接参数</text>
+  <text x="787" y="557" text-anchor="middle" class="mono">settings.html</text>
+
+  <path d="M550 590 L550 609" class="arrow"/>
+
+  <!-- Backend -->
+  <rect x="190" y="615" width="720" height="76" rx="14" class="implemented"/>
+  <text x="550" y="645" text-anchor="middle" class="node-title">FastAPI 单体后端</text>
+  <text x="550" y="671" text-anchor="middle" class="node-text">统一承接页面路由、业务逻辑、SQLite 读写与外部模型调用</text>
+
+  <path d="M550 691 L550 710" class="arrow"/>
+
+  <!-- AI and business -->
+  <rect x="60" y="716" width="980" height="422" rx="16" class="group"/>
+  <text x="88" y="750" class="group-title">后端 AI 与业务模块</text>
+
+  <rect x="90" y="773" width="445" height="103" rx="11" class="implemented"/>
+  <text x="312" y="799" text-anchor="middle" class="node-title">解题、验证与格式化流水线</text>
+  <text x="312" y="823" text-anchor="middle" class="small">step_solver_only → step_verify_all → step_final_check</text>
+  <text x="312" y="846" text-anchor="middle" class="small">Verifier 校验步骤；Formatter 补全五维难度并有限回退</text>
+  <text x="312" y="867" text-anchor="middle" class="tiny">对应 solver.py / verifier.py / formatter.py</text>
+
+  <rect x="565" y="773" width="445" height="103" rx="11" class="implemented"/>
+  <text x="787" y="799" text-anchor="middle" class="node-title">多模态切题与手写识别</text>
+  <text x="787" y="823" text-anchor="middle" class="small">PDF 逐页、图片、DOCX、TXT → 题目文本</text>
+  <text x="787" y="846" text-anchor="middle" class="small">手写作答图 → OCR 文本 → 前端确认后送入批改</text>
+  <text x="787" y="867" text-anchor="middle" class="tiny">视觉调用使用 DashScope qwen-vl-max</text>
+
+  <rect x="90" y="893" width="445" height="103" rx="11" class="implemented"/>
+  <text x="312" y="919" text-anchor="middle" class="node-title">分步教学与单题批改</text>
+  <text x="312" y="943" text-anchor="middle" class="small">对话式提示；客观题规则比对</text>
+  <text x="312" y="966" text-anchor="middle" class="small">大题一次模型判分；保存答案、得分、用时等练习记录</text>
+  <text x="312" y="987" text-anchor="middle" class="tiny">仅文本批改；确认错因写入 step_errors 并匹配套路</text>
+
+  <rect x="565" y="893" width="445" height="103" rx="11" class="implemented"/>
+  <text x="787" y="919" text-anchor="middle" class="node-title">变式生成与入库筛选</text>
+  <text x="787" y="943" text-anchor="middle" class="small">依据原题与错因生成候选</text>
+  <text x="787" y="966" text-anchor="middle" class="small">候选通过完整解题校验后入库；适配分用于排序</text>
+  <text x="787" y="987" text-anchor="middle" class="tiny">支持同步与异步生成流程</text>
+
+  <rect x="90" y="1013" width="445" height="103" rx="11" class="prototype"/>
+  <text x="312" y="1039" text-anchor="middle" class="node-title">规则式套路训练与复查（机制已实现）</text>
+  <text x="312" y="1063" text-anchor="middle" class="small">母题 + 3 变式；never → first → second → third_pass</text>
+  <text x="312" y="1086" text-anchor="middle" class="small">出错 again_wrong；复查 1/7/30 日；日历、关卡与规划</text>
+  <text x="312" y="1107" text-anchor="middle" class="tiny">内容和长期掌握推断仍处于项目雏形</text>
+
+  <rect x="565" y="1013" width="445" height="103" rx="11" class="prototype"/>
+  <text x="787" y="1039" text-anchor="middle" class="node-title">全局教练 / 站内 Agent</text>
+  <text x="787" y="1063" text-anchor="middle" class="small">规则快路径 + 模型决策；最多 4 轮工具调用</text>
+  <text x="787" y="1086" text-anchor="middle" class="small">search / solve / teach / grade / plan / context</text>
+  <text x="787" y="1107" text-anchor="middle" class="tiny">工具循环已实现；短上下文，无长期记忆/RAG/MCP</text>
+
+  <path d="M550 1138 L550 1157" class="arrow"/>
+
+  <!-- External services -->
+  <rect x="60" y="1163" width="980" height="98" rx="16" class="group"/>
+  <text x="88" y="1195" class="group-title">外部模型服务</text>
+  <rect x="90" y="1210" width="445" height="34" rx="9" class="external"/>
+  <text x="312" y="1233" text-anchor="middle" class="small">DeepSeek 兼容文本模型 API（可配置 base URL / model）</text>
+  <rect x="565" y="1210" width="445" height="34" rx="9" class="external"/>
+  <text x="787" y="1233" text-anchor="middle" class="small">DashScope Qwen-VL：文件切题与手写 OCR</text>
+
+  <!-- Data -->
+  <rect x="60" y="1286" width="980" height="286" rx="16" class="group"/>
+  <text x="88" y="1320" class="group-title">业务组件依赖：持久数据与配置</text>
+
+  <rect x="90" y="1342" width="445" height="132" rx="11" class="data"/>
+  <text x="312" y="1368" text-anchor="middle" class="node-title">study_agent.db</text>
+  <text x="312" y="1393" text-anchor="middle" class="small">questions · question_steps · practice_records</text>
+  <text x="312" y="1416" text-anchor="middle" class="small">step_errors · question_lists · question_list_members</text>
+  <text x="312" y="1439" text-anchor="middle" class="tiny">错题由已确认 step_errors 定义；mistakes 是遗留表</text>
+  <text x="312" y="1462" text-anchor="middle" class="tiny">题目、解题步骤、练习、错因/错题与题单</text>
+
+  <rect x="565" y="1342" width="445" height="132" rx="11" class="data"/>
+  <text x="787" y="1368" text-anchor="middle" class="node-title">mastery.db</text>
+  <text x="787" y="1393" text-anchor="middle" class="small">patterns · pattern_questions · pattern_mastery</text>
+  <text x="787" y="1416" text-anchor="middle" class="small">attempts · category_mastery · boards</text>
+  <text x="787" y="1439" text-anchor="middle" class="small">board_nodes · board_edges · board_levels</text>
+  <text x="787" y="1462" text-anchor="middle" class="tiny">套路、母题/变式、掌握状态、尝试、挑战板与关卡</text>
+
+  <rect x="90" y="1492" width="920" height="58" rx="11" class="data"/>
+  <text x="550" y="1517" text-anchor="middle" class="node-title">配置、目录与提示词</text>
+  <text x="550" y="1541" text-anchor="middle" class="small">categories.yaml / steps.yaml（运行约束）· patterns.yaml（导出副本）· settings.json · prompts/</text>
+
+  <!-- Exact current boundaries -->
+  <rect x="60" y="1597" width="980" height="162" rx="16" class="placeholder"/>
+  <text x="550" y="1628" text-anchor="middle" class="node-title">当前边界与明确占位</text>
+  <text x="550" y="1656" text-anchor="middle" class="node-text">语义搜索 /questions/ai-search 与 AI 一键组卷 /exam/ai-assemble 当前返回空结果</text>
+  <text x="550" y="1682" text-anchor="middle" class="small">尚无：教师/教研端、整卷评价与诊断、手写笔迹时间线、多解路径步骤对齐</text>
+  <text x="550" y="1706" text-anchor="middle" class="small">尚无：独立复核评分、RAG / MCP、Benchmark 与正式试用；无多用户权限隔离</text>
+  <text x="550" y="1731" text-anchor="middle" class="tiny">教学会话与仿题任务的进程内状态重启清空；浏览器留存会话/草稿快照</text>
+
+  <!-- Legend -->
+  <rect x="179" y="1792" width="18" height="18" rx="4" class="implemented"/>
+  <text x="207" y="1807" class="small">已实现</text>
+  <rect x="421" y="1792" width="18" height="18" rx="4" class="prototype"/>
+  <text x="449" y="1807" class="small">机制已实现，效果待验证</text>
+  <rect x="678" y="1792" width="18" height="18" rx="4" class="placeholder"/>
+  <text x="706" y="1807" class="small">待建设 / 占位</text>
+</svg>

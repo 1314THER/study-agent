@@ -1,0 +1,170 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="145mm" height="242.5mm" viewBox="0 0 1100 1840">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,5 L0,10 Z" fill="#496277"/>
+    </marker>
+    <style>
+      .title { font: 700 34px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; fill: #17324d; }
+      .group-title { font: 700 23px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; fill: #17324d; }
+      .node-title { font: 700 20px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; fill: #20384f; }
+      .node-text { font: 400 18px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; fill: #334e63; }
+      .small { font: 400 16px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; fill: #4c6578; }
+      .tiny { font: 400 15px "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif; fill: #587084; }
+      .group { fill: #ffffff; stroke: #bdcedb; stroke-width: 2; }
+      .user { fill: #eef6fc; stroke: #4f87ad; stroke-width: 2.2; }
+      .content { fill: #f0f8f5; stroke: #57977d; stroke-width: 2.2; }
+      .ai { fill: #f2f0fb; stroke: #786bad; stroke-width: 2.2; }
+      .evidence { fill: #fff7e8; stroke: #c79742; stroke-width: 2.2; }
+      .govern { fill: #f5f6f7; stroke: #7d8992; stroke-width: 2; }
+      .arrow { fill: none; stroke: #496277; stroke-width: 3; marker-end: url(#arrow); }
+      .feedback { fill: none; stroke: #57977d; stroke-width: 2.5; stroke-dasharray: 8 6; marker-end: url(#arrow); }
+    </style>
+  </defs>
+
+  <rect width="1100" height="1840" fill="#ffffff"/>
+  <text x="550" y="51" text-anchor="middle" class="title">目标项目结构（完整研究与应用闭环）</text>
+
+  <!-- Users -->
+  <rect x="60" y="78" width="980" height="140" rx="16" class="group"/>
+  <text x="88" y="111" class="group-title">用户与终端</text>
+  <rect x="90" y="133" width="285" height="60" rx="11" class="user"/>
+  <text x="232" y="158" text-anchor="middle" class="node-title">学生端</text>
+  <text x="232" y="181" text-anchor="middle" class="small">Web / App</text>
+  <rect x="407" y="133" width="285" height="60" rx="11" class="user"/>
+  <text x="549" y="158" text-anchor="middle" class="node-title">教师端</text>
+  <text x="549" y="181" text-anchor="middle" class="small">阅卷、报告与人工复核</text>
+  <rect x="724" y="133" width="286" height="60" rx="11" class="user"/>
+  <text x="867" y="158" text-anchor="middle" class="node-title">教研与评测端</text>
+  <text x="867" y="181" text-anchor="middle" class="small">内容治理与模型评测</text>
+
+  <path d="M550 218 L550 237" class="arrow"/>
+
+  <!-- Access/input/content -->
+  <rect x="60" y="243" width="980" height="276" rx="16" class="group"/>
+  <text x="88" y="276" class="group-title">统一接入、采集与可追溯内容底座</text>
+
+  <rect x="90" y="298" width="920" height="50" rx="11" class="user"/>
+  <text x="550" y="329" text-anchor="middle" class="node-text">账号与角色权限 · 学生/班级/学校数据隔离 · 授权范围与操作审计</text>
+
+  <rect x="90" y="367" width="445" height="125" rx="11" class="content"/>
+  <text x="312" y="393" text-anchor="middle" class="node-title">统一采集与事件流</text>
+  <text x="312" y="418" text-anchor="middle" class="small">单题、文档、整卷、图片/OCR</text>
+  <text x="312" y="441" text-anchor="middle" class="small">手写笔迹与时间戳、题号、提示、修改和提交事件</text>
+  <text x="312" y="466" text-anchor="middle" class="tiny">保留原始输入、解析结果、人工修订与来源</text>
+
+  <rect x="565" y="367" width="445" height="125" rx="11" class="content"/>
+  <text x="787" y="393" text-anchor="middle" class="node-title">审核、版本化的结构化内容库</text>
+  <text x="787" y="418" text-anchor="middle" class="small">知识点 ↔ 方法/套路 ↔ 母题/变式 ↔ 解法路径</text>
+  <text x="787" y="441" text-anchor="middle" class="small">步骤 ↔ 错因 ↔ 难度；内容版本与审核状态</text>
+  <text x="787" y="466" text-anchor="middle" class="tiny">供检索增强使用，并能追溯来源和版本</text>
+
+  <path d="M312 492 L312 538" class="arrow"/>
+  <path d="M787 492 L787 538" class="arrow"/>
+
+  <!-- AI core -->
+  <rect x="60" y="544" width="980" height="498" rx="16" class="group"/>
+  <text x="88" y="578" class="group-title">统一 AI 诊断与教学引擎</text>
+
+  <rect x="90" y="601" width="445" height="124" rx="11" class="ai"/>
+  <text x="312" y="627" text-anchor="middle" class="node-title">多模态理解与输入校正</text>
+  <text x="312" y="652" text-anchor="middle" class="small">题目/文档/试卷切分、OCR、公式与版面识别</text>
+  <text x="312" y="675" text-anchor="middle" class="small">笔迹事件对齐、题号匹配、低置信度提示确认</text>
+  <text x="312" y="699" text-anchor="middle" class="tiny">解析版本与人工修订均写入证据链</text>
+
+  <rect x="565" y="601" width="445" height="124" rx="11" class="ai"/>
+  <text x="787" y="627" text-anchor="middle" class="node-title">多解法求解、验证与格式化</text>
+  <text x="787" y="652" text-anchor="middle" class="small">生成候选解法路径并逐步验证</text>
+  <text x="787" y="675" text-anchor="middle" class="small">统一答案、步骤、知识点、方法和难度结构</text>
+  <text x="787" y="699" text-anchor="middle" class="tiny">Solver → Verifier → Formatter，可交叉复核</text>
+
+  <rect x="90" y="743" width="445" height="124" rx="11" class="ai"/>
+  <text x="312" y="769" text-anchor="middle" class="node-title">学生作答的步骤级对齐与评价</text>
+  <text x="312" y="794" text-anchor="middle" class="small">兼容多条正确路径，识别等价异解与部分得分</text>
+  <text x="312" y="817" text-anchor="middle" class="small">定位首个实质性错误、错因、缺步和后续连带错误</text>
+  <text x="312" y="841" text-anchor="middle" class="tiny">输出置信度；疑难样本进入人工复核</text>
+
+  <rect x="565" y="743" width="445" height="124" rx="11" class="ai"/>
+  <text x="787" y="769" text-anchor="middle" class="node-title">可控变式生成与质量校验</text>
+  <text x="787" y="794" text-anchor="middle" class="small">按方法、错因和难度改变条件或设问</text>
+  <text x="787" y="817" text-anchor="middle" class="small">校验答案、步骤、难度与原目标的一致性</text>
+  <text x="787" y="841" text-anchor="middle" class="tiny">去重、适配度筛选、审核后进入题库</text>
+
+  <rect x="90" y="885" width="445" height="124" rx="11" class="ai"/>
+  <text x="312" y="911" text-anchor="middle" class="node-title">整卷质量评价与学生整卷诊断</text>
+  <text x="312" y="936" text-anchor="middle" class="small">覆盖度、难度、梯度、重复度与区分度分析</text>
+  <text x="312" y="959" text-anchor="middle" class="small">按题、步骤、方法、知识点和时间事件汇总表现</text>
+  <text x="312" y="983" text-anchor="middle" class="tiny">形成试卷报告、个人报告与班级报告</text>
+
+  <rect x="565" y="885" width="445" height="124" rx="11" class="ai"/>
+  <text x="787" y="911" text-anchor="middle" class="node-title">Agent + RAG + API / MCP</text>
+  <text x="787" y="936" text-anchor="middle" class="small">检索内容库并编排识别、解题、评价和规划工具</text>
+  <text x="787" y="959" text-anchor="middle" class="small">记录检索依据、工具轨迹、模型与提示词版本</text>
+  <text x="787" y="983" text-anchor="middle" class="tiny">向学生端、教师端和教研端提供统一能力</text>
+
+  <path d="M550 1042 L550 1061" class="arrow"/>
+
+  <!-- Evidence and decisions -->
+  <rect x="60" y="1067" width="980" height="337" rx="16" class="group"/>
+  <text x="88" y="1101" class="group-title">学习证据、掌握建模与个性化决策</text>
+
+  <rect x="110" y="1122" width="880" height="55" rx="11" class="evidence"/>
+  <text x="550" y="1146" text-anchor="middle" class="node-title">可追溯学习证据</text>
+  <text x="550" y="1168" text-anchor="middle" class="small">得分、首错、错因、提示、尝试次数、用时、修改轨迹与人工复核结果</text>
+
+  <path d="M550 1177 L550 1191" class="arrow"/>
+  <rect x="110" y="1197" width="880" height="55" rx="11" class="evidence"/>
+  <text x="550" y="1221" text-anchor="middle" class="node-title">分层掌握度估计</text>
+  <text x="550" y="1243" text-anchor="middle" class="small">关键步骤 → 解题方法/套路 → 知识点；保留证据、置信度与更新时间</text>
+
+  <path d="M550 1252 L550 1266" class="arrow"/>
+  <rect x="110" y="1272" width="880" height="55" rx="11" class="evidence"/>
+  <text x="550" y="1296" text-anchor="middle" class="node-title">六步训练闭环</text>
+  <text x="550" y="1318" text-anchor="middle" class="small">方法识别 → 母题学习 → 分步仿练 → 无提示重做 → 同方法变式迁移 → 延迟复查</text>
+
+  <path d="M550 1327 L550 1341" class="arrow"/>
+  <rect x="110" y="1347" width="880" height="34" rx="9" class="evidence"/>
+  <text x="550" y="1370" text-anchor="middle" class="small">个性化计划：学习、重做、变式迁移、延迟复查，并随新证据动态更新</text>
+
+  <path d="M550 1404 L550 1423" class="arrow"/>
+
+  <!-- Applications -->
+  <rect x="60" y="1429" width="980" height="166" rx="16" class="group"/>
+  <text x="88" y="1462" class="group-title">应用闭环</text>
+
+  <rect x="90" y="1483" width="285" height="87" rx="11" class="user"/>
+  <text x="232" y="1509" text-anchor="middle" class="node-title">学生端</text>
+  <text x="232" y="1533" text-anchor="middle" class="small">单题反馈 · 六步训练</text>
+  <text x="232" y="1556" text-anchor="middle" class="small">整卷报告 · 个性化计划</text>
+
+  <rect x="407" y="1483" width="285" height="87" rx="11" class="user"/>
+  <text x="549" y="1509" text-anchor="middle" class="node-title">教师端</text>
+  <text x="549" y="1533" text-anchor="middle" class="small">试卷质量 · 学生/班级报告</text>
+  <text x="549" y="1556" text-anchor="middle" class="small">人工复核与教学调整</text>
+
+  <rect x="724" y="1483" width="286" height="87" rx="11" class="user"/>
+  <text x="867" y="1509" text-anchor="middle" class="node-title">教研与评测端</text>
+  <text x="867" y="1533" text-anchor="middle" class="small">内容审核/版本 · Benchmark</text>
+  <text x="867" y="1556" text-anchor="middle" class="small">模型比较与错误分析</text>
+
+  <!-- Feedback loop -->
+  <path d="M1010 1526 C1060 1526 1060 430 1018 430" class="feedback"/>
+  <text x="550" y="1585" text-anchor="middle" class="tiny">学生作答、复查结果与人工修订持续回流至内容库</text>
+
+  <path d="M550 1595 L550 1614" class="arrow"/>
+
+  <!-- Evaluation and governance -->
+  <rect x="60" y="1620" width="980" height="176" rx="16" class="govern"/>
+  <text x="88" y="1653" class="group-title">科研评测与横向治理</text>
+
+  <rect x="90" y="1673" width="445" height="96" rx="11" class="govern"/>
+  <text x="312" y="1699" text-anchor="middle" class="node-title">独立 Benchmark 与实证评估</text>
+  <text x="312" y="1723" text-anchor="middle" class="small">题族隔离的开发/保留测试；双人标注与分歧仲裁</text>
+  <text x="312" y="1746" text-anchor="middle" class="small">基线对照、错误分析、离线回放与真人试用</text>
+
+  <rect x="565" y="1673" width="445" height="96" rx="11" class="govern"/>
+  <text x="787" y="1699" text-anchor="middle" class="node-title">隐私、安全与版本审计</text>
+  <text x="787" y="1723" text-anchor="middle" class="small">知情同意、最小化采集、脱敏、权限与数据隔离</text>
+  <text x="787" y="1746" text-anchor="middle" class="small">内容、提示词、模型、人工修改与输出版本可追溯</text>
+
+  <text x="550" y="1822" text-anchor="middle" class="tiny">目标结构按“内容—诊断—证据—训练—复查—评测”闭环组织</text>
+</svg>
