@@ -1,8 +1,15 @@
-# Use only after 150.chat has passed ICP filing and points to this server.
+# 150.chat has passed ICP filing. Install deploy/public/index.html to
+# /var/www/study-agent-public/index.html before loading this config.
 # Ubuntu 26.04 ships Caddy 2.6, which uses `basicauth`.
 150.chat {
-	basicauth {
-		studyadmin REPLACE_WITH_CADDY_HASH_PASSWORD_OUTPUT
+	handle / {
+		root * /var/www/study-agent-public
+		file_server
 	}
-	reverse_proxy 127.0.0.1:8000
+	handle {
+		basicauth {
+			studyadmin REPLACE_WITH_CADDY_HASH_PASSWORD_OUTPUT
+		}
+		reverse_proxy 127.0.0.1:8000
+	}
 }
