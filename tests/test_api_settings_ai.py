@@ -41,6 +41,24 @@ class SettingsApiTest(ApiTestCase):
         resp = self.client.post("/settings/test", json={"provider": "unknown"})
         self.assertFalse(resp.json()["ok"])
 
+    def test_legacy_connection_test_uses_shared_provider_slot_and_timeout(self):
+        from backend import jobs
+        def response(*args, **kwargs):
+            self.assertEqual(jobs.provider_active_count(), 1)
+            self.assertEqual(kwargs["timeout"], 4.5)
+            return type("Response", (), {"status_code": 200})()
+        with patch("backend.settings.get_api", return_value={"deepseek": {"base_url": "https://example.invalid/v1"}}), \
+                patch("backend.settings.get_api_key", return_value="test-only-key"), \
+                patch("backend.jobs.provider_slot", wraps=jobs.provider_slot) as slot, \
+                patch("backend.jobs.request_timeout", return_value=4.5) as timeout, \
+                patch("httpx.get", side_effect=response):
+            resp = self.client.post("/settings/test", json={"provider": "deepseek"})
+        self.assertEqual(resp.status_code, 200)
+        self.assertEqual(resp.json(), {"ok": True, "provider": "deepseek"})
+        slot.assert_called_once_with("deepseek")
+        timeout.assert_called_once_with(15)
+        self.assertEqual(jobs.provider_active_count(), 0)
+
 
 class GenerateApiTest(ApiTestCase):
     def test_generate_variants(self):

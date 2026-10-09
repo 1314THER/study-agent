@@ -6,6 +6,7 @@ from datetime import date, datetime, timedelta
 import yaml
 
 from backend.categories import CATEGORIES
+from backend.data_paths import data_path
 from backend.patterns import get_boards, get_patterns, set_pattern_schedule
 
 
@@ -19,10 +20,11 @@ TEMPLATES = {
 
 
 def _load_config():
-    if not os.path.exists(CONFIG_PATH):
+    path = data_path("board_order.yaml", CONFIG_PATH)
+    if not os.path.exists(path):
         return {"board_order": []}
     try:
-        with open(CONFIG_PATH, encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
         return data if isinstance(data, dict) else {}
     except Exception:
@@ -30,7 +32,8 @@ def _load_config():
 
 
 def _save_config(data):
-    tmp = CONFIG_PATH + ".tmp"
+    path = data_path("board_order.yaml", CONFIG_PATH)
+    tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         f.write(
             "# 板块顺序配置\n"
@@ -38,7 +41,7 @@ def _save_config(data):
             "# nodes 留空时，规划器按闯关地图的连线做拓扑排序兜底。\n"
         )
         yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False)
-    os.replace(tmp, CONFIG_PATH)
+    os.replace(tmp, path)
 
 
 def get_board_order_config():

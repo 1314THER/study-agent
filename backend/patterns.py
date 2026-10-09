@@ -11,6 +11,7 @@ import yaml
 
 from backend.categories import CATEGORIES
 from backend.database import get_question_by_id, update_question_source
+from backend.data_paths import data_path
 import backend.settings as runtime_settings
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -48,25 +49,27 @@ _YAML_HEADER = """# 母题库：一级标题与 backend/categories.yaml 保持�
 
 
 def _get_conn():
-    conn = sqlite3.connect(MASTERY_DB)
+    conn = sqlite3.connect(data_path("mastery.db", MASTERY_DB))
     conn.row_factory = sqlite3.Row
     return conn
 
 
 def _load_yaml() -> dict:
-    if not os.path.exists(PATTERNS_YAML):
+    path = data_path("patterns.yaml", PATTERNS_YAML)
+    if not os.path.exists(path):
         return {}
-    with open(PATTERNS_YAML, encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         data = yaml.safe_load(f)
     return data if isinstance(data, dict) else {}
 
 
 def _save_yaml(data: dict) -> None:
-    tmp = PATTERNS_YAML + ".tmp"
+    path = data_path("patterns.yaml", PATTERNS_YAML)
+    tmp = path + ".tmp"
     with open(tmp, "w", encoding="utf-8") as f:
         f.write(_YAML_HEADER)
         yaml.safe_dump(data, f, allow_unicode=True, sort_keys=False, default_flow_style=False)
-    os.replace(tmp, PATTERNS_YAML)
+    os.replace(tmp, path)
 
 
 def _now_str() -> str:
@@ -209,6 +212,24 @@ def init_mastery_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_attempts_question ON attempts(question_id);
             CREATE INDEX IF NOT EXISTS idx_attempts_pattern ON attempts(pattern_id);
             CREATE INDEX IF NOT EXISTS idx_attempts_created ON attempts(created_at);
+
+            CREATE TABLE IF NOT EXISTS loop_rounds (
+                round_id TEXT PRIMARY KEY,
+                pattern_id INTEGER NOT NULL,
+                queue_json TEXT NOT NULL,
+                mother_only INTEGER NOT NULL DEFAULT 0,
+                current_index INTEGER NOT NULL DEFAULT 0,
+                session_failed INTEGER NOT NULL DEFAULT 0,
+                completed INTEGER NOT NULL DEFAULT 0,
+                pending_job TEXT,
+                updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS loop_job_results (
+                job_id TEXT PRIMARY KEY,
+                round_id TEXT NOT NULL,
+                result_json TEXT NOT NULL,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP
+            );
 
             CREATE TABLE IF NOT EXISTS boards (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -591,54 +612,59 @@ def add_variant_question(pattern_id: int, question_id: int, role: str) -> None:
         conn.close()
 
 
+def _complete_pattern_loop(conn, pattern_id: int, passed: bool) -> dict:
+    row = conn.execute("SELECT * FROM pattern_mastery WHERE pattern_id = ?", (pattern_id,)).fetchone()
+    state = row["state"] if row else STATE_NEVER
+    if passed:
+        next_state = {
+            STATE_NEVER: STATE_FIRST_PASS,
+            STATE_FIRST_PASS: STATE_SECOND_PASS,
+            STATE_SECOND_PASS: STATE_THIRD_PASS,
+            STATE_THIRD_PASS: STATE_THIRD_PASS,
+            STATE_AGAIN_WRONG: STATE_SECOND_PASS,
+        }.get(state, STATE_FIRST_PASS)
+        if next_state == STATE_FIRST_PASS:
+            next_check = _future_str(1)
+        elif next_state == STATE_SECOND_PASS:
+            next_check = _future_str(7)
+        else:
+            next_check = _future_str(30)
+        need_check = 1
+    else:
+        next_state = STATE_NEVER
+        next_check = _now_str()
+        need_check = 1
+    conn.execute(
+        """INSERT INTO pattern_mastery
+           (pattern_id, state, need_check, next_check_at, last_completed_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+           ON CONFLICT(pattern_id) DO UPDATE SET
+             state = excluded.state,
+             need_check = excluded.need_check,
+             next_check_at = excluded.next_check_at,
+             last_completed_at = excluded.last_completed_at,
+             updated_at = CURRENT_TIMESTAMP""",
+        (pattern_id, next_state, need_check, next_check, _now_str()),
+    )
+    cat_row = conn.execute("SELECT category FROM patterns WHERE id = ?", (pattern_id,)).fetchone()
+    if cat_row:
+        _recalc_category_mastery(conn, cat_row["category"])
+    return {
+        "pattern_id": pattern_id,
+        "state": next_state,
+        "need_check": need_check,
+        "next_check_at": next_check,
+    }
+
+
 def complete_pattern_loop(pattern_id: int, passed: bool) -> dict:
     """母题循环结果回写。passed=False 表示循环中出错，一律回到 never。"""
     init_mastery_db()
     conn = _get_conn()
     try:
-        row = conn.execute("SELECT * FROM pattern_mastery WHERE pattern_id = ?", (pattern_id,)).fetchone()
-        state = row["state"] if row else STATE_NEVER
-        if passed:
-            next_state = {
-                STATE_NEVER: STATE_FIRST_PASS,
-                STATE_FIRST_PASS: STATE_SECOND_PASS,
-                STATE_SECOND_PASS: STATE_THIRD_PASS,
-                STATE_THIRD_PASS: STATE_THIRD_PASS,
-                STATE_AGAIN_WRONG: STATE_SECOND_PASS,
-            }.get(state, STATE_FIRST_PASS)
-            if next_state == STATE_FIRST_PASS:
-                next_check = _future_str(1)
-            elif next_state == STATE_SECOND_PASS:
-                next_check = _future_str(7)
-            else:
-                next_check = _future_str(30)
-            need_check = 1
-        else:
-            next_state = STATE_NEVER
-            next_check = _now_str()
-            need_check = 1
-        conn.execute(
-            """INSERT INTO pattern_mastery
-               (pattern_id, state, need_check, next_check_at, last_completed_at, updated_at)
-               VALUES (?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-               ON CONFLICT(pattern_id) DO UPDATE SET
-                 state = excluded.state,
-                 need_check = excluded.need_check,
-                 next_check_at = excluded.next_check_at,
-                 last_completed_at = excluded.last_completed_at,
-                 updated_at = CURRENT_TIMESTAMP""",
-            (pattern_id, next_state, need_check, next_check, _now_str()),
-        )
-        cat_row = conn.execute("SELECT category FROM patterns WHERE id = ?", (pattern_id,)).fetchone()
-        if cat_row:
-            _recalc_category_mastery(conn, cat_row["category"])
+        result = _complete_pattern_loop(conn, pattern_id, passed)
         conn.commit()
-        return {
-            "pattern_id": pattern_id,
-            "state": next_state,
-            "need_check": need_check,
-            "next_check_at": next_check,
-        }
+        return result
     finally:
         conn.close()
 
@@ -861,7 +887,7 @@ def mark_pattern_wrong(pattern_id: int, question_id: int = None) -> dict:
 
 
 def delete_question_links(question_id: int) -> None:
-    if not os.path.exists(MASTERY_DB):
+    if not os.path.exists(data_path("mastery.db", MASTERY_DB)):
         return
     conn = _get_conn()
     try:
@@ -925,6 +951,128 @@ def sync_mother_questions() -> dict:
     if synced:
         export_patterns_yaml()
     return {"synced": synced}
+
+
+class LoopConflict(ValueError):
+    pass
+
+
+def _actual_loop_queue(conn, pattern_id):
+    if not conn.execute("SELECT id FROM patterns WHERE id=?", (pattern_id,)).fetchone():
+        raise LoopConflict("套路不存在，请重新选择。")
+    linked = {row["role"]: row["question_id"] for row in conn.execute(
+        "SELECT role,question_id FROM pattern_questions WHERE pattern_id=?", (pattern_id,))}
+    if not linked.get("mother"):
+        raise LoopConflict("该套路还没有母题。")
+    return [{"role": role, "question_id": linked[role]} for role in ("mother", "variant1", "variant2", "variant3") if linked.get(role)]
+
+
+def reserve_loop_grade(loop, question_id, job_id):
+    """Validate and reserve one server-owned turn before a paid grade call."""
+    init_mastery_db()
+    conn = _get_conn()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        actual = _actual_loop_queue(conn, loop["pattern_id"])
+        queue = loop["queue"]
+        if any(item not in actual for item in queue):
+            raise LoopConflict("套路题目或角色已变更，请重新进入循环。")
+        row = conn.execute("SELECT * FROM loop_rounds WHERE round_id=?", (loop["round_id"],)).fetchone()
+        if row is None:
+            mastery = conn.execute("SELECT state FROM pattern_mastery WHERE pattern_id=?", (loop["pattern_id"],)).fetchone()
+            never = mastery is None or mastery["state"] == STATE_NEVER
+            if loop["mother_only"]:
+                if len(actual) == 4:
+                    raise LoopConflict("当前套路需要按完整挑战顺序作答。")
+                expected = actual[:1]
+            elif never:
+                if len(actual) != 4:
+                    raise LoopConflict("还缺少变式题，请先生成变式或只挑战母题。")
+                expected = actual
+            else:
+                # A previously mastered pattern may also use a full round
+                # after a failed challenge; every linked role still has to be
+                # completed in order, so this never skips the required steps.
+                expected = actual if len(actual) == 4 and queue == actual else actual[:1]
+            if queue != expected or loop["queue_index"] != 0:
+                raise LoopConflict("挑战队列不符合当前套路状态，请重新进入循环。")
+            conn.execute("INSERT INTO loop_rounds (round_id,pattern_id,queue_json,mother_only) VALUES (?,?,?,?)",
+                         (loop["round_id"], loop["pattern_id"], json.dumps(queue, sort_keys=True), int(loop["mother_only"])))
+            row = conn.execute("SELECT * FROM loop_rounds WHERE round_id=?", (loop["round_id"],)).fetchone()
+        if (row["pattern_id"] != loop["pattern_id"] or json.loads(row["queue_json"]) != queue
+                or bool(row["mother_only"]) != loop["mother_only"]):
+            raise LoopConflict("本轮挑战信息已改变，请重新进入循环。")
+        if row["completed"] or row["current_index"] != loop["queue_index"]:
+            raise LoopConflict("这道题已处理，请恢复后台结果后继续。")
+        if queue[row["current_index"]]["question_id"] != question_id:
+            raise LoopConflict("请按当前挑战顺序提交答案。")
+        # Different tabs can create distinct round IDs. They still cannot pay
+        # for two simultaneous turns of the same pattern or advance it twice.
+        from backend.jobs import get_job, TERMINAL
+        for pending in conn.execute("SELECT round_id,pending_job FROM loop_rounds WHERE pattern_id=? AND pending_job IS NOT NULL",
+                                    (loop["pattern_id"],)).fetchall():
+            if pending["pending_job"] == job_id:
+                continue
+            old = get_job(pending["pending_job"])
+            if old and old["status"] not in TERMINAL:
+                raise LoopConflict("本题仍在后台判分，请等待完成。")
+            conn.execute("UPDATE loop_rounds SET pending_job=NULL WHERE round_id=?", (pending["round_id"],))
+        conn.execute("UPDATE loop_rounds SET pending_job=?,updated_at=CURRENT_TIMESTAMP WHERE round_id=?",
+                     (job_id, loop["round_id"]))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def release_loop_grade(loop, job_id):
+    conn = _get_conn()
+    try:
+        conn.execute("UPDATE loop_rounds SET pending_job=NULL WHERE round_id=? AND pending_job=?", (loop["round_id"], job_id))
+        conn.commit()
+    finally:
+        conn.close()
+
+
+def commit_loop_grade(loop, question_id, job_id, correct, duration_seconds):
+    """Commit attempt, round position and mastery together, once per job."""
+    conn = _get_conn()
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        previous = conn.execute("SELECT result_json FROM loop_job_results WHERE job_id=?", (job_id,)).fetchone()
+        if previous:
+            return json.loads(previous["result_json"])
+        row = conn.execute("SELECT * FROM loop_rounds WHERE round_id=?", (loop["round_id"],)).fetchone()
+        if not row or row["pending_job"] != job_id or row["current_index"] != loop["queue_index"] or row["completed"]:
+            raise LoopConflict("挑战步骤已改变，请恢复最新后台结果。")
+        queue = json.loads(row["queue_json"])
+        current = queue[row["current_index"]]
+        if current not in _actual_loop_queue(conn, row["pattern_id"]) or current["question_id"] != question_id:
+            raise LoopConflict("套路题目已更换，本次未更新掌握状态。")
+        attempts = [json.loads(item["result_json"]) for item in conn.execute(
+            "SELECT result_json FROM loop_job_results WHERE round_id=?", (loop["round_id"],))]
+        first_try = not any(item["queue_index"] == row["current_index"] for item in attempts)
+        cur = conn.execute("INSERT INTO attempts (question_id,pattern_id,role,correct,is_first_try,duration_seconds) VALUES (?,?,?,?,?,?)",
+                           (question_id, row["pattern_id"], current["role"], int(correct), int(first_try), int(duration_seconds or 0)))
+        next_index = row["current_index"] + int(correct)
+        ended = correct and next_index == len(queue)
+        needs_variants = bool(ended and row["mother_only"])
+        completed = bool(ended and not needs_variants)
+        mastery = None
+        if not correct or completed:
+            mastery = _complete_pattern_loop(conn, row["pattern_id"], completed)
+        result = {"round_id": loop["round_id"], "pattern_id": row["pattern_id"], "queue": queue,
+                  "queue_index": row["current_index"], "next_index": next_index, "mother_only": bool(row["mother_only"]),
+                  "session_failed": bool(row["session_failed"] or not correct), "attempt_id": cur.lastrowid,
+                  "elapsed_seconds": loop["elapsed_seconds"],
+                  "completed": completed, "needs_variants": needs_variants, "mastery": mastery}
+        conn.execute("UPDATE loop_rounds SET current_index=?,session_failed=?,completed=?,pending_job=NULL,updated_at=CURRENT_TIMESTAMP WHERE round_id=?",
+                     (next_index, int(result["session_failed"]), int(ended), loop["round_id"]))
+        conn.execute("INSERT INTO loop_job_results (job_id,round_id,result_json) VALUES (?,?,?)",
+                     (job_id, loop["round_id"], json.dumps(result, ensure_ascii=False)))
+        conn.commit()
+        return result
+    finally:
+        conn.close()
 
 
 def get_pattern_loop(pattern_id: int) -> dict:

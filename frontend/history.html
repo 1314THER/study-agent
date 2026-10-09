@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="/jobs.js?v=20261009a"></script>
 <script>document.documentElement.classList.add("nav-init")</script>
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache">
@@ -2096,7 +2097,7 @@ function safeParseKps(kps){
                         if (pj.status === 'done') {
                             _aiGenTimer = null;
                             renderAiGenResult(pj.result);
-                        } else if (pj.status === 'error') {
+                        } else if (pj.status === 'error' || pj.status === 'interrupted') {
                             _aiGenTimer = null;
                             ct.innerHTML = aiGenErrorHtml(pj.detail || pj.error || '生成失败');
                         } else {
@@ -2224,6 +2225,6 @@ function safeParseKps(kps){
 
 <!-- Save to Lists Dialog (generated dynamically by JS) -->
 
-<script src="nav.js?v=20260809e"></script>
+<script src="nav.js?v=20261004a"></script>
 </body>
 </html>

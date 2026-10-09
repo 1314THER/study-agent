@@ -1,9 +1,12 @@
 import json
 import logging
+import os
+import threading
 
 from fastapi import FastAPI, UploadFile, Query
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse, StreamingResponse
+from starlette.concurrency import run_in_threadpool
 
 from pydantic import BaseModel, Field
 from typing import Optional, List
@@ -27,6 +30,69 @@ setup_logging()
 logger = logging.getLogger("backend.main")
 
 app = FastAPI(title="你好，我是张雪峰老师")
+_deploy_lock = threading.Lock()
+_active_requests = 0
+_deploy_draining = os.environ.get("STUDY_DEPLOY_DRAIN", "0") == "1"
+
+
+@app.middleware("http")
+async def deployment_guard(request, call_next):
+    global _active_requests
+    from fastapi.responses import JSONResponse
+    internal = request.url.path.startswith("/_internal/")
+    if internal:
+        if not request.client or request.client.host not in ("127.0.0.1", "::1", "testclient") or any(
+            name in request.headers for name in ("x-forwarded-for", "forwarded", "x-study-demo-client")
+        ):
+            return JSONResponse({"detail": "Not found"}, status_code=404)
+        return await call_next(request)
+    if request.url.path == "/health":
+        return await call_next(request)
+    with _deploy_lock:
+        if _deploy_draining and request.method not in ("GET", "HEAD", "OPTIONS"):
+            return JSONResponse({"detail": "网站正在更新，请稍后再试。"}, status_code=503)
+        _active_requests += 1
+    try:
+        response = await call_next(request)
+    except BaseException:
+        with _deploy_lock:
+            _active_requests -= 1
+        raise
+    original = response.body_iterator
+    async def counted_body():
+        global _active_requests
+        try:
+            async for chunk in original:
+                yield chunk
+        finally:
+            with _deploy_lock:
+                _active_requests -= 1
+    response.body_iterator = counted_body()
+    return response
+
+
+@app.get("/health")
+def health():
+    return {"mode": "owner", "ok": True}
+
+
+@app.get("/_internal/deploy-status")
+def deploy_status():
+    from backend.jobs import active_count, provider_active_count
+    with _deploy_lock:
+        active = _active_requests
+    return {"active_requests": active + provider_active_count(), "active_jobs": active_count(),
+            "draining": _deploy_draining, "mode": "demo" if os.environ.get("STUDY_DEMO_ROOT") else "owner"}
+
+
+@app.post("/_internal/deploy-drain")
+def deploy_drain(payload: dict):
+    global _deploy_draining
+    from backend.jobs import set_draining
+    with _deploy_lock:
+        _deploy_draining = bool(payload.get("draining"))
+        set_draining(_deploy_draining)
+    return deploy_status()
 
 
 @app.middleware("http")
@@ -836,6 +902,7 @@ def api_ai_assemble(req: AiAssembleRequest):
 async def api_multimodal_parse(file: UploadFile):
     """上传文件，解析为 LaTeX 题目列表"""
     import tempfile, os, shutil
+    from fastapi import HTTPException
     
     ext = os.path.splitext(file.filename or "upload")[1].lower()
     if ext not in get_supported_extensions():
@@ -843,12 +910,19 @@ async def api_multimodal_parse(file: UploadFile):
     
     # 保存到临时文件
     tmp_dir = tempfile.mkdtemp()
-    tmp_path = os.path.join(tmp_dir, file.filename or f"upload{ext}")
+    tmp_path = os.path.join(tmp_dir, f"upload{ext}")
     try:
         with open(tmp_path, "wb") as f:
-            shutil.copyfileobj(file.file, f)
-        questions = parse_file(tmp_path, file.filename or "")
+            total = 0
+            while chunk := await file.read(1024 * 1024):
+                total += len(chunk)
+                if total > 16 * 1024 * 1024:
+                    raise HTTPException(status_code=413, detail="文件过大：最多 16 MiB")
+                f.write(chunk)
+        questions = await run_in_threadpool(parse_file, tmp_path, file.filename or "")
         return {"questions": questions, "total": len(questions)}
+    except HTTPException:
+        raise
     except Exception as e:
         return {"error": str(e)}
     finally:
@@ -859,6 +933,7 @@ async def api_multimodal_parse(file: UploadFile):
 async def api_ocr_answer(file: UploadFile):
     """识别手写作答图片，返回识别文本与置信度。"""
     import tempfile, os, shutil
+    from fastapi import HTTPException
 
     ext = os.path.splitext(file.filename or "upload")[1].lower()
     if ext not in (".jpg", ".jpeg", ".png"):
@@ -868,9 +943,16 @@ async def api_ocr_answer(file: UploadFile):
     tmp_path = os.path.join(tmp_dir, f"answer{ext}")
     try:
         with open(tmp_path, "wb") as f:
-            shutil.copyfileobj(file.file, f)
+            total = 0
+            while chunk := await file.read(1024 * 1024):
+                total += len(chunk)
+                if total > 16 * 1024 * 1024:
+                    raise HTTPException(status_code=413, detail="文件过大：最多 16 MiB")
+                f.write(chunk)
         from backend.multimodal import recognize_answer_image
-        return recognize_answer_image(tmp_path)
+        return await run_in_threadpool(recognize_answer_image, tmp_path)
+    except HTTPException:
+        raise
     except Exception as e:
         return {"error": "ocr_failed", "detail": str(e)}
     finally:
@@ -1251,6 +1333,10 @@ def _sanitize_settings_patch(patch):
 def _public_settings(data: dict) -> dict:
     import copy
     out = copy.deepcopy(data)
+    if runtime_settings.shared_ai_enabled():
+        out["api"] = copy.deepcopy(runtime_settings.get_api())
+        out["teachers"] = copy.deepcopy(runtime_settings.get_teachers())
+        out["limits"] = copy.deepcopy(runtime_settings.get_limits())
     api = out.get("api") or {}
     for provider in ("deepseek", "dashscope"):
         cfg = api.get(provider)
@@ -1258,9 +1344,9 @@ def _public_settings(data: dict) -> dict:
             continue
         stored = (data.get("api") or {}).get(provider, {}).get("api_key") or ""
         resolved = runtime_settings.get_api_key(provider)
-        cfg["api_key"] = runtime_settings.mask_key(resolved)
+        cfg["api_key"] = "" if runtime_settings.shared_ai_enabled() else runtime_settings.mask_key(resolved)
         cfg["has_key"] = bool(resolved)
-        cfg["key_source"] = "settings" if stored else ("env" if resolved else "")
+        cfg["key_source"] = "demo" if resolved and runtime_settings.shared_ai_enabled() else ("settings" if stored else ("env" if resolved else ""))
     return out
 
 
@@ -1286,6 +1372,7 @@ def api_reset_settings():
 def api_test_settings(req: SettingsTestRequest):
     """用当前保存的地址与密钥测试 API 连通性。"""
     import httpx
+    from backend.jobs import provider_slot, request_timeout
     if req.provider not in ("deepseek", "dashscope"):
         return {"ok": False, "error": "未知 provider"}
     api = runtime_settings.get_api()
@@ -1297,11 +1384,12 @@ def api_test_settings(req: SettingsTestRequest):
     if not base_url:
         return {"ok": False, "error": "未配置 API 地址"}
     try:
-        resp = httpx.get(
-            base_url + "/models",
-            headers={"Authorization": f"Bearer {key}"},
-            timeout=15,
-        )
+        with provider_slot(req.provider):
+            resp = httpx.get(
+                base_url + "/models",
+                headers={"Authorization": f"Bearer {key}"},
+                timeout=request_timeout(15),
+            )
         if resp.status_code == 200:
             return {"ok": True, "provider": req.provider}
         return {"ok": False, "error": f"HTTP {resp.status_code}: {resp.text[:120]}"}
@@ -1311,7 +1399,14 @@ def api_test_settings(req: SettingsTestRequest):
 
 # ---- Static files: serve frontend (must be last) ----
 
-import os
+from backend.jobs import router as jobs_router
+app.include_router(jobs_router)
+
+@app.get("/demo/presets")
+def demo_presets():
+    from backend.demo_presets import public_presets
+    return {"presets": public_presets()}
+
 _frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 if os.path.isdir(_frontend_path):
     app.mount("/", StaticFiles(directory=_frontend_path, html=True), name="frontend")

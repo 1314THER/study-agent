@@ -661,12 +661,14 @@ def _call_llm_messages(messages, temperature=0.4):
         "max_tokens": max_tokens,
     }
     try:
-        resp = httpx.post(
-            endpoint,
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json=body,
-            timeout=20,
-        )
+        from backend.jobs import provider_slot, request_timeout
+        with provider_slot("deepseek"):
+            resp = httpx.post(
+                endpoint,
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json=body,
+                timeout=request_timeout(20),
+            )
         if resp.status_code != 200:
             return None
         return resp.json()["choices"][0]["message"]["content"]

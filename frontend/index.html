@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="/jobs.js?v=20261005a"></script>
 <script>document.documentElement.classList.add("nav-init")</script>
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache">
@@ -321,7 +322,7 @@ var _selectedTeacher = "liangliang";
             } else if (reason.indexOf('错题') >= 0) {
                 formatted = '这个题是错题';
             }
-            formatted += '<br>张雪峰老师，我还记得你～';
+            if(!window.STUDY_DEMO)formatted += '<br>张雪峰老师，我还记得你～';
             var html = '<div class="xuebile"><div class="xuebile-icon">💀</div><div class="xuebile-title">雪碧了</div><div class="xuebile-reason">' + formatted + '</div></div>';
             result.innerHTML = html;
             result.classList.add('show'); result.style.display = 'block';
@@ -367,7 +368,7 @@ var _selectedTeacher = "liangliang";
                     timerEl.textContent = '已思考 ' + elapsed + 's';
                     if (!_timeoutAdded) {
                         _timeoutAdded = true;
-                        document.getElementById('progressText').innerHTML += '<br>你做不过我你信吗';
+                        document.getElementById('progressText').textContent += '，可先体验其他页面。';
                     }
                 } else {
                     timerEl.textContent = '已思考 ' + elapsed + 's/180s';
@@ -389,94 +390,51 @@ var _selectedTeacher = "liangliang";
             return true;
         }
 
-        async function solveQuestion() {
-            const input = document.getElementById('questionInput');
-            const result = document.getElementById('result');
-            const btn = document.getElementById('searchBtn');
-            const question = input.value.trim();
-            _lastQuestion = question;
-            localStorage.setItem('solve_input', question);
-            if (!question) { alert('请输入题目'); return; }
-            if (!isValidQuestion(question)) {
-                result.classList.remove('show');
-                result.innerHTML = '<div class="xuebile"><div class="xuebile-icon">💀</div><div class="xuebile-title">雪碧了</div><div class="xuebile-reason">这个题不是数学题<br>张雪峰老师，我还记得你～</div></div>';
-                result.style.display = 'block';
-                return;
+        function resumeSolveJob(data, job) {
+            _lastResult=data;
+            if(job&&job.args&&job.args.question){_lastQuestion=job.args.question;document.getElementById('questionInput').value=_lastQuestion;}
+            var tokens=data.token_usage&&data.token_usage.total_tokens||0;
+            stopStepTimer();setProgress(100,'完成',tokens);
+            if(data.error&&!data.chunk_results){displayXuebile(data);return;}
+            _lastQuestionId=data.saved_question_id||null;
+            displayResult(data,tokens);
+            if(data.source==='prepared_cache'){
+                var note=document.createElement('p');note.className='study-job-cache';note.textContent='预先准备的示例解析 · 本次实时 AI 未在 300 秒内完成。';document.getElementById('result').prepend(note);
             }
-            result.classList.remove('show');
-            btn.disabled = true;
-
-            const area = document.getElementById('progressArea');
-            const tokenEl = document.getElementById('progressToken');
-            tokenEl.style.display = 'none';
-            area.classList.add('show');
-
-            var totalTokens = 0;
-
-            try {
-                // Step 1: Solver
-                var tn = teacherNames[_selectedTeacher] || 'AI';
-                setProgress(13, tn + ' 正在思考', 0);
-                startStepTimer();
-                const r1 = await fetch('/solve/step1', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question: question, question_type: _selectedType || null, teacher: _selectedTeacher })
-                });
-                const d1 = await r1.json();
-                if (d1.error) { stopStepTimer(); setProgress(100, '雪碧了'); displayXuebile(d1); return; }
-                totalTokens += (d1.token_usage?.total_tokens || 0);
-
-                // Step 2: Verifier
-                setProgress(78, tn + ' 正在分类知识点', totalTokens);
-                const r2 = await fetch('/solve/step2', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question: question, content: d1.content, category: d1.category || null, question_type: _selectedType || null, teacher: _selectedTeacher })
-                });
-                const d2 = await r2.json();
-                if (d2.error) { stopStepTimer(); setProgress(100, '雪碧了'); displayXuebile(d2); return; }
-                totalTokens += (d2.token_usage?.total_tokens || 0);
-
-                // Step 3: Formatter
-                setProgress(91, tn + ' 正在检查', totalTokens);
-                const r3 = await fetch('/solve/step3', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ question: question, chunk_results: JSON.stringify(d2.chunk_results), teacher: _selectedTeacher, save: document.getElementById('saveToggle').checked, content: d1.content, category: d1.category || null, question_type: _selectedType || null })
-                });
-                const d3 = await r3.json();
-                totalTokens += (d3.token_usage?.total_tokens || 0);
-
-                stopStepTimer();
-                setProgress(100, '完成', totalTokens);
-                if (d3.error && !d3.chunk_results) { displayXuebile(d3); return; }
-                _lastResult = d3;
-                document.getElementById('saveAfterArea').style.display = 'block';
-                document.getElementById('saveAfterBtn').textContent = '加入个人题库';
-                document.getElementById('saveAfterBtn').innerHTML = '<span class="btn-icon">📋</span><span>加入个人题库</span>';
-                document.getElementById('saveAfterBtn').disabled = false;
-                document.getElementById('saveAfterBtn').className = 'save-after-btn';
-                displayResult(d3, totalTokens);
-                if (d3.saved_question_id) {
-                    _lastQuestionId = d3.saved_question_id;
-                }
-                localStorage.setItem('solve_result', JSON.stringify({data: d3, totalTokens: totalTokens}));
-                setTimeout(function() {
-                    if (_lastQuestionId) refreshStepErrors();
-                    else initErrorStepButtons();
-                }, 100);
-            } catch (err) {
-                stopStepTimer();
-                console.error('请求失败:', err);
-                document.getElementById('saveAfterArea').style.display = 'none';
-                setProgress(100, '请求失败');
-                result.innerHTML = '<p style="color:red">请求失败: ' + err.message + '</p>';
-                result.classList.add('show'); result.style.display = 'block';
-            } finally {
-                btn.disabled = false;
-            }
+            document.getElementById('saveAfterArea').style.display='block';
+            document.getElementById('saveAfterBtn').disabled=false;
+            localStorage.setItem('solve_result',JSON.stringify({data:data,totalTokens:tokens}));
+            document.getElementById('searchBtn').disabled=false;
+            setTimeout(function(){if(_lastQuestionId)refreshStepErrors();else initErrorStepButtons();},100);
+            document.dispatchEvent(new CustomEvent('study:solve-ready',{detail:{result:data,job:job||null}}));
         }
+        function solveProgress(job){
+            document.getElementById('progressArea').classList.add('show');
+            setProgress(job.progress||5,job.detail||job.stage||'正在后台解题',0);
+        }
+        async function solveQuestion() {
+            var question=document.getElementById('questionInput').value.trim();
+            if(!question){alert('请输入题目');return;}
+            _lastQuestion=question;localStorage.setItem('solve_input',question);localStorage.removeItem('solve_result');
+            var btn=document.getElementById('searchBtn');btn.disabled=true;
+            document.getElementById('result').style.display='none';startStepTimer();
+            var args={question:question,question_type:_selectedType||null,teacher:_selectedTeacher,save:document.getElementById('saveToggle').checked};
+            if(window.StudyDemoPresets&&StudyDemoPresets.isUnchanged()){var preset=StudyDemoPresets.selected();if(preset)args.preset_id=preset.id;}
+            try{var data=await StudyJobs.submit('solve',args,{key:'solve',onProgress:solveProgress});resumeSolveJob(data);}
+            catch(e){stopStepTimer();setProgress(100,'任务失败');var result=document.getElementById('result');result.textContent=e.message;result.style.display='block';result.classList.add('show');}
+            finally{btn.disabled=false;}
+        }
+        document.addEventListener('DOMContentLoaded',async function(){
+            var jobId=new URLSearchParams(location.search).get('job');
+            try{
+                var record=StudyJobs.read('solve');
+                if(!jobId&&(!record||!record.job_id))return;
+                var job=await StudyJobs.get(jobId||(record&&record.job_id));if(job.kind!=='solve')return;
+                if(job.args&&job.args.question){_lastQuestion=job.args.question;document.getElementById('questionInput').value=_lastQuestion;localStorage.setItem('solve_input',_lastQuestion);}
+                if(job.status==='done'){resumeSolveJob(job.result,job);return;}
+                if(['running','queued'].includes(job.status)){document.getElementById('searchBtn').disabled=true;startStepTimer();var data=await StudyJobs.wait(job,solveProgress);resumeSolveJob(data,job);}
+            }catch(e){stopStepTimer();document.getElementById('searchBtn').disabled=false;}
+        });
 
 // ---- localStorage Persistence ----
 async function saveAfterSolve() {
@@ -1067,6 +1025,6 @@ document.getElementById('searchBtn').addEventListener('click', function() {
     </div>
 </div>
 
-<script src="nav.js?v=20260809e"></script>
+<script src="nav.js?v=20261004a"></script>
 </body>
 </html>

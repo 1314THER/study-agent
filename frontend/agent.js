@@ -189,7 +189,7 @@
 
     function navigate(a) {
         var map = {
-            home: 'home.html', solve: 'index.html', multimodal: 'multimodal.html',
+            home: 'home.html', solve: window.STUDY_DEMO ? 'multimodal.html' : 'index.html', multimodal: 'multimodal.html',
             teach: 'teach.html', history: 'history.html', exam: 'exam.html',
             grade: 'grade.html', settings: 'settings.html', mother: 'mother.html',
             loop: 'loop.html', calendar: 'calendar.html', board: 'board.html', 'level-editor': 'level-editor.html'
@@ -197,8 +197,13 @@
         var p = a.params || {};
         var url = map[a.page] || 'home.html';
         if (a.page === 'solve' && p.input) {
-            localStorage.setItem('solve_input', String(p.input));
-            url = 'index.html?auto=1';
+            if (window.STUDY_DEMO) {
+                localStorage.setItem('_mm_coach_input', String(p.input));
+                url = 'multimodal.html';
+            } else {
+                localStorage.setItem('solve_input', String(p.input));
+                url = 'index.html?auto=1';
+            }
         }
         if (a.page === 'history' && p.qid) {
             localStorage.setItem('_open_question_id', String(p.qid));
@@ -229,6 +234,11 @@
     }
 
     function startSolve(question) {
+        if (window.STUDY_DEMO) {
+            if (question) localStorage.setItem('_mm_coach_input', String(question));
+            location.href = 'multimodal.html';
+            return;
+        }
         if (question) {
             localStorage.setItem('solve_input', String(question));
             location.href = 'index.html?auto=1';
@@ -506,40 +516,17 @@
                 pushHistory('assistant', reply);
                 renderBlocks(data.blocks || []);
                 if (data.context) updateHomeStats(data.context);
-                if (data.actions && data.actions.length) runActions(data.actions);
+                if (data.actions && data.actions.length) {
+                    var apply=document.createElement('button');apply.type='button';apply.textContent='打开相关功能';
+                    apply.addEventListener('click',function(){apply.disabled=true;runActions(data.actions);});bubble.appendChild(document.createElement('br'));bubble.appendChild(apply);
+                }
             }
         }
 
-        fetch(API_BASE + '/agent/act', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ message: text.trim(), history: chatHistory.slice(0, -1).slice(-MAX_HISTORY) })
-        })
-            .then(function (r) {
-                if (!r.ok || !r.body) throw new Error('bad response');
-                var reader = r.body.getReader();
-                var decoder = new TextDecoder('utf-8');
-                var buf = '';
-                function pump() {
-                    return reader.read().then(function (res) {
-                        if (res.done) return;
-                        buf += decoder.decode(res.value, { stream: true });
-                        var lines = buf.split('\n');
-                        buf = lines.pop();
-                        lines.forEach(function (line) {
-                            line = line.trim();
-                            if (!line) return;
-                            try {
-                                handleItem(JSON.parse(line));
-                            } catch (e) {}
-                        });
-                        return pump();
-                    });
-                }
-                return pump();
-            })
+        StudyJobs.submit('agent',{message:text.trim(),history:chatHistory.slice(0,-1).slice(-MAX_HISTORY)},{key:'agent',onProgress:function(job){bubble.textContent=job.detail||'教练正在后台处理，可以切换页面。';}})
+            .then(function(data){handleItem({type:'done',result:data});})
             .catch(function () {
-                bubble.textContent = '连接后端失败，请确认服务已启动。';
+                bubble.textContent = '任务未完成，可在后台任务查看原因并重试。';
             })
             .finally(function () {
                 state.busy = false;
@@ -644,12 +631,18 @@
             document.body.appendChild(widget);
             buildPanel(widget, true);
         }
+        var previous=StudyJobs.read('agent');
+        if(previous&&previous.job_id)StudyJobs.get(previous.job_id).then(function(j){return StudyJobs.wait(j);}).then(function(data){
+            var row=addMessage('agent',data.reply||'任务已完成');renderBlocks(data.blocks||[]);if(data.context)updateHomeStats(data.context);
+            if(data.actions&&data.actions.length){var button=document.createElement('button');button.textContent='打开相关功能';button.onclick=function(){button.disabled=true;runActions(data.actions);};row.querySelector('.agent-bubble').appendChild(button);}
+        }).catch(function(){});
     }
 
     window.AgentGlobal = {
         send: sendMessage,
         renderQuestions: renderQuestionCards,
         updateStats: updateHomeStats,
+        applyActions: runActions,
         API_BASE: API_BASE
     };
 

@@ -2,10 +2,14 @@
 
 设置保存在 backend/settings.json，保存后无需重启即热生效。
 API 密钥为空时回退到环境变量或 .env。
+游客启用共享 AI 时，仅使用管理员指定的只读配置，不继承主人的环境。
 """
 
 import json
 import os
+from copy import deepcopy
+
+from backend.data_paths import data_path, shared_ai_config_path, workspace_directory
 
 
 SETTINGS_PATH = os.path.join(os.path.dirname(__file__), "settings.json")
@@ -77,7 +81,8 @@ _ENV_KEYS = {
     "dashscope": "DASHSCOPE_API_KEY",
 }
 
-_cache = {"mtime": None, "data": None}
+# Indexed by the resolved file; visitors may have identically timestamped files.
+_cache = {}
 
 
 def _deep_merge(base, patch):
@@ -89,35 +94,87 @@ def _deep_merge(base, patch):
     return out
 
 
-def _read_file_settings():
-    if not os.path.exists(SETTINGS_PATH):
-        return DEFAULTS
+def _read_shared_ai_settings():
+    """Read trusted AI configuration without caching or copying its secrets.
+
+    Only a server environment variable selects this file. Visitor settings
+    cannot select it, change shared endpoints, or write back to it.
+    """
+    path = shared_ai_config_path()
+    if path is None:
+        return None
     try:
-        with open(SETTINGS_PATH, encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
-        return _deep_merge(DEFAULTS, data) if isinstance(data, dict) else DEFAULTS
+    except (OSError, ValueError):
+        # A configured but missing/invalid snapshot disables shared credentials;
+        # it must not silently switch to visitor-selected endpoints and keys.
+        return {}
+    if not isinstance(data, dict) or not isinstance(data.get("api"), dict):
+        return {}
+    return {
+        section: deepcopy(data[section])
+        for section in ("api", "teachers", "limits")
+        if isinstance(data.get(section), dict)
+    }
+
+
+def _shared_api(shared: dict) -> dict:
+    """Use trusted provider values exclusively, including their endpoints."""
+    api = deepcopy(DEFAULTS["api"])
+    for provider, defaults in api.items():
+        cfg = shared.get("api", {}).get(provider)
+        if isinstance(cfg, dict):
+            api[provider] = _deep_merge(defaults, cfg)
+    return api
+
+
+def shared_ai_enabled() -> bool:
+    """Whether this workspace can use at least one administrator AI key."""
+    shared = _read_shared_ai_settings()
+    if shared is None:
+        return False
+    return any(
+        isinstance(cfg.get("api_key"), str) and bool(cfg["api_key"].strip())
+        for cfg in _shared_api(shared).values()
+    )
+
+
+def _read_file_settings(path=None):
+    path = path if path is not None else data_path("settings.json", SETTINGS_PATH)
+    defaults = deepcopy(DEFAULTS)
+    if not os.path.exists(path):
+        return defaults
+    try:
+        with open(path, encoding="utf-8") as f:
+            data = json.load(f)
+        return _deep_merge(defaults, data) if isinstance(data, dict) else defaults
     except (json.JSONDecodeError, OSError):
-        return DEFAULTS
+        return defaults
 
 
 def get_settings() -> dict:
     """读取当前设置（带 mtime 缓存，保存后自动重新加载）。"""
-    mtime = os.path.getmtime(SETTINGS_PATH) if os.path.exists(SETTINGS_PATH) else 0
-    if _cache["mtime"] == mtime and _cache["data"] is not None:
-        return _cache["data"]
-    data = _read_file_settings()
-    _cache["mtime"] = mtime
-    _cache["data"] = data
+    path = os.path.abspath(data_path("settings.json", SETTINGS_PATH))
+    mtime = os.stat(path).st_mtime_ns if os.path.exists(path) else None
+    cached = _cache.get(path)
+    if cached and cached["mtime"] == mtime:
+        return cached["data"]
+    data = _read_file_settings(path)
+    _cache[path] = {"mtime": mtime, "data": data}
+    # Expired demo workspaces must not accumulate an unlimited settings cache.
+    if len(_cache) > 128:
+        _cache.pop(next(iter(_cache)))
     return data
 
 
 def _write_settings(data: dict) -> None:
-    tmp_path = SETTINGS_PATH + ".tmp"
+    path = os.path.abspath(data_path("settings.json", SETTINGS_PATH))
+    tmp_path = path + ".tmp"
     with open(tmp_path, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
-    os.replace(tmp_path, SETTINGS_PATH)
-    _cache["mtime"] = os.path.getmtime(SETTINGS_PATH)
-    _cache["data"] = data
+    os.replace(tmp_path, path)
+    _cache[path] = {"mtime": os.stat(path).st_mtime_ns, "data": data}
 
 
 def save_settings(patch: dict) -> dict:
@@ -129,8 +186,9 @@ def save_settings(patch: dict) -> dict:
 
 def reset_settings() -> dict:
     """恢复默认设置并落盘。"""
-    _write_settings(DEFAULTS)
-    return DEFAULTS
+    defaults = deepcopy(DEFAULTS)
+    _write_settings(defaults)
+    return defaults
 
 
 def get_scoring() -> dict:
@@ -138,6 +196,9 @@ def get_scoring() -> dict:
 
 
 def get_teachers() -> dict:
+    shared = _read_shared_ai_settings()
+    if shared is not None:
+        return _deep_merge(deepcopy(DEFAULTS["teachers"]), shared.get("teachers", {}))
     return get_settings().get("teachers") or DEFAULTS["teachers"]
 
 
@@ -148,20 +209,30 @@ def get_teacher_config(teacher: str) -> dict:
 
 
 def get_api() -> dict:
+    shared = _read_shared_ai_settings()
+    if shared is not None:
+        return _shared_api(shared)
     return get_settings().get("api") or DEFAULTS["api"]
 
 
 def get_limits() -> dict:
+    shared = _read_shared_ai_settings()
+    if shared is not None:
+        # Shared AI budgets and concurrency remain controlled by the owner.
+        return _deep_merge(deepcopy(DEFAULTS["limits"]), shared.get("limits", {}))
     return get_settings().get("limits") or DEFAULTS["limits"]
 
 
 def _read_env_key(name: str) -> str:
-    key = os.environ.get(name)
-    if key:
-        return key
-    if os.path.exists(_ENV_PATH):
+    # A demo workspace never inherits the owner's environment or project .env.
+    if workspace_directory() is None:
+        key = os.environ.get(name)
+        if key:
+            return key
+    env_path = data_path(".env", _ENV_PATH)
+    if os.path.exists(env_path):
         try:
-            with open(_ENV_PATH, encoding="utf-8") as f:
+            with open(env_path, encoding="utf-8") as f:
                 for line in f:
                     line = line.strip()
                     if line.startswith(name + "="):
@@ -173,6 +244,10 @@ def _read_env_key(name: str) -> str:
 
 def get_api_key(provider: str) -> str:
     """取指定 API 的密钥：设置文件优先，其次环境变量 / .env。"""
+    shared = _read_shared_ai_settings()
+    if shared is not None:
+        key = (_shared_api(shared).get(provider) or {}).get("api_key")
+        return key.strip() if isinstance(key, str) else ""
     api = get_api()
     cfg = api.get(provider) or {}
     key = cfg.get("api_key") or ""

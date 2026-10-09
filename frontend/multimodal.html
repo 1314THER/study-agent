@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN" style="overflow:hidden;height:100%;overscroll-behavior:none;">
 <head>
+<script src="/jobs.js?v=20261009a"></script>
 <script>document.documentElement.classList.add("nav-init")</script>
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache">
@@ -138,6 +139,7 @@ function safeParseKps(kps){
         <div class="container" style="max-width:1200px;">
             <h1>多模态解答</h1>
             <p class="subtitle" id="mmSubtitle">上传试卷 / 图片 / 文档，自动切题后勾选批量解答</p>
+            <div id="mmParseStatus" role="status" style="display:none;font-size:13px;line-height:1.7;margin-bottom:12px;white-space:pre-wrap;"></div>
 
             <div id="mmUploadArea">
                 <div class="mm-upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()" ondragover="onDropZoneDragOver(event)" ondragleave="onDropZoneDragLeave(event)" ondrop="onDropZoneDrop(event)">
@@ -237,6 +239,20 @@ var _pendingFiles = [];
 var _filePreviewUrls = [];
 var teacherNames = {liangliang:'梁梁',taotao:'韬韬',xuefeng:'雪峰',ji:'鸡'};
 var STORAGE_KEY = 'multimodal_state';
+var _parseAppliedJobs = {};
+function readParseGroup(id){try{var key=id||localStorage.getItem('mm_parse_current');return key?JSON.parse(localStorage.getItem('mm_parse_group:'+key)||'null'):null;}catch(e){return null;}}
+function writeParseGroup(group){try{localStorage.setItem('mm_parse_group:'+group.id,JSON.stringify(group));}catch(e){}return group;}
+function renderParseStatus(){
+  var el=document.getElementById('mmParseStatus'),group=readParseGroup();if(!el)return;
+  if(!group){el.style.display='none';return;}
+  var labels={uploading:'等待上传确认',queued:'等待识别',running:'识别中',done:'识别完成',error:'识别失败',interrupted:'任务已中断'};
+  el.style.display='block';el.textContent=group.files.map(function(f){return f.name+'：'+(labels[f.status]||f.status)+(f.error?' · '+f.error:'');}).join('\n');
+}
+function updateParseFile(groupId,index,job,error){
+  var group=readParseGroup(groupId);if(!group||!group.files[index])return;
+  var f=group.files[index];if(job){f.job_id=job.job_id;f.status=job.status;f.error=job.error&&(job.error.detail||job.error)||'';}if(error){f.status='error';f.error=error.message||String(error);}
+  writeParseGroup(group);renderParseStatus();
+}
 
 function safeParseMeta(m){
     if(m && typeof m === 'object') return m;
@@ -538,27 +554,20 @@ function dragHasFiles(e){
 }
 
 // ---- Timer ----
+function timerText(idx,elapsed){
+    var q=_questions[idx],preset=window.STUDY_DEMO&&window.StudyDemoPresets&&window.StudyDemoPresets.idForQuestion(q&&q.latex);
+    return '已等待 '+elapsed+'s'+(preset?' · 300 秒内未完成时提供同题示例解析':'');
+}
 function startTimer(idx) {
-    var start = Date.now();
+    _sessions[idx]=_sessions[idx]||{};
+    _sessions[idx].startedAt=_sessions[idx].startedAt||Date.now();
     if (_sessionTimers[idx]) clearInterval(_sessionTimers[idx]);
-    var added = false;
     _sessionTimers[idx] = setInterval(function(){
-        var elapsed = Math.floor((Date.now() - start) / 1000);
-        var body = document.getElementById('session_body_'+idx);
-        if (!body) { clearInterval(_sessionTimers[idx]); return; }
-        var tEl = body.querySelector('.mm-progress-timer');
-        if (!tEl) return;
-        if (elapsed > 180) {
-            tEl.textContent = '已思考 ' + elapsed + 's';
-            if (!added) {
-                added = true;
-                var txt = body.querySelector('.mm-progress-text');
-                if (txt) txt.innerHTML += '<br>你做不过我你信吗';
-            }
-        } else {
-            tEl.textContent = '已思考 ' + elapsed + 's / 180s';
-        }
-    }, 1000);
+        var elapsed=Math.max(0,Math.floor((Date.now()-_sessions[idx].startedAt)/1000));
+        var body=document.getElementById('session_body_'+idx);
+        if(!body){clearInterval(_sessionTimers[idx]);return;}
+        var label=body.querySelector('.mm-progress-timer');if(label)label.textContent=timerText(idx,elapsed);
+    },1000);
 }
 function stopTimer(idx) {
     if (_sessionTimers[idx]) { clearInterval(_sessionTimers[idx]); delete _sessionTimers[idx]; }
@@ -614,32 +623,27 @@ function onFileSelect(e){
 
 async function uploadFiles(files){
     if(!files||files.length===0)return;
+    var group=writeParseGroup({id:StudyJobs.uuid(),files:Array.from(files).map(function(f){return {name:f.name,status:'uploading'};})});
+    localStorage.setItem('mm_parse_current',group.id);localStorage.setItem('mm_restore_after',String(Date.now()/1000));
+    _questions=[];_sessions={};_parseAppliedJobs={};_selectedIdx=-1;saveState();
+    document.getElementById('mmSessions').innerHTML='';renderParseStatus();
     document.getElementById('mmLoading').style.display='block';
     document.querySelector('.mm-upload-zone').style.display='none';
-    var allQuestions=[];
     var loadingText=document.querySelector('#mmLoading div:last-child');
-    for(var i=0;i<files.length;i++){
-        var f=files[i];
-        if(loadingText)loadingText.textContent=files.length>1?'正在解析 ('+(i+1)+'/'+files.length+') '+f.name+'...':'正在解析 '+f.name+'，请稍候...';
-        try{
-            var fd=new FormData();fd.append('file',f);
-            var r=await fetch('/multimodal/parse',{method:'POST',body:fd});
-            var data=await r.json();
-            if(data.error){alert('文件 "'+f.name+'" 解析失败: '+data.error);continue;}
-            allQuestions=allQuestions.concat(data.questions||[]);
-        }catch(err){alert('文件 "'+f.name+'" 上传失败: '+err.message);}
-    }
+    await Promise.all(Array.from(files).map(async function(f,index){
+      var accepted;
+      try{
+        var fd=new FormData();fd.append('file',f);
+        var data=await StudyJobs.upload('parse_file',fd,{key:'mm_parse:'+group.id+':'+index,route:{page:'multimodal.html',parse_group:group.id,file_index:index},
+          onAccepted:function(job){accepted=job;updateParseFile(group.id,index,job);},onProgress:function(job){updateParseFile(group.id,index,job);}});
+        updateParseFile(group.id,index,Object.assign({},accepted,{status:'done',error:null}));restoreParseResult(data,accepted);
+      }catch(e){updateParseFile(group.id,index,e.job||accepted,e);showToast(f.name+'：'+e.message,'error');}
+    }));
+    if(!readParseGroup()||readParseGroup().id!==group.id)return;
     document.getElementById('mmLoading').style.display='none';
     if(loadingText)loadingText.textContent='正在解析题目，请稍候...';
     _pendingFiles=[];renderFilePreview();
-    allQuestions=allQuestions.map(function(q,qi){if(typeof q.latex!=='string')q.latex='';q.index=qi+1;return q;});
-    if(allQuestions.length===0){resetUpload();return;}
-    _questions=allQuestions;_sessions={};_selectedIdx=-1;
-    document.getElementById('mmUploadArea').style.display='none';
-    document.getElementById('mmSolveArea').style.display='block';
-    document.documentElement.style.overflow='hidden';
-    document.getElementById('mmTitle').textContent='共 '+_questions.length+' 道题';
-    renderQuestionList();saveState();
+    if(!_questions.length)resetUpload();renderParseStatus();
 }
 
 function resetUpload(){
@@ -651,15 +655,15 @@ function resetUpload(){
     document.documentElement.style.overflow='';
     document.getElementById('mmSubtitle').textContent='上传试卷 / 图片 / 文档，自动切题后勾选批量解答';
 }
-function resetAll(){_questions=[];_sessions={};_selectedIdx=-1;localStorage.removeItem(STORAGE_KEY);document.documentElement.style.overflow='';document.getElementById('mmQuestionList').innerHTML='';document.getElementById('mmSessions').innerHTML='<div class="mm-empty"><div class="mm-empty-icon">📎</div><p>点击左侧题目，在右侧预览和编辑</p></div>';resetUpload();}
+function resetAll(){_questions=[];_sessions={};_parseAppliedJobs={};_selectedIdx=-1;localStorage.removeItem(STORAGE_KEY);localStorage.removeItem('mm_parse_current');localStorage.setItem('mm_restore_after',String(Date.now()/1000));renderParseStatus();document.documentElement.style.overflow='';document.getElementById('mmQuestionList').innerHTML='';document.getElementById('mmSessions').innerHTML='<div class="mm-empty"><div class="mm-empty-icon">📎</div><p>点击左侧题目，在右侧预览和编辑</p></div>';resetUpload();}
 
 // ---- Persistence ----
 function saveState(){
-    var s = {questions:_questions,selectedIdx:_selectedIdx};
+    var s = {questions:_questions,selectedIdx:_selectedIdx,parseAppliedJobs:_parseAppliedJobs};
     s.sessions={};
     for(var k in _sessions){
         var ss=_sessions[k];
-        s.sessions[k]={latex:ss.latex,done:ss.done,data:ss.data,solving:ss.solving,autoSave:ss.autoSave};
+        s.sessions[k]={latex:ss.latex,done:ss.done,data:ss.data,solving:ss.solving,autoSave:ss.autoSave,startedAt:ss.startedAt};
     }
     try{localStorage.setItem(STORAGE_KEY,JSON.stringify(s));}catch(e){}
 }
@@ -669,8 +673,9 @@ function restoreState(){
     if(!raw)return false;
     try{
         var s=JSON.parse(raw);
+        _parseAppliedJobs=s.parseAppliedJobs||{};
         if(!s.questions||s.questions.length===0)return false;
-        _questions=s.questions; _sessions=s.sessions||{}; _selectedIdx=-1;
+        _questions=s.questions; _sessions=s.sessions||{}; _selectedIdx=window.STUDY_DEMO&&Number.isInteger(s.selectedIdx)?s.selectedIdx:-1;
         document.getElementById('mmUploadArea').style.display='none';
         document.getElementById('mmSolveArea').style.display='block';
         document.getElementById('mmTitle').textContent='共 '+_questions.length+' 道题';
@@ -697,7 +702,7 @@ function renderQuestionList(){
     var c=document.getElementById('mmQuestionList');var html='';
     for(var i=0;i<_questions.length;i++){
         var q=_questions[i];var dc=(q.difficulty==='容易'||q.difficulty==='简单')?'tag-easy':q.difficulty==='中等'?'tag-medium':'tag-hard';
-        html+='<div class="mm-qcard'+(i===_selectedIdx?' active':'')+'" data-idx="'+i+'" onclick="selectQuestion('+i+')">';
+        html+='<div class="mm-qcard'+(i===_selectedIdx?' active':'')+'" data-idx="'+i+'"'+(window.STUDY_DEMO&&q.demo_preset_id?' data-preset-id="'+escapeHtml(q.demo_preset_id)+'"':'')+' onclick="selectQuestion('+i+')">';
         html+='<div class="mm-qcard-header">';
         html+='<input type="checkbox" class="hc-checkbox" data-idx="'+i+'" onchange="updateBatchCount()" onclick="event.stopPropagation()">';
         html+='<span class="mm-qnum">题'+(i+1)+'</span>';
@@ -707,7 +712,7 @@ function renderQuestionList(){
         if(q.source_type){var qm=sourceMetaText(q.source_type,q.source_meta);if(qm)html+='<span class="tag tag-source-meta mm-qtag">'+escapeHtml(qm)+'</span>';}
         if(_sessions[i]&&_sessions[i].done)html+='<span class="mm-solved-tag">✓ 已解答</span>';
         html+='<button class="mm-qbtn" onclick="event.stopPropagation();startSingleSolve('+i+')" style="font-size:11px;padding:2px 8px;margin-left:auto;">'+(_sessions[i]&&_sessions[i].done?'↻ 重做':'▶ 解题')+'</button>';
-        html+='</div><div class="mm-qpreview-latex" id="qpreview_'+i+'">'+escapeHtml(q.latex||'')+'</div></div>';
+        html+='</div>'+(window.STUDY_DEMO&&q.demo_label?'<div class="mm-demo-preset-label">'+escapeHtml(q.demo_label)+'</div>':'')+'<div class="mm-qpreview-latex" id="qpreview_'+i+'">'+escapeHtml(q.latex||'')+'</div></div>';
     }
     c.innerHTML=html;updateBatchCount();
     for(var ki=0;ki<_questions.length;ki++){
@@ -716,8 +721,9 @@ function renderQuestionList(){
     }
 }
 
-function selectQuestion(idx){
+function selectQuestion(idx,quiet){
     _selectedIdx=idx;renderQuestionList();
+    if(!quiet&&window.STUDY_DEMO&&_questions[idx]&&_questions[idx].demo_preset_id)document.dispatchEvent(new CustomEvent('study:preset-selected',{detail:{id:_questions[idx].demo_preset_id,client_index:idx}}));
     // Show preview session
     createSessionEl(idx);saveState();
     var el=document.getElementById('session_'+idx);
@@ -757,7 +763,7 @@ div.innerHTML='<div class="mm-session-header" onclick="toggleSessionCollapse('+i
     _sessions[idx]=_sessions[idx]||{latex:_questions[idx]?._latex,autoSave:true,solving:false,done:false,data:null};
     renderPreview(idx);
     // Already-done sessions: collapse
-    if(_sessions[idx]&&_sessions[idx].done){
+    if(!window.STUDY_DEMO&&_sessions[idx]&&_sessions[idx].done){
         var bodyEl=document.getElementById('session_body_'+idx);
         var compEl=document.getElementById('compact_'+idx);
         var arrowEl=document.querySelector('#session_'+idx+' .mm-collapse-arrow');
@@ -777,7 +783,7 @@ function renderPreview(idx){
     var html='<div class="mm-preview-section">';
     html+='<div class="mm-preview-rendered" id="preview_'+idx+'">'+escapedLatex(q.latex)+'</div>';
     html+='<div class="mm-edit-area"><textarea id="edit_'+idx+'" oninput="onEditLatex('+idx+')">'+escapeHtml(q.latex)+'</textarea></div>';
-    html+='</div>';
+    html+='</div>'+demoSourceHtml(q);
     html+='<div class="mm-actions">';
     html+='<span style="font-size:13px;color:#86868b;">老师：</span><select id="teacher_'+idx+'" onchange="changeTeacher('+idx+',this.value)">';
     var ts=['liangliang','taotao','xuefeng','ji'];var tn={liangliang:'梁梁',taotao:'韬韬',xuefeng:'雪峰',ji:'鸡'};
@@ -788,7 +794,8 @@ function renderPreview(idx){
     for(var ti=0;ti<tys.length;ti++){var sel=tys[ti]===currentType?' selected':'';html+='<option value="'+tys[ti]+'"'+sel+'>'+tlabels[ti]+'</option>';}
     html+='</select>';
     
-    html+='<button class="mm-solve-btn" onclick="startSingleSolve('+idx+')" style="margin-left:auto;">'+(_sessions[idx]&&_sessions[idx].done?'↻ 重做':'▶ 开始解题')+'</button>';
+    if(window.STUDY_DEMO)html+='<label class="demo-auto-save"><input type="checkbox" id="autoSave_'+idx+'"'+(s.autoSave?' checked':'')+' onchange="setAutoSave('+idx+',this.checked)">自动加入本次题库</label>';
+    html+='<button class="mm-solve-btn'+(window.STUDY_DEMO?' mm-demo-submit':'')+'" data-index="'+idx+'" onclick="startSingleSolve('+idx+')" style="margin-left:auto;">'+(_sessions[idx]&&_sessions[idx].done?'↻ 重做':'▶ 开始解题')+'</button>';
     html+='</div>';
     updateSessionBody(idx,html);
     // KaTeX render preview
@@ -818,65 +825,23 @@ function updateSessionBody(idx,html){
 }
 
 // ---- Solve Pipeline ----
+function applyMultiResult(idx,data){
+    if(!_questions[idx])return;createSessionEl(idx);_sessions[idx]=_sessions[idx]||{};
+    _sessions[idx].solving=false;_sessions[idx].done=true;_sessions[idx].data=data;_sessions[idx].saved=!!data.saved_question_id;
+    stopTimer(idx);renderSessionResult(idx,data,false,!!window.STUDY_DEMO);renderQuestionList();saveState();
+    if(window.STUDY_DEMO)document.dispatchEvent(new CustomEvent('study:multimodal-solve-ready',{detail:{client_index:idx,result:data}}));
+}
+function multiArgs(idx){
+    var q=_questions[idx],checkbox=document.getElementById('autoSave_'+idx);
+    var args={question:q.latex,teacher:q.recommended_teacher||'liangliang',question_type:document.getElementById('type_'+idx)?.value||q.question_type||null,save:checkbox?checkbox.checked!==false:_sessions[idx]?.autoSave!==false,source_type:q.source_type||null,source_meta:q.source_meta||null,client_page:'multimodal',client_index:idx};
+    var preset=window.STUDY_DEMO&&window.StudyDemoPresets&&window.StudyDemoPresets.idForQuestion(q.latex);
+    if(preset)args.preset_id=preset;
+    return args;
+}
 async function startSingleSolve(idx){
-    var q=_questions[idx];if(!q)return;
-    createSessionEl(idx);
-    _sessions[idx]=_sessions[idx]||{};
-    _sessions[idx].solving=true;_sessions[idx].done=false;_sessions[idx].data=null;saveState();
-    renderProgress(idx,0,'准备中...');
-    var teacher=q.recommended_teacher||'liangliang';
-    var autoSave=document.getElementById('autoSave_'+idx)?.checked!==false;
-    var question=q.latex;
-
-    try{
-        _sessions[idx].saved=false;startTimer(idx);
-        // Step 1
-        renderProgress(idx,13,'\u6b65\u9aa4 1/3: \u6b63\u5728\u601d\u8003...',0);
-        var r1=await fetch('/solve/step1',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,question_type:'',teacher})});
-        var d1=await r1.json();
-        if(d1.error)throw new Error(d1.detail||d1.status||'无法解答');
-
-        // Step 2
-        renderProgress(idx,78,'\u6b65\u9aa4 2/3: \u6b63\u5728\u5206\u7c7b\u77e5\u8bc6\u70b9...',d1.token_usage?.total_tokens);
-        var r2=await fetch('/solve/step2',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,content:d1.content,category:d1.category||null,question_type:'',teacher})});
-        var d2=await r2.json();
-        if(d2.error)throw new Error('无法分类');
-
-        // Step 3
-        renderProgress(idx,91,'\u6b65\u9aa4 3/3: \u6b63\u5728\u68c0\u67e5...',d2.token_usage?.total_tokens);
-        var r3=await fetch('/solve/step3',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question,chunk_results:JSON.stringify(d2.chunk_results),teacher,save:false,content:d1.content,category:d1.category||null,question_type:''})});
-        var d3=await r3.json();
-        if(d3.error&&!d3.chunk_results)throw new Error('无法完成');
-
-        renderProgress(idx,100,'\u5b8c\u6210');
-        _sessions[idx].solving=false;_sessions[idx].done=true;_sessions[idx].data=d3;
-        // If user selected a type that differs from result, save override
-        var userType=document.getElementById('type_'+idx)?.value;
-        if(userType&&autoSave){
-            var overrideData=JSON.parse(JSON.stringify(d3));
-            overrideData.question_type=userType;
-            if(overrideData.chunk_results&&overrideData.chunk_results[0])overrideData.chunk_results[0].chunk_type=userType;
-            try{
-                var overridePayload={question:_questions[idx].latex,answer_json:overrideData};
-                if(_questions[idx].source_type)overridePayload.source_type=_questions[idx].source_type;
-                if(_questions[idx].source_meta)overridePayload.source_meta=_questions[idx].source_meta;
-                var saveResp=await fetch('/questions/save',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(overridePayload)});
-                var saveData=await saveResp.json();
-                if(saveData.id){_sessions[idx].saved=true;_sessions[idx].data.saved_question_id=saveData.id;}
-            }catch(e){}
-        }
-        // 维持第一次的题型判断，不覆盖
-        var userType=document.getElementById('type_'+idx)?.value;
-        if (!_questions[idx].question_type && userType) {
-            _questions[idx].question_type = userType;
-        }
-        saveState();
-        renderSessionResult(idx,d3,autoSave);
-        renderQuestionList();
-    }catch(err){
-        _sessions[idx].solving=false;saveState();
-        updateSessionBody(idx,'<div class="mm-session-error" style="color:#c62828;padding:16px;">解题失败: '+escapeHtml(err.message||'未知错误')+'</div>');
-    }
+    if(!_questions[idx])return;createSessionEl(idx);_sessions[idx]=_sessions[idx]||{};_sessions[idx].solving=true;_sessions[idx].startedAt=Date.now();saveState();startTimer(idx);
+    try{var data=await StudyJobs.submit('solve',multiArgs(idx),{key:'mm_single_'+idx,onProgress:function(j){renderProgress(idx,j.progress||5,j.detail||'正在后台解题');}});applyMultiResult(idx,data);}
+    catch(e){stopTimer(idx);_sessions[idx].solving=false;saveState();updateSessionBody(idx,'<p style="color:#b3261e">'+escapeHtml(e.message)+'</p>');}
 }
 
 function renderProgress(idx,pct,msg,tokens){
@@ -890,7 +855,8 @@ function renderProgress(idx,pct,msg,tokens){
     h+='<div class="mm-progress-area"><div class="mm-progress-bar"><div class="mm-progress-fill" style="width:'+pct+'%;background:'+grad+'"></div></div>';
     h+='<div class="mm-progress-pct" style="color:'+tcolor+'">'+Math.round(pct)+'%</div>';
     h+='<div class="mm-progress-text">'+tn+' '+escapeHtml(msg)+'</div>';
-    h+='<div class="mm-progress-timer" style="color:'+tcolor+'">\u5df2\u601d\u8003 0s / 180s</div>';
+    var elapsed=_sessions[idx]&&_sessions[idx].startedAt?Math.max(0,Math.floor((Date.now()-_sessions[idx].startedAt)/1000)):0;
+    h+='<div class="mm-progress-timer" style="color:'+tcolor+'">'+escapeHtml(timerText(idx,elapsed))+'</div>';
     if(tokens!==undefined)h+='<div class="mm-progress-token" style="color:#86868b;">\u6d88\u8017 '+tokens+' tokens</div>';
     h+='</div>';body.innerHTML=h;
     try{renderMathInElement(body,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],ignoredTags:[]});}catch(e){}
@@ -903,8 +869,11 @@ function renderProgress(idx,pct,msg,tokens){
 
 // ---- Render Result ----
 function renderSessionResult(idx,data,autoSave,keepOpen){
+    if(keepOpen===undefined&&window.STUDY_DEMO)keepOpen=true;
     var q=_questions[idx];
     var html='<div class="mm-preview-rendered" style="margin-bottom:12px;background:#fff;border:1px solid #e0e0e0;border-radius:10px;">'+escapedLatex(q?q.latex:'')+'</div>';
+    html+=demoSourceHtml(q);
+    if(data.source==='prepared_cache')html+='<p class="study-job-cache">预先准备的示例解析 · 本次实时 AI 未在 300 秒内完成。</p>';
     if(data.formatter_fallback)html+='<div style="margin-bottom:12px;padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#9a3412;font-size:13px;line-height:1.6;">可能有错误：该题 Formatter 未通过校验，已保留 Verifier 结果，难度未知。</div>';
     html+='<div class="meta-bar">';
     if(data.knowledge_points&&data.knowledge_points.length>0)html+='<span class="tag tag-category">'+safeParseKps(data.knowledge_points).slice(0,3).join(' / ')+'</span>';
@@ -964,7 +933,7 @@ function renderSessionResult(idx,data,autoSave,keepOpen){
     var isSaved=_sessions[idx]&&_sessions[idx].saved;
     html+='<div style="text-align:center;margin-top:16px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">';
     html+='<button class="mm-solve-btn" onclick="startSingleSolve('+idx+')" style="background:#515154;">↻ 重新解答</button>';
-    html+='<button class="mm-solve-btn" onclick="teachOpenMulti(this)" data-question="' + (_questions[idx] ? _questions[idx].latex.replace(/"/g, '&quot;') : '') + '" style="background:#ca8a04;">📖 教学</button>';
+    html+='<button class="mm-solve-btn" onclick="teachOpenMulti(this)" data-demo-teach data-question="' + (_questions[idx] ? _questions[idx].latex.replace(/"/g, '&quot;') : '') + '" style="background:#ca8a04;">📖 手把手教学</button>';
     if(isSaved){html+='<span class="tag" style="background:#e8f5e9;color:#2e7d32;">✅ 已加入题库</span>';}
     else{html+='<button class="mm-solve-btn" onclick="saveToBank('+idx+')" style="background:#2e7d32;">📋 加入题库</button>';}
     html+='</div>';
@@ -998,7 +967,7 @@ function renderSessionResult(idx,data,autoSave,keepOpen){
         if(isSaved)compactHtml+='<span class="tag" style="background:#e8f5e9;color:#2e7d32;">✅ 已入库</span>';
         else compactHtml+='<button class="mm-solve-btn" onclick="saveToBank('+idx+')" style="background:#2e7d32;font-size:12px;padding:4px 10px;">📋 入库</button>';
         compactHtml+='<button class="mm-qbtn" onclick="event.stopPropagation();addSingleToExam('+idx+')" style="font-size:12px;padding:4px 10px;">📋 组卷</button>';
-        compactHtml+='<button class="mm-qbtn" onclick="event.stopPropagation();teachOpenMulti(this)" data-question="' + (_questions[idx] ? _questions[idx].latex.replace(/"/g, '&quot;') : '') + '" style="font-size:12px;padding:4px 10px;background:#ca8a04;color:white;border:none;border-radius:8px;cursor:pointer;">📖 教学</button>';
+        compactHtml+='<button class="mm-qbtn" onclick="event.stopPropagation();teachOpenMulti(this)" data-demo-teach data-question="' + (_questions[idx] ? _questions[idx].latex.replace(/"/g, '&quot;') : '') + '" style="font-size:12px;padding:4px 10px;background:#ca8a04;color:white;border:none;border-radius:8px;cursor:pointer;">📖 手把手教学</button>';
         compactHtml+='</div></div>';
         compact.innerHTML=compactHtml;compact.style.display='block';
         try{renderMathInElement(compact,{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],ignoredTags:[]});}catch(e){}
@@ -1310,20 +1279,105 @@ function formatUTCDate(s){
 }
 
 // ---- Batch Solve ----
+function applyBatchResult(data,args){
+  (data.items||[]).forEach(function(item,i){var original=(args.questions||[])[item.index===undefined?i:item.index]||{};var idx=_questions.findIndex(function(q){return q.latex===original.question;});if(idx<0){idx=_questions.length;_questions.push({latex:original.question||item.question,recommended_teacher:original.teacher,question_type:original.question_type});}createSessionEl(idx);if(item.status==='done'&&item.result)applyMultiResult(idx,item.result);else{_sessions[idx]=_sessions[idx]||{};_sessions[idx].solving=false;updateSessionBody(idx,'<p>'+escapeHtml(item.error&&item.error.detail||item.error||'本题未完成')+'</p>');}});saveState();renderQuestionList();
+}
 async function batchSolve(){
-    var cbs=document.querySelectorAll('#mmQuestionList .hc-checkbox:checked');
-    var indices=[];for(var i=0;i<cbs.length;i++)indices.push(parseInt(cbs[i].dataset.idx));
-    indices.sort(function(a,b){return a-b;});
-    if(indices.length===0){alert('请先勾选题目');return;}
-    document.getElementById('mmBatchSolveBtn').disabled=true;document.getElementById('mmBatchSolveBtn').textContent='解题中 '+indices.length+' 道...';
-    for(var i=0;i<indices.length;i++)createSessionEl(indices[i]);
-    var queue=indices.slice();
-    var workers=[];
-    for(var i=0;i<Math.min(MAX_CONCURRENT,indices.length);i++){
-        workers.push((async function(){while(queue.length>0){var qid=queue.shift();await startSingleSolve(qid);}})());
-    }
-    await Promise.all(workers);
-    document.getElementById('mmBatchSolveBtn').disabled=false;document.getElementById('mmBatchSolveBtn').textContent='批量解题';
+    var indices=Array.from(document.querySelectorAll('#mmQuestionList .hc-checkbox:checked')).map(function(cb){return Number(cb.dataset.idx);}).sort(function(a,b){return a-b;});
+    if(!indices.length){alert('请先勾选题目');return;}
+    var btn=document.getElementById('mmBatchSolveBtn');btn.disabled=true;
+    var args={questions:indices.map(multiArgs),client_page:'multimodal'};localStorage.setItem('mm_batch_args',JSON.stringify(args));
+    indices.forEach(function(idx){createSessionEl(idx);_sessions[idx]=_sessions[idx]||{};_sessions[idx].solving=true;});saveState();
+    try{var data=await StudyJobs.submit('batch_solve',args,{key:'mm_batch',onProgress:function(j){btn.textContent=j.detail||'批量任务在后台执行';}});applyBatchResult(data,args);}
+    catch(e){showToast(e.message,'error');}finally{btn.disabled=false;btn.textContent='批量解题';}
+}
+function ensureRestoredQuestion(args){
+    var idx=_questions.findIndex(function(q){return q.latex===args.question;});
+    if(idx<0){idx=_questions.length;_questions.push({latex:args.question,recommended_teacher:args.teacher,question_type:args.question_type,source_type:args.source_type,source_meta:args.source_meta});}
+    return idx;
+}
+async function restoreMultiJobs(){
+  try{
+    var id=new URLSearchParams(location.search).get('job'),explicit;
+    if(id){explicit=await StudyJobs.get(id);if(explicit.kind==='parse_file'){
+      var route=StudyJobs.read('route:'+id),group=route&&readParseGroup(route.parse_group);
+      if(!group){group=writeParseGroup({id:StudyJobs.uuid(),files:[{name:explicit.args&&explicit.args.filename||'文件',job_id:id,status:explicit.status}]});}
+      if(localStorage.getItem('mm_parse_current')!==group.id){localStorage.setItem('mm_parse_current',group.id);_questions=[];_sessions={};_parseAppliedJobs={};_selectedIdx=-1;document.getElementById('mmSessions').innerHTML='';saveState();}
+    }}
+    var r=await fetch('/jobs'),list=await r.json(),after=Number(localStorage.getItem('mm_restore_after')||0);
+    var relevant=(list.jobs||[]).filter(function(j){return (id&&j.job_id===id)||Number(j.created_at)>=after&&['batch_solve','solve'].includes(j.kind)&&j.args&&j.args.client_page==='multimodal';});
+    if(explicit&&!relevant.some(function(job){return job.job_id===id;}))relevant.push(explicit);
+    // The most recent task for the same text owns its card; late historical
+    // results must not overwrite a newer pending task or its saved result.
+    var owners=Object.create(null);relevant.forEach(function(job){var entries=job.kind==='solve'?[job.args]:job.kind==='batch_solve'&&job.args?job.args.questions||[]:[];entries.forEach(function(args){if(!args||!args.question)return;var previous=owners[args.question];if(!previous||job.job_id===id||previous.job_id!==id&&Number(job.created_at)>Number(previous.created_at))owners[args.question]=job;});});
+    var ids=relevant.map(function(j){return j.job_id;});
+    var current=readParseGroup();if(current)current.files.forEach(function(f){if(f.job_id)ids.push(f.job_id);});if(id)ids.push(id);
+    Array.from(new Set(ids)).forEach(async function(jobId){
+      var job,owned=[],group=readParseGroup(),fileIndex=group?group.files.findIndex(function(f){return f.job_id===jobId;}):-1;
+      try{
+        job=explicit&&explicit.job_id===jobId?explicit:await StudyJobs.get(jobId);
+        var entries=job.kind==='solve'?[job.args]:job.kind==='batch_solve'&&job.args?job.args.questions||[]:[];
+        entries.forEach(function(args,originalIndex){if(args&&owners[args.question]&&owners[args.question].job_id===jobId)owned.push({idx:ensureRestoredQuestion(args),originalIndex:originalIndex});});
+        if(entries.length&&!owned.length)return;
+        var progress=function(j){
+          if(fileIndex>=0)updateParseFile(group.id,fileIndex,j);
+          if(!['done','error','interrupted'].includes(j.status))owned.forEach(function(item){var idx=item.idx;createSessionEl(idx);_sessions[idx]=_sessions[idx]||{};_sessions[idx].solving=true;_sessions[idx].startedAt=_sessions[idx].startedAt||Number(j.created_at)*1000||Date.now();startTimer(idx);renderProgress(idx,j.progress||5,j.detail||'任务在后台继续执行');});
+          if(owned.length){document.getElementById('mmUploadArea').style.display='none';document.getElementById('mmSolveArea').style.display='block';renderQuestionList();saveState();}
+        };progress(job);
+        var result=['error','interrupted'].includes(job.status)&&job.result?job.result:job.status==='done'?job.result:await StudyJobs.wait(job,progress);
+        if(job.kind==='batch_solve')owned.forEach(function(item){var output=(result.items||[]).find(function(value,index){return (value.index===undefined?index:value.index)===item.originalIndex;});if(output&&output.status==='done'&&output.result)applyMultiResult(item.idx,output.result);else showRestoredSolveError(item.idx,output&&output.error||'本题未完成');});
+        else if(job.kind==='solve'&&owned.length)applyMultiResult(owned[0].idx,result);
+        else if(job.kind==='parse_file'){if(fileIndex>=0)updateParseFile(group.id,fileIndex,Object.assign({},job,{status:'done',error:null}));restoreParseResult(result,job);}
+      }catch(e){if(fileIndex>=0)updateParseFile(group.id,fileIndex,e.job||job,e);owned.forEach(function(item){showRestoredSolveError(item.idx,e);});}
+    });renderParseStatus();
+  }catch(e){}
+}
+function showRestoredSolveError(idx,error){
+    stopTimer(idx);_sessions[idx]=_sessions[idx]||{};_sessions[idx].solving=false;_sessions[idx].done=false;
+    var message=error&&error.detail||error&&error.message||error||'本题未完成';
+    updateSessionBody(idx,'<p style="color:#b3261e">'+escapeHtml(message)+'</p><button class="mm-solve-btn" onclick="startSingleSolve('+idx+')">重新提交本题</button>');saveState();
+}
+function restoreParseResult(data,job){
+  if(!data||!Array.isArray(data.questions))return;
+  var group=readParseGroup(),jobId=job&&job.job_id;
+  if(group&&jobId&&!group.files.some(function(f){return f.job_id===jobId;}))return;
+  if(jobId&&_parseAppliedJobs[jobId])return;
+  data.questions.forEach(function(q){var text=q.latex||q.text||'';if(!text||_questions.some(function(existing){return (existing.latex||existing.text||'')===text;}))return;_questions.push(Object.assign({},q,{latex:text,index:_questions.length+1}));});
+  if(jobId)_parseAppliedJobs[jobId]=true;
+  if(_questions.length){document.getElementById('mmLoading').style.display='none';document.getElementById('mmUploadArea').style.display='none';document.getElementById('mmSolveArea').style.display='block';document.getElementById('mmTitle').textContent='共 '+_questions.length+' 道题';renderQuestionList();}
+  saveState();renderParseStatus();
+}
+document.addEventListener('DOMContentLoaded',function(){setTimeout(restoreMultiJobs,100);renderParseStatus();});
+
+function demoSourceHtml(q){
+    if(!window.STUDY_DEMO||!q||!q.demo_preset_id)return '';
+    var url=q.demo_source_url;try{var parsed=new URL(url);if(parsed.protocol!=='https:')return '';}catch(e){return '';}
+    return '<p class="mm-demo-source">'+escapeHtml(q.demo_label||'预设真题')+' · <a href="'+escapeHtml(url)+'" target="_blank" rel="noopener noreferrer">查看原题出处</a></p>';
+}
+function selectDemoPreset(id){
+    var idx=_questions.findIndex(function(q){return q.demo_preset_id===id;});if(idx<0)return false;selectQuestion(idx);return true;
+}
+function consumeDemoCoachInput(){
+    if(!window.STUDY_DEMO)return false;
+    var question=localStorage.getItem('_mm_coach_input');if(!question||!question.trim())return false;
+    var idx=_questions.length;_questions.push({latex:question.trim(),index:idx+1,difficulty:'未知',recommended_teacher:'liangliang'});
+    document.getElementById('mmUploadArea').style.display='none';document.getElementById('mmSolveArea').style.display='block';document.getElementById('mmTitle').textContent='共 '+_questions.length+' 道题';
+    renderQuestionList();selectQuestion(idx,true);saveState();localStorage.removeItem('_mm_coach_input');return true;
+}
+async function initializeDemoQuestions(){
+    if(!window.STUDY_DEMO||!window.StudyDemoPresets)return false;
+    try{
+        var catalog=await window.StudyDemoPresets.load();
+        function hasCurrent(){return _questions.length||localStorage.getItem(STORAGE_KEY)||readParseGroup()||new URLSearchParams(location.search).has('job');}
+        if(hasCurrent())return false;
+        var response=await fetch('/jobs');if(!response.ok)throw new Error('无法确认已有任务，请刷新重试。');
+        var ledger=await response.json(),after=Number(localStorage.getItem('mm_restore_after')||0);
+        if((ledger.jobs||[]).some(function(job){return Number(job.created_at||0)>=after&&(job.kind==='parse_file'||(['solve','batch_solve'].includes(job.kind)&&job.args&&job.args.client_page==='multimodal'));})||hasCurrent())return false;
+        _questions=(catalog.presets||[]).map(function(preset,index){var source=preset.source||{};return {latex:preset.question,index:index+1,difficulty:'中等',question_type:'大题',recommended_teacher:'liangliang',demo_preset_id:preset.id,demo_label:preset.label,demo_source_url:source.url,source_type:'高考题',source_meta:{paper_name:source.paper,paper:source.paper,year:source.year,question_number:source.question_number,question_no:String(source.question_number),url:source.url}};});
+        if(!_questions.length)return false;
+        document.getElementById('mmUploadArea').style.display='none';document.getElementById('mmSolveArea').style.display='block';document.getElementById('mmTitle').textContent='3 道预设真题';
+        renderQuestionList();var selected=_questions.findIndex(function(q){return q.demo_preset_id===catalog.default_id;});selectQuestion(selected<0?0:selected,true);saveState();return true;
+    }catch(error){console.warn('演示例题未加载：'+error.message);return false;}
 }
 
 // ---- Init ----
@@ -1332,6 +1386,7 @@ document.addEventListener('DOMContentLoaded',function(){
     document.addEventListener('dragover',function(e){if(dragHasFiles(e))e.preventDefault();});
     document.addEventListener('drop',function(e){if(dragHasFiles(e))e.preventDefault();});
     if(!restoreState()){document.getElementById('fileInput').value='';}
+    consumeDemoCoachInput();initializeDemoQuestions();
 });
 
 function teachOpenMulti(btn) {
@@ -1365,6 +1420,6 @@ async function batchAddSelectedToExam(){
     showToast('已将 '+done+' 道题加入组卷','success');
 }
 </script>
-<script src="nav.js?v=20260809e"></script>
+<script src="nav.js?v=20261004a"></script>
 </body>
 </html>

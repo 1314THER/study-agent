@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="/jobs.js?v=20261009a"></script>
+<script src="/job-pages.js?v=20261009a"></script>
 <script>document.documentElement.classList.add("nav-init")</script>
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-cache">
@@ -203,7 +205,7 @@
         </div>
     </div>
 </div>
-<script src="nav.js?v=20260809e"></script>
+<script src="nav.js?v=20261004a"></script>
 <script>
 var _teacher = localStorage.getItem('teacher') || 'liangliang';
 document.body.classList.remove('theme-liangliang', 'theme-xuefeng', 'theme-taotao', 'theme-ji');
@@ -248,8 +250,9 @@ async function uploadGradeHandwriting() {
     var fd = new FormData();
     fd.append('file', input.files[0]);
     try {
-        var r = await fetch('/ocr/answer', { method: 'POST', body: fd });
-        var d = await r.json();
+        var draft={};
+        ['qSelect','questionInput','answerInput','qType','fullScore','duration','teacher','source','viewedAnswer','skipped'].forEach(function(id){var el=document.getElementById(id);if(el)draft[id]=el.type==='checkbox'?el.checked:el.value;});
+        var d = await StudyJobs.upload('ocr_file',fd,{key:location.pathname+'/ocr/answer',route:{page:'grade.html',draft:draft}});
         if (d.error) {
             if (statusEl) statusEl.textContent = '识别失败：' + (d.detail || d.error || '未知错误');
             return;
@@ -282,6 +285,7 @@ async function loadQuestions() {
             opt.textContent = '#' + q.id + ' · ' + (q.question_type || '大题') + ' · ' + text;
             sel.appendChild(opt);
         }
+        if(sel._studyRestoreValue!==undefined){sel.value=sel._studyRestoreValue;delete sel._studyRestoreValue;toggleQuestionMode();}
         var preset = qs('question_id');
         if (preset) {
             sel.value = String(preset);

@@ -7,9 +7,11 @@ import re
 import threading
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from contextvars import copy_context
 from typing import Optional
 
 from backend import difficulty as diff
+from backend.data_paths import acquire_background_lease, workspace_directory
 import backend.settings as runtime_settings
 from backend.solver import (
     TEACHER_CONFIG,
@@ -371,7 +373,10 @@ def generate_variants(qid: int, count: Optional[int] = None, teacher: str = "lia
     solved = []
     workers = int(runtime_settings.get_limits().get("generate_concurrency", 5))
     with ThreadPoolExecutor(max_workers=max(1, min(len(candidates), workers))) as pool:
-        futures = [pool.submit(_solve_candidate, cand, teacher, on_phase=progress_callback) for cand in candidates]
+        futures = [
+            pool.submit(copy_context().run, _solve_candidate, cand, teacher, on_phase=progress_callback)
+            for cand in candidates
+        ]
         solved = [f.result() for f in futures]
 
     accepted = []
@@ -414,7 +419,7 @@ _GENERATE_JOBS = {}
 
 
 def _job_snapshot(job: dict) -> dict:
-    snap = dict(job)
+    snap = {key: value for key, value in job.items() if key != "_workspace"}
     if isinstance(snap.get("result"), dict):
         snap["result"] = dict(snap["result"])
     return snap
@@ -433,6 +438,14 @@ def _progress_text(phase: str, done: int, total: int) -> str:
 
 
 def start_generate_job(qid: int, count: Optional[int] = None, teacher: str = "liangliang") -> dict:
+    """Compatibility entry: generation now shares the durable task manager."""
+    if not get_question_by_id(qid):
+        raise ValueError(f"题目不存在: {qid}")
+    from backend.jobs import submit_job
+    return submit_job("generate", {"question_id": qid, "count": count, "teacher": teacher}, uuid.uuid4().hex)
+
+
+def _legacy_start_generate_job(qid: int, count: Optional[int] = None, teacher: str = "liangliang") -> dict:
     if not get_question_by_id(qid):
         raise ValueError(f"题目不存在: {qid}")
     if count is None:
@@ -441,6 +454,7 @@ def start_generate_job(qid: int, count: Optional[int] = None, teacher: str = "li
     job_id = uuid.uuid4().hex
     job = {
         "job_id": job_id,
+        "_workspace": workspace_directory(),
         "status": "running",
         "stage": "generating",
         "progress": 0,
@@ -451,6 +465,10 @@ def start_generate_job(qid: int, count: Optional[int] = None, teacher: str = "li
         "result": None,
         "error": None,
     }
+    # Acquire before starting the thread: expiry/reset must not delete a sandbox
+    # between returning the HTTP response and the worker actually beginning.
+    release = acquire_background_lease()
+    context = copy_context()
     with _GENERATE_JOB_LOCK:
         _GENERATE_JOBS[job_id] = job
 
@@ -494,14 +512,39 @@ def start_generate_job(qid: int, count: Optional[int] = None, teacher: str = "li
                 job["status"] = "error"
                 job["detail"] = f"生成失败: {str(e)[:300]}"
                 job["error"] = str(e)[:500]
+        finally:
+            release()
 
-    threading.Thread(target=run_job, daemon=True).start()
+    try:
+        threading.Thread(target=context.run, args=(run_job,), daemon=True).start()
+    except BaseException:
+        with _GENERATE_JOB_LOCK:
+            _GENERATE_JOBS.pop(job_id, None)
+        release()
+        raise
     return _job_snapshot(job)
 
 
 def get_generate_job(job_id: str) -> dict:
+    from backend.jobs import get_job
+    job = get_job(job_id)
+    if job and job.get("kind") == "generate":
+        return job
+    # Read old in-flight tasks during a rolling code update, never launch new
+    # jobs into this deprecated registry.
     with _GENERATE_JOB_LOCK:
         job = _GENERATE_JOBS.get(job_id)
-        if not job:
+        if not job or job.get("_workspace") != workspace_directory():
             return None
         return _job_snapshot(job)
+
+
+def forget_workspace(directory) -> None:
+    """Discard completed demo jobs when that visitor's directory is removed."""
+    directory = os.path.abspath(os.fspath(directory))
+    from backend.jobs import cleanup_workspace
+    cleanup_workspace(directory)
+    with _GENERATE_JOB_LOCK:
+        for job_id, job in list(_GENERATE_JOBS.items()):
+            if job.get("_workspace") == directory:
+                del _GENERATE_JOBS[job_id]

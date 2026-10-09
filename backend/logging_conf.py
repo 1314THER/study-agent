@@ -5,7 +5,9 @@ import os
 from logging.handlers import TimedRotatingFileHandler
 
 
-LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs")
+LOG_DIR = os.environ.get("STUDY_AGENT_LOG_DIR") or os.path.join(
+    os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "logs"
+)
 LOG_FILE = os.path.join(LOG_DIR, "app.log")
 KEEP_DAYS = 14
 

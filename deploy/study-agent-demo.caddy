@@ -1,0 +1,7 @@
+# Included by /etc/caddy/Caddyfile. Keep the owner site and its password intact.
+demo.150.chat {
+	reverse_proxy 127.0.0.1:8001 {
+		header_up -Authorization
+		header_up X-Study-Demo-Client {remote_host}
+	}
+}

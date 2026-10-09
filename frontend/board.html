@@ -5,6 +5,7 @@
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-cache">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<script src="/jobs.js?v=20261009a"></script>
 <title>闯关 - 数学最强大脑</title>
 <link rel="stylesheet" href="style.css?v=20260806board">
 <style>
@@ -117,7 +118,7 @@
         </div>
     </main>
 </div>
-<script src="nav.js?v=20260809e"></script>
+<script src="nav.js?v=20261004a"></script>
 <script>
 var boards = [];
 var currentBoardId = null;
@@ -154,6 +155,16 @@ function levelLocked(levels, seq) {
 function loadBoards() {
     api('/boards').then(function(data) {
         boards = data || [];
+        if (window.STUDY_DEMO) {
+            var order = ['一元二次式', '三角函数', '不等式', '函数与导数', '复数', '平面向量', '指对幂耐克函数', '数列', '概率统计', '立体几何', '解析几何', '集合与逻辑用语'];
+            boards.sort(function(a, b) { return order.indexOf(a.category) - order.indexOf(b.category); });
+            document.querySelector('.run-subtitle').textContent = '先认识学习路线，再打开集合首关，看看这一关要学什么。';
+            document.querySelector('.side-note').textContent = '集合板块准备了 21 项方法主题。当前可以查看路线与首关要点，其余内容尚未完成。';
+            if (currentBoardId === null) {
+                var collection = boards.find(function(b) { return b.category === '集合与逻辑用语'; });
+                if (collection) currentBoardId = collection.id;
+            }
+        }
         if (!boards.length) { renderCategories(); renderBoard(null); return; }
         if (!boards.some(function(b) { return b.id === currentBoardId; })) currentBoardId = boards[0].id;
         renderCategories();
@@ -177,6 +188,7 @@ function selectBoard(id) { currentBoardId = id; renderCategories(); renderBoard(
 function renderBoard(board) {
     var el = document.getElementById('runBoard');
     if (!board) { el.innerHTML = '<div class="empty-run">暂无闯关地图</div>'; return; }
+    if (window.STUDY_DEMO) { renderDemoBoard(board); return; }
     var levels = boardLevels(board);
     var mastered = (board.nodes || []).filter(function(n) { return n.state === 'third_pass'; }).length;
     var total = (board.nodes || []).length;
@@ -202,6 +214,95 @@ function renderBoard(board) {
 }
 
 function openLoop(patternId) { window.open('loop.html?v=20260807&pattern_id=' + patternId, '_blank'); }
+
+function renderDemoBoard(board) {
+    var el = document.getElementById('runBoard');
+    var count = (board.nodes || []).length;
+    var head = '<div class="run-board-head"><div class="run-board-name">' + escapeHtml(board.category) + '</div>';
+    if (board.category !== '集合与逻辑用语' || !count) {
+        el.innerHTML = head + '<span class="mission-status">尚未完成</span></div>' +
+            '<div class="demo-unfinished"><h2>这个板块尚未完成</h2><p>目前可体验集合板块的学习路线和首关要点。</p>' +
+            '<button class="run-btn" type="button" id="demo-board-back">查看集合路线</button></div>';
+        document.getElementById('demo-board-back').addEventListener('click', function () {
+            var collection = boards.find(function(b) { return b.category === '集合与逻辑用语'; });
+            if (collection) selectBoard(collection.id);
+        });
+        return;
+    }
+    var viewed = localStorage.getItem('demo_board_first_viewed') === '1';
+    head += '<div class="run-board-progress">' + count + ' 项方法主题 · ' + (viewed ? '首关要点已查看' : '首关要点待查看') + '</div></div>';
+    var levels = boardLevels(board);
+    var html = head + '<p class="demo-board-note">这里展示关卡怎样组织解题方法。当前只开放首关要点，不记录掌握或解锁进度。</p>' +
+        '<div class="mission-map"><div class="map-start">学习路线</div>';
+    levels.forEach(function(level, index) {
+        html += '<div class="mission-level"><div class="mission-branch"></div><div class="mission-box' + (index === 0 ? ' available' : '') + '">';
+        html += '<div class="mission-head"><div><div class="mission-number">MISSION ' + String(index + 1).padStart(2, '0') + '</div>' +
+            '<div class="mission-name">' + escapeHtml(index === 0 ? '集合的概念与性质' : level.name || ('第 ' + (index + 1) + ' 关')) + '</div></div>' +
+            '<span class="mission-status">' + (index === 0 ? '可查看要点' : '尚未完成') + '</span></div>';
+        if (index === 0) {
+            html += '<p class="mission-desc">认识元素的确定性、互异性与无序性。</p>' +
+                '<button class="run-btn demo-board-open" type="button" onclick="openDemoMission()">打开首关要点 →</button>';
+        } else {
+            level.patterns.forEach(function(n) { html += '<div class="mission-task"><span>' + escapeHtml(n.name || '') + '</span></div>'; });
+        }
+        html += '</div></div>';
+    });
+    if (!levels.length) html += '<button class="run-btn demo-board-open" type="button" onclick="openDemoMission()">打开首关要点 →</button>';
+    html += '<div class="map-end">后续内容尚未完成</div></div><section id="demo-board-mission" hidden></section>';
+    el.innerHTML = html;
+}
+
+function openDemoMission() {
+    var panel = document.getElementById('demo-board-mission');
+    if (!panel) return;
+    panel.hidden = false;
+    panel.className = 'demo-mission-notes';
+    panel.innerHTML = '<h2>第 1 关 · 集合的概念与性质</h2><p>这一关先理解什么样的对象可以组成集合。</p>' +
+        '<dl><dt>确定性</dt><dd>对于给定对象，能明确判断它是否属于这个集合。例如“小于 3 的正整数”可以确定。</dd>' +
+        '<dt>互异性</dt><dd>同一个元素只算一次。重复书写不会增加元素个数，{1, 1, 2} 与 {1, 2} 表示同一个集合。</dd>' +
+        '<dt>无序性</dt><dd>集合与元素的书写顺序无关，{1, 2} 与 {2, 1} 是同一个集合。</dd></dl>' +
+        '<div class="demo-concept-question" id="demo-concept-0"><strong>判断 1：“很大的数”能构成集合吗？</strong>' +
+        '<div><button class="run-btn secondary" type="button" onclick="answerDemoConcept(0, false)">能</button> ' +
+        '<button class="run-btn secondary" type="button" onclick="answerDemoConcept(0, true)">不能</button></div><p class="demo-concept-feedback" aria-live="polite"></p></div>' +
+        '<div class="demo-concept-question" id="demo-concept-1"><strong>判断 2：{1, 2, 3} 与 {3, 1, 2} 是同一个集合吗？</strong>' +
+        '<div><button class="run-btn secondary" type="button" onclick="answerDemoConcept(1, true)">是</button> ' +
+        '<button class="run-btn secondary" type="button" onclick="answerDemoConcept(1, false)">不是</button></div><p class="demo-concept-feedback" aria-live="polite"></p></div>' +
+        '<p class="demo-board-note">这些是首关的学习要点。后续练习尚未完成，查看要点不会被记为掌握或通关。</p>' +
+        '<p id="demo-concept-progress" class="demo-board-note">已体验 0 / 2 道概念判断</p>' +
+        '<button class="run-btn" type="button" id="demo-board-read" disabled>完成两道判断后返回路线</button>';
+    window._demoConceptAnswers = {};
+    document.getElementById('demo-board-read').addEventListener('click', function () {
+        if (Object.keys(window._demoConceptAnswers).length !== 2) return;
+        localStorage.setItem('demo_board_first_viewed', '1');
+        panel.hidden = true;
+        document.querySelector('.run-board-progress').textContent = '21 项方法主题 · 首关判断已体验';
+        document.dispatchEvent(new CustomEvent('study:board-concepts-viewed'));
+    });
+    try {
+        var savedAnswers = JSON.parse(localStorage.getItem('demo_board_concept_answers') || '{}');
+        [0, 1].forEach(function(index) {
+            if (typeof savedAnswers[index] === 'boolean') answerDemoConcept(index, savedAnswers[index], true);
+        });
+    } catch (ignore) {}
+    panel.scrollIntoView({behavior: 'smooth', block: 'center'});
+    document.dispatchEvent(new CustomEvent('study:board-mission-opened'));
+}
+
+function answerDemoConcept(index, correct, silent) {
+    window._demoConceptAnswers[index] = correct;
+    localStorage.setItem('demo_board_concept_answers', JSON.stringify(window._demoConceptAnswers));
+    var question = document.getElementById('demo-concept-' + index);
+    question.querySelector('.demo-concept-feedback').textContent = (correct ? '答对了。' : '再核对一下：') +
+        (index === 0 ? '“很大”没有明确标准，不能确定哪些数属于它，不满足确定性。' : '元素相同，排列顺序不会改变集合，这就是无序性。');
+    question.querySelector('.demo-concept-feedback').style.color = correct ? '#257153' : '#996821';
+    var count = Object.keys(window._demoConceptAnswers).length;
+    document.getElementById('demo-concept-progress').textContent = '已体验 ' + count + ' / 2 道概念判断';
+    if (count === 2) {
+        document.getElementById('demo-board-read').disabled = false;
+        document.getElementById('demo-board-read').textContent = '体验完成，返回路线';
+    }
+    if (!silent) document.dispatchEvent(new CustomEvent('study:board-concept-answered', {detail: {index: index, correct: correct}}));
+}
 document.addEventListener('DOMContentLoaded', loadBoards);
 </script>
 </body>

@@ -1,0 +1,31 @@
+[Unit]
+Description=Study Agent temporary visitor demo
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=studydemo
+Group=studydemo
+WorkingDirectory=/opt/study-agent-demo/current
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=STUDY_DEMO_ROOT=/var/lib/study-agent-demo
+Environment=STUDY_AGENT_LOG_DIR=/var/lib/study-agent-demo/logs
+Environment=STUDY_DEMO_AI_ENABLED=1
+Environment=STUDY_DEMO_AI_CONFIG=/etc/study-agent-demo/ai.json
+ExecStart=/opt/study-agent-demo/.venv/bin/python -m uvicorn backend.demo:app --host 127.0.0.1 --port 8001 --workers 1
+Restart=on-failure
+RestartSec=5
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/study-agent-demo
+InaccessiblePaths=/opt/study-agent
+MemoryMax=256M
+TasksMax=64
+
+[Install]
+WantedBy=multi-user.target

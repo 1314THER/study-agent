@@ -9,6 +9,7 @@ from unittest.mock import patch
 
 import backend.database as dbmod
 import backend.generate as gen_mod
+import backend.jobs as jobs_mod
 import backend.patterns as pat_mod
 from backend.database import init_db, save_question, update_question_source
 from backend.generate import (
@@ -381,18 +382,23 @@ class GeneratePipelineTest(unittest.TestCase):
         self.assertEqual(result["candidates"][0]["fit_score"], 90.0)
 
     def test_start_and_get_generate_job(self):
+        temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(temp_dir.cleanup)
+        expected = {"accepted": 0, "rejected": 0, "candidates": [], "token_usage": {}}
+        runners = {**jobs_mod.RUNNERS, "generate": lambda args, ctx: expected}
         with patch.object(gen_mod, "get_question_by_id", return_value={"id": 1}), \
-             patch.object(gen_mod, "generate_variants", return_value={"accepted": 0, "rejected": 0, "candidates": [], "token_usage": {}}):
+             patch.object(jobs_mod._manager, "runners", runners), \
+             patch.object(jobs_mod, "storage_path", return_value=os.path.join(temp_dir.name, "jobs.db")):
             job = start_generate_job(1, count=1)
-        job_id = job["job_id"]
-        self.assertIn(job["status"], ("running", "done"))
+            job_id = job["job_id"]
+            self.assertIn(job["status"], ("queued", "running", "done"))
 
-        for _ in range(50):
-            snap = get_generate_job(job_id)
-            if snap and snap["status"] in ("done", "error"):
-                break
-            time.sleep(0.05)
-        self.assertEqual(snap["status"], "done")
+            for _ in range(50):
+                snap = get_generate_job(job_id)
+                if snap and snap["status"] in ("done", "error"):
+                    break
+                time.sleep(0.05)
+        self.assertEqual(snap["status"], "done", snap)
         self.assertEqual(snap["result"]["accepted"], 0)
 
         with patch.object(gen_mod, "get_question_by_id", return_value=None):

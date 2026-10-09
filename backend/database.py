@@ -12,6 +12,7 @@ import re
 import sqlite3
 from backend import difficulty as diff
 from backend.categories import CATEGORIES
+from backend.data_paths import data_path
 from backend.steps import _load_steps
 
 logger = logging.getLogger(__name__)
@@ -150,21 +151,18 @@ def _collect_step_knowledge_points(chunk_results: list) -> list:
 
 
 def get_connection():
-    conn = sqlite3.connect(DB_PATH)
+    conn = sqlite3.connect(data_path("study_agent.db", DB_PATH))
     conn.row_factory = sqlite3.Row
     return conn
 
-# 系统题单 ID 缓存（init_db 时填充）
+# 保留旧名称以兼容调用者；系统题单 ID 从当前连接查询，不跨工作区缓存。
 _SYSTEM_LIST_IDS = {}
 
 def _ensure_system_lists(conn):
     for name in ("全部", "母题", "高考题"):
         row = conn.execute("SELECT id FROM question_lists WHERE name = ? AND list_type = 'system'", (name,)).fetchone()
         if not row:
-            cur = conn.execute("INSERT INTO question_lists (name, list_type) VALUES (?, 'system')", (name,))
-            _SYSTEM_LIST_IDS[name] = cur.lastrowid
-        else:
-            _SYSTEM_LIST_IDS[name] = row["id"]
+            conn.execute("INSERT INTO question_lists (name, list_type) VALUES (?, 'system')", (name,))
     conn.commit()
 
 
@@ -481,7 +479,8 @@ def init_db():
             pass
     _ensure_system_lists(conn)
     # 回填：将已有题目加入 "全部" 题单（仅在新装时执行一次）
-    all_id = _SYSTEM_LIST_IDS.get("全部")
+    all_row = conn.execute("SELECT id FROM question_lists WHERE name = '全部' AND list_type = 'system'").fetchone()
+    all_id = all_row["id"] if all_row else None
     if all_id:
         missing = conn.execute(
             "SELECT COUNT(*) FROM questions q WHERE NOT EXISTS (SELECT 1 FROM question_list_members m WHERE m.list_id = ? AND m.question_id = q.id)",

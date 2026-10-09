@@ -166,7 +166,7 @@ class MultimodalApiTest(unittest.TestCase):
         with tempfile.NamedTemporaryFile(suffix=".docx", delete=False) as f:
             docx_path = f.name
         try:
-            with patch.object(mm, "pdf_to_images", return_value=["b64"]), \
+            with patch.object(mm, "iter_pdf_images", return_value=iter([(1, 1, "b64")])), \
                  patch.object(mm, "_call_qwen_vl", return_value=self._llm_json()):
                 self.assertEqual(len(parse_file(pdf_path)), 1)
             with patch.object(mm, "image_to_base64", return_value="b64"), \

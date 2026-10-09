@@ -9,6 +9,8 @@ backend/settings.json.tmp
 /*.db-wal
 /*.db-shm
 logs/
+.demo-sessions/
+.runtime/
 
 # Local Python and JavaScript environments
 .venv/

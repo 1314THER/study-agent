@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="/jobs.js?v=20261009a"></script>
+<script src="/job-pages.js?v=20261009a"></script>
 <script>document.documentElement.classList.add("nav-init")</script>
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-cache">
@@ -96,7 +98,7 @@
     </div>
 </div>
 
-<script src="nav.js?v=20260809e"></script>
+<script src="nav.js?v=20261004a"></script>
 <script>
 var state = {
     patternId: null,
@@ -113,8 +115,15 @@ var state = {
     allQuestionsPassed: false,
     viewMode: 'question',
     failMessage: '',
-    restoring: false
+    restoring: false,
+    roundId: null,
+    pendingGradeId: null,
+    appliedGradeIds: [],
+    draftAnswer: ''
 };
+var _explicitLoopJob = new URLSearchParams(location.search).get('job');
+var _restoringLoopJob = false;
+var _submittingLoopGrade = false;
 
 function saveDraft() {
     try {
@@ -130,7 +139,11 @@ function saveDraft() {
             failMessage: state.failMessage,
             timerStart: state.timerStart,
             timerElapsed: state.timerElapsed,
-            currentRole: state.currentQuestion ? state.currentQuestion.role : null
+            currentRole: state.currentQuestion ? state.currentQuestion.role : null,
+            roundId: state.roundId,
+            pendingGradeId: state.pendingGradeId,
+            appliedGradeIds: state.appliedGradeIds,
+            draftAnswer: state.draftAnswer
         }));
     } catch (e) {}
 }
@@ -235,6 +248,7 @@ async function loadLoop() {
     } else {
         buildQueue();
     }
+    await restoreLoopGrade();
 }
 
 function restoreDraftState() {
@@ -258,12 +272,17 @@ function restoreDraftState() {
     state.failMessage = draft.failMessage || '';
     state.timerStart = draft.timerStart || null;
     state.timerElapsed = draft.timerElapsed || 0;
+    state.roundId = draft.roundId || StudyJobs.uuid();
+    state.pendingGradeId = draft.pendingGradeId || null;
+    state.appliedGradeIds = draft.appliedGradeIds || [];
+    state.draftAnswer = draft.draftAnswer || '';
     state.restoring = false;
     if (!state.currentQuestion) {
         startQuestion();
         return;
     }
     renderQuestion();
+    if (state.draftAnswer) document.getElementById('userAnswerInput').value = state.draftAnswer;
     if (state.viewMode === 'fail') {
         renderFailActions(state.failMessage || '');
         var timerEl = document.getElementById('loopTimer');
@@ -271,6 +290,9 @@ function restoreDraftState() {
             timerEl.textContent = state.timerElapsed.toFixed(1) + 's';
             timerEl.classList.toggle('over', state.timerElapsed > (state.data.pattern.max_time_seconds || 120));
         }
+    } else if (state.viewMode === 'grading') {
+        document.getElementById('doneBtn').disabled = true;
+        document.getElementById('checkStatus').textContent = '后台正在判分，恢复任务后继续。';
     } else {
         startTimer();
         saveDraft();
@@ -329,6 +351,9 @@ async function saveDifficulty() {
 }
 
 function buildQueue() {
+    state.roundId = StudyJobs.uuid();
+    state.pendingGradeId = null;
+    state.appliedGradeIds = [];
     var p = state.data.pattern;
     var m = p.mastery || {};
     var never = m.state === 'never';
@@ -527,6 +552,9 @@ function startMotherOnly() {
     state.queue = [questions.find(function(q) { return q.role === 'mother'; })];
     state.queueIdx = 0;
     state.motherOnlyMode = true;
+    state.roundId = StudyJobs.uuid();
+    state.pendingGradeId = null;
+    state.appliedGradeIds = [];
     startQuestion();
 }
 
@@ -541,6 +569,7 @@ function startQuestion() {
     state.timerElapsed = 0;
     state.viewMode = 'question';
     state.failMessage = '';
+    state.draftAnswer = '';
     renderQuestion();
     startTimer();
     saveDraft();
@@ -593,32 +622,8 @@ function stopTimer() {
     if (state.timerStart) state.timerElapsed = (Date.now() - state.timerStart) / 1000;
 }
 
-async function recordAttempt(correct) {
-    var q = state.currentQuestion;
-    await api('/patterns/' + state.patternId + '/attempt', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({
-            question_id: q.question_id,
-            role: q.role,
-            correct: correct,
-            is_first_try: state.questionAttempts === 1,
-            duration_seconds: Math.round(state.timerElapsed)
-        })
-    });
-}
-
-async function markPatternWrong() {
-    try {
-        await api('/patterns/' + state.patternId + '/complete', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({passed: false})
-        });
-    } catch (e) {}
-}
-
 async function submitAnswer() {
+    if (_submittingLoopGrade) return;
     var q = state.currentQuestion;
     if (!q) return;
     var input = document.getElementById('userAnswerInput');
@@ -631,20 +636,16 @@ async function submitAnswer() {
     }
     stopTimer();
     state.questionAttempts++;
+    state.draftAnswer = userAnswer;
+    state.viewMode = 'grading';
+    state.roundId = state.roundId || StudyJobs.uuid();
+    var submittedRound = state.roundId, submittedPattern = state.patternId;
+    saveDraft();
     if (statusEl) statusEl.innerHTML = 'AI 正在判分，请稍候...';
     if (doneBtn) doneBtn.disabled = true;
-    var maxT = state.data.pattern.max_time_seconds || 120;
-    if (state.timerElapsed > maxT) {
-        await recordAttempt(false);
-        await markPatternWrong();
-        renderFailActions('超时：用时 ' + state.timerElapsed.toFixed(1) + 's，超过了限时 ' + maxT + 's。');
-        return;
-    }
+    _submittingLoopGrade = true;
     try {
-        var d = await api('/grade', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
+        var d = await StudyJobs.submit('grade', {
                 question_id: q.question_id,
                 student_answer: userAnswer,
                 question_type: q.question_type || null,
@@ -652,32 +653,34 @@ async function submitAnswer() {
                 source: state.questionAttempts === 1 ? '首次作答' : '重做',
                 duration_seconds: Math.round(state.timerElapsed),
                 viewed_answer: false,
-                skipped: false
-            })
-        });
+                skipped: false,
+                loop: {round_id: state.roundId, pattern_id: state.patternId,
+                    queue: state.queue.map(function(item){return {question_id:item.question_id,role:item.role};}),
+                    queue_index: state.queueIdx, mother_only: state.motherOnlyMode,
+                    elapsed_seconds: state.timerElapsed}
+        }, {key: 'loop_grade:' + state.roundId, onProgress: function(job){
+            if (state.roundId!==submittedRound || state.patternId!==submittedPattern) return;
+            state.pendingGradeId = job.job_id;
+            if (statusEl) statusEl.textContent = job.detail || 'AI 正在后台判分';
+            saveDraft();
+        }});
+        if (state.roundId!==submittedRound || state.patternId!==submittedPattern) return;
         if (d.error) {
             if (statusEl) statusEl.innerHTML = '<span style="color:#c62828;">判分失败：' + escapeHtml(d.detail || d.error) + '</span>';
             if (doneBtn) doneBtn.disabled = false;
             startTimer();
             return;
         }
-        if (d.is_correct) {
-            await recordAttempt(true);
-            onQuestionPassed();
-            return;
-        }
-        state.sessionFailed = true;
-        await recordAttempt(false);
-        await markPatternWrong();
-        var msg = d.feedback || '答案不对，再试一次。';
-        var hasPartial = (d.step_results || []).some(function(s) { return s.status === 'partial'; });
-        if (hasPartial) msg = '答案还不完整：' + msg;
-        renderFailActions(msg);
+        applyLoopGrade(d, state.pendingGradeId);
     } catch (e) {
+        if (state.roundId!==submittedRound || state.patternId!==submittedPattern) return;
         if (statusEl) statusEl.innerHTML = '<span style="color:#c62828;">请求失败：' + escapeHtml(e.message || '无法连接后端') + '</span>';
         if (doneBtn) doneBtn.disabled = false;
+        state.viewMode = 'question';
+        state.pendingGradeId = null;
+        saveDraft();
         startTimer();
-    }
+    } finally {_submittingLoopGrade = false;}
 }
 
 function renderFailActions(msg) {
@@ -692,20 +695,87 @@ function renderFailActions(msg) {
     saveDraft();
 }
 
-function onQuestionPassed() {
-    state.queueIdx++;
-    if (state.queueIdx >= state.queue.length) {
-        var m = (state.data.pattern.mastery || {});
-        var never = m.state === 'never';
-        if (state.motherOnlyMode && (never || state.sessionFailed)) {
-            renderGenerateButton();
-        } else {
-            finishAllPassed();
-        }
-    } else {
-        startQuestion();
+function settleLoopIntent(jobId, status) {
+    var key = 'loop_grade:' + state.roundId, intent = StudyJobs.read(key);
+    if (intent && (!intent.job_id || intent.job_id === jobId)) {
+        intent.job_id = jobId;intent.status = status;
+        try {localStorage.setItem('study_job_' + key, JSON.stringify(intent));} catch (e) {}
     }
 }
+
+function applyLoopGrade(data, jobId) {
+    if (!data || !data.loop) throw new Error('后台未返回挑战进度，请重新载入。');
+    var result = data.loop;
+    if (jobId && state.appliedGradeIds.includes(jobId)) return;
+    state.roundId = result.round_id;
+    settleLoopIntent(jobId, 'done');
+    state.queue = result.queue.map(function(item){return state.data.questions.find(function(q){return q.role===item.role && q.question_id===item.question_id;});});
+    if (state.queue.some(function(q){return !q;})) throw new Error('套路题目已更换，请重新进入循环。');
+    if (jobId) state.appliedGradeIds.push(jobId);
+    state.pendingGradeId = null;
+    state.motherOnlyMode = result.mother_only;
+    state.sessionFailed = result.session_failed;
+    state.timerElapsed = result.elapsed_seconds || 0;
+    state.queueIdx = result.next_index;
+    if (result.mastery) state.data.pattern.mastery = result.mastery;
+    if (result.completed) {finishAllPassed(result.mastery);return;}
+    if (result.needs_variants) {renderGenerateButton();return;}
+    if (data.is_correct) {startQuestion();return;}
+    state.currentQuestion = state.queue[state.queueIdx];
+    renderQuestion();
+    document.getElementById('userAnswerInput').value = state.draftAnswer || data.student_answer || '';
+    document.getElementById('loopTimer').textContent = state.timerElapsed.toFixed(1) + 's';
+    var msg = data.feedback || '答案不对，再试一次。';
+    if ((data.step_results || []).some(function(s){return s.status==='partial';})) msg = '答案还不完整：' + msg;
+    renderFailActions(msg);
+}
+
+async function restoreLoopGrade() {
+    if (_restoringLoopJob || !state.data) return;
+    _restoringLoopJob = true;
+    try {
+        var record = StudyJobs.read('loop_grade:' + state.roundId);
+        var id = _explicitLoopJob || state.pendingGradeId || (state.viewMode==='grading' && record && record.job_id);
+        if (!id && state.viewMode==='grading') {
+            var list = await api('/jobs');
+            var matches = (list.jobs || []).filter(function(j){return j.kind==='grade' && j.args && j.args.loop && j.args.loop.round_id===state.roundId && j.args.loop.queue_index===state.queueIdx;});
+            matches.sort(function(a,b){return b.created_at-a.created_at;});
+            id = matches[0] && matches[0].job_id;
+        }
+        if (!id) return;
+        var job = await StudyJobs.get(id);
+        if (job.kind!=='grade' || !job.args || !job.args.loop) {if (_explicitLoopJob) StudyJobs.showResult(id);return;}
+        if (job.args.loop.pattern_id!==state.patternId) {
+            state.patternId = job.args.loop.pattern_id;state.restoring = false;
+            await loadLoop();
+        }
+        if (state.appliedGradeIds.includes(id)) {_explicitLoopJob=null;return;}
+        state.roundId = job.args.loop.round_id;
+        state.draftAnswer = job.args.student_answer || '';
+        state.pendingGradeId = id;
+        var data = job.status==='done' ? job.result : await StudyJobs.wait(job, function(j){
+            var status = document.getElementById('checkStatus');if (status) status.textContent=j.detail || '后台判分处理中';
+            var button = document.getElementById('doneBtn');if (button) button.disabled=true;
+        });
+        _explicitLoopJob = null;
+        applyLoopGrade(data, id);
+    } catch (e) {
+        settleLoopIntent(state.pendingGradeId, 'error');
+        state.pendingGradeId = null;state.viewMode = 'question';
+        var status = document.getElementById('checkStatus');if (status) status.textContent=e.message || '后台任务未完成';
+        var button = document.getElementById('doneBtn');if (button) button.disabled=false;
+        saveDraft();
+    } finally {_restoringLoopJob=false;}
+}
+
+window.restoreLoopJob = function(id) {_explicitLoopJob=id;restoreLoopGrade();};
+document.addEventListener('studyjobupdate', function(event) {
+    var job = event.detail, loop = job && job.args && job.args.loop;
+    if (!_submittingLoopGrade && !_restoringLoopJob && state.viewMode==='grading' && loop
+            && loop.round_id===state.roundId && loop.queue_index===state.queueIdx) {
+        state.pendingGradeId=job.job_id;saveDraft();restoreLoopGrade();
+    }
+});
 
 function retryQuestion() {
     state.viewMode = 'question';
@@ -726,19 +796,11 @@ function closeTeach() {
     retryQuestion();
 }
 
-async function finishAllPassed() {
+async function finishAllPassed(mastery) {
     if (state.allQuestionsPassed) return;
     state.allQuestionsPassed = true;
     clearDraft();
-    var d = null;
-    try {
-        d = await api('/patterns/' + state.patternId + '/complete', {
-            method: 'POST',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({passed: true})
-        });
-    } catch (e) {}
-    var m = (d && d.state) ? d : (state.data.pattern.mastery || {});
+    var m = mastery || state.data.pattern.mastery || {};
     var isOnePass = !state.sessionFailed && state.queue.length <= 1;
     var html = '<div class="loop-card"><h2>' + (isOnePass ? '一遍过，直接通过' : '全部题目做对，套路通过') + '</h2>';
     html += '<p style="color:#515154;margin-top:8px;">当前掌握状态：<span class="state-badge ' + stateClass(m.state) + '">' + escapeHtml(stateLabel(m.state)) + '</span></p>';

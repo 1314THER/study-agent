@@ -13,9 +13,23 @@
     main { flex: 1; display: grid; place-items: center; padding: 48px 24px; text-align: center; }
     h1 { margin: 0 0 16px; font-size: clamp(28px, 5vw, 44px); }
     p { margin: 0 0 28px; color: #636366; line-height: 1.7; }
+    .welcome { width: 100%; max-width: 800px; }
+    .entries { display: grid; grid-template-columns: repeat(2, 1fr); gap: 18px; margin-top: 34px; text-align: left; }
+    .entry { padding: 26px; border: 1px solid #e5e5e7; border-radius: 20px; background: #fff; }
+    .entry h2 { margin: 0 0 10px; font-size: 22px; }
+    .entry p { margin: 0 0 20px; min-height: 54px; font-size: 14px; }
     .enter { display: inline-block; padding: 13px 26px; border-radius: 12px;
       background: #0071e3; color: #fff; font-weight: 600; text-decoration: none; }
     .enter:hover, .enter:focus-visible { background: #005bb5; }
+    .owner { background: #eef3f8; color: #24618f; }
+    .owner:hover, .owner:focus-visible { background: #dce8f2; }
+    .hint { margin: 20px 0 0; font-size: 13px; }
+    @media (max-width: 600px) {
+      main { padding: 38px 20px; }
+      .entries { grid-template-columns: 1fr; }
+      .entry { padding: 23px; }
+      .entry p { min-height: 0; }
+    }
     footer { padding: 20px 16px 26px; text-align: center; color: #636366;
       font-size: 13px; line-height: 1.9; }
     footer a { color: inherit; }
@@ -23,10 +37,22 @@
 </head>
 <body>
   <main>
-    <div>
+    <div class="welcome">
       <h1>成为数学高手</h1>
-      <p>学习教练台 · 个人题库与 AI 数学学习</p>
-      <a class="enter" href="/home.html">进入学习助手</a>
+      <p>学习教练台 · AI 数学学习、个人题库与巩固复习</p>
+      <div class="entries">
+        <section class="entry">
+          <h2>先体验一下</h2>
+          <p>无需账号，可以体验 AI 解题、编辑题库和组卷。体验持续 2 小时，修改与生成的题目不会影响主人的题库。</p>
+          <a class="enter" href="https://demo.150.chat/home.html">游客体验 →</a>
+        </section>
+        <section class="entry">
+          <h2>继续自己的学习</h2>
+          <p>使用主人账号进入个人题库，编辑和学习记录会持续保存。</p>
+          <a class="enter owner" href="/home.html">主人登录 →</a>
+        </section>
+      </div>
+      <p class="hint">第一次来，可以先看看题库，再输入一道题体验 AI 分步讲解。</p>
     </div>
   </main>
   <footer>

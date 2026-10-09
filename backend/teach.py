@@ -2,7 +2,13 @@ import json
 import logging
 import os
 import re
+import threading
+import time
+from copy import deepcopy
+from contextlib import contextmanager
+from contextvars import ContextVar
 import backend.settings as runtime_settings
+from backend.data_paths import workspace_directory
 from backend.solver import (
     TEACHER_CONFIG,
     call_deepseek,
@@ -13,6 +19,12 @@ from backend.solver import (
 from backend.database import find_question, save_question as db_save_question
 
 logger = logging.getLogger(__name__)
+_TURN_SNAPSHOT = ContextVar("teaching_turn_snapshot", default=None)
+
+
+class TeachingConflict(ValueError):
+    """A stale or concurrent teaching turn must not advance the session."""
+
 
 PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
 
@@ -220,10 +232,75 @@ from typing import Optional, List, Dict, Any
 # 读取新对话式 prompt
 
 class TeachSessionManager:
-    """内存中的教学会话管理器（单用户，重启清空）"""
+    """SQLite-backed teaching sessions, cached only within their workspace."""
 
     def __init__(self):
         self._sessions: Dict[str, dict] = {}
+        self._session_owners: Dict[str, Optional[str]] = {}
+        self._lock = threading.RLock()
+        self._turn_locks = {}
+
+    def _persist(self, session):
+        from backend.jobs import storage_connection
+        now = time.time()
+        session.setdefault("revision", 0)
+        session.setdefault("created_at", now)
+        with storage_connection() as conn:
+            conn.execute("INSERT INTO teaching_sessions VALUES (?,?,?,?,?,?) ON CONFLICT(session_id) DO UPDATE SET "
+                         "state_json=excluded.state_json,revision=excluded.revision,pending_job=excluded.pending_job,updated_at=excluded.updated_at",
+                         (session["session_id"], json.dumps(session, ensure_ascii=False), session["revision"],
+                          session.get("pending_job"), session["created_at"], now))
+
+    def _store(self, session):
+        self._persist(session)
+        self._sessions[session["session_id"]] = session
+        self._session_owners[session["session_id"]] = workspace_directory()
+
+    def reserve(self, session_id, job_id, expected_revision=None):
+        with self._lock:
+            session = self.get(session_id)
+            if not session:
+                raise TeachingConflict("教学会话不存在，请重新开始。")
+            if expected_revision is not None and expected_revision != session.get("revision", 0):
+                raise TeachingConflict("教学步骤已更新，请刷新后再回答。")
+            if session.get("pending_job") and session["pending_job"] != job_id:
+                raise TeachingConflict("当前回答仍在处理中，请等待老师反馈。")
+            session["pending_job"] = job_id
+            self._persist(session)
+
+    def release(self, session_id, job_id):
+        with self._lock:
+            session = self.get(session_id)
+            if session and session.get("pending_job") == job_id:
+                session["pending_job"] = None
+                self._persist(session)
+
+    @contextmanager
+    def transaction(self, session_id, expected_revision=None):
+        from backend.jobs import current_job_id
+        key = (workspace_directory(), session_id)
+        with self._lock:
+            turn_lock = self._turn_locks.setdefault(key, threading.RLock())
+        with turn_lock:
+            with self._lock:
+                original = self.get(session_id)
+                if not original:
+                    raise TeachingConflict("教学会话不存在，请重新开始。")
+                if expected_revision is not None and expected_revision != original.get("revision", 0):
+                    raise TeachingConflict("教学步骤已更新，请刷新后再回答。")
+                if original.get("pending_job") and original["pending_job"] != current_job_id():
+                    raise TeachingConflict("当前回答仍在处理中，请等待老师反馈。")
+                snapshot = deepcopy(original)
+            token = _TURN_SNAPSHOT.set((self, session_id, snapshot))
+            try:
+                yield snapshot
+                snapshot["revision"] = original.get("revision", 0) + 1
+                if snapshot.get("pending_job") == current_job_id():
+                    snapshot["pending_job"] = None
+                with self._lock:
+                    self._store(snapshot)
+            finally:
+                _TURN_SNAPSHOT.reset(token)
 
     def create(self, question: str, teacher: str = None) -> dict:
         """创建新教学会话：解题 → 取步骤 → 存入 session"""
@@ -337,7 +414,7 @@ class TeachSessionManager:
                 saved_qid = None
                 logger.warning("_fs or second save_question failed: %s", e)
         session_id = str(_uuid.uuid4())
-        self._sessions[session_id] = {
+        session = {
             "session_id": session_id,
             "question_id": (saved_qid if 'saved_qid' in dir() and saved_qid is not None else saved_qid_first if 'saved_qid_first' in dir() else None),
             "question": question,
@@ -346,43 +423,96 @@ class TeachSessionManager:
             "total_steps": len(steps),
             "current_step": 0,
             "step_introduced": False,   # 当前步骤是否已给过引导
+            "step_viewed_answer": False,  # 当前步骤是否已查看完整答案
             "attempt_count": 0,         # 当前步骤的回答次数
             "messages": [],             # [{role, content, step_index, ...}]
             "stats": {"correct": 0, "wrong": 0, "skipped": 0, "viewed_answer": 0},
             "step_results": [],         # 每步的最终记录 [{step_index, correct, attempts, ...}]
+            "revision": 0,
+            "pending_job": None,
             "chunk_results": cr,
             "overall_difficulty": (r.get("overall_difficulty") if (r and r.get("chunk_results")) else (vr.get("overall_difficulty") if vr else None)),
         }
-        return {"session_id": session_id, **self._sessions[session_id]}
+        with self._lock:
+            self._store(session)
+            owner = workspace_directory()
+            self._session_owners[session_id] = owner
+            if owner is not None:
+                # Keep repeated starts on an existing question from growing demo
+                # memory indefinitely. The regular owner's sessions stay intact.
+                own_sessions = [sid for sid, directory in self._session_owners.items() if directory == owner]
+                for old_id in own_sessions[:-20]:
+                    self._sessions.pop(old_id, None)
+                    del self._session_owners[old_id]
+                    from backend.jobs import storage_connection
+                    with storage_connection() as conn:
+                        conn.execute("DELETE FROM teaching_sessions WHERE session_id=?", (old_id,))
+        return {"session_id": session_id, **session}
 
     def get(self, session_id: str) -> Optional[dict]:
-        return self._sessions.get(session_id)
+        transaction = _TURN_SNAPSHOT.get()
+        if transaction and transaction[:2] == (self, session_id):
+            return transaction[2]
+        with self._lock:
+            if session_id in self._session_owners and self._session_owners[session_id] != workspace_directory():
+                return None
+            if session_id in self._sessions:
+                return self._sessions[session_id]
+            from backend.jobs import storage_connection
+            with storage_connection() as conn:
+                row = conn.execute("SELECT state_json,revision,pending_job FROM teaching_sessions WHERE session_id=?", (session_id,)).fetchone()
+            if not row:
+                return None
+            session = json.loads(row["state_json"])
+            session["revision"], session["pending_job"] = row["revision"], row["pending_job"]
+            self._sessions[session_id] = session
+            self._session_owners[session_id] = workspace_directory()
+            return session
+
+    def forget_workspace(self, directory) -> None:
+        directory = os.path.abspath(os.fspath(directory))
+        with self._lock:
+            for session_id, owner in list(self._session_owners.items()):
+                if owner == directory:
+                    self._sessions.pop(session_id, None)
+                    del self._session_owners[session_id]
+                    self._turn_locks.pop((directory, session_id), None)
 
     def add_message(self, session_id: str, role: str, content: str,
                     step_index: int = None, metadata: dict = None):
-        sess = self._sessions.get(session_id)
+        sess = self.get(session_id)
         if not sess:
             return
         msg = {"role": role, "content": content, "step_index": step_index or sess["current_step"]}
         if metadata:
             msg.update(metadata)
         sess["messages"].append(msg)
+        if _TURN_SNAPSHOT.get() is None:
+            self._persist(sess)
 
     def advance_step(self, session_id: str):
-        sess = self._sessions.get(session_id)
+        sess = self.get(session_id)
         if not sess:
             return
         sess["current_step"] += 1
         sess["step_introduced"] = False
+        sess["step_viewed_answer"] = False
         sess["attempt_count"] = 0
+        if _TURN_SNAPSHOT.get() is None:
+            self._persist(sess)
 
     def is_complete(self, session_id: str) -> bool:
-        sess = self._sessions.get(session_id)
+        sess = self.get(session_id)
         return sess and sess["current_step"] >= sess["total_steps"]
 
 
 # 全局会话管理器实例
 _session_manager = TeachSessionManager()
+
+
+def forget_workspace(directory) -> None:
+    """Remove a visitor's teaching history after their sandbox expires."""
+    _session_manager.forget_workspace(directory)
 
 
 
@@ -410,7 +540,7 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
                 "step_index": skipped_index,
                 "correct": True,
                 "attempts": sess["attempt_count"],
-                "viewed_answer": False,
+                "viewed_answer": bool(sess.get("step_viewed_answer")),
             })
             sess["stats"]["skipped"] = sess["stats"].get("skipped", 0) + 1
             _session_manager.add_message(session_id, "system", f"已跳过步骤 {skipped_index+1}")
@@ -450,6 +580,9 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
             return {"action": "guide", "message": feedback, "current_step": sess["current_step"] + 1, "total_steps": sess["total_steps"], "session_id": session_id}
         
         if any(kw in student_message for kw in ["答案", "answer", "看一下答案"]):
+            if not sess.get("step_viewed_answer"):
+                sess["stats"]["viewed_answer"] = sess["stats"].get("viewed_answer", 0) + 1
+                sess["step_viewed_answer"] = True
             answer = step.get("step_answer", step.get("standard_writing", ""))
             feedback = f"这一步的关键答案是：{answer}\n\n理解了之后，请继续完成下一步。"
             _session_manager.add_message(session_id, "teacher", feedback, metadata={"action": "show_answer"})
@@ -477,10 +610,10 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
             c, _ = call_deepseek(TC, up, temperature=0.2,
                                  model=cfg.get("verifier", {}).get("model", "deepseek-v4-flash"))
             check_result = json.loads(_ej(c))
-        except Exception:
-            check_result = {"is_correct": False, "is_partial": False,
-                            "feedback": "抱歉，无法判断，请稍后再试。",
-                            "error_type": "其他", "error_detail": ""}
+        except Exception as exc:
+            # A failed request is not a wrong student answer. The enclosing
+            # snapshot transaction discards messages, attempt count and stats.
+            raise RuntimeError("AI 暂时无法判断，请稍后重试。") from exc
 
         is_correct = check_result.get("is_correct", False)
         is_partial = check_result.get("is_partial", False)
@@ -494,7 +627,7 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
                 "step_index": sess["current_step"],
                 "correct": True,
                 "attempts": sess["attempt_count"],
-                "viewed_answer": False,
+                "viewed_answer": bool(sess.get("step_viewed_answer")),
             })
             sess["stats"]["correct"] += 1
             _session_manager.add_message(session_id, "teacher", feedback, metadata={
@@ -524,6 +657,7 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
                 }
         else:
             # 答错 → 留在当前步骤，返回反馈
+            sess["stats"]["wrong"] = sess["stats"].get("wrong", 0) + 1
             _session_manager.add_message(session_id, "teacher", feedback, metadata={
                 "action": "guide", "is_correct": is_correct, "is_partial": is_partial,
                 "error_type": error_type, "error_detail": error_detail})
@@ -544,18 +678,17 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
     return {"action": "guide", "message": msg, "session_id": session_id}
 
 
-def teach_ack_prompt(session_id: str) -> dict:
+def teach_ack_prompt(session_id: str, expected_revision=None) -> dict:
     """前端展示完下一步引导后确认，避免提示词被跳过或重复"""
-    sess = _session_manager.get(session_id)
-    if not sess:
-        return {"error": "session_not_found", "detail": "会话不存在"}
-    if sess["current_step"] < sess["total_steps"]:
-        sess["step_introduced"] = True
+    with _session_manager.transaction(session_id, expected_revision) as sess:
+        if sess["current_step"] < sess["total_steps"]:
+            sess["step_introduced"] = True
     return {
         "ok": True,
         "current_step": sess["current_step"] + 1,
         "total_steps": sess["total_steps"],
         "step_introduced": sess["step_introduced"],
+        "revision": sess["revision"],
     }
 
 
@@ -584,14 +717,81 @@ def teach_session_start(question: str, teacher: str = None) -> dict:
         "chunk_results": sess["chunk_results"],
         "total_steps": sess["total_steps"],
         "current_step": 1,
+        "revision": sess.get("revision", 0),
     }
 
 
 
 
-def teach_session_chat(session_id: str, student_message: str) -> dict:
+def teach_session_chat(session_id: str, student_message: str, expected_revision=None) -> dict:
     """对外：发送学生消息，返回 AI 回应"""
-    return _do_chat_turn(session_id, student_message)
+    with _session_manager.transaction(session_id, expected_revision) as sess:
+        result = _do_chat_turn(session_id, student_message)
+        if result.get("error"):
+            raise RuntimeError(result.get("detail") or result["error"])
+        if result.get("next_step_message"):
+            _session_manager.add_message(session_id, "teacher", result["next_step_message"], metadata={"action": "guide"})
+            sess["step_introduced"] = True
+        if result.get("action") == "complete":
+            _save_completed_session(sess)
+            result["question_id"] = sess.get("question_id")
+            result["saved_question_id"] = sess.get("question_id")
+    result["revision"] = sess["revision"]
+    return result
+
+
+def reserve_teaching_job(session_id, job_id, expected_revision=None):
+    _session_manager.reserve(session_id, job_id, expected_revision)
+
+
+def release_teaching_job(session_id, job_id):
+    _session_manager.release(session_id, job_id)
+
+
+def _save_completed_session(sess, manual_errors=None):
+    """Server-side completion cannot be lost when the summary page is closed."""
+    from backend.database import add_step_error, get_step_errors
+    result = {"chunk_results": sess.get("chunk_results") or [], "overall_difficulty": sess.get("overall_difficulty")}
+    _set_category_from_chunks(result)
+    if not sess.get("question_id"):
+        sess["question_id"] = db_save_question(sess["question"], result)
+    qid = sess.get("question_id")
+    if not qid:
+        return
+    tags = {}
+    student = ""
+    for message in sess.get("messages") or []:
+        if message["role"] == "student":
+            student = message.get("content", "")
+        elif message.get("is_correct") is False and message.get("error_type"):
+            index = message.get("step_index", 0)
+            if index < len(sess.get("steps") or []):
+                step = sess["steps"][index]
+                tags[(step.get("chunk_id", 1), step.get("step_number", index + 1))] = {
+                    "mistake_type": message["error_type"], "mistake_detail": message.get("error_detail", ""), "student_input": student}
+    if isinstance(manual_errors, dict):
+        for key, value in manual_errors.items():
+            parts = key.split("-")
+            if len(parts) == 2:
+                tags[(int(parts[0]), int(parts[1]))] = {"mistake_type": value.get("error_type", "其他"),
+                                                     "mistake_detail": value.get("error_detail", ""), "student_input": value.get("student_input", "")}
+    elif manual_errors:
+        for tag in manual_errors:
+            tags[(tag.get("chunk_id", 1), tag["step_number"])] = tag
+    existing = {(e["chunk_id"], e["step_number"], e["mistake_type"], e.get("mistake_detail", ""), e.get("student_input") or "") for e in get_step_errors(qid)}
+    for (chunk, step), tag in tags.items():
+        identity = (chunk, step, tag["mistake_type"], tag.get("mistake_detail", ""), tag.get("student_input") or "")
+        if identity not in existing:
+            add_step_error(qid, step, chunk, tag["mistake_type"], tag.get("mistake_detail", ""), tag.get("student_input"))
+            existing.add(identity)
+    sess["results_saved"] = True
+
+
+def teach_finish_session(session_id, step_errors=None, expected_revision=None):
+    with _session_manager.transaction(session_id, expected_revision) as sess:
+        _save_completed_session(sess, step_errors)
+    return {"saved_question_id": sess.get("question_id"), "question_id": sess.get("question_id"),
+            "saved": bool(sess.get("question_id")), "revision": sess["revision"]}
 
 
 def teach_get_session(session_id: str) -> Optional[dict]:
@@ -612,5 +812,9 @@ def teach_get_session(session_id: str) -> Optional[dict]:
         "stats": sess["stats"],
         "step_results": sess["step_results"],
         "step_introduced": sess.get("step_introduced", False),
+        "step_viewed_answer": sess.get("step_viewed_answer", False),
         "overall_difficulty": sess.get("overall_difficulty"),
+        "revision": sess.get("revision", 0),
+        "pending_job": sess.get("pending_job"),
+        "results_saved": sess.get("results_saved", False),
     }

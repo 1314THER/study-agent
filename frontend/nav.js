@@ -44,7 +44,7 @@
         if (window.AgentGlobal || document.getElementById('agentScript')) return;
         var s = document.createElement('script');
         s.id = 'agentScript';
-        s.src = 'agent.js?v=20260809g';
+        s.src = 'agent.js?v=20261004a';
         document.head.appendChild(s);
     }
 
@@ -60,6 +60,14 @@
             }
         } catch (e) {}
         injectHomeNav();
+        if (window.STUDY_DEMO) {
+            document.querySelectorAll('a[href]').forEach(function(a) {
+                if (!/(?:grade|mother|loop|level-editor)\.html(?:[?#]|$)/.test(a.getAttribute('href'))) return;
+                a.title = '暂未开发完成';
+                var label=a.querySelector('.nav-label');
+                if(label && !label.textContent.includes('暂未完成')) label.textContent += ' · 暂未完成';
+            });
+        }
         loadAgent();
         requestAnimationFrame(function () {
             requestAnimationFrame(function () {

@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>学习助手 · 评委体验</title>
+    <script src="/jobs.js?v=20261009a"></script>
+    <script>document.documentElement.classList.add("nav-init")</script>
+    <link rel="stylesheet" href="/style.css">
+    <link rel="stylesheet" href="/demo-session.css?v=20261009a">
+</head>
+<body class="demo-home">
+<div class="app-layout">
+    <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
+    <aside class="sidebar">
+        <button class="nav-expand-toggle" onclick="toggleNavExpand()" aria-label="展开导航">☰</button>
+        <nav>
+            <a href="home.html" class="nav-item active" data-page="home"><span class="nav-icon">🏠</span><span class="nav-label">体验首页</span></a>
+            <a href="multimodal.html" class="nav-item" data-page="multimodal"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
+            <a href="history.html" class="nav-item" data-page="history"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+            <a href="exam.html" class="nav-item" data-page="exam"><span class="nav-icon">📝</span><span class="nav-label">组卷</span></a>
+            <a href="board.html" class="nav-item" data-page="board"><span class="nav-icon">🗺️</span><span class="nav-label">集合闯关</span></a>
+            <a href="teach.html" class="nav-item" data-page="teach"><span class="nav-icon">📖</span><span class="nav-label">手把手教学</span></a>
+            <a href="calendar.html" class="nav-item" data-page="calendar"><span class="nav-icon">📅</span><span class="nav-label">巩固日历</span></a>
+            <a href="settings.html" class="nav-item" data-page="settings"><span class="nav-icon">⚙️</span><span class="nav-label">设置</span></a>
+        </nav>
+    </aside>
+    <main class="main-content">
+        <div class="demo-home-container">
+            <section class="demo-home-hero" id="demo-intro">
+                <span class="demo-home-eyebrow">评委体验 · 数学学习助手</span>
+                <h1>从一道题开始，<br>看见完整的学习过程。</h1>
+                <p>三道近年高考大题已经备好。跟着页面提示，体验解题、题库、组卷与集合首关，再看看 AI 怎样引导学生自己作答。</p>
+                <a class="demo-home-primary" id="demo-enter-multimodal" href="multimodal.html">进入多模态解答 <span aria-hidden="true">→</span></a>
+                <p class="demo-home-hint">教程会自动开始。每一步都可以跳过，跳过不会调用 AI。</p>
+            </section>
+            <section class="demo-home-route" aria-label="体验顺序">
+                <div><span>01</span><strong>选择真题，开始解答</strong><p>逐步解析可以回看，后台任务支持切页与刷新。</p></div>
+                <div><span>02</span><strong>把题目组织起来</strong><p>等待时浏览题库、加入试卷、体验集合概念判断。</p></div>
+                <div><span>03</span><strong>试着自己做一遍</strong><p>回到解析，再让 AI 老师围绕步骤提问。</p></div>
+            </section>
+            <section class="demo-home-features" aria-label="功能入口">
+                <h2>本次可以体验</h2>
+                <div class="demo-home-grid">
+                    <a href="multimodal.html"><strong>多模态解答</strong><p>预设真题，也能上传图片、PDF、文档并批量解题。</p></a>
+                    <a href="history.html"><strong>个人题库</strong><p>保存、检索与回看解析，记录每一步的错因。</p></a>
+                    <a href="exam.html"><strong>组卷</strong><p>整理题目，切换学生版与教师版，导出 PDF。</p></a>
+                    <a href="board.html"><strong>集合闯关</strong><p>浏览集合路线，完成首关的两道概念判断。</p></a>
+                    <a href="teach.html"><strong>手把手教学</strong><p>按步骤回答问题，获得即时反馈与提示。</p></a>
+                    <a href="calendar.html"><strong>巩固日历</strong><p>查看复习安排。AI 教练也可以帮你找到下一步。</p></a>
+                </div>
+                <p class="demo-home-status">AI 改卷、母题看板、套路循环、关卡编辑暂未开发完成；集合以外的闯关板块也暂未开放。</p>
+            </section>
+            <section class="demo-home-complete" id="demo-home-complete" hidden>
+                <h2>教程已完成</h2><p>可以继续自由体验，也可以前往正式站。</p>
+                <a class="demo-home-primary" href="https://150.chat/">前往 150.chat →</a>
+                <button type="button" onclick="StudyDemoTour.restart()">重新体验教程</button>
+            </section>
+        </div>
+    </main>
+</div>
+<script src="/nav.js?v=20261009a"></script>
+</body>
+</html>

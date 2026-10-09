@@ -48,6 +48,19 @@ def pdf_to_images(file_path: str, dpi: int = 200) -> list:
     return images
 
 
+def iter_pdf_images(file_path: str, dpi: int = 200):
+    """Render one page at a time instead of retaining the whole PDF in RAM."""
+    import fitz
+    with fitz.open(file_path) as doc:
+        total = len(doc)
+        for page_num in range(total):
+            pix = doc[page_num].get_pixmap(matrix=fitz.Matrix(dpi / 72, dpi / 72))
+            data = pix.tobytes("png")
+            del pix
+            yield page_num + 1, total, base64.b64encode(data).decode("utf-8")
+            del data
+
+
 def image_to_base64(file_path: str) -> str:
     return file_to_base64(file_path)
 
@@ -112,15 +125,17 @@ def _call_qwen_vl(image_base64: Optional[str] = None, text: Optional[str] = None
     }
     
     try:
-        resp = httpx.post(
-            base_url + "/chat/completions",
-            headers={
-                "Authorization": f"Bearer {api_key}",
-                "Content-Type": "application/json"
-            },
-            json=body,
-            timeout=timeout_seconds,
-        )
+        from backend.jobs import provider_slot, request_timeout
+        with provider_slot("dashscope"):
+            resp = httpx.post(
+                base_url + "/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {api_key}",
+                    "Content-Type": "application/json"
+                },
+                json=body,
+                timeout=request_timeout(timeout_seconds),
+            )
         if resp.status_code != 200:
             raise Exception(f"Qwen API 错误 {resp.status_code}: {resp.text[:200]}")
         data = resp.json()
@@ -214,22 +229,26 @@ def _image_mime(ext: str) -> str:
 
 
 # ---------- 主入口 ----------
-def parse_file(file_path: str, original_filename: str = "") -> list:
+def parse_file(file_path: str, original_filename: str = "", progress=None) -> list:
     """解析文件，返回 [{index, latex, difficulty, recommended_teacher}]"""
     ext = os.path.splitext(file_path)[1].lower()
     
     # PDF → 每页转图 → 逐页切题
     if ext == ".pdf":
-        images = pdf_to_images(file_path)
         all_questions = []
-        for page_b64 in images:
+        for page_num, total, page_b64 in iter_pdf_images(file_path):
+            if progress:
+                progress(page_num, total)
             raw = _call_qwen_vl(image_base64=page_b64, text=_EXTRACTION_PROMPT)
             page_qs = _parse_questions(raw)
             all_questions.extend(page_qs)
+            del page_b64
         return _post_process(all_questions)
     
     # 图片 → 直接调 vision API
     elif ext in (".jpg", ".jpeg", ".png"):
+        if progress:
+            progress(1, 1)
         b64 = image_to_base64(file_path)
         raw = _call_qwen_vl(image_base64=b64, text=_EXTRACTION_PROMPT)
         questions = _parse_questions(raw)
@@ -237,12 +256,16 @@ def parse_file(file_path: str, original_filename: str = "") -> list:
     
     # docx / txt → 文本提取 → 调 text-only API
     elif ext == ".docx":
+        if progress:
+            progress(1, 1)
         text = docx_to_text(file_path)
         raw = _call_qwen_vl(text=_EXTRACTION_PROMPT + "\n\n文本内容：\n" + text)
         questions = _parse_questions(raw)
         return _post_process(questions)
     
     elif ext == ".txt":
+        if progress:
+            progress(1, 1)
         with open(file_path, "r", encoding="utf-8", errors="replace") as f:
             text = f.read()
         raw = _call_qwen_vl(text=_EXTRACTION_PROMPT + "\n\n文本内容：\n" + text)

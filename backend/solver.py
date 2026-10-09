@@ -166,12 +166,14 @@ def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3
         body["reasoning_effort"] = reasoning_effort
         body["thinking"] = {"type": "enabled"}
     try:
-        resp = httpx.post(
-            endpoint,
-            headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-            json=body,
-            timeout=timeout_seconds,
-        )
+        from backend.jobs import provider_slot, request_timeout
+        with provider_slot("deepseek"):
+            resp = httpx.post(
+                endpoint,
+                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
+                json=body,
+                timeout=request_timeout(timeout_seconds),
+            )
         if resp.status_code != 200:
             raise Exception(f"状态码 {resp.status_code}: {resp.text[:200]}")
         data = resp.json()

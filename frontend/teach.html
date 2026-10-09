@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="/jobs.js?v=20261009a"></script>
+<script src="/job-pages.js?v=20261009a"></script>
 <script>document.documentElement.classList.add("nav-init")</script>
 <meta charset="UTF-8">
 <meta http-equiv="Cache-Control" content="no-cache">
@@ -479,32 +481,56 @@ var _currentErrorChunkId=1;
 var _currentErrorStepNumber=1;
 function showErrorDialog(c,s,t){_currentErrorChunkId=c;_currentErrorStepNumber=s;document.getElementById("errorStepDisplay").textContent=t||"\u6B65\u9AA4 "+s;document.getElementById("errorTypeSelect").value="\u601D\u8DEF\u9519\u8BEF";document.getElementById("errorDetailInput").value="";document.getElementById("errorDialogOverlay").style.display="block";document.body.style.overflow="hidden";}
 function closeErrorDialog(){document.getElementById("errorDialogOverlay").style.display="none";document.body.style.overflow="";}
-function saveStepError(){var et=document.getElementById("errorTypeSelect").value;var ed=document.getElementById("errorDetailInput").value.trim();_stepErrorData[_currentErrorChunkId+"-"+_currentErrorStepNumber]={error_type:et,error_detail:ed};updateInfoPanel();closeErrorDialog();}
+function saveStepError(){var et=document.getElementById("errorTypeSelect").value;var ed=document.getElementById("errorDetailInput").value.trim();_stepErrorData[_currentErrorChunkId+"-"+_currentErrorStepNumber]={error_type:et,error_detail:ed};updateInfoPanel();saveSession();closeErrorDialog();}
 
 function saveSession(){
   try{var d={session_id:_sessionId,question:document.getElementById("teachQuestionInput").value,teacher:_selectedTeacher,messages:[],stats:_stats,current_step:_currentStepIndex,total_steps:_totalSteps,steps:_sessionSteps,chunk_results:_sessionChunkResults,step_errors:_stepErrorData};var c=document.getElementById("teachChat");if(c){c.querySelectorAll(".chat-msg").forEach(function(m){var r=m.classList.contains("teacher")?"teacher":"student";var b=m.querySelector(".chat-bubble");d.messages.push({role:r,content:b?b.textContent:""})})}localStorage.setItem(SAVE_KEY,JSON.stringify(d))}catch(e){}
 }
 function clearSavedSession(){localStorage.removeItem(SAVE_KEY);}
-function restoreSession(){
-  try{var s=localStorage.getItem(SAVE_KEY);if(!s)return false;var d=JSON.parse(s);if(!d||!d.session_id)return false;
-    _sessionId=d.session_id;_currentStepIndex=d.current_step||0;_totalSteps=d.total_steps||0;_stats=d.stats||{correct:0,wrong:0,skipped:0};
-    _sessionSteps=d.steps||[];_sessionChunkResults=d.chunk_results||[];_stepErrorData=d.step_errors||{};
-    if(d.teacher){_selectedTeacher=d.teacher;document.body.className=document.body.className.replace(/theme-\w+/g,"").trim()||"theme-liangliang";document.body.classList.add("theme-"+_selectedTeacher);}
-    if(!_sessionSteps||!_sessionSteps.length){clearSavedSession();return false;}
-    if(d.question){document.getElementById("teachQuestionInput").value=d.question;var qd=document.getElementById("teachQuestionDisplay");if(qd){qd.innerHTML=escapeHtml(d.question).replace(/\n/g,"<br>");renderMath(qd);}}
-    document.getElementById("teachInput").style.display="none";document.getElementById("quoteArea").style.display="none";
-    document.getElementById("teachSession").style.display="flex";document.getElementById("teachSummary").classList.remove("show");
-    document.getElementById("teachChat").innerHTML="";if(d.messages)d.messages.forEach(function(m){addChatMessage(m.role,m.content)});
-    // Delayed KaTeX re-render for restored messages
-    setTimeout(function(){var cc=document.getElementById("teachChat");if(cc&&window.renderMathInElement){try{renderMathInElement(cc,{delimiters:[{left:"$$",right:"$$",display:true},{left:"$",right:"$",display:false}],ignoredTags:["script","style"]})}catch(e){}}},300);
-    updateProgress();updateInfoPanel();setInputEnabled(true);saveSession();
-    // Try to get fresh session data from backend
-    fetch("/teach/session/"+_sessionId).then(function(r){return r.json()}).then(function(sd){
-      if(sd&&sd.steps&&sd.steps.length){_sessionSteps=sd.steps;_sessionChunkResults=sd.chunk_results||[];updateInfoPanel();saveSession();}
-    }).catch(function(){});
-    return true;
-  }catch(e){clearSavedSession();return false;}
+function ignoreCurrentTeachingWork(){var record=StudyJobs.read('teach_start');if(record)localStorage.setItem('teach_start_ignored',record.request_id||record.job_id);}
+var _teachRevision=0;
+function applyTeachState(d){
+  if(!d||!d.session_id)return;
+  _sessionId=d.session_id;_teachQuestionId=d.question_id||d.saved_question_id||null;
+  _teachRevision=d.revision||0;window.studyTeachRevision=_teachRevision;
+  _currentStepIndex=d.current_step||0;_totalSteps=d.total_steps||0;
+  _stats=d.stats||{correct:0,wrong:0,skipped:0};_sessionSteps=d.steps||[];_sessionChunkResults=d.chunk_results||[];
+  if(d.question)document.getElementById('teachQuestionInput').value=d.question;
+  if(d.teacher)_selectedTeacher=d.teacher;
+  document.getElementById('teachInput').style.display='none';document.getElementById('quoteArea').style.display='none';
+  document.getElementById('teachSession').style.display='flex';document.getElementById('teachSummary').classList.remove('show');
+  document.getElementById('teachChat').innerHTML='';
+  (d.messages||[]).forEach(function(m){if(['teacher','assistant','student','user'].includes(m.role))addChatMessage(m.role==='student'||m.role==='user'?'student':'teacher',m.content,m);});
+  var qd=document.getElementById('teachQuestionDisplay');if(qd){qd.innerHTML=escapeHtml(d.question||'').replace(/\n/g,'<br>');renderMath(qd);}
+  _isWaiting=!!d.pending_job;setInputEnabled(!_isWaiting);updateProgress();updateInfoPanel();saveSession();
+  stopStepTimer();document.getElementById('teachStartBtn').disabled=false;
+  if(_currentStepIndex>=_totalSteps&&_totalSteps)showSummary(d);
+  document.dispatchEvent(new CustomEvent('study:teach-opened',{detail:d}));
 }
+async function refreshTeachState(){
+  if(!_sessionId)return false;var r=await fetch('/teach/session/'+_sessionId);if(!r.ok){_sessionId=null;clearSavedSession();return false;}var d=await r.json();applyTeachState(d);return true;
+}
+async function restoreSession(){
+  try{var d=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');if(!d||!d.session_id)return false;_sessionId=d.session_id;_stepErrorData=d.step_errors||{};return await refreshTeachState();}catch(e){return false;}
+}
+async function restoreTeachingWork(){
+  var id=new URLSearchParams(location.search).get('job'),record=StudyJobs.read('teach_start');
+  if(!id&&(!record||!record.job_id||localStorage.getItem('teach_start_ignored')===(record.request_id||record.job_id))){await restoreSession();return;}
+  try{
+    var job=await StudyJobs.get(id||record.job_id);if(!job.kind.startsWith('teach_')){await restoreSession();return;}
+    var saved=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');
+    if(job.kind==='teach_start'&&['queued','running'].includes(job.status)){
+      _sessionId=null;_isWaiting=true;clearSavedSession();
+      if(job.args&&job.args.question)document.getElementById('teachQuestionInput').value=job.args.question;
+      document.getElementById('teachInput').style.display='block';document.getElementById('teachSession').style.display='none';document.getElementById('teachSummary').classList.remove('show');document.getElementById('teachStartBtn').disabled=true;
+    }
+    var data=job.status==='done'?job.result:await StudyJobs.wait(job,function(j){document.getElementById('teachProgressArea').style.display='block';document.getElementById('teachProgressText').textContent=j.detail||'教学任务在后台执行';});
+    _sessionId=data.session_id||job.args.session_id;
+    _stepErrorData=saved&&saved.session_id===_sessionId?saved.step_errors||{}:{};
+    await refreshTeachState();
+  }catch(e){_isWaiting=false;showError(e.message);resetStartBtn();}
+}
+document.addEventListener('studyjobdone',function(e){var j=e.detail;if(j.args&&j.args.session_id===_sessionId)refreshTeachState();});
 
 
 var _stepTimer=null;
@@ -551,39 +577,12 @@ function setProgressStage(stage, text){
 }
 
 async function startTeaching(){
-  var q=document.getElementById("teachQuestionInput").value.trim();
-  if(!q){showError("请输入题目");return;}
-  saveSession();document.getElementById("teachError").style.display="none";
-  document.getElementById("teachStartBtn").disabled=true;
-  document.getElementById("teachProgressArea").style.display="block";
-  try{
-    var r=await fetch("/teach/find",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,teacher:_selectedTeacher})});
-    var findRes=await r.json();
-    if(findRes.found&&findRes.chunk_results&&findRes.chunk_results.length){
-      // Question already in DB - go directly to stage 2
-      startStepTimer();
-      setProgressStage(2,"\u6B63\u5728\u4F18\u5316\u6559\u5B66\u5F15\u5BFC");
-      await startTeachSession(q);
-    }else{
-      // New question - show teacher modal
-      document.getElementById("teacherModal").style.display="flex";
-      await new Promise(function(resolve){_pendingResolve=resolve;});
-      startStepTimer();
-      setProgressStage(1,"\u6B63\u5728\u89E3\u9898");
-      var s1=await fetch("/solve/step1",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,teacher:_selectedTeacher})});
-      var d1=await s1.json();
-      if(d1.error){showError(d1.detail||"无法解答");resetStartBtn();return;}
-      setProgressStage(2,"正在检查步骤…");
-      var s2=await fetch("/solve/step2",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,content:d1.content,category:d1.category||null,teacher:_selectedTeacher})});
-      var d2=await s2.json();
-      if(d2.error){showError(d2.detail||"步骤检查失败");resetStartBtn();return;}
-      var s3=await fetch("/solve/step3",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({question:q,chunk_results:JSON.stringify(d2.chunk_results),teacher:_selectedTeacher,save:true})});
-      await s3.json();
-      stopStepTimer();
-      setProgressStage(3,"\u6B63\u5728\u4F18\u5316\u6559\u5B66\u5F15\u5BFC");
-      await startTeachSession(q);
-    }
-  }catch(e){console.error(e);showError("网络错误，请确认后端已启动");resetStartBtn();}
+  var q=document.getElementById('teachQuestionInput').value.trim();if(!q){showError('请输入题目');return;}
+  clearSavedSession();_sessionId=null;_teachQuestionId=null;_stepErrorData={};_teachRevision=0;window.studyTeachRevision=undefined;localStorage.removeItem('teach_start_ignored');
+  document.getElementById('teachError').style.display='none';document.getElementById('teachStartBtn').disabled=true;
+  document.getElementById('teachProgressArea').style.display='block';startStepTimer();
+  try{var data=await StudyJobs.submit('teach_start',{question:q,teacher:_selectedTeacher},{key:'teach_start',onProgress:function(j){var el=document.getElementById('teachProgressText');if(el)el.textContent=j.detail||'正在后台准备教学，可以切换页面。';}});_sessionId=data.session_id;await refreshTeachState();}
+  catch(e){stopStepTimer();showError(e.message);resetStartBtn();}
 }
 function resetStartBtn(){document.getElementById("teachStartBtn").disabled=false;document.getElementById("teachLoading").style.display="none";} // progress area kept visible during teaching
 function showError(m){var e=document.getElementById("teachError");e.textContent=m;e.style.display="block";}
@@ -623,7 +622,8 @@ async function sendMessage(){
   try{
     var r=await fetch("/teach/session/"+_sessionId+"/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message:m})});
     var d=await r.json();removeLoadingMessage();
-    if(d.error){addChatMessage("teacher","\u62B1\u6B49\uFF0C\u51FA\u4E86\u70B9\u95EE\u9898\uFF0C\u8BF7\u518D\u8BD5\u4E00\u6B21\u3002");_isWaiting=false;setInputEnabled(true);saveSession();return;}
+    if(d.error){i.value=m;addChatMessage("teacher","\u62B1\u6B49\uFF0C\u51FA\u4E86\u70B9\u95EE\u9898\uFF0C\u8BF7\u518D\u8BD5\u4E00\u6B21\u3002");_isWaiting=false;setInputEnabled(true);saveSession();return;}
+    if(d.revision!==undefined){_teachRevision=d.revision;window.studyTeachRevision=d.revision;}
     var a=d.action||"guide";
     if(a==="advance"){
       if(d.message)addChatMessage("teacher",d.message,{});
@@ -631,7 +631,7 @@ async function sendMessage(){
       document.getElementById("showAnswerBtn").style.display="";
       document.getElementById("understandBtn").style.display="none";
       updateInfoPanel();
-      if(d.next_step_message){_currentStepIndex=(d.current_step||1)-1;updateProgress();addChatMessage("teacher",d.next_step_message);updateProgress();await ackTeachPrompt();}
+      if(d.next_step_message){_currentStepIndex=(d.current_step||1)-1;updateProgress();addChatMessage("teacher",d.next_step_message);updateProgress();}
       else{_currentStepIndex=(d.current_step||1)-1;updateProgress();}
       updateInfoPanel();_isWaiting=false;setInputEnabled(true);
     }else if(a==="complete"){if(d.message)addChatMessage("teacher",d.message);_isWaiting=false;setInputEnabled(false);showSummary(d);}
@@ -645,8 +645,10 @@ async function sendMessage(){
         document.getElementById("teachChat").appendChild(sugDiv);scrollChat();
       }
     }
-    saveSession();
-  }catch(e){removeLoadingMessage();addChatMessage("teacher","\u7F51\u7EDC\u9519\u8BEF\uFF0C\u8BF7\u91CD\u8BD5\u3002");_isWaiting=false;setInputEnabled(true);}
+    if(d.revision!==undefined){_teachRevision=d.revision;window.studyTeachRevision=d.revision;}
+    await refreshTeachState();
+    document.dispatchEvent(new CustomEvent('study:teach-answer-feedback',{detail:d}));
+  }catch(e){i.value=m;removeLoadingMessage();addChatMessage("teacher","\u7F51\u7EDC\u9519\u8BEF\uFF0C\u8BF7\u91CD\u8BD5\u3002");_isWaiting=false;setInputEnabled(true);}
 }
 
 async function uploadTeachHandwriting(){
@@ -710,7 +712,7 @@ function understoodStep(){
   if(i){i.value="跳过";sendMessage();}
 }
 
-function cancelTeaching(){if(!_sessionId)return;clearSavedSession();_sessionId=null;_teachQuestionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("quoteArea").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachStartBtn").disabled=false;}
+function cancelTeaching(){if(!_sessionId)return;ignoreCurrentTeachingWork();clearSavedSession();_sessionId=null;_teachQuestionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("quoteArea").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachStartBtn").disabled=false;}
 
 async function saveTeachingResults(){
   try{
@@ -750,7 +752,8 @@ async function saveTeachingResults(){
   document.getElementById("teachSavedStatus").style.display="block";
   return null;
 }
-async function showSummary(d){document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.add("show");var st=d.stats||_stats;document.getElementById("summaryCorrect").textContent=st.correct||0;document.getElementById("summaryWrong").textContent=st.wrong||0;document.getElementById("summarySkipped").textContent=(st.skipped||0)+(st.viewed_answer||0);var qid=await saveTeachingResults();var btn=document.getElementById("teachAiGenBtn");if(btn){btn.style.display=qid?"inline-block":"none";}}
+var _summaryFinishKey=null;
+async function showSummary(d){document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.add("show");var st=d.stats||_stats;document.getElementById("summaryCorrect").textContent=st.correct||0;document.getElementById("summaryWrong").textContent=st.wrong||0;document.getElementById("summarySkipped").textContent=(st.skipped||0)+(st.viewed_answer||0);var signature=_sessionId+JSON.stringify(_stepErrorData);var finalState={};if(_summaryFinishKey!==signature){_summaryFinishKey=signature;try{finalState=await StudyJobs.submit('teach_finish',{session_id:_sessionId,step_errors:_stepErrorData},{key:'teach_finish_'+_sessionId});}catch(e){_summaryFinishKey=null;}}var qid=finalState.saved_question_id||d.question_id||d.saved_question_id||_teachQuestionId;_teachQuestionId=qid||null;document.getElementById('teachSavedStatus').textContent=qid?'已保存教学记录与题目':'教学已完成';var btn=document.getElementById("teachAiGenBtn");if(btn){btn.style.display=qid?"inline-block":"none";}}
 
 var _aiGenTimer = null;
 
@@ -791,7 +794,7 @@ async function startAiGenJob(qid){
         var pr=await fetch("/generate-jobs/"+jobId);
         var pj=await pr.json();
         if(pj.status==="done"){_aiGenTimer=null;renderAiGenResult(pj.result);}
-        else if(pj.status==="error"){_aiGenTimer=null;ct.innerHTML=aiGenErrorHtml(pj.detail||pj.error||"生成失败");}
+        else if(pj.status==="error"||pj.status==="interrupted"){_aiGenTimer=null;ct.innerHTML=aiGenErrorHtml(pj.detail||pj.error||"生成失败");}
         else{
           ct.innerHTML=aiGenProgressHtml(pj.progress||0,pj.stage||"generating",pj.detail||"");
           _aiGenTimer=setTimeout(poll,800);
@@ -859,7 +862,7 @@ function renderAiGenResult(d){
 
 function aiTeachNewQuestion(q){localStorage.setItem("_teach_question",q);window.open("teach.html?standalone=1","_blank");}
 
-function resetAll(){clearSavedSession();_sessionId=null;_teachQuestionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("quoteArea").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachQuestionInput").value="";document.getElementById("teachStartBtn").disabled=false;document.getElementById("teachLoading").style.display="none";}
+function resetAll(){ignoreCurrentTeachingWork();clearSavedSession();_sessionId=null;_teachQuestionId=null;_isWaiting=false;document.getElementById("teachChat").innerHTML="";document.getElementById("teachInput").style.display="block";document.getElementById("quoteArea").style.display="";document.getElementById("teachSession").style.display="none";document.getElementById("teachSummary").classList.remove("show");document.getElementById("teachError").style.display="none";document.getElementById("teachQuestionInput").value="";document.getElementById("teachStartBtn").disabled=false;document.getElementById("teachLoading").style.display="none";}
 
 
 document.addEventListener("DOMContentLoaded",function(){
@@ -891,13 +894,13 @@ document.addEventListener("DOMContentLoaded",function(){
   });
   var q=localStorage.getItem("_teach_question");
   if(q){localStorage.removeItem("_teach_question");document.getElementById("teachQuestionInput").value=q;if(document.getElementById("teachQuestionInput")){autoResize(document.getElementById("teachQuestionInput"));}startTeaching();}
-  else{restoreSession();}
+  else{restoreTeachingWork();}
   var inp=document.getElementById("teachChatInput");inp.addEventListener("input",function(){this.style.height="auto";this.style.height=Math.min(this.scrollHeight,120)+"px"});
   // Auto resize for question input
   var qi=document.getElementById("teachQuestionInput");if(qi)qi.addEventListener("input",function(){autoResize(this)});
 });
 
 </script>
-<script src="nav.js?v=20260809e"></script>
+<script src="nav.js?v=20261004a"></script>
 </body>
 </html>
