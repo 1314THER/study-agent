@@ -150,15 +150,27 @@ git rev-parse HEAD
 在 **Workbench 的 root 终端**，把下面 `REPLACE_WITH_FULL_COMMIT_SHA` 替换为 Mac 上得到的完整 SHA，再整段粘贴：
 
 ```bash
-systemd-run --unit=study-agent-sites-sync --collect /bin/bash -c '
+umask 077
+cat > /root/study-agent-bootstrap-sites.sh <<'BOOTSTRAP'
+#!/usr/bin/env bash
 set -Eeuo pipefail
 umask 077
-sync_commit=$1
+sync_commit=${1:-}
+[[ $sync_commit =~ ^[0-9a-f]{40}$ ]] || { echo '请输入完整40位提交SHA。' >&2; exit 2; }
+shift
 timeout 300 runuser -u studyagent -- git -C /opt/study-agent -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=30 fetch --no-tags origin main
-runuser -u studyagent -- git -C /opt/study-agent show "${sync_commit}:deploy/sync-sites.sh" > /root/study-agent-sync-sites.sh
-exec /bin/bash /root/study-agent-sync-sites.sh "$sync_commit" "${@:2}"
-' sync-sites REPLACE_WITH_FULL_COMMIT_SHA --bootstrap
+sync_script=$(mktemp /root/study-agent-sync-sites.XXXXXXXX.sh)
+trap 'rm -f -- "$sync_script"' EXIT
+runuser -u studyagent -- git -C /opt/study-agent show "${sync_commit}:deploy/sync-sites.sh" > "$sync_script"
+bash -n "$sync_script"
+chmod 700 "$sync_script"
+/bin/bash "$sync_script" "$sync_commit" "$@"
+BOOTSTRAP
+chmod 700 /root/study-agent-bootstrap-sites.sh
+bash -n /root/study-agent-bootstrap-sites.sh && systemd-run --unit=study-agent-sites-sync --collect /bin/bash /root/study-agent-bootstrap-sites.sh REPLACE_WITH_FULL_COMMIT_SHA --bootstrap
 ```
+
+先保存脚本再让 systemd 运行文件，可避免它提前展开脚本文本里的 `$` 变量。仓库中也保存了对应的 [启动脚本](bootstrap-sites.sh)。
 
 命令显示已创建 `study-agent-sites-sync.service` 后，拉取和安装会由服务器独立执行，Workbench 断线也会继续。重新登录查看日志：
 
@@ -167,6 +179,14 @@ journalctl -u study-agent-sites-sync -n 120 --no-pager
 ```
 
 成功日志会显示「双站已同步到……」与备份目录。`--collect` 会在结束后回收临时任务；之后 `systemctl status study-agent-sites-sync` 可能显示单元不存在，历史结果仍以日志为准。若 GitHub 拉取、依赖安装或任务等待失败，这些步骤尚未更新服务版本；错误后查看日志，处理原因再运行。
+
+旧版本首次同步若提示未跟踪文件，且列出的文件都在 `.cache/pip/`，这是先前安装依赖留下的下载缓存。当前版本已在 `.gitignore` 忽略该目录；旧服务器需要先添加同样的本地忽略规则，才能通过更新前检查。在 Workbench 运行下面命令，再重试发布命令：
+
+```bash
+runuser -u studyagent -- /bin/sh -c 'printf "\n/.cache/pip/\n" >> /opt/study-agent/.git/info/exclude'
+```
+
+该规则仅匹配仓库根目录的 pip 缓存，缓存继续保留；其他代码改动与未跟踪文件仍会触发检查。如果错误列出了其他路径，应先检查那些文件。
 
 脚本在 `/opt/study-agent-sync/backups/` 创建 root 私有快照：用 SQLite 备份 API 保存并检查两个主人数据库及已有的 `.runtime/jobs.sqlite3` 任务/教学记录，保存套路、看板顺序、设置、`.env`、Caddy、公开首页、systemd 配置、AI 快照与旧 Python 环境。两个服务停站后还会复制 `/var/lib/study-agent-demo` 的游客数据库、任务、配置与日志，保留权限及归属，并通过 SQLite 备份 API 归并快照中的数据库临时日志。复制前后拒绝链接和特殊文件，校验数据库完整性；恢复采用已校验的目录复制。脚本支持默认数据路径；如果 systemd 设置了自定义 `STUDY_AGENT_DATA_DIR`、`STUDY_AGENT_JOB_DIR` 或游客 `STUDY_DEMO_ROOT`，会停止并要求另行确认备份路径。遗留同步维护配置会在停站前阻止发布，脚本仅清理本次创建的维护配置。服务器代码必须能从当前 `main` 快进到指定提交；除运行时 `backend/patterns.yaml` 外有代码改动、暂存改动或意外未跟踪文件时会停止，避免覆盖人工改动。它仅临时还原该套路导出文件的 Git 版本以完成 `merge --ff-only`，随后恢复主人原文件，**不使用 `git reset --hard`**。
 

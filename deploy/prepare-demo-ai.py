@@ -21,7 +21,7 @@ def prepare(source, output):
         os.environ.pop(name, None)
     import backend.settings as settings
     api = deepcopy(settings.get_api())
-    for provider in ("deepseek", "dashscope"):
+    for provider in ("deepseek",):
         api[provider]["api_key"] = settings.get_api_key(provider)
     config = {"api": api, "teachers": deepcopy(settings.get_teachers()),
               "limits": deepcopy(settings.get_limits())}
@@ -35,7 +35,7 @@ def prepare(source, output):
     finally:
         if os.path.exists(staging):
             os.unlink(staging)
-    for provider in ("deepseek", "dashscope"):
+    for provider in ("deepseek",):
         print(provider + " AI 配置：" + ("已就绪" if api[provider].get("api_key") else "尚未配置密钥"), flush=True)
     return output
 

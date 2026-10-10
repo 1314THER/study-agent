@@ -4,6 +4,10 @@
 
 面向高中生的 AI 数学学习系统。基于 DeepSeek V4 多老师路由与 Solver → Verifier → Formatter 三段流水线，同时提供首页教练台、全局智能体、手写作答识别、一键规划、多模态切题、手把手教学、AI 仿题、个人题库、题单、错题与组卷系统。完整开发路线见 [ROADMAP.md](ROADMAP.md)。
 
+账号版提供游客登录、邮箱验证注册和账号登录三入口，个人学习数据按用户隔离，公共母题仅主人 `studyadmin` 维护。启用配置、主人迁移及个人 ICP 下验证码服务的门槛见 [账号与验证码方案](docs/accounts-and-verification.md)。生产启用 `STUDY_AUTH_ENABLED=1` 后，现有 `backend.main:app` 自动切换为账号版；本地预览使用 `python3 scripts/run_accounts.py`。
+
+主人可从导航或母题看板进入 [原题池](http://127.0.0.1:8000/question-pool.html)：先筛选、确定套路与角色，再为选中题准备 AI 解析，对照原答案后批量确认入库。候选、原文件和出处独立保存；图形依赖题暂缓，来源许可未确认时不自动公开。使用方法见 [原题池工作流](docs/question-pool.md)，固定题源和采集数量见 [来源与导入](docs/question-pool-sources.md)。
+
 ---
 
 ## 新成员快速开始
@@ -23,7 +27,7 @@ cd study-agent
 
 首次运行会创建 `.venv`、安装 `requirements.txt`，并从 `demo-data/` 复制题库和学习记录快照到本地；随后启动服务并打开[首页](http://127.0.0.1:8000/home.html)。再次运行不会覆盖本地数据库。终端按 `Ctrl+C` 停止服务。克隆后的题库已有 25 道题，以及套路、闯关和练习记录，便于直接查看各页面。
 
-**AI 功能需要使用自己的 API 密钥。**在[系统设置](http://127.0.0.1:8000/settings.html)填写，或将 `.env.example` 复制为 `.env` 后填写 `DEEPSEEK_API_KEY`；多模态功能另需 `DASHSCOPE_API_KEY`。仅浏览现有题库、记录和页面无需密钥。`.env`、运行时 `backend/settings.json` 和本地数据库不会提交到 Git。
+**AI 功能统一使用 DeepSeek API 密钥，包括图片识别。**注册账号需填写自己的密钥，密钥会在账户库中加密保存；也可以在[系统设置](http://127.0.0.1:8000/settings.html)更新。私人部署的主人可将 `.env.example` 复制为 `.env` 后填写 `DEEPSEEK_API_KEY`。仅浏览现有题库、记录和页面无需密钥。`.env`、运行时 `backend/settings.json` 和本地数据库不会提交到 Git。图片接口和迁移说明见 [DeepSeek 图片配置](docs/deepseek-image-api.md)。
 
 如需参与开发，请看 [CONTRIBUTING.md](CONTRIBUTING.md)。
 
@@ -68,7 +72,7 @@ cd study-agent
 
 ```text
 文本 / 文件（PDF、图片、docx、txt）
-  → 多模态切题（Qwen-VL-Max，可选）
+  → 多模态切题（DeepSeek Flash，可选）
   → Solver：解答 + 板块分类 + 雪碧了检测
   → Verifier：分块 + 标准过程 + 详细过程 + 步骤难度 + 知识点
   → Formatter：一致性校验 + LaTeX 检查 + 聚合
@@ -83,10 +87,10 @@ cd study-agent
 
 | 老师 | Solver 模型 | Verifier 模型 | Formatter 模型 | UI 主题 | 描述 |
 |------|------------|--------------|---------------|---------|------|
-| 🫅 梁梁 | deepseek-v4-flash | deepseek-v4-flash (low) | deepseek-v4-flash (low) | 黄色 | 快速，但是可能出错 |
-| 🎩 韬韬 | deepseek-v4-pro (low) | deepseek-v4-flash (medium) | deepseek-v4-flash (low) | 粉色 | 更慢但更聪明 |
-| 🏃 雪峰 | deepseek-v4-pro (high) | deepseek-v4-flash (medium) | deepseek-v4-flash (low) | 紫色 | 每一步考虑得更多 |
-| 🐔 鸡 | deepseek-v4-pro (high) | deepseek-v4-flash (high) | deepseek-v4-flash (high) | 绿色 | 每一步都要考虑半天 |
+| 🫅 梁梁 | deepseek-flash | deepseek-flash (low) | deepseek-flash (low) | 黄色 | 快速，但是可能出错 |
+| 🎩 韬韬 | deepseek-v4-pro (low) | deepseek-flash (medium) | deepseek-flash (low) | 粉色 | 更慢但更聪明 |
+| 🏃 雪峰 | deepseek-v4-pro (high) | deepseek-flash (medium) | deepseek-flash (low) | 紫色 | 每一步考虑得更多 |
+| 🐔 鸡 | deepseek-v4-pro (high) | deepseek-flash (high) | deepseek-flash (high) | 绿色 | 每一步都要考虑半天 |
 
 老师选择通过 `teacher` 参数传给解题与教学接口，进度消息显示对应老师名称，前端主题色跟随老师切换。
 
@@ -132,7 +136,7 @@ cd study-agent
 - **KaTeX 渲染**：列表预览、详情、教学会话中的 LaTeX 公式自动渲染
 - **组卷**：购物车选题目 → 排序 → 学生版/教师版预览 → 导出 PDF
 - **步骤五维柱状图**：每一步的难度标签旁显示五维横向柱状图，颜色随分值 0/1/2/3 变化
-- **系统设置**：运行时调整难度评分权重、总分封顶与等级阈值，四个老师的三阶段模型与思考强度，DeepSeek / Qwen / 豆包 API 密钥与地址；CC Switch 风格弹窗一键切换服务商，保存即热生效
+- **系统设置**：运行时调整难度评分权重、总分封顶与等级阈值，四个老师的三阶段模型与思考强度，一把 DeepSeek API Key、图片模型配置与连接测试，保存即热生效
 - **首页教练台**：学情卡片、今日待办（来自巩固日历）、快捷入口与全屏教练对话
 - **全局智能体**：规则快路径 + 多步工具循环（搜索 / 解题 / 教学 / 批改 / 规划 / 学情），工具结果回传后继续决策；保留最近 10 轮会话历史；接口以 NDJSON 流式返回进度与逐字回复；agent 消息与结果卡片支持 KaTeX 公式渲染
 - **手写作答识别**：`/ocr/answer` 接口，教学页与改卷页可上传手写图片，识别结果回填作答框后继续原流程
@@ -227,7 +231,7 @@ study-agent/
 │   ├── solver.py            # TEACHER_CONFIG + 三阶流水线 + 解析/清洗/校验
 │   ├── teach.py             # 手把手教学：步骤生成、逐题检查、对话式会话
 │   ├── grade.py             # AI 改题：文字作答判分（答案比对 + 步骤判分）
-│   ├── multimodal.py        # 多模态切题：PDF/图片/docx/txt → Qwen-VL-Max
+│   ├── multimodal.py        # 多模态切题：PDF/图片/docx/txt → DeepSeek Flash
 │   ├── database.py          # SQLite：题库、错因、题单、来源、时间追踪
 │   ├── categories.py        # categories.yaml 的 Python 接口
 │   ├── categories.yaml      # 知识点单一数据源（板块→二级→三级）
@@ -308,7 +312,7 @@ study-agent/
 | GET | `/settings` | 读取系统设置（API Key 掩码返回，含来源 settings/env） |
 | PUT | `/settings` | 保存系统设置：评分公式、老师模型、API 地址与密钥 |
 | POST | `/settings/reset` | 恢复默认设置 |
-| POST | `/settings/test` | 测试 DeepSeek / DashScope 连接 |
+| POST | `/settings/test` | 测试 DeepSeek 连接 |
 | POST | `/agent/act` | 全局教练：自然语言指令 → 结构化动作 |
 | GET | `/agent/context` | 首页与教练共享的学情快照 |
 | POST | `/ocr/answer` | 手写作答图片识别，返回文本与置信度 |

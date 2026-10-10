@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="referrer" content="same-origin">
+    <title>欢迎回来 · 学习教练台</title>
+    <link rel="stylesheet" href="/style.css?v=20260809home">
+    <link rel="stylesheet" href="/auth.css?v=20261009a">
+    <script src="/auth.js?v=20261009a"></script>
+    <script src="/login.js?v=20261009a" defer></script>
+</head>
+<body class="login-body">
+    <main class="login-shell">
+        <div class="login-brand"><span class="login-mark" aria-hidden="true">∑</span>学习教练台</div>
+        <div class="login-heading" id="welcome-heading">
+            <h1>每一步，都算进步。</h1>
+            <p>从一道题开始，建立属于你的学习空间。</p>
+        </div>
+        <section class="login-options" id="login-options" aria-label="选择登录方式">
+            <article class="login-choice">
+                <div class="choice-icon" aria-hidden="true">◷</div>
+                <h2>游客登录</h2>
+                <p>先试试解题、教学与组卷。<br>2 小时体验，学习记录临时保存。</p>
+                <button class="auth-button" type="button" id="guest-login">开始体验 →</button>
+            </article>
+            <article class="login-choice featured">
+                <div class="choice-icon" aria-hidden="true">＋</div>
+                <h2>创建账号</h2>
+                <p>邮箱验证，保存个人题库与进度。<br>使用你自己的 DeepSeek API Key。</p>
+                <button class="auth-button primary" type="button" id="open-register">创建我的账号 →</button>
+            </article>
+            <article class="login-choice">
+                <div class="choice-icon" aria-hidden="true">↗</div>
+                <h2>账号登录</h2>
+                <p>继续上一次的学习。<br>题目、错因和复习安排都在这里。</p>
+                <button class="auth-button" type="button" id="open-login">登录账号 →</button>
+            </article>
+        </section>
+        <section class="auth-panel" id="login-panel" hidden aria-labelledby="login-title">
+            <button class="auth-back" type="button" data-back>← 返回选择</button>
+            <h2 id="login-title">欢迎回来</h2>
+            <p class="auth-description">输入用户名或邮箱，继续你的学习。</p>
+            <form class="auth-form" id="login-form">
+                <label class="auth-field">用户名 / 邮箱<input name="login" autocomplete="username" required maxlength="254"></label>
+                <label class="auth-field">密码<input name="password" type="password" autocomplete="current-password" required maxlength="128"></label>
+                <button class="auth-button primary" type="submit">登录并进入 →</button>
+            </form>
+        </section>
+        <section class="auth-panel" id="register-panel" hidden aria-labelledby="register-title">
+            <button class="auth-back" type="button" data-back>← 返回选择</button>
+            <h2 id="register-title">创建你的学习空间</h2>
+            <p class="auth-description">验证邮箱后即可注册。解题与图片识别共用一个 DeepSeek API Key。</p>
+            <div class="auth-channel"><span>邮箱验证</span><span class="off" title="短信服务尚未开放">手机验证 · 暂未开放</span></div>
+            <p class="auth-message" id="registration-note" hidden></p>
+            <form class="auth-form" id="register-form">
+                <label class="auth-field">用户名<input name="username" autocomplete="username" required minlength="3" maxlength="32" pattern="[A-Za-z][A-Za-z0-9_.\-]{2,31}" placeholder="例如 study2026"><small>3–32 位，以英文字母开头，可包含数字、下划线、点与连字符。</small></label>
+                <label class="auth-field">邮箱<input name="email" type="email" autocomplete="email" required maxlength="254" placeholder="用于接收注册验证码"></label>
+                <label class="auth-field">邮箱验证码<span class="auth-code-row"><input name="code" inputmode="numeric" autocomplete="one-time-code" required pattern="[0-9]{6}" maxlength="6" placeholder="6 位验证码"><button class="auth-button" type="button" id="send-code">发送验证码</button></span><small>验证码 5 分钟有效。</small></label>
+                <label class="auth-field">设置密码<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="128" placeholder="至少 12 个字符"><small>建议使用一句容易记住的长密码。</small></label>
+                <label class="auth-field">确认密码<input name="confirm_password" type="password" autocomplete="new-password" required minlength="12" maxlength="128" placeholder="再次输入密码"></label>
+                <label class="auth-field">DeepSeek API Key<input name="api_key" type="password" autocomplete="off" spellcheck="false" required minlength="8" maxlength="512" placeholder="粘贴你在 DeepSeek 创建的密钥"><small>密钥用于你的 AI 请求，保存后不会回显。<a href="/deepseek-guide.html" target="_blank" rel="noopener">如何注册 DeepSeek 并创建密钥 ↗</a></small></label>
+                <button class="auth-button primary" type="submit">创建账号并进入 →</button>
+            </form>
+        </section>
+        <div class="login-helper" id="login-message" role="status" aria-live="polite" hidden></div>
+        <p class="login-helper" id="login-helper">还没有 DeepSeek 密钥？<a href="/deepseek-guide.html" target="_blank" rel="noopener">查看注册与 API Key 教程 ↗</a><br>共享母题由 studyadmin 维护，个人题库与学习记录按账号保存。</p>
+        <footer class="login-footer"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">渝ICP备2026024246号-1</a></footer>
+    </main>
+</body>
+</html>

@@ -40,6 +40,23 @@
         nav.insertBefore(a, nav.firstChild);
     }
 
+    function injectQuestionPoolNav() {
+        if (!window.StudyAuth || !window.StudyAuth.isOwner()) return;
+        var nav = document.querySelector('nav');
+        if (!nav || nav.querySelector('a[data-page="question-pool"]')) return;
+        var link = document.createElement('a');
+        link.href = 'question-pool.html';
+        link.className = 'nav-item';
+        link.setAttribute('data-page', 'question-pool');
+        link.setAttribute('data-owner-only', '');
+        link.title = '原题池';
+        var icon = document.createElement('span'); icon.className = 'nav-icon'; icon.textContent = '🗂️';
+        var label = document.createElement('span'); label.className = 'nav-label'; label.textContent = '原题池';
+        link.append(icon, label);
+        var mother = nav.querySelector('a[data-page="mother"]');
+        if (mother) mother.after(link); else nav.appendChild(link);
+    }
+
     function loadAgent() {
         if (window.AgentGlobal || document.getElementById('agentScript')) return;
         var s = document.createElement('script');
@@ -60,6 +77,7 @@
             }
         } catch (e) {}
         injectHomeNav();
+        if (window.StudyAuth) window.StudyAuth.ready.then(injectQuestionPoolNav);
         if (window.STUDY_DEMO) {
             document.querySelectorAll('a[href]').forEach(function(a) {
                 if (!/(?:grade|mother|loop|level-editor)\.html(?:[?#]|$)/.test(a.getAttribute('href'))) return;

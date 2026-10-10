@@ -4,7 +4,7 @@
   if (window.StudyJobs) return;
   var nativeFetch = window.fetch.bind(window), jobs = new Map(), waiters = new Map();
   var timer, polling = false, uploads = 0, pendingNavigation = null;
-  var titles = {solve:'题目解答',teach_start:'教学准备',teach_chat:'教学对话',teach_check:'步骤检查',teach_ack:'教学进度',teach_finish:'教学记录',generate:'仿题生成',grade:'AI 批改',parse_file:'文件识别',ocr_file:'手写识别',batch_solve:'批量解题',agent:'AI 教练',pattern_check:'套路检查',pattern_variants:'变式生成',provider_test:'连接测试'};
+  var titles = {solve:'题目解答',teach_start:'教学准备',teach_chat:'教学对话',teach_check:'步骤检查',teach_ack:'教学进度',teach_finish:'教学记录',generate:'仿题生成',grade:'AI 批改',parse_file:'文件识别',ocr_file:'手写识别',batch_solve:'批量解题',agent:'AI 教练',pattern_check:'套路检查',pattern_variants:'变式生成',provider_test:'连接测试',pool_prepare:'原题解析准备',pool_import:'原题来源采集'};
   function uuid() { return window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+'-'+Math.random().toString(36).slice(2); }
   function read(key) { try{return JSON.parse(localStorage.getItem('study_job_'+key)||'null');}catch(e){return null;} }
   function write(key,value) { try{localStorage.setItem('study_job_'+key,JSON.stringify(value));}catch(e){} }
@@ -120,8 +120,8 @@
         }
         renderValue(visibleResult,target,0);
       }
-      if(j.status==='done'&&['solve','teach_start','teach_chat','teach_ack','grade','parse_file','ocr_file','batch_solve'].includes(j.kind)){
-        var page={solve:'index.html',teach_start:'teach.html',teach_chat:'teach.html',teach_ack:'teach.html',grade:'grade.html',parse_file:'multimodal.html',ocr_file:'teach.html',batch_solve:'multimodal.html'}[j.kind];
+      if(j.status==='done'&&['solve','teach_start','teach_chat','teach_ack','grade','parse_file','ocr_file','batch_solve','pool_prepare','pool_import'].includes(j.kind)){
+        var page={solve:'index.html',teach_start:'teach.html',teach_chat:'teach.html',teach_ack:'teach.html',grade:'grade.html',parse_file:'multimodal.html',ocr_file:'teach.html',batch_solve:'multimodal.html',pool_prepare:'question-pool.html',pool_import:'question-pool.html'}[j.kind];
         if(j.kind==='solve'&&(window.STUDY_DEMO||j.args&&j.args.client_page==='multimodal'))page='multimodal.html';
         if(j.kind==='grade'&&j.args&&j.args.loop)page='loop.html?pattern_id='+encodeURIComponent(j.args.loop.pattern_id);
         if(j.kind==='ocr_file'){var route=read('route:'+j.job_id);if(route&&['grade.html','teach.html'].includes(route.page))page=route.page;}
@@ -158,8 +158,8 @@
     else if(path==='/teach/start')kind='teach_legacy_start';
     else if(path==='/teach/session/start')kind='teach_start';
     else if((match=path.match(/^\/teach\/session\/([a-f0-9-]+)\/(chat|ack)$/))){kind='teach_'+match[2];}
-    else if((match=path.match(/^\/patterns\/(\d+)\/(check|ensure-variants)$/)))kind=match[2]==='check'?'pattern_check':'pattern_variants';
-    else if((match=path.match(/^\/questions\/(\d+)\/generate(?:\/async)?$/)))kind='generate';
+    else if((match=path.match(/^\/patterns\/(-?\d+)\/(check|ensure-variants)$/)))kind=match[2]==='check'?'pattern_check':'pattern_variants';
+    else if((match=path.match(/^\/questions\/(-?\d+)\/generate(?:\/async)?$/)))kind='generate';
     else if(path==='/multimodal/parse'||path==='/ocr/answer'){
       try{var result=await upload(path==='/ocr/answer'?'ocr_file':'parse_file',options.body,{key:location.pathname+path});return new Response(JSON.stringify(result),{status:200,headers:{'Content-Type':'application/json'}});}catch(e){return new Response(JSON.stringify({error:'task_error',detail:e.message}),{status:500});}
     }

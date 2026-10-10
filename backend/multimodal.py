@@ -1,5 +1,5 @@
 """
-多模态解答：文件解析 + 通义千问 Qwen-VL-Plus 切题
+多模态解答：文件解析 + DeepSeek Flash 图片理解与切题
 支持 PDF / JPG / PNG / docx / txt
 """
 
@@ -7,6 +7,7 @@ import os
 import re
 import json
 import base64
+import io
 import logging
 import httpx
 from typing import Optional
@@ -16,14 +17,17 @@ import backend.settings as runtime_settings
 logger = logging.getLogger(__name__)
 
 # ---------- API ----------
-DASHSCOPE_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-MODEL = "qwen-vl-max"
+DEEPSEEK_BASE = "https://api.deepseek.com/v1"
+MODEL = "deepseek-flash"
+MAX_IMAGE_BYTES = 32 * 1024 * 1024
+MAX_IMAGE_SIDE = 8192
+MAX_REQUEST_BYTES = 48 * 1024 * 1024
 
 
 def _get_api_key() -> str:
-    key = runtime_settings.get_api_key("dashscope")
+    key = runtime_settings.get_api_key("deepseek")
     if not key:
-        raise ValueError("未找到 DASHSCOPE_API_KEY，请在系统设置页配置")
+        raise ValueError("未找到 DeepSeek API Key，请在系统设置页配置")
     return key
 
 
@@ -33,6 +37,14 @@ def file_to_base64(file_path: str) -> str:
         return base64.b64encode(f.read()).decode("utf-8")
 
 
+def _pdf_render_scale(page, dpi):
+    scale = dpi / 72
+    rect = getattr(page, "rect", None)
+    if rect is not None and max(rect.width, rect.height) > 0:
+        scale = min(scale, MAX_IMAGE_SIDE / max(rect.width, rect.height))
+    return scale
+
+
 def pdf_to_images(file_path: str, dpi: int = 200) -> list:
     """将 PDF 每页转为 PNG base64"""
     import fitz
@@ -40,7 +52,8 @@ def pdf_to_images(file_path: str, dpi: int = 200) -> list:
     images = []
     for page_num in range(len(doc)):
         page = doc[page_num]
-        mat = fitz.Matrix(dpi / 72, dpi / 72)
+        scale = _pdf_render_scale(page, dpi)
+        mat = fitz.Matrix(scale, scale)
         pix = page.get_pixmap(matrix=mat)
         img_bytes = pix.tobytes("png")
         images.append(base64.b64encode(img_bytes).decode("utf-8"))
@@ -54,7 +67,9 @@ def iter_pdf_images(file_path: str, dpi: int = 200):
     with fitz.open(file_path) as doc:
         total = len(doc)
         for page_num in range(total):
-            pix = doc[page_num].get_pixmap(matrix=fitz.Matrix(dpi / 72, dpi / 72))
+            page = doc[page_num]
+            scale = _pdf_render_scale(page, dpi)
+            pix = page.get_pixmap(matrix=fitz.Matrix(scale, scale))
             data = pix.tobytes("png")
             del pix
             yield page_num + 1, total, base64.b64encode(data).decode("utf-8")
@@ -62,7 +77,27 @@ def iter_pdf_images(file_path: str, dpi: int = 200):
 
 
 def image_to_base64(file_path: str) -> str:
-    return file_to_base64(file_path)
+    """Normalize camera orientation and fit the documented image size limit.
+
+    Preserve the whole image and its aspect ratio; never crop away questions.
+    All image inputs are re-encoded as PNG so the data URL matches the bytes.
+    """
+    from PIL import Image, ImageOps, UnidentifiedImageError
+    try:
+        with Image.open(file_path) as image:
+            image = ImageOps.exif_transpose(image)
+            image.load()
+            image.thumbnail((MAX_IMAGE_SIDE, MAX_IMAGE_SIDE), Image.Resampling.LANCZOS)
+            if image.mode not in ("RGB", "RGBA", "L", "LA"):
+                image = image.convert("RGB")
+            output = io.BytesIO()
+            image.save(output, format="PNG", optimize=True)
+            data = output.getvalue()
+    except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
+        raise ValueError("无法读取图片，请上传完整的 JPG/PNG 文件") from exc
+    if len(data) > MAX_IMAGE_BYTES:
+        raise ValueError("图片超过 DeepSeek 单张 32 MiB 限制，请降低图片分辨率")
+    return base64.b64encode(data).decode("utf-8")
 
 
 def docx_to_text(file_path: str) -> str:
@@ -72,7 +107,7 @@ def docx_to_text(file_path: str) -> str:
     return "\n".join(paragraphs)
 
 
-# ---------- Qwen-VL 调用 ----------
+# ---------- DeepSeek 图片理解 ----------
 _PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
 
 
@@ -97,20 +132,30 @@ _ANSWER_OCR_PROMPT = (
 )
 
 
-def _call_qwen_vl(image_base64: Optional[str] = None, text: Optional[str] = None) -> str:
-    """调用 Qwen-VL-Plus，返回原始回复文本"""""
+def _call_deepseek_vision(image_base64: Optional[str] = None, text: Optional[str] = None) -> str:
+    """Use the official Chat Completions image_url format with Flash."""
     api_key = _get_api_key()
-    api_cfg = runtime_settings.get_api().get("dashscope") or {}
+    api_cfg = runtime_settings.get_api().get("deepseek") or {}
     limits = runtime_settings.get_limits()
     timeout_seconds = limits.get("multimodal_timeout_seconds", 180)
-    base_url = (api_cfg.get("base_url") or DASHSCOPE_BASE).rstrip("/")
-    model = api_cfg.get("model") or MODEL
+    base_url = (api_cfg.get("base_url") or DEEPSEEK_BASE).rstrip("/")
+    endpoint = base_url if base_url.endswith("/chat/completions") else base_url + "/chat/completions"
+    model = api_cfg.get("vision_model") or MODEL
+    if model != MODEL:
+        raise ValueError("图片识别模型请使用 deepseek-flash")
     messages = [{"role": "user", "content": []}]
     
     if image_base64:
+        # One image per request: PDF pages are processed sequentially.
+        try:
+            image_bytes = base64.b64decode(image_base64, validate=True)
+        except (ValueError, base64.binascii.Error) as exc:
+            raise ValueError("图片编码无效") from exc
+        if len(image_bytes) > MAX_IMAGE_BYTES:
+            raise ValueError("图片超过 DeepSeek 单张 32 MiB 限制")
         messages[0]["content"].append({
             "type": "image_url",
-            "image_url": {"url": f"data:image/png;base64,{image_base64}"}
+            "image_url": {"url": f"data:image/png;base64,{image_base64}", "detail": "original"}
         })
     
     messages[0]["content"].append({
@@ -122,13 +167,16 @@ def _call_qwen_vl(image_base64: Optional[str] = None, text: Optional[str] = None
         "model": model,
         "messages": messages,
         "max_tokens": limits.get("multimodal_max_tokens", 16384),
+        "thinking": {"type": "disabled"},
     }
+    if len(json.dumps(body, ensure_ascii=False).encode("utf-8")) > MAX_REQUEST_BYTES:
+        raise ValueError("图片请求超过 DeepSeek 48 MiB 请求体限制")
     
     try:
         from backend.jobs import provider_slot, request_timeout
-        with provider_slot("dashscope"):
+        with provider_slot("deepseek"):
             resp = httpx.post(
-                base_url + "/chat/completions",
+                endpoint,
                 headers={
                     "Authorization": f"Bearer {api_key}",
                     "Content-Type": "application/json"
@@ -137,16 +185,20 @@ def _call_qwen_vl(image_base64: Optional[str] = None, text: Optional[str] = None
                 timeout=request_timeout(timeout_seconds),
             )
         if resp.status_code != 200:
-            raise Exception(f"Qwen API 错误 {resp.status_code}: {resp.text[:200]}")
+            raise Exception(f"DeepSeek API 错误 {resp.status_code}")
         data = resp.json()
         content = data["choices"][0]["message"]["content"]
+        if not isinstance(content, str) or not content.strip():
+            raise ValueError("DeepSeek API 未返回识别文本")
+        if data["choices"][0].get("finish_reason") == "length":
+            raise ValueError("图片识别结果超出输出长度，请拆分页面或提高识别输出上限")
         return content
     except httpx.TimeoutException:
-        raise Exception(f"Qwen API 请求超时（{timeout_seconds}s）")
+        raise Exception(f"DeepSeek API 请求超时（{timeout_seconds}s）")
     except httpx.ConnectError:
-        raise Exception("无法连接到 Qwen API 服务器")
-    except (KeyError, json.JSONDecodeError, IndexError) as e:
-        raise Exception(f"Qwen API 响应解析失败: {str(e)[:200]}")
+        raise Exception("无法连接到 DeepSeek API 服务器")
+    except (KeyError, json.JSONDecodeError, IndexError, TypeError) as e:
+        raise Exception("DeepSeek API 响应解析失败") from e
 
 
 def _parse_questions(raw: str) -> list:
@@ -239,7 +291,7 @@ def parse_file(file_path: str, original_filename: str = "", progress=None) -> li
         for page_num, total, page_b64 in iter_pdf_images(file_path):
             if progress:
                 progress(page_num, total)
-            raw = _call_qwen_vl(image_base64=page_b64, text=_EXTRACTION_PROMPT)
+            raw = _call_deepseek_vision(image_base64=page_b64, text=_EXTRACTION_PROMPT)
             page_qs = _parse_questions(raw)
             all_questions.extend(page_qs)
             del page_b64
@@ -250,7 +302,7 @@ def parse_file(file_path: str, original_filename: str = "", progress=None) -> li
         if progress:
             progress(1, 1)
         b64 = image_to_base64(file_path)
-        raw = _call_qwen_vl(image_base64=b64, text=_EXTRACTION_PROMPT)
+        raw = _call_deepseek_vision(image_base64=b64, text=_EXTRACTION_PROMPT)
         questions = _parse_questions(raw)
         return _post_process(questions)
     
@@ -259,7 +311,7 @@ def parse_file(file_path: str, original_filename: str = "", progress=None) -> li
         if progress:
             progress(1, 1)
         text = docx_to_text(file_path)
-        raw = _call_qwen_vl(text=_EXTRACTION_PROMPT + "\n\n文本内容：\n" + text)
+        raw = _call_deepseek_vision(text=_EXTRACTION_PROMPT + "\n\n文本内容：\n" + text)
         questions = _parse_questions(raw)
         return _post_process(questions)
     
@@ -268,7 +320,7 @@ def parse_file(file_path: str, original_filename: str = "", progress=None) -> li
             progress(1, 1)
         with open(file_path, "r", encoding="utf-8", errors="replace") as f:
             text = f.read()
-        raw = _call_qwen_vl(text=_EXTRACTION_PROMPT + "\n\n文本内容：\n" + text)
+        raw = _call_deepseek_vision(text=_EXTRACTION_PROMPT + "\n\n文本内容：\n" + text)
         questions = _parse_questions(raw)
         return _post_process(questions)
     
@@ -286,7 +338,7 @@ def recognize_answer_image(file_path: str) -> dict:
     if ext not in (".jpg", ".jpeg", ".png"):
         raise ValueError("仅支持 JPG/PNG 图片")
     b64 = image_to_base64(file_path)
-    raw = _call_qwen_vl(image_base64=b64, text=_ANSWER_OCR_PROMPT)
+    raw = _call_deepseek_vision(image_base64=b64, text=_ANSWER_OCR_PROMPT)
     text = (raw or "").strip()
     has_cjk = any("\u4e00" <= ch <= "\u9fff" for ch in text)
     if len(text) >= 10 and has_cjk:

@@ -1,5 +1,7 @@
-"""multimodal.py 文件解析/Qwen 调用与 rescore_questions.py 测试。"""
+"""multimodal.py 文件解析/DeepSeek 调用与 rescore_questions.py 测试。"""
 
+import base64
+import io
 import json
 import os
 import sys
@@ -12,7 +14,7 @@ import httpx
 
 import backend.multimodal as mm
 from backend.multimodal import (
-    _call_qwen_vl,
+    _call_deepseek_vision,
     _get_api_key,
     _read_extraction_prompt,
     docx_to_text,
@@ -39,53 +41,109 @@ class MultimodalApiTest(unittest.TestCase):
             path = f.name
         try:
             self.assertEqual(file_to_base64(path), "YWJj")
-            self.assertEqual(image_to_base64(path), "YWJj")
+            with self.assertRaises(ValueError):
+                image_to_base64(path)
         finally:
             os.unlink(path)
+
+    def test_image_preparation_preserves_whole_image_and_exif_orientation(self):
+        from PIL import Image
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "camera.jpg")
+            image = Image.new("RGB", (80, 40), "white")
+            exif = image.getexif()
+            exif[274] = 6  # Camera stores landscape pixels; display rotates 90°.
+            image.save(path, exif=exif)
+            normalized = Image.open(io.BytesIO(base64.b64decode(image_to_base64(path))))
+            self.assertEqual(normalized.format, "PNG")
+            self.assertEqual(normalized.size, (40, 80))
+            self.assertNotIn(274, normalized.getexif())
+
+            image = Image.new("RGB", (100, 50), "white")
+            image.save(path)
+            with patch.object(mm, "MAX_IMAGE_SIDE", 20):
+                normalized = Image.open(io.BytesIO(base64.b64decode(image_to_base64(path))))
+            self.assertEqual(normalized.size, (20, 10))
 
     def test_read_extraction_prompt(self):
         self.assertTrue(_read_extraction_prompt().strip())
 
-    def _qwen_patches(self):
+    def _deepseek_patches(self):
         return (
             patch.object(mm, "_get_api_key", return_value="k"),
-            patch.object(mm.runtime_settings, "get_api", return_value={"dashscope": {"base_url": "https://x/v1"}}),
+            patch.object(mm.runtime_settings, "get_api", return_value={"deepseek": {"base_url": "https://x/v1"}}),
             patch.object(mm.runtime_settings, "get_limits", return_value={
                 "multimodal_timeout_seconds": 5,
                 "multimodal_max_tokens": 1000,
             }),
         )
 
-    def _qwen_stack(self):
+    def _deepseek_stack(self):
         from contextlib import ExitStack
         stack = ExitStack()
-        for p in self._qwen_patches():
+        for p in self._deepseek_patches():
             stack.enter_context(p)
         return stack
 
-    def test_call_qwen_vl_success(self):
+    def test_call_deepseek_vision_success(self):
         resp = type("R", (), {
             "status_code": 200,
             "json": lambda self: {"choices": [{"message": {"content": "ok"}}]},
         })()
-        with self._qwen_stack(), patch.object(mm.httpx, "post", return_value=resp):
-            self.assertEqual(_call_qwen_vl(text="hi"), "ok")
+        with self._deepseek_stack(), patch.object(mm.httpx, "post", return_value=resp):
+            self.assertEqual(_call_deepseek_vision(text="hi"), "ok")
 
-    def test_call_qwen_vl_errors(self):
+    def test_vision_request_uses_deepseek_key_model_and_original_image(self):
+        from contextlib import nullcontext
+        resp = type("R", (), {
+            "status_code": 200,
+            "json": lambda self: {"choices": [{"message": {"content": "ok"}}]},
+        })()
+        with self._deepseek_stack(), patch.object(mm.httpx, "post", return_value=resp) as post, \
+                patch("backend.jobs.provider_slot", return_value=nullcontext()) as slot:
+            self.assertEqual(_call_deepseek_vision(image_base64="YWJj", text="识别公式"), "ok")
+        slot.assert_called_once_with("deepseek")
+        self.assertEqual(post.call_args.args[0], "https://x/v1/chat/completions")
+        body = post.call_args.kwargs["json"]
+        self.assertEqual(body["model"], "deepseek-flash")
+        self.assertEqual(body["thinking"], {"type": "disabled"})
+        self.assertEqual(body["messages"][0]["role"], "user")
+        self.assertEqual(body["messages"][0]["content"][0]["image_url"], {
+            "url": "data:image/png;base64,YWJj", "detail": "original",
+        })
+
+    def test_vision_rejects_oversized_invalid_or_truncated_requests(self):
+        with self._deepseek_stack(), patch.object(mm.httpx, "post") as post:
+            with self.assertRaises(ValueError):
+                _call_deepseek_vision(image_base64="not-base64")
+            with patch.object(mm, "MAX_IMAGE_BYTES", 2), self.assertRaises(ValueError):
+                _call_deepseek_vision(image_base64="YWJj")
+            with patch.object(mm, "MAX_REQUEST_BYTES", 2), self.assertRaises(ValueError):
+                _call_deepseek_vision(text="题目")
+            post.assert_not_called()
+        resp = type("R", (), {
+            "status_code": 200,
+            "json": lambda self: {"choices": [{"finish_reason": "length", "message": {"content": "["}}]},
+        })()
+        with self._deepseek_stack(), patch.object(mm.httpx, "post", return_value=resp):
+            with self.assertRaisesRegex(ValueError, "超出输出长度"):
+                _call_deepseek_vision(text="题目")
+
+    def test_call_deepseek_vision_errors(self):
         resp = type("R", (), {"status_code": 500, "text": "boom"})()
-        with self._qwen_stack(), patch.object(mm.httpx, "post", return_value=resp):
+        with self._deepseek_stack(), patch.object(mm.httpx, "post", return_value=resp):
             with self.assertRaises(Exception) as ctx:
-                _call_qwen_vl(text="hi")
+                _call_deepseek_vision(text="hi")
         self.assertIn("500", str(ctx.exception))
 
-        with self._qwen_stack(), patch.object(mm.httpx, "post", side_effect=httpx.TimeoutException("t")):
+        with self._deepseek_stack(), patch.object(mm.httpx, "post", side_effect=httpx.TimeoutException("t")):
             with self.assertRaises(Exception) as ctx:
-                _call_qwen_vl(text="hi")
+                _call_deepseek_vision(text="hi")
         self.assertIn("超时", str(ctx.exception))
 
-        with self._qwen_stack(), patch.object(mm.httpx, "post", side_effect=httpx.ConnectError("c")):
+        with self._deepseek_stack(), patch.object(mm.httpx, "post", side_effect=httpx.ConnectError("c")):
             with self.assertRaises(Exception) as ctx:
-                _call_qwen_vl(text="hi")
+                _call_deepseek_vision(text="hi")
         self.assertIn("无法连接", str(ctx.exception))
 
     def test_pdf_to_images_with_fake_fitz(self):
@@ -126,6 +184,12 @@ class MultimodalApiTest(unittest.TestCase):
         finally:
             os.unlink(path)
 
+    def test_pdf_render_respects_provider_dimension_limit(self):
+        page = types.SimpleNamespace(rect=types.SimpleNamespace(width=720, height=1440))
+        self.assertEqual(mm._pdf_render_scale(page, 200), 200 / 72)
+        with patch.object(mm, "MAX_IMAGE_SIDE", 1000):
+            self.assertEqual(mm._pdf_render_scale(page, 200), 1000 / 1440)
+
     def test_docx_to_text_with_fake_docx(self):
         class FakePara:
             text = "第一段"
@@ -152,7 +216,7 @@ class MultimodalApiTest(unittest.TestCase):
             f.write("1. 求 $x$")
             path = f.name
         try:
-            with patch.object(mm, "_call_qwen_vl", return_value=self._llm_json()):
+            with patch.object(mm, "_call_deepseek_vision", return_value=self._llm_json()):
                 questions = parse_file(path)
             self.assertEqual(questions[0]["latex"], "$x^2=1$")
         finally:
@@ -167,13 +231,13 @@ class MultimodalApiTest(unittest.TestCase):
             docx_path = f.name
         try:
             with patch.object(mm, "iter_pdf_images", return_value=iter([(1, 1, "b64")])), \
-                 patch.object(mm, "_call_qwen_vl", return_value=self._llm_json()):
+                 patch.object(mm, "_call_deepseek_vision", return_value=self._llm_json()):
                 self.assertEqual(len(parse_file(pdf_path)), 1)
             with patch.object(mm, "image_to_base64", return_value="b64"), \
-                 patch.object(mm, "_call_qwen_vl", return_value=self._llm_json()):
+                 patch.object(mm, "_call_deepseek_vision", return_value=self._llm_json()):
                 self.assertEqual(len(parse_file(img_path)), 1)
             with patch.object(mm, "docx_to_text", return_value="题目"), \
-                 patch.object(mm, "_call_qwen_vl", return_value=self._llm_json()):
+                 patch.object(mm, "_call_deepseek_vision", return_value=self._llm_json()):
                 self.assertEqual(len(parse_file(docx_path)), 1)
         finally:
             for p in (pdf_path, img_path, docx_path):
@@ -193,12 +257,12 @@ class MultimodalApiTest(unittest.TestCase):
             path = f.name
         try:
             with patch.object(mm, "image_to_base64", return_value="b64"), \
-                 patch.object(mm, "_call_qwen_vl", return_value="设 $x=1$，解得 $x=1$。这是完整作答。"):
+                 patch.object(mm, "_call_deepseek_vision", return_value="设 $x=1$，解得 $x=1$。这是完整作答。"):
                 result = recognize_answer_image(path)
             self.assertEqual(result["confidence"], "high")
 
             with patch.object(mm, "image_to_base64", return_value="b64"), \
-                 patch.object(mm, "_call_qwen_vl", return_value="x=1"):
+                 patch.object(mm, "_call_deepseek_vision", return_value="x=1"):
                 result = recognize_answer_image(path)
             self.assertEqual(result["confidence"], "medium")
         finally:

@@ -264,7 +264,8 @@ class StepFlowTest(unittest.TestCase):
             "knowledge_points": ["集合与元素"],
             "steps": [{"knowledge_point": "集合与元素"}],
         }]
-        with patch.object(solver_mod, "_call_formatter", return_value=(None, "格式不合格")):
+        with patch.object(solver_mod, "_call_formatter", return_value=(None, "格式不合格")), \
+                patch.object(solver_mod, "call_deepseek", side_effect=RuntimeError("mock verifier failure")):
             result = step_final_check("题", crs, [], {}, solver_content="解")
         self.assertTrue(result["formatter_fallback"])
         self.assertEqual(result["error"], "formatter_failed")

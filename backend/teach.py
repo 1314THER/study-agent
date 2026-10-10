@@ -96,7 +96,7 @@ def _fs(steps, teacher=None):
     try:
         c, _ = call_deepseek(TF, json.dumps(inp, ensure_ascii=False, indent=2),
                              temperature=0.3,
-                             model=cfg.get("verifier", {}).get("model", "deepseek-v4-flash"),
+                             model=cfg.get("verifier", {}).get("model", "deepseek-flash"),
                              reasoning_effort=cfg.get("verifier", {}).get("reasoning_effort"))
         rl = json.loads(_ej(c))
     except Exception as e:
@@ -216,7 +216,7 @@ def teach_check(question, step_prompt, step_answer, user_answer, teacher=None):
     up = f"原题：{question}\n当前步骤引导问题：{step_prompt}\n参考答案：{step_answer}\n学生回答：{user_answer}"
     cfg = runtime_settings.get_teacher_config(teacher)
     c, _ = call_deepseek(TC, up, temperature=0.2,
-                         model=cfg.get("verifier", {}).get("model", "deepseek-v4-flash"),
+                         model=cfg.get("verifier", {}).get("model", "deepseek-flash"),
                          reasoning_effort=cfg.get("verifier", {}).get("reasoning_effort"))
     try:
         return json.loads(_ej(c))
@@ -608,7 +608,7 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
 
         try:
             c, _ = call_deepseek(TC, up, temperature=0.2,
-                                 model=cfg.get("verifier", {}).get("model", "deepseek-v4-flash"))
+                                 model=cfg.get("verifier", {}).get("model", "deepseek-flash"))
             check_result = json.loads(_ej(c))
         except Exception as exc:
             # A failed request is not a wrong student answer. The enclosing

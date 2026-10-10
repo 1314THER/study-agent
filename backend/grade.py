@@ -259,7 +259,7 @@ def _ai_grade_essay(question: str, student_answer: str, steps: list,
     }
     cfg = runtime_settings.get_teacher_config(teacher)
     grade_cfg = cfg.get("grade") or {}
-    grade_model = grade_cfg.get("model") or cfg.get("verifier", {}).get("model", "deepseek-v4-flash")
+    grade_model = grade_cfg.get("model") or cfg.get("verifier", {}).get("model", "deepseek-flash")
     grade_effort = grade_cfg.get("reasoning_effort") or cfg.get("verifier", {}).get("reasoning_effort")
     content, _ = call_deepseek(
         GRADE_PROMPT,

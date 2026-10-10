@@ -119,7 +119,9 @@ def startup():
     init_db()
     from backend.patterns import init_mastery_db, sync_mother_questions
     init_mastery_db()
-    sync_mother_questions()
+    from backend.identity import can_edit_catalog
+    if can_edit_catalog():
+        sync_mother_questions()
 
 
 class SolveRequest(BaseModel):
@@ -1251,7 +1253,7 @@ def api_update_source_type(qid: int, req: SourceTypeRequest):
 
 # ---------- 系统设置 ----------
 class SettingsTestRequest(BaseModel):
-    provider: str = Field(..., description="deepseek / dashscope")
+    provider: str = Field("deepseek", description="deepseek")
 
 
 _LIMIT_RANGES = {
@@ -1312,7 +1314,8 @@ def _sanitize_settings_patch(patch):
 
     api = out.get("api")
     if api:
-        for provider in ("deepseek", "dashscope"):
+        out["api"] = {"deepseek": api["deepseek"]} if isinstance(api.get("deepseek"), dict) else {}
+        for provider in ("deepseek",):
             cfg = api.get(provider)
             if isinstance(cfg, dict) and not cfg.get("api_key"):
                 cfg.pop("api_key", None)
@@ -1332,21 +1335,25 @@ def _sanitize_settings_patch(patch):
 
 def _public_settings(data: dict) -> dict:
     import copy
+    from backend.identity import current_identity
+    identity = current_identity()
     out = copy.deepcopy(data)
+    if identity and identity.get("role") == "user":
+        out["api"] = copy.deepcopy(runtime_settings.get_api())
     if runtime_settings.shared_ai_enabled():
         out["api"] = copy.deepcopy(runtime_settings.get_api())
         out["teachers"] = copy.deepcopy(runtime_settings.get_teachers())
         out["limits"] = copy.deepcopy(runtime_settings.get_limits())
     api = out.get("api") or {}
-    for provider in ("deepseek", "dashscope"):
+    for provider in ("deepseek",):
         cfg = api.get(provider)
         if not isinstance(cfg, dict):
             continue
         stored = (data.get("api") or {}).get(provider, {}).get("api_key") or ""
         resolved = runtime_settings.get_api_key(provider)
-        cfg["api_key"] = "" if runtime_settings.shared_ai_enabled() else runtime_settings.mask_key(resolved)
+        cfg["api_key"] = "" if identity is not None or runtime_settings.shared_ai_enabled() else runtime_settings.mask_key(resolved)
         cfg["has_key"] = bool(resolved)
-        cfg["key_source"] = "demo" if resolved and runtime_settings.shared_ai_enabled() else ("settings" if stored else ("env" if resolved else ""))
+        cfg["key_source"] = "account" if resolved and identity and identity.get("role") != "guest" else ("demo" if resolved and runtime_settings.shared_ai_enabled() else ("settings" if stored else ("env" if resolved else "")))
     return out
 
 
@@ -1373,7 +1380,7 @@ def api_test_settings(req: SettingsTestRequest):
     """用当前保存的地址与密钥测试 API 连通性。"""
     import httpx
     from backend.jobs import provider_slot, request_timeout
-    if req.provider not in ("deepseek", "dashscope"):
+    if req.provider != "deepseek":
         return {"ok": False, "error": "未知 provider"}
     api = runtime_settings.get_api()
     cfg = api.get(req.provider) or {}
@@ -1401,6 +1408,8 @@ def api_test_settings(req: SettingsTestRequest):
 
 from backend.jobs import router as jobs_router
 app.include_router(jobs_router)
+from backend.question_pool import router as question_pool_router
+app.include_router(question_pool_router)
 
 @app.get("/demo/presets")
 def demo_presets():
@@ -1410,3 +1419,9 @@ def demo_presets():
 _frontend_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "frontend")
 if os.path.isdir(_frontend_path):
     app.mount("/", StaticFiles(directory=_frontend_path, html=True), name="frontend")
+
+# Keep the private legacy app available to the isolated demo and account factory.
+core_app = app
+if os.environ.get("STUDY_AUTH_ENABLED", "0") == "1":
+    from backend.account_app import build_account_app
+    app = build_account_app(core_app)

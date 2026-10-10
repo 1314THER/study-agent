@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN" style="overflow:hidden;height:100%;overscroll-behavior:none;">
 <head>
+<script src="/auth.js?v=20261009a"></script>
 <script src="/jobs.js?v=20261009a"></script>
 <script>document.documentElement.classList.add("nav-init")</script>
     <meta charset="UTF-8">
@@ -278,7 +279,7 @@ function sourceMetaText(sourceType, sourceMeta){
     return '';
 }
 function getRememberedSource(){
-    try{var raw = localStorage.getItem('remembered_question_source'); return raw ? JSON.parse(raw) : null;}catch(e){return null;}
+    try{var raw = localStorage.getItem('remembered_question_source'); var data = raw ? JSON.parse(raw) : null; return data && data.source_type === '精选母题' && !window.StudyAuth.isOwner() ? null : data;}catch(e){return null;}
 }
 function saveRememberedSource(data){ localStorage.setItem('remembered_question_source', JSON.stringify(data)); }
 function clearRememberedSource(){ localStorage.removeItem('remembered_question_source'); }
@@ -348,13 +349,14 @@ function populateMotherCategoryOptions(){
         .catch(function(){});
 }
 async function registerMotherQuestion(questionId, srcMeta){
+    if (!window.StudyAuth.isOwner()) return;
     if(!srcMeta||!srcMeta.category||!srcMeta.pattern)return;
     try{
         await fetch('/patterns/mother',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({question_id:questionId,category:srcMeta.category,name:srcMeta.pattern})});
     }catch(e){console.error('登记母题失败:',e);}
 }
 function sourceChipsHtml(activeType, prefix){
-    var types = ['ai生成', '高考题', '模拟题', '精选母题'];
+    var types = ['ai生成', '高考题', '模拟题', '精选母题'].filter(function (type) { return type !== '精选母题' || window.StudyAuth.isOwner(); });
     var html = '<div class="source-type-row"><label>来源标签</label>';
     for (var i = 0; i < types.length; i++) {
         html += '<span class="source-type-option' + (types[i] === activeType ? ' active' : '') + '" onclick="selectImportSource(this,\'' + prefix + '\')" data-value="' + types[i] + '">' + types[i] + '</span>';
@@ -1145,7 +1147,7 @@ function renderPerQuestionBatchForm(){
         var idx=_mmBatchIndices[i];var q=_questions[idx];
         var type=q&&q.source_type?q.source_type:(remembered&&remembered.source_type)||'';
         var meta=q&&q.source_meta?safeParseMeta(q.source_meta):safeParseMeta(remembered&&remembered.source_meta)||{};
-        var types=['','ai生成','高考题','模拟题','精选母题'];
+        var types=['','ai生成','高考题','模拟题','精选母题'].filter(function (type) { return type !== '精选母题' || window.StudyAuth.isOwner(); });
         html+='<div class="mm-import-row"><div class="mm-import-row-head">题'+(idx+1)+'</div>';
         html+='<select id="pq_src_'+idx+'" class="mm-source-select" onchange="selectPerQuestionSource('+idx+')">';
         for(var ti=0;ti<types.length;ti++){

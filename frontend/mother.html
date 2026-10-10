@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="/auth.js?v=20261009a"></script>
 <script src="/jobs.js?v=20261009a"></script>
 <script>document.documentElement.classList.add("nav-init")</script>
 <meta charset="UTF-8">
@@ -96,9 +97,10 @@
             <div class="mother-header">
                 <h1>母题看板</h1>
                 <div class="mother-actions">
-                    <button class="mother-btn secondary" onclick="newPattern()">新增套路</button>
+                    <a class="mother-btn secondary" data-owner-only href="question-pool.html" style="text-decoration:none;">原题池</a>
+                    <button class="mother-btn secondary" data-owner-only onclick="newPattern()">新增套路</button>
                     <button class="mother-btn secondary" onclick="syncPatterns()">刷新</button>
-                    <button class="mother-btn" onclick="exportYaml()">导出 YAML</button>
+                    <button class="mother-btn" data-owner-only onclick="exportYaml()">导出 YAML</button>
                 </div>
             </div>
             <div id="motherReminder" style="display:none;margin-bottom:12px;padding:10px 14px;background:#fff7ed;border:1px solid #fed7aa;border-radius:10px;color:#9a3412;font-size:14px;"></div>
@@ -227,6 +229,7 @@ async function loadPatterns() {
 }
 
 async function syncPatterns() {
+    if (!window.StudyAuth.isOwner()) { await loadPatterns(); checkReminders(); return; }
     setStatus('正在同步题库母题...');
     try {
         var r = await fetch('/patterns/sync', {method: 'POST'});
@@ -370,6 +373,7 @@ function renderQuestionLinks(p) {
 }
 
 function newPattern() {
+    if (!window.StudyAuth.requireOwner()) return;
     _selectedPatternId = null;
     renderTree();
     var form = document.getElementById('motherEditForm');
@@ -386,6 +390,7 @@ function newPattern() {
 }
 
 async function savePattern() {
+    if (!window.StudyAuth.requireOwner()) return;
     var id = parseInt(document.getElementById('patternId').value);
     var payload = {
         category: document.getElementById('patternCategory').value,
@@ -406,6 +411,7 @@ async function savePattern() {
 }
 
 async function createPattern() {
+    if (!window.StudyAuth.requireOwner()) return;
     var qid = parseInt(document.getElementById('newMotherQuestionId').value) || null;
     var payload = {
         question_id: qid,
@@ -427,6 +433,7 @@ async function createPattern() {
 }
 
 async function linkQuestion(patternId) {
+    if (!window.StudyAuth.requireOwner()) return;
     var qid = parseInt(document.getElementById('newQuestionId').value);
     var role = document.getElementById('newQuestionRole').value;
     if (!qid) { setStatus('请搜索并选择题目', true); return; }
@@ -441,6 +448,7 @@ async function linkQuestion(patternId) {
 }
 
 async function unlinkQuestion(patternId, questionId, role) {
+    if (!window.StudyAuth.requireOwner()) return;
     try {
         var url = '/patterns/' + patternId + '/questions/' + questionId;
         if (role) url += '?role=' + encodeURIComponent(role);
@@ -453,6 +461,7 @@ async function unlinkQuestion(patternId, questionId, role) {
 }
 
 async function deletePattern(patternId) {
+    if (!window.StudyAuth.requireOwner()) return;
     if (!confirm('确定删除这个套路吗？')) return;
     try {
         var r = await fetch('/patterns/' + patternId, {method: 'DELETE'});
@@ -464,6 +473,7 @@ async function deletePattern(patternId) {
 }
 
 async function exportYaml() {
+    if (!window.StudyAuth.requireOwner()) return;
     try {
         var r = await fetch('/patterns/export-yaml', {method: 'POST'});
         var d = await r.json();

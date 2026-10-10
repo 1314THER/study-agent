@@ -652,7 +652,7 @@ def _call_llm_messages(messages, temperature=0.4):
     base_url = (api_cfg.get("base_url") or "https://api.deepseek.com/v1").rstrip("/")
     endpoint = base_url if base_url.endswith("/chat/completions") else base_url + "/chat/completions"
     settings = runtime_settings.get_settings()
-    model = settings.get("teachers", {}).get("liangliang", {}).get("solver", {}).get("model", "deepseek-v4-flash")
+    model = settings.get("teachers", {}).get("liangliang", {}).get("solver", {}).get("model", "deepseek-flash")
     max_tokens = min(int(runtime_settings.get_limits().get("api_max_tokens", 32000)), 2000)
     body = {
         "model": model,

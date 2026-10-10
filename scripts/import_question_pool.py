@@ -1,0 +1,85 @@
+"""Import a pinned local source into the private question pool, or inspect it.
+
+Example (no AI calls):
+  python scripts/import_question_pool.py --source-name HighMATH --kind highmath \
+    --path .runtime/question-pool/sources/highmath --revision 0f1a3636 --dry-run
+"""
+
+import argparse
+from collections import Counter
+from hashlib import sha256
+import json
+import os
+from pathlib import Path
+import shutil
+import sys
+
+ROOT = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(ROOT))
+
+
+def main():
+    from backend.pool_sources import SOURCE_KINDS, iter_source_records
+    parser = argparse.ArgumentParser(description="导入主人原题池；默认仅本地保存，不公开，不调用解题 AI")
+    parser.add_argument("--source-name", required=True)
+    parser.add_argument("--kind", choices=SOURCE_KINDS, required=True)
+    parser.add_argument("--path", type=Path, required=True)
+    parser.add_argument("--revision", default="")
+    parser.add_argument("--url", default="")
+    parser.add_argument("--license", default="待核验，未自动授权公开")
+    parser.add_argument("--publication-allowed", action="store_true", help="仅在已经核验来源许可时允许后续确认公开")
+    parser.add_argument("--ocr", action="store_true", help="显式文件导入使用已配置 DeepSeek 进行付费 OCR；公开仓库数据不需要")
+    parser.add_argument("--dry-run", action="store_true", help="核对数量和状态，不写原题池")
+    args = parser.parse_args()
+    if args.ocr and args.kind not in ("image", "pdf"):
+        parser.error("OCR 只适用于明确导入的图片或扫描 PDF")
+    counts = Counter()
+    categories = Counter()
+    answers = 0
+    solutions = 0
+    def records():
+        nonlocal answers, solutions
+        for record in iter_source_records(args.path, args.kind, {"ocr": args.ocr}):
+            counts[record["completeness"]] += 1
+            categories.update(record["categories"])
+            answers += bool(record["answer"])
+            solutions += bool(record["solution"])
+            yield record
+    if args.dry_run:
+        for _ in records():
+            pass
+        result = {"dry_run": True}
+    else:
+        from backend.question_pool import files_directory, import_records
+        source = {
+            "name": args.source_name, "kind": args.kind, "revision": args.revision,
+            "url": args.url, "license": args.license, "publication_allowed": args.publication_allowed,
+            "options": {"ocr": args.ocr},
+        }
+        if args.path.is_file():
+            digest = sha256()
+            with args.path.open("rb") as stream:
+                for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            extension = args.path.suffix.lower().lstrip(".")
+            if not extension.isalnum():
+                parser.error("原文件需要有效扩展名")
+            token = digest.hexdigest() + "." + extension
+            directory = files_directory()
+            directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+            target = directory / token
+            if not target.exists():
+                # Exclusive creation avoids following an existing destination symlink.
+                with args.path.open("rb") as origin, target.open("xb") as dest:
+                    shutil.copyfileobj(origin, dest)
+                os.chmod(target, 0o600)
+            source.update({"filename": args.path.name, "file_token": token})
+        result = import_records(source, records())
+    print(json.dumps({"source": args.source_name, "total": sum(counts.values()), "completeness": dict(counts),
+                      "categories": dict(categories), "with_original_answer": answers,
+                      "with_original_solution": solutions, "result": result}, ensure_ascii=False, indent=2))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

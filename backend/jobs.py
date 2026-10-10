@@ -33,14 +33,26 @@ logger = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parent.parent
 KINDS = {"solve", "teach_start", "teach_legacy_start", "teach_chat", "teach_check", "teach_ack", "teach_finish",
          "generate", "grade", "parse_file", "ocr_file", "batch_solve", "agent",
-         "pattern_check", "pattern_variants", "provider_test"}
+         "pattern_check", "pattern_variants", "provider_test", "pool_prepare", "pool_import"}
 TERMINAL = {"done", "error", "interrupted"}
 PRESET_TIMEOUT_SECONDS = 300
 _CURRENT = ContextVar("study_background_job", default=None)
 _SHARED_PROVIDER_LIMIT = threading.BoundedSemaphore(2)
-_PROVIDERS = {name: _SHARED_PROVIDER_LIMIT for name in ("deepseek", "dashscope")}
+_PROVIDERS = {name: _SHARED_PROVIDER_LIMIT for name in ("deepseek",)}
 _PROVIDER_LOCK = threading.Lock()
 _PROVIDER_ACTIVE = 0
+
+
+def _history_ttl():
+    from backend.identity import current_identity
+    identity = current_identity()
+    visitor = identity and identity.get("role") == "guest"
+    legacy_visitor = identity is None and workspace_directory() is not None
+    return 7200 if visitor or legacy_visitor else 7 * 86400
+
+
+def _valid_id(value):
+    return isinstance(value, int) and not isinstance(value, bool) and value != 0
 
 
 class JobConflict(ValueError):
@@ -460,7 +472,7 @@ class JobManager:
     def get(self, job_id):
         with self.lock, self._connection(storage_path()) as conn:
             row = conn.execute("SELECT * FROM jobs WHERE job_id=?", (job_id,)).fetchone()
-            ttl = 7200 if workspace_directory() is not None else 7 * 86400
+            ttl = _history_ttl()
             if row and row["status"] in TERMINAL and row["updated_at"] < time.time() - ttl:
                 conn.execute("DELETE FROM jobs WHERE job_id=?", (job_id,))
                 return None
@@ -468,7 +480,7 @@ class JobManager:
 
     def list(self, limit=50):
         path = storage_path()
-        ttl = 7200 if workspace_directory() is not None else 7 * 86400
+        ttl = _history_ttl()
         with self.lock, self._connection(path) as conn:
             conn.execute("DELETE FROM jobs WHERE status IN ('done','error','interrupted') AND updated_at<?",
                          (time.time() - ttl,))
@@ -492,6 +504,12 @@ def validate_args(kind, args):
     args = json.loads(_dump(args))
     if len(_dump(args).encode()) > 1024 * 1024:
         raise ValueError("提交内容超过 1 MiB")
+    if kind == "pool_prepare":
+        from backend.question_pool import validate_prepare_args
+        return validate_prepare_args(args)
+    if kind == "pool_import":
+        from backend.question_pool import validate_import_args
+        return validate_import_args(args)
     if kind in ("solve", "teach_start", "teach_legacy_start", "teach_check"):
         args["question"] = _text(args, "question")
     if kind in ("teach_chat", "teach_ack", "teach_finish"):
@@ -508,21 +526,25 @@ def validate_args(kind, args):
         key = "question_id" if kind == "generate" else "pattern_id"
         if key not in args and kind == "generate":
             args[key] = args.pop("qid", None)
-        if not isinstance(args.get(key), int) or args[key] <= 0:
-            raise ValueError(f"{key} 必须是题库中的正整数 ID")
+        if not _valid_id(args.get(key)):
+            raise ValueError(f"{key} 必须是题库中的非零整数 ID")
+        if kind == "pattern_check" and not _valid_id(args.get("question_id")):
+            raise ValueError("question_id 必须是题库中的非零整数 ID")
     if kind == "grade":
         args["student_answer"] = _text(args, "student_answer")
+        if args.get("question_id") is not None and not _valid_id(args["question_id"]):
+            raise ValueError("question_id 必须是题库中的非零整数 ID")
         if not args.get("question_id"):
             args["question"] = _text(args, "question")
         if args.get("loop") is not None:
             loop = args["loop"]
-            if not isinstance(loop, dict) or not isinstance(args.get("question_id"), int) or args["question_id"] <= 0:
+            if not isinstance(loop, dict) or not _valid_id(args.get("question_id")):
                 raise ValueError("套路作答需要有效的题目及挑战信息")
             loop["round_id"] = _text(loop, "round_id")
             if not 8 <= len(loop["round_id"]) <= 128:
                 raise ValueError("round_id 必须是 8 至 128 字符")
-            if not isinstance(loop.get("pattern_id"), int) or loop["pattern_id"] <= 0:
-                raise ValueError("pattern_id 必须是正整数")
+            if not _valid_id(loop.get("pattern_id")):
+                raise ValueError("pattern_id 必须是非零整数")
             if not isinstance(loop.get("queue_index"), int) or loop["queue_index"] < 0:
                 raise ValueError("queue_index 必须是非负整数")
             queue = loop.get("queue")
@@ -530,7 +552,7 @@ def validate_args(kind, args):
                 raise ValueError("挑战队列不合法")
             for item in queue:
                 if (not isinstance(item, dict) or item.get("role") not in ("mother", "variant1", "variant2", "variant3")
-                        or not isinstance(item.get("question_id"), int) or item["question_id"] <= 0):
+                        or not _valid_id(item.get("question_id"))):
                     raise ValueError("挑战题目和角色不合法")
             if not isinstance(loop.get("mother_only"), bool):
                 raise ValueError("mother_only 必须是布尔值")
@@ -541,7 +563,7 @@ def validate_args(kind, args):
     if kind == "agent":
         args["message"] = _text(args, "message")
         args["history"] = (args.get("history") or [])[-20:]
-    if kind == "provider_test" and args.get("provider") not in ("deepseek", "dashscope"):
+    if kind == "provider_test" and args.get("provider") not in ("deepseek",):
         raise ValueError("未知 provider")
     if kind in ("parse_file", "ocr_file") and not args.get("_upload_path"):
         raise ValueError("请通过文件上传接口提交此任务")
@@ -842,11 +864,22 @@ def _provider_test(args, ctx):
             **({} if response.status_code == 200 else {"error": f"HTTP {response.status_code}"})}
 
 
+def _pool_prepare(args, ctx):
+    from backend.question_pool import prepare_items
+    return prepare_items(args, ctx)
+
+
+def _pool_import(args, ctx):
+    from backend.question_pool import import_source_job
+    return import_source_job(args, ctx)
+
+
 RUNNERS = {"solve": _solve, "teach_start": _teach_start, "teach_legacy_start": _teach_legacy_start,
            "teach_chat": _teach_chat, "teach_ack": _teach_ack,
            "teach_finish": _teach_finish, "teach_check": _teach_check, "generate": _generate, "grade": _grade,
            "parse_file": _parse_file, "ocr_file": _ocr_file, "batch_solve": _batch_solve, "agent": _agent,
-           "pattern_check": _pattern_check, "pattern_variants": _pattern_variants, "provider_test": _provider_test}
+           "pattern_check": _pattern_check, "pattern_variants": _pattern_variants, "provider_test": _provider_test,
+           "pool_prepare": _pool_prepare, "pool_import": _pool_import}
 _manager = JobManager()
 
 

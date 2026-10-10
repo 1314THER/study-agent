@@ -79,28 +79,28 @@ _LATEX_RULES = _read_prompt("latex_rules")
 
 TEACHER_CONFIG = {
     "liangliang": {
-        "solver": {"model": "deepseek-v4-flash", "reasoning_effort": None},
-        "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
-        "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
-        "grade": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
+        "solver": {"model": "deepseek-flash", "reasoning_effort": None},
+        "verifier": {"model": "deepseek-flash", "reasoning_effort": "low"},
+        "formatter": {"model": "deepseek-flash", "reasoning_effort": "low"},
+        "grade": {"model": "deepseek-flash", "reasoning_effort": "low"},
     },
     "taotao": {
         "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "low"},
-        "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
-        "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
-        "grade": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
+        "verifier": {"model": "deepseek-flash", "reasoning_effort": "medium"},
+        "formatter": {"model": "deepseek-flash", "reasoning_effort": "low"},
+        "grade": {"model": "deepseek-flash", "reasoning_effort": "medium"},
     },
     "xuefeng": {
         "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
-        "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
-        "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
-        "grade": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
+        "verifier": {"model": "deepseek-flash", "reasoning_effort": "medium"},
+        "formatter": {"model": "deepseek-flash", "reasoning_effort": "low"},
+        "grade": {"model": "deepseek-flash", "reasoning_effort": "medium"},
     },
     "ji": {
         "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
-        "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "high"},
-        "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "high"},
-        "grade": {"model": "deepseek-v4-flash", "reasoning_effort": "high"},
+        "verifier": {"model": "deepseek-flash", "reasoning_effort": "high"},
+        "formatter": {"model": "deepseek-flash", "reasoning_effort": "high"},
+        "grade": {"model": "deepseek-flash", "reasoning_effort": "high"},
     },
 }
 
@@ -144,7 +144,7 @@ def get_api_key() -> str:
 
 
 # ---------- 调用 DeepSeek ----------
-def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3, model: str = "deepseek-chat", reasoning_effort: str = None):
+def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3, model: str = "deepseek-flash", reasoning_effort: str = None):
     api_key = get_api_key()
     api_cfg = runtime_settings.get_api().get("deepseek") or {}
     limits = runtime_settings.get_limits()

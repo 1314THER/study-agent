@@ -24,6 +24,7 @@ import time
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.responses import HTMLResponse
+from starlette.responses import RedirectResponse
 
 from backend.data_paths import background_lease, workspace
 
@@ -38,44 +39,44 @@ MAX_UPLOAD_BODY = 18 * 1024 * 1024
 LOCAL_ROUTES = {
     "GET": [
         r"/agent/context", r"/categories", r"/steps", r"/questions",
-        r"/questions/(?:search|errors|[0-9]+)", r"/questions/[0-9]+/lists",
-        r"/question-lists", r"/question-lists/(?:[0-9]+|all|wrong)/questions",
-        r"/patterns", r"/patterns/calendar(?:\.ics)?", r"/patterns/[0-9]+/loop",
+        r"/questions/(?:search|errors|-?[0-9]+)", r"/questions/-?[0-9]+/lists",
+        r"/question-lists", r"/question-lists/(?:-?[0-9]+|all|wrong)/questions",
+        r"/patterns", r"/patterns/calendar(?:\.ics)?", r"/patterns/-?[0-9]+/loop",
         r"/boards", r"/planner/board-order", r"/settings",
         r"/jobs(?:/[a-f0-9-]+)?", r"/demo/presets",
     ],
     "POST": [
         r"/jobs", r"/jobs/uploads",
-        r"/questions/save", r"/questions/[0-9]+/(?:exam-touch|step-error|lists)",
-        r"/questions/[0-9]+/step-errors/batch", r"/question-lists",
+        r"/questions/save", r"/questions/-?[0-9]+/(?:exam-touch|step-error|lists)",
+        r"/questions/-?[0-9]+/step-errors/batch", r"/question-lists",
         r"/patterns/(?:mother|sync|export-yaml|match-wrong|calendar)",
-        r"/patterns/[0-9]+/(?:questions|wrong|attempt|complete)",
+        r"/patterns/-?[0-9]+/(?:questions|wrong|attempt|complete)",
         r"/planner/(?:plan|apply)", r"/teach/find", r"/settings/reset",
     ],
     "PUT": [
-        r"/questions/[0-9]+/source-type", r"/question-lists/[0-9]+",
-        r"/patterns/[0-9]+", r"/boards/[0-9]+", r"/planner/board-order",
+        r"/questions/-?[0-9]+/source-type", r"/question-lists/-?[0-9]+",
+        r"/patterns/-?[0-9]+", r"/boards/-?[0-9]+", r"/planner/board-order",
     ],
     "DELETE": [
-        r"/questions/[0-9]+", r"/questions/[0-9]+/step-error/[0-9]+",
-        r"/questions/[0-9]+/lists/[0-9]+", r"/question-lists/[0-9]+",
-        r"/patterns/[0-9]+", r"/patterns/[0-9]+/questions/[0-9]+",
-        r"/patterns/calendar/[0-9]+",
+        r"/questions/-?[0-9]+", r"/questions/-?[0-9]+/step-error/-?[0-9]+",
+        r"/questions/-?[0-9]+/lists/-?[0-9]+", r"/question-lists/-?[0-9]+",
+        r"/patterns/-?[0-9]+", r"/patterns/-?[0-9]+/questions/-?[0-9]+",
+        r"/patterns/calendar/-?[0-9]+",
     ],
 }
 AI_PATHS = re.compile(
     r"/(?:solve(?:/.*)?|agent/act|teach/(?!find$).*|grade(?:/.*)?|"
     r"multimodal/parse|ocr/answer|generate-jobs/.*|questions/ai-search|"
-    r"questions/[0-9]+/generate(?:/async)?|exam/ai-assemble|"
-    r"patterns/[0-9]+/(?:check|ensure-variants))$"
+    r"questions/-?[0-9]+/generate(?:/async)?|exam/ai-assemble|"
+    r"patterns/-?[0-9]+/(?:check|ensure-variants))$"
 )
 AI_ROUTES = {
     "POST": [
         r"/solve/step[123]", r"/agent/act", r"/teach/(?:start|check|session/start)",
         r"/teach/session/[a-f0-9-]{32,36}/(?:chat|ack)", r"/grade(?:/text)?",
-        r"/multimodal/parse", r"/ocr/answer", r"/questions/[0-9]+/generate(?:/async)?",
+        r"/multimodal/parse", r"/ocr/answer", r"/questions/-?[0-9]+/generate(?:/async)?",
         r"/questions/ai-search", r"/exam/ai-assemble",
-        r"/patterns/[0-9]+/(?:check|ensure-variants)", r"/settings/test",
+        r"/patterns/-?[0-9]+/(?:check|ensure-variants)", r"/settings/test",
     ],
     "GET": [r"/teach/session/[a-f0-9-]{32,36}", r"/generate-jobs/[a-f0-9]{32}"],
 }
@@ -103,12 +104,13 @@ class Session:
 
 
 class SessionStore:
-    def __init__(self, root: Path, *, ttl=7200, max_sessions=40, seed=ROOT / "demo-data", clock=time.time):
+    def __init__(self, root: Path, *, ttl=7200, max_sessions=40, seed=ROOT / "demo-data", clock=time.time, account_mode=False):
         self.root = Path(root)
         self.seed = Path(seed)
         self.ttl = ttl
         self.max_sessions = max_sessions
         self.clock = clock
+        self.account_mode = account_mode
         self.sessions = {}
         self.created = {}
         self.lock = threading.RLock()
@@ -231,7 +233,20 @@ class SessionStore:
                 from backend.patterns import init_mastery_db, export_patterns_yaml
                 init_db()
                 init_mastery_db()
-                export_patterns_yaml()
+                if not self.account_mode:
+                    export_patterns_yaml()
+                else:
+                    from backend.identity import current_user_id
+                    # Example learning questions remain local. The curriculum is
+                    # supplied exclusively by the owner's published catalog.
+                    with sqlite3.connect(str(directory / "study_agent.db")) as conn:
+                        for table in ("question_list_members", "question_steps"):
+                            conn.execute(f"DELETE FROM {table} WHERE question_id IN (SELECT id FROM questions WHERE source_type='精选母题')")
+                        conn.execute("DELETE FROM questions WHERE source_type='精选母题'")
+                        conn.execute("UPDATE questions SET user_id=?", (current_user_id(),))
+                    with sqlite3.connect(str(directory / "mastery.db")) as conn:
+                        for table in ("pattern_questions", "pattern_mastery", "category_mastery", "patterns", "board_nodes", "board_edges", "board_levels", "boards"):
+                            conn.execute("DELETE FROM " + table)
         except Exception:
             shutil.rmtree(directory, ignore_errors=True)
             raise
@@ -252,7 +267,12 @@ class SessionStore:
                     raise DemoBusy("新建体验过于频繁，请稍后再试。")
                 token = secrets.token_hex(16)
                 session = Session(token, self.root / ("session-" + token), now + self.ttl)
-                self._seed(session.directory)
+                if self.account_mode:
+                    from backend.identity import identity_context
+                    with identity_context({"id": "guest:" + token, "username": "游客", "role": "guest"}):
+                        self._seed(session.directory)
+                else:
+                    self._seed(session.directory)
                 (session.directory / "session.json").write_text(json.dumps({"expires": session.expires}), encoding="utf-8")
                 self.sessions[token] = session
                 times.append(now)
@@ -292,11 +312,13 @@ class SessionStore:
 
 
 class DemoGateway:
-    def __init__(self, application, store, *, ai_enabled=False, local_preview=False):
+    def __init__(self, application, store, *, ai_enabled=False, local_preview=False, account_mode=False, catalog_path=None):
         self.application = application
         self.store = store
         self.ai_enabled = ai_enabled
         self.local_preview = local_preview
+        self.account_mode = account_mode
+        self.catalog_path = catalog_path
         self.ai_requests = threading.BoundedSemaphore(2)
 
     def cookie_options(self, request):
@@ -343,6 +365,27 @@ class DemoGateway:
             return
         request = Request(scope, receive)
         path = scope["path"]
+        if self.account_mode and path in ("/auth/me", "/auth/guest"):
+            cookie_name, cookie_secure = self.cookie_options(request)
+            client = request.headers.get("x-study-demo-client") or (request.client.host if request.client else "local")
+            create = path == "/auth/guest" and request.method == "POST"
+            if not create and not (path == "/auth/me" and request.method == "GET"):
+                await self.error("not_found", "没有此接口。", 404)(scope, receive, send)
+                return
+            try:
+                session, fresh = await asyncio.to_thread(self.store.acquire, request.cookies.get(cookie_name), client, create=create)
+            except DemoBusy as exc:
+                await self.error("demo_busy", str(exc), 429)(scope, receive, send)
+                return
+            if session is None:
+                response = JSONResponse({"authenticated": False, "user": None}, headers={"Cache-Control": "no-store"})
+            else:
+                response = JSONResponse({"authenticated": True, "user": {"id": "guest:" + session.token, "username": "游客", "role": "guest", "api_key_configured": False}, "expires_at": session.public()["expires_at"]}, headers={"Cache-Control": "no-store"})
+                if fresh:
+                    self.set_cookie(response, session, cookie_name, cookie_secure)
+                self.store.release(session)
+            await response(scope, receive, send)
+            return
         if path == "/health" and request.method == "GET":
             await JSONResponse({"mode": "demo", "ai_enabled": self.ai_enabled})(scope, receive, send)
             return
@@ -394,11 +437,14 @@ class DemoGateway:
         client = request.headers.get("x-study-demo-client") or (request.client.host if request.client else "local")
         cookie_name, cookie_secure = self.cookie_options(request)
         try:
-            session, fresh = await asyncio.to_thread(self.store.acquire, request.cookies.get(cookie_name), client, create=html)
+            session, fresh = await asyncio.to_thread(self.store.acquire, request.cookies.get(cookie_name), client, create=html and not self.account_mode)
         except DemoBusy as exc:
             await self.error("demo_busy", str(exc), 429)(scope, receive, send)
             return
         if session is None:
+            if html and self.account_mode:
+                await RedirectResponse("/login.html", status_code=303)(scope, receive, send)
+                return
             code = "demo_session_expired" if request.cookies.get(cookie_name) else "demo_session_required"
             await self.error(code, "体验已结束，请返回游客首页重新开始。", 401)(scope, receive, send)
             return
@@ -429,7 +475,15 @@ class DemoGateway:
                 if request.method not in ("GET", "HEAD") and sum(p.stat().st_size for p in session.directory.rglob('*') if p.is_file()) > MAX_WORKSPACE:
                     await self.error("demo_storage_full", "体验数据已达上限，请重置体验。", 413)(scope, receive, send)
                     return
-                await self.forward(scope, replay_receive, send, session, fresh, cookie_name, cookie_secure)
+                if self.account_mode:
+                    from backend.identity import identity_context
+                    from backend.catalog import sync_catalog
+                    with identity_context({"id": "guest:" + session.token, "username": "游客", "role": "guest"}), workspace(session.directory):
+                        if self.catalog_path:
+                            await asyncio.to_thread(sync_catalog, self.catalog_path)
+                        await self.forward(scope, replay_receive, send, session, fresh, cookie_name, cookie_secure)
+                else:
+                    await self.forward(scope, replay_receive, send, session, fresh, cookie_name, cookie_secure)
         finally:
             self.store.release(session)
 
@@ -524,7 +578,7 @@ def create_app(directory=None, *, ai_enabled=None, local_preview=None, **store_o
     # Import after environment is established, so the demo has its own log path.
     root = directory or os.environ.get("STUDY_DEMO_ROOT", str(ROOT / ".demo-sessions"))
     os.environ.setdefault("STUDY_AGENT_LOG_DIR", str(Path(root) / "logs"))
-    from backend.main import app as main_app
+    from backend.main import core_app as main_app
     if ai_enabled is None:
         ai_enabled = os.environ.get("STUDY_DEMO_AI_ENABLED", "1") == "1"
     if local_preview is None:

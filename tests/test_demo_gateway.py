@@ -151,7 +151,7 @@ class DemoGatewayTests(unittest.TestCase):
     def test_no_owner_keys_and_ai_or_unknown_routes_are_blocked(self):
         self.enter(self.a)
         public = self.a.get("/settings").json()
-        for provider in ("deepseek", "dashscope"):
+        for provider in ("deepseek",):
             self.assertFalse(public["api"][provider]["has_key"])
             self.assertEqual(public["api"][provider]["api_key"], "")
         blocked = [

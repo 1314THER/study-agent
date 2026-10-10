@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="/auth.js?v=20261009a"></script>
 <script src="/jobs.js?v=20261009a"></script>
+<script src="/question-provenance.js?v=20261010a"></script>
 <script>document.documentElement.classList.add("nav-init")</script>
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache">
@@ -53,7 +55,8 @@ function sourceMetaLink(sourceType, sourceMeta){
     var text = sourceMetaText(sourceType, m);
     if (!text) return '';
     if (sourceType === 'ai生成' && m.reference_id) {
-        var rid = String(m.reference_id).replace(/\D/g, '');
+        var ridNumber = Number(m.reference_id);
+                var rid = /^-?\d+$/.test(String(m.reference_id)) && Number.isSafeInteger(ridNumber) && ridNumber !== 0 ? String(ridNumber) : '';
         if (rid) {
             return '<a class="tag tag-source-meta tag-ref-link" href="javascript:void(0)" onclick="event.stopPropagation();openReferenceQuestion(' + rid + ')" title="查看参考题详情">' + escapeHtml(text) + '</a>';
         }
@@ -65,7 +68,7 @@ function openReferenceQuestion(rid){
     window.open('history.html', '_blank');
 }
 function getRememberedSource(){
-    try{var raw = localStorage.getItem('remembered_question_source'); return raw ? JSON.parse(raw) : null;}catch(e){return null;}
+    try{var raw = localStorage.getItem('remembered_question_source'); var data = raw ? JSON.parse(raw) : null; return data && data.source_type === '精选母题' && !window.StudyAuth.isOwner() ? null : data;}catch(e){return null;}
 }
 function saveRememberedSource(data){ localStorage.setItem('remembered_question_source', JSON.stringify(data)); }
 function clearRememberedSource(){ localStorage.removeItem('remembered_question_source'); }
@@ -738,6 +741,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
 
                 var score = q.difficulty_score !== null ? '(' + q.difficulty_score + '\u5206)' : '';
 
+                rememberQuestionPermission(q);
                 html += '<div class="history-card" data-id="' + q.id + '">';
                 html += '<input type="checkbox" class="hc-checkbox" data-id="' + q.id + '"' + (cartIds.indexOf(q.id) >= 0 ? ' checked' : '') + ' onchange="toggleExamSelection(this)">';
                 html += '<div class="hc-preview" onclick="showDetail(' + q.id + ')">' + escapeHtml(preview) + '</div>';
@@ -755,7 +759,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
                 html += '<button class="exam-add-btn" onclick="event.stopPropagation();showSaveDialog(' + q.id + ', \'\', ' + _srcArg + ', \'' + _metaArg + '\')" title="加入其他题单">📂</button>';
                 html += '<button class="exam-add-btn" onclick="event.stopPropagation();generateFromQuestion(' + q.id + ')" title="AI仿题">✨</button>';
                 html += '<button class="exam-add-btn" onclick="event.stopPropagation();openGrade(' + q.id + ')" title="AI 改卷">✅</button>';
-                html += '<button class="delete-btn" onclick="event.stopPropagation();confirmDelete(' + q.id + ')" title="\u5220\u9664\u6b64\u9898">\ud83d\uddd1</button>';
+                if (!_readonlyQuestionIds[q.id]) html += '<button class="delete-btn" onclick="event.stopPropagation();confirmDelete(' + q.id + ')" title="\u5220\u9664\u6b64\u9898">\ud83d\uddd1</button>';
                 html += '<button class="exam-add-btn" onclick="event.stopPropagation();addToExam(' + q.id + ')" title="\u52a0\u5165\u7ec4\u5377">\ud83d\udccb</button>';
                 html += '<button class=\"exam-add-btn\" onclick=\"event.stopPropagation();teachOpen(this)\" data-question=\"' + escapeHtml(q.content||'').replace(/\"/g,'&quot;').replace(/\\n/g,' ') + '\" title=\"手把手教学\">📖</button>';
                 html += '</div>';
@@ -783,6 +787,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
         }
 
         function confirmDelete(id) {
+            if (_readonlyQuestionIds[id]) { window.StudyAuth.toast("共享母题由 studyadmin 维护，不能删除。"); return; }
             _deleteTargetId = id;
             var removeOnly = _selectedListId !== null && _selectedListId !== '__wrong__' && !isAllListView();
             var msg = removeOnly
@@ -878,6 +883,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
 
             var delBtn = document.createElement('button');
             delBtn.id = 'detailDeleteBtn';
+            delBtn.hidden = !window.StudyAuth.isOwner();
             delBtn.className = 'delete-btn-large';
             delBtn.innerHTML = '\ud83d\uddd1 \u5220\u9664\u6b64\u9898';
             delBtn.onclick = function() { confirmDelete(id); };
@@ -891,6 +897,9 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
                         resultEl.innerHTML = '<p style="color:red;text-align:center;padding:40px;">\u52a0\u8f7d\u5931\u8d25: ' + escapeHtml(errMsg) + '</p>';
                         return;
                     }
+                    rememberQuestionPermission(data);
+                    var deleteButton = document.getElementById('detailDeleteBtn');
+                    if (deleteButton) deleteButton.hidden = !!_readonlyQuestionIds[data.id];
                     var qHtml = '<div class="detail-question"><h3>\u9898\u76ee</h3><div class="question-text">' + escapeHtml(formatChoiceQuestion(data.content || '')).replace(/\n/g, '<br>') + '</div></div>';
                     document.getElementById('detailQuestion').innerHTML = qHtml;
                     try { renderMathInElement(document.getElementById('detailQuestion'), { delimiters: [{left: '$$', right: '$$', display: true},{left: '$', right: '$', display: false}], ignoredTags: [] }); } catch(e) {}
@@ -1040,15 +1049,15 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
                         html += '</div>';
                     }
                     if (cr.final_answer) {
-                        html += '<div class="final-answer">\u7b54\u6848\uff1a' + cr.final_answer + '</div>';
+                        html += '<div class="final-answer">\u7b54\u6848\uff1a' + escapeHtml(cr.final_answer) + '</div>';
                     }
                     html += '</div>';
                 }
             }
             if (data.final_answer && data.chunk_results && data.chunk_results.some(function(cr){return !cr.final_answer;})) {
-                html += '<div class="final-answer">\u6574\u9898\u7b54\u6848\uff1a' + data.final_answer + '</div>';
+                html += '<div class="final-answer">\u6574\u9898\u7b54\u6848\uff1a' + escapeHtml(data.final_answer) + '</div>';
             }
-
+            if (window.QuestionProvenance) html += window.QuestionProvenance.html(data);
             result.innerHTML = html;
 
             try {
@@ -1747,10 +1756,17 @@ function safeParseKps(kps){
 
         // ========== Save to Lists Dialog (used from other pages too via window) ==========
         var _saveDialogCallback = null;
+        var _readonlyQuestionIds = Object.create(null);
+        function rememberQuestionPermission(q) {
+            var shared = q.is_shared || q.catalog_id != null || q.source_type === '精选母题';
+            _readonlyQuestionIds[q.id] = !window.StudyAuth.isOwner() && (q.can_edit === false || shared);
+            return !_readonlyQuestionIds[q.id];
+        }
         
         function showSaveDialog(questionId, questionText, sourceType, sourceMeta) {
             sourceType = _detailSourceType || sourceType || '';
             sourceMeta = _detailSourceMeta || sourceMeta || {};
+            if (!window.StudyAuth.isOwner() && (questionId < 0 || sourceType === '精选母题')) _readonlyQuestionIds[questionId] = true;
             // Fetch available lists
             fetch('/question-lists')
                 .then(function(r) { return r.json(); })
@@ -1806,9 +1822,9 @@ function safeParseKps(kps){
             html += '</div>';
             
             // Source type selection
-            html += '<div class="source-type-row">';
+            html += '<div class="source-type-row"' + (_readonlyQuestionIds[questionId] ? ' hidden' : '') + '>';
             html += '<label>来源标签</label>';
-            var srcTypes = ['ai生成', '高考题', '模拟题', '精选母题'];
+            var srcTypes = ['ai生成', '高考题', '模拟题', '精选母题'].filter(function (type) { return type !== '精选母题' || window.StudyAuth.isOwner(); });
             for (var si = 0; si < srcTypes.length; si++) {
                 var active = (_selectedSourceType === srcTypes[si]) ? ' active' : '';
                 html += '<span class="source-type-option' + active + '" onclick="selectSourceType(this)" data-value="' + srcTypes[si] + '">' + srcTypes[si] + '</span>';
@@ -1816,8 +1832,8 @@ function safeParseKps(kps){
             html += '</div>';
 
             // 二级标签：卷子名/题号、参考题ID、母题ID
-            html += sourceMetaFieldsHtml(_selectedSourceType, _selectedSourceMeta);
-            html += '<label class="remember-source-row"><input type="checkbox" id="rememberSourceBox"' + (remembered ? ' checked' : '') + '><span>记住来源</span></label>';
+            if (!_readonlyQuestionIds[questionId]) html += sourceMetaFieldsHtml(_selectedSourceType, _selectedSourceMeta);
+            if (!_readonlyQuestionIds[questionId]) html += '<label class="remember-source-row"><input type="checkbox" id="rememberSourceBox"' + (remembered ? ' checked' : '') + '><span>记住来源</span></label>';
             
             // Create new list inline
             html += '<div class="save-dialog-create">';
@@ -1920,6 +1936,7 @@ function safeParseKps(kps){
         }
 
         async function registerMotherQuestion(questionId, srcMeta) {
+            if (!window.StudyAuth.isOwner()) return;
             if (!srcMeta || !srcMeta.category || !srcMeta.pattern) return;
             try {
                 await fetch('/patterns/mother', {
@@ -1964,7 +1981,7 @@ function safeParseKps(kps){
                 var overlay = document.querySelector('.save-dialog-overlay');
                 if (overlay) {
                     var qid = overlay.querySelector('.sd-btn-confirm') ? 
-                              overlay.querySelector('.sd-btn-confirm').getAttribute('onclick').match(/\d+/)[0] : null;
+                              overlay.querySelector('.sd-btn-confirm').getAttribute('onclick').match(/-?\d+/)[0] : null;
                     if (qid) {
                         var currentSrc = '';
                         var activeEl = overlay.querySelector('.source-type-option.active');
@@ -1990,16 +2007,18 @@ function safeParseKps(kps){
             
             var srcType = _selectedSourceType || '';
             var srcMeta = collectSourceMetaFromDialog();
-            if (srcType === '精选母题' && (!srcMeta.category || !srcMeta.pattern)) {
+            if (!_readonlyQuestionIds[questionId] && srcType === '精选母题' && (!srcMeta.category || !srcMeta.pattern)) {
                 alert('请选择所属板块并填写套路名');
                 return;
             }
             var rememberBox = document.getElementById('rememberSourceBox');
             var remember = rememberBox ? rememberBox.checked : false;
-            if (remember && srcType) saveRememberedSource({source_type: srcType, source_meta: srcMeta});
-            else if (!remember) clearRememberedSource();
+            if (!_readonlyQuestionIds[questionId]) {
+                if (remember && srcType) saveRememberedSource({source_type: srcType, source_meta: srcMeta});
+                else if (!remember) clearRememberedSource();
+            }
             try {
-                if (srcType) {
+                if (srcType && !_readonlyQuestionIds[questionId]) {
                     var sr = await fetch('/questions/' + questionId + '/source-type', {
                         method: 'PUT',
                         headers: { 'Content-Type': 'application/json' },
@@ -2036,7 +2055,7 @@ function safeParseKps(kps){
                 return;
             }
 
-            updateDetailSourceTag(srcType, srcMeta);
+            if (!_readonlyQuestionIds[questionId]) updateDetailSourceTag(srcType, srcMeta);
             doSearch();
             setTimeout(loadLists, 400);
         }

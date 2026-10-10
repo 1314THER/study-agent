@@ -16,6 +16,44 @@ from fastapi import FastAPI
 
 from backend import database, jobs, teach
 from backend.data_paths import background_lease, workspace, workspace_directory
+from backend.identity import identity_context
+
+
+class JobArgumentTest(unittest.TestCase):
+    def test_shared_negative_ids_are_accepted(self):
+        for kind, args in (("generate", {"question_id": -1}),
+                           ("pattern_check", {"pattern_id": -2, "question_id": -1}),
+                           ("pattern_variants", {"pattern_id": -2})):
+            with self.subTest(kind=kind):
+                self.assertEqual(jobs.validate_args(kind, args), args)
+        payload = {"question_id": -1, "student_answer": "2", "loop": {
+            "round_id": "shared-round", "pattern_id": -2, "queue_index": 0,
+            "queue": [{"role": "mother", "question_id": -1}], "mother_only": True,
+        }}
+        self.assertEqual(jobs.validate_args("grade", payload)["loop"]["pattern_id"], -2)
+
+    def test_zero_bool_and_non_integer_ids_are_rejected(self):
+        for bad_id in (0, True, False, "-1", 1.5):
+            for kind, args in (("generate", {"question_id": bad_id}),
+                               ("pattern_check", {"pattern_id": -2, "question_id": bad_id}),
+                               ("pattern_variants", {"pattern_id": bad_id}),
+                               ("grade", {"question_id": bad_id, "student_answer": "2"})):
+                with self.subTest(kind=kind, bad_id=bad_id), self.assertRaises(ValueError):
+                    jobs.validate_args(kind, args)
+
+    def test_only_deepseek_provider_is_accepted(self):
+        self.assertEqual(jobs.validate_args("provider_test", {"provider": "deepseek"}), {"provider": "deepseek"})
+        with self.assertRaises(ValueError):
+            jobs.validate_args("provider_test", {"provider": "dashscope"})
+
+    def test_account_workspaces_keep_history_seven_days(self):
+        with tempfile.TemporaryDirectory() as directory, workspace(directory):
+            self.assertEqual(jobs._history_ttl(), 7200)
+            with identity_context({"id": "visitor", "role": "guest"}):
+                self.assertEqual(jobs._history_ttl(), 7200)
+            for role in ("user", "owner"):
+                with identity_context({"id": "account", "role": role}):
+                    self.assertEqual(jobs._history_ttl(), 7 * 86400)
 
 
 class ManualTimer:
@@ -284,7 +322,7 @@ class JobsTest(unittest.TestCase):
                 self.manager.submit("solve", {"question": "计算2+2"}, "draining-2")
         self.drain()
 
-    def test_provider_limit_is_shared_between_deepseek_and_dashscope(self):
+    def test_provider_limit_is_shared_between_deepseek_tasks(self):
         entered, release = threading.Event(), threading.Event()
         lock = threading.Lock()
         counts = [0, 0]
@@ -298,7 +336,7 @@ class JobsTest(unittest.TestCase):
                 self.assertTrue(release.wait(3))
                 with lock:
                     counts[0] -= 1
-        threads = [threading.Thread(target=run, args=(provider,)) for provider in ("deepseek", "dashscope", "deepseek")]
+        threads = [threading.Thread(target=run, args=(provider,)) for provider in ("deepseek", "deepseek", "deepseek")]
         try:
             for thread in threads:
                 thread.start()
@@ -322,7 +360,7 @@ class JobsTest(unittest.TestCase):
             events.append(("recognize", int(args["image_base64"])))
             return '[{"latex":"x=1"}]'
         with patch.object(multimodal, "iter_pdf_images", side_effect=pages), \
-                patch.object(multimodal, "_call_qwen_vl", side_effect=recognize):
+                patch.object(multimodal, "_call_deepseek_vision", side_effect=recognize):
             questions = multimodal.parse_file("fake.pdf")
         self.assertEqual(events, [("render", 1), ("recognize", 1), ("render", 2), ("recognize", 2)])
         self.assertEqual(len(questions), 2)

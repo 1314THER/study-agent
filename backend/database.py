@@ -1,5 +1,5 @@
 """
-单用户小题库 —— SQLite 数据库
+按用户工作区隔离的 SQLite 题库，公共题目通过 catalog_id 关联共享库。
 
 知识点分类从 categories.py 读取，调整时改那个文件即可。
 """
@@ -14,6 +14,7 @@ from backend import difficulty as diff
 from backend.categories import CATEGORIES
 from backend.data_paths import data_path
 from backend.steps import _load_steps
+from backend.identity import current_user_id, can_edit_catalog, require_catalog_editor
 
 logger = logging.getLogger(__name__)
 
@@ -232,7 +233,7 @@ def _sync_question_to_source_list(conn, question_id, source_type):
 
 def _backfill_source_lists(conn):
     """老题回填：已经带来源标签的题目补进对应系统题单"""
-    rows = conn.execute("SELECT id, source_type FROM questions").fetchall()
+    rows = conn.execute("SELECT id, source_type FROM questions WHERE catalog_active=1").fetchall()
     changed = 0
     for row in rows:
         before = conn.total_changes
@@ -462,6 +463,18 @@ def init_db():
             UNIQUE(list_id, question_id)
         );
     """)
+    conn.commit()
+    # 每个持久工作区属于一个 user；公共母题投影不属于任何个人。
+    owner = current_user_id().replace("'", "''")
+    for table in ("questions", "mistakes", "practice_records", "step_errors", "question_lists", "question_list_members"):
+        cols = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+        if "user_id" not in cols:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN user_id TEXT DEFAULT '{owner}'")
+    if "catalog_id" not in {row["name"] for row in conn.execute("PRAGMA table_info(questions)")}:
+        conn.execute("ALTER TABLE questions ADD COLUMN catalog_id INTEGER")
+    if "catalog_active" not in {row["name"] for row in conn.execute("PRAGMA table_info(questions)")}:
+        conn.execute("ALTER TABLE questions ADD COLUMN catalog_active INTEGER NOT NULL DEFAULT 1")
+    conn.execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_questions_catalog ON questions(catalog_id)")
     conn.commit()
     # 迁移：practice_records 记录作答来源、原文与防欺骗信号（旧库补列）
     for col, decl in (
@@ -861,9 +874,18 @@ def _infer_category_level2(level1: str, kps: list):
     return None
 
 
-def save_question(question_text: str, answer_dict: dict):
+def save_question(question_text: str, answer_dict: dict, *, overwrite_existing=True, match_existing=True):
     """从 answer_dict 提取各字段，分别存入数据库（入库前清洗，保证字段来自字典）"""
 
+    # 所有写入路径（包括 AI 工具与后台任务）都受同一母题权限约束。
+    existing_id = find_question_id(question_text.strip()) if match_existing else None
+    existing = get_question_by_id(existing_id) if existing_id is not None else None
+    if existing and not overwrite_existing:
+        return existing["id"]
+    if not can_edit_catalog() and existing and (existing.get("catalog_id") is not None or existing.get("source_type") == "精选母题"):
+        return existing["id"]
+    if answer_dict.get("source_type") == "精选母题":
+        require_catalog_editor()
     # 处理 category（清洗）；顶层缺失时从第一个块补齐一级板块
     category = answer_dict.get("category")
     if not category:
@@ -1026,7 +1048,17 @@ def save_question(question_text: str, answer_dict: dict):
             pass
 
     conn = get_connection()
-    conn.execute(
+    # Repeat after choice formatting, using the connection that performs the
+    # upsert. Alternate option punctuation must not bypass shared ownership.
+    if not can_edit_catalog():
+        conn.execute("BEGIN IMMEDIATE")
+        existing = conn.execute("SELECT id,catalog_id,source_type FROM questions WHERE content=?", (question_text.strip(),)).fetchone()
+        if existing and (existing["catalog_id"] is not None or existing["source_type"] == "精选母题"):
+            question_id = existing["id"]
+            conn.rollback()
+            conn.close()
+            return question_id
+    saved = conn.execute(
         """INSERT INTO questions
            (content, answer_json, category_level1, category_level2,
             difficulty_level, difficulty_score, difficulty_dimensions,
@@ -1045,7 +1077,8 @@ def save_question(question_text: str, answer_dict: dict):
             question_type = excluded.question_type,
             steps_structure = excluded.steps_structure,
             source_type = excluded.source_type,
-            source_meta = excluded.source_meta""",
+            source_meta = excluded.source_meta
+           WHERE ?""",
         (
             question_text.strip(),
             json.dumps(answer_dict, ensure_ascii=False),
@@ -1060,12 +1093,16 @@ def save_question(question_text: str, answer_dict: dict):
             steps_structure,
             source_type,
             source_meta_json,
+            bool(overwrite_existing),
         )
     )
     conn.commit()
     # 获取新增/更新的题目 ID
     row = conn.execute("SELECT id FROM questions WHERE content = ?", (question_text.strip(),)).fetchone()
     question_id = row["id"] if row else None
+    if not overwrite_existing and saved.rowcount == 0:
+        conn.close()
+        return question_id
     if question_id is not None:
         _index_question_steps(conn, question_id, chunk_results=chunk_results)
         conn.commit()
@@ -1097,7 +1134,7 @@ def get_all_questions():
         """SELECT id, content, category_level1, category_level2,
                   difficulty_level, difficulty_score, difficulty_dimensions,
                   knowledge_points, question_type, steps_structure,
-                  source_type, source_meta,
+                  source_type, source_meta, user_id, catalog_id, catalog_active,
                   created_at, last_viewed_at, last_edited_at, last_exam_at
            FROM questions ORDER BY created_at DESC"""
     ).fetchall()
@@ -1106,6 +1143,8 @@ def get_all_questions():
     result = []
     for r in rows:
         d = dict(r)
+        d["is_shared"] = d.get("catalog_id") is not None or d.get("source_type") == "精选母题"
+        d["can_edit"] = can_edit_catalog() or not d["is_shared"]
         # JSON 字段解析
         for key in ("difficulty_dimensions", "knowledge_points", "steps_structure", "source_meta"):
             val = d.get(key)
@@ -1127,6 +1166,8 @@ def get_question_by_id(qid: int):
     if not row:
         return None
     d = dict(row)
+    d["is_shared"] = d.get("catalog_id") is not None or d.get("source_type") == "精选母题"
+    d["can_edit"] = can_edit_catalog() or not d["is_shared"]
     for key in ("answer_json", "difficulty_dimensions", "knowledge_points", "common_mistakes", "steps_structure", "source_meta"):
         val = d.get(key)
         if val:
@@ -1254,7 +1295,7 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
         f"""SELECT {select_prefix}{q_prefix}id, {q_prefix}content, {q_prefix}category_level1, {q_prefix}category_level2,
                    {q_prefix}difficulty_level, {q_prefix}difficulty_score, {q_prefix}difficulty_dimensions,
                    {q_prefix}knowledge_points, {q_prefix}question_type, {q_prefix}steps_structure,
-                   {q_prefix}source_type, {q_prefix}source_meta,
+                   {q_prefix}source_type, {q_prefix}source_meta, {q_prefix}user_id, {q_prefix}catalog_id,
                    {q_prefix}created_at, {q_prefix}last_viewed_at, {q_prefix}last_edited_at, {q_prefix}last_exam_at
             {from_clause} WHERE {where_sql}
             ORDER BY {q_prefix}created_at DESC LIMIT ?""",
@@ -1272,6 +1313,8 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
     all_rows = []
     for r in rows:
         d = dict(r)
+        d["is_shared"] = d.get("catalog_id") is not None or d.get("source_type") == "精选母题"
+        d["can_edit"] = can_edit_catalog() or not d["is_shared"]
         for key in ("difficulty_dimensions", "knowledge_points", "steps_structure", "source_meta"):
             val = d.get(key)
             if val:
@@ -1300,6 +1343,7 @@ def search_questions(keywords=None, categories=None, difficulties=None, types=No
 
 def delete_question(qid: int) -> bool:
     """删除指定 id 的题目，返回是否成功删除"""
+    _require_question_edit(qid)
     conn = get_connection()
     conn.execute("DELETE FROM question_list_members WHERE question_id = ?", (qid,))
     conn.execute("DELETE FROM step_errors WHERE question_id = ?", (qid,))
@@ -1421,7 +1465,7 @@ def get_questions_with_errors() -> list:
     conn = get_connection()
     rows = conn.execute(
         """SELECT DISTINCT q.id, q.content, q.category_level1, q.category_level2,
-                  q.difficulty_level, q.difficulty_score, q.question_type, q.source_type, q.source_meta, q.created_at,
+                  q.difficulty_level, q.difficulty_score, q.question_type, q.source_type, q.source_meta, q.user_id, q.catalog_id, q.created_at,
                   q.last_viewed_at, q.last_edited_at, q.last_exam_at
            FROM questions q
            INNER JOIN step_errors e ON e.question_id = q.id
@@ -1586,7 +1630,7 @@ def get_list_questions(list_id, keywords=None, categories=None, difficulties=Non
     rows = conn.execute(
         "SELECT DISTINCT q.id, q.content, q.category_level1, q.category_level2, "
         "q.difficulty_level, q.difficulty_score, q.difficulty_dimensions, "
-        "q.knowledge_points, q.question_type, q.source_type, q.source_meta, "
+        "q.knowledge_points, q.question_type, q.source_type, q.source_meta, q.user_id, q.catalog_id, "
         "q.steps_structure, q.created_at, q.last_viewed_at, q.last_edited_at, q.last_exam_at "
         + from_clause + " WHERE " + where_sql + " ORDER BY m.id DESC" + limit_sql,
         params
@@ -1631,7 +1675,7 @@ def get_wrong_questions(keywords=None, categories=None, difficulties=None, types
     rows = conn.execute(
         "SELECT DISTINCT q.id, q.content, q.category_level1, q.category_level2, "
         "q.difficulty_level, q.difficulty_score, q.difficulty_dimensions, "
-        "q.knowledge_points, q.question_type, q.source_type, q.source_meta, "
+        "q.knowledge_points, q.question_type, q.source_type, q.source_meta, q.user_id, q.catalog_id, "
         "q.steps_structure, q.created_at, q.last_viewed_at, q.last_edited_at, q.last_exam_at "
         + from_clause + " WHERE " + where_sql + " ORDER BY q.created_at DESC" + limit_sql,
         params
@@ -1660,6 +1704,9 @@ def update_question_source_type(question_id, source_type):
 
 def update_question_source(question_id, source_type, source_meta=None):
     """更新一级来源标签和二级标签（source_meta 为 None 时保留原有二级标签）"""
+    _require_question_edit(question_id)
+    if source_type == "精选母题":
+        require_catalog_editor()
     if source_type not in _VALID_SOURCE_TYPES:
         return False
     conn = get_connection()
@@ -1686,3 +1733,11 @@ def update_question_source(question_id, source_type, source_meta=None):
     conn.commit()
     conn.close()
     return ok
+
+
+def _require_question_edit(question_id):
+    if can_edit_catalog():
+        return
+    question = get_question_by_id(question_id)
+    if question and (question.get("catalog_id") is not None or question.get("source_type") == "精选母题"):
+        require_catalog_editor()

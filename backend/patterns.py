@@ -13,6 +13,7 @@ from backend.categories import CATEGORIES
 from backend.database import get_question_by_id, update_question_source
 from backend.data_paths import data_path
 import backend.settings as runtime_settings
+from backend.identity import current_user_id, require_catalog_editor
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 PATTERNS_YAML = os.path.join(os.path.dirname(os.path.abspath(__file__)), "patterns.yaml")
@@ -277,6 +278,14 @@ def init_mastery_db() -> None:
             CREATE INDEX IF NOT EXISTS idx_board_levels_board ON board_levels(board_id);
         """)
         conn.commit()
+        owner = current_user_id().replace("'", "''")
+        for table in ("pattern_mastery", "category_mastery", "attempts", "loop_rounds"):
+            cols = {row["name"] for row in conn.execute(f"PRAGMA table_info({table})")}
+            if "user_id" not in cols:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN user_id TEXT DEFAULT '{owner}'")
+        if "catalog_id" not in {row["name"] for row in conn.execute("PRAGMA table_info(patterns)")}:
+            conn.execute("ALTER TABLE patterns ADD COLUMN catalog_id INTEGER")
+        conn.commit()
         # 迁移：patterns 增加 max_time_seconds
         cols = [r["name"] for r in conn.execute("PRAGMA table_info(patterns)").fetchall()]
         if "max_time_seconds" not in cols:
@@ -401,6 +410,7 @@ def get_patterns() -> list:
 def add_mother_question(question_id: int = None, category: str = "", name: str = "",
                         key: str = None, description: str = "",
                         difficulty=None) -> dict:
+    require_catalog_editor()
     if question_id is not None:
         question = get_question_by_id(question_id)
         if not question:
@@ -480,6 +490,7 @@ def get_pattern(pattern_id: int) -> dict:
 def update_pattern(pattern_id: int, category: str = None, name: str = None,
                    description: str = None, key: str = None,
                    max_time_seconds: int = None, difficulty=None) -> dict:
+    require_catalog_editor()
     conn = _get_conn()
     try:
         row = conn.execute("SELECT * FROM patterns WHERE id = ?", (pattern_id,)).fetchone()
@@ -524,6 +535,7 @@ def update_pattern(pattern_id: int, category: str = None, name: str = None,
 
 
 def delete_pattern(pattern_id: int) -> bool:
+    require_catalog_editor()
     conn = _get_conn()
     try:
         row = conn.execute("SELECT category FROM patterns WHERE id = ?", (pattern_id,)).fetchone()
@@ -540,7 +552,9 @@ def delete_pattern(pattern_id: int) -> bool:
         conn.close()
 
 
-def link_question_to_pattern(pattern_id: int, question_id: int, role: str) -> dict:
+def link_question_to_pattern(pattern_id: int, question_id: int, role: str, *, replace_existing=True) -> dict:
+    if role == "mother":
+        require_catalog_editor()
     if role not in ("mother", "variant1", "variant2", "variant3"):
         raise ValueError("role 必须是 mother/variant1/variant2/variant3")
     question = get_question_by_id(question_id)
@@ -548,11 +562,23 @@ def link_question_to_pattern(pattern_id: int, question_id: int, role: str) -> di
         raise ValueError(f"题目不存在: {question_id}")
     conn = _get_conn()
     try:
+        if not replace_existing:
+            require_catalog_editor()
+            conn.execute("BEGIN IMMEDIATE")
         pattern_row = conn.execute("SELECT * FROM patterns WHERE id = ?", (pattern_id,)).fetchone()
         if not pattern_row:
             raise ValueError(f"套路不存在: {pattern_id}")
         pattern = dict(pattern_row)
-        _link_question(conn, pattern_id, question_id, role)
+        if replace_existing:
+            _link_question(conn, pattern_id, question_id, role)
+        else:
+            occupied = conn.execute("SELECT question_id FROM pattern_questions WHERE pattern_id=? AND role=?", (pattern_id, role)).fetchone()
+            other = conn.execute("SELECT pattern_id FROM pattern_questions WHERE question_id=? AND role=?", (question_id, role)).fetchone()
+            if occupied and occupied[0] != question_id:
+                raise ValueError("该套路角色已占用，不会自动替换。")
+            if other and other[0] != pattern_id:
+                raise ValueError("该题在另一套路占用相同角色。")
+            conn.execute("INSERT OR IGNORE INTO pattern_questions (pattern_id,question_id,role) VALUES (?,?,?)", (pattern_id, question_id, role))
         conn.commit()
     finally:
         conn.close()
@@ -567,6 +593,9 @@ def link_question_to_pattern(pattern_id: int, question_id: int, role: str) -> di
 
 
 def unlink_question_from_pattern(pattern_id: int, question_id: int, role: str = None) -> bool:
+    # 未指定 role 的删除也可能移除母题。
+    if role is None or role == "mother":
+        require_catalog_editor()
     conn = _get_conn()
     try:
         if role:
@@ -586,6 +615,7 @@ def unlink_question_from_pattern(pattern_id: int, question_id: int, role: str = 
 
 
 def export_patterns_yaml() -> dict:
+    require_catalog_editor()
     patterns = get_patterns()
     data = {}
     for p in patterns:
@@ -903,7 +933,7 @@ def get_mastery_summary() -> dict:
     try:
         categories = conn.execute("SELECT * FROM category_mastery ORDER BY category").fetchall()
         patterns = conn.execute(
-            """SELECT pm.state, COUNT(*) AS count FROM pattern_mastery pm
+            """SELECT pm.state, COUNT(*) AS count FROM pattern_mastery pm JOIN patterns p ON p.id=pm.pattern_id
                GROUP BY pm.state ORDER BY pm.state"""
         ).fetchall()
         return {
@@ -916,6 +946,7 @@ def get_mastery_summary() -> dict:
 
 def sync_mother_questions() -> dict:
     """把题库里 source_type=精选母题 的题目同步成母题看板上的套路。"""
+    require_catalog_editor()
     from backend.database import get_all_questions
 
     init_mastery_db()
@@ -1428,6 +1459,7 @@ def get_boards() -> list:
 
 
 def save_board_layout(board_id: int, nodes: list, edges: list, levels: list = None) -> dict:
+    require_catalog_editor()
     """整体替换某板块地图的节点、连线与关卡名。nodes 含 question_id/x/y，edges 含 from/to question_id。"""
     conn = _get_conn()
     try:

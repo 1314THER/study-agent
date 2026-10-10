@@ -66,4 +66,9 @@ def workspace(directory: Union[str, os.PathLike]) -> Iterator[None]:
 def data_path(filename: str, legacy_default: Union[str, os.PathLike]) -> str:
     """Resolve a known data filename without changing the normal app defaults."""
     directory = workspace_directory()
+    from backend.identity import current_identity
+    identity = current_identity()
+    legacy_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    if identity and identity.get("role") == "owner" and directory == legacy_root and not os.environ.get("STUDY_AGENT_DATA_DIR"):
+        return os.fspath(legacy_default)
     return os.path.join(directory, filename) if directory is not None else os.fspath(legacy_default)

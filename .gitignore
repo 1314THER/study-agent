@@ -10,10 +10,12 @@ backend/settings.json.tmp
 /*.db-shm
 logs/
 .demo-sessions/
+.accounts/
 .runtime/
 
 # Local Python and JavaScript environments
 .venv/
+/.cache/pip/
 __pycache__/
 *.py[cod]
 node_modules/

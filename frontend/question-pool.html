@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Cache-Control" content="no-cache">
+  <title>原题池 - 数学最强大脑</title>
+  <script src="/auth.js?v=20261009a"></script>
+  <script src="/jobs.js?v=20261010pool"></script>
+  <link rel="stylesheet" href="style.css?v=20260804mother">
+  <link rel="stylesheet" href="question-pool.css?v=20261010b">
+  <link rel="stylesheet" href="vendor/katex/katex.min.css">
+  <script defer src="vendor/katex/katex.min.js"></script>
+  <script defer src="pool-math.js?v=20261010b"></script>
+</head>
+<body class="pool-page">
+<div class="app-layout">
+  <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
+  <aside class="sidebar">
+    <button class="nav-expand-toggle" onclick="toggleNavExpand()" title="展开导航" aria-label="展开导航">☰</button>
+    <nav>
+      <a href="multimodal.html" class="nav-item" data-page="multimodal" title="多模态解答"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
+      <a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+      <a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
+      <a href="question-pool.html" class="nav-item active" data-page="question-pool" data-owner-only title="原题池"><span class="nav-icon">🗂️</span><span class="nav-label">原题池</span></a>
+      <a href="loop.html" class="nav-item" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
+      <a href="board.html" class="nav-item" data-page="board" title="闯关"><span class="nav-icon">🗺️</span><span class="nav-label">闯关</span></a>
+      <a href="settings.html" class="nav-item" data-page="settings" title="系统设置"><span class="nav-icon">⚙️</span><span class="nav-label">系统设置</span></a>
+    </nav>
+  </aside>
+  <main class="main-content">
+    <div class="pool-container">
+      <header class="pool-header">
+        <div><p class="pool-eyebrow">主人工作台 · 从原题到母题</p><h1>原题池</h1><p class="pool-subtitle">先筛选和归类，再核对解析，最后确认入库。</p></div>
+        <div class="pool-header-actions"><a class="pool-btn" href="mother.html">母题看板 ↗</a><button type="button" class="pool-btn" id="poolSourcesButton">题源与导入</button><button type="button" class="pool-btn" id="poolRefresh">刷新</button></div>
+      </header>
+      <div id="poolAccess" class="pool-empty" hidden></div>
+      <div id="poolWorkspace" hidden>
+        <div id="poolStats" class="pool-stats" aria-label="题池统计"></div>
+        <div id="poolNotice" class="pool-notice" role="status" aria-live="polite" hidden></div>
+        <div class="pool-layout">
+          <aside class="pool-panel pool-filter-panel">
+            <div class="pool-panel-heading"><h2>筛选原题</h2><button type="button" class="pool-text-btn" id="poolReset">重置</button></div>
+            <form id="poolFilters" class="pool-form">
+              <label>关键词<input name="keyword" id="poolKeyword" type="search" placeholder="题干、答案、出处"></label>
+              <label>大板块<select name="category" id="poolCategory"><option value="">全部板块</option></select></label>
+              <label>题型<select name="question_type" id="poolType"><option value="">全部题型</option></select></label>
+              <label>题源 / 书名<select name="source_id" id="poolSource"><option value="">全部题源</option></select></label>
+              <label>年份<input name="year" id="poolYear" type="number" min="1900" max="2100" placeholder="如 2024"></label>
+              <label>题干完整性<select name="completeness" id="poolCompleteness"><option value="text_only">文字题（含待确认）</option><option value="complete">文字完整</option><option value="needs_review">待确认</option><option value="deferred_graphic">暂缓图形题</option><option value="failed">提取失败</option><option value="">全部</option></select></label>
+              <label>处理状态<select name="status" id="poolStatus"><option value="">全部状态</option><option value="unreviewed">未筛选</option><option value="reviewed">已筛选</option><option value="preparing">准备解析中</option><option value="ready">可预览入库</option><option value="needs_review">解析待复核</option><option value="imported">已入库</option></select></label>
+              <button class="pool-btn primary" type="submit">筛选</button>
+            </form>
+            <details class="pool-coverage"><summary>板块覆盖与缺口</summary><div id="poolCoverage"></div><p class="pool-muted">候选数量只反映已接入题源；由你确认细类、套路与代表题。</p></details>
+          </aside>
+          <section class="pool-panel pool-list-panel" aria-label="原题列表">
+            <div class="pool-panel-heading"><h2 id="poolResultCount">正在读取…</h2><label class="pool-select-all"><input type="checkbox" id="poolSelectPage">选择本页</label></div>
+            <div class="pool-list" id="poolList" aria-busy="true"></div>
+            <footer class="pool-pagination"><button class="pool-btn" type="button" id="poolPrev">上一页</button><span id="poolPageLabel"></span><button class="pool-btn" type="button" id="poolNext">下一页</button><select id="poolPageSize" aria-label="每页题数"><option value="40">40 / 页</option><option value="80">80 / 页</option></select></footer>
+          </section>
+          <section class="pool-panel pool-detail-panel" aria-label="原题详情">
+            <div class="pool-panel-heading"><h2>核对与归类</h2><div class="pool-detail-nav"><button type="button" class="pool-text-btn" id="poolPreviousItem" title="上一题（←）">←</button><button type="button" class="pool-text-btn" id="poolNextItem" title="下一题（→）">→</button></div></div>
+            <div id="poolDetail"><div class="pool-empty">选择一道原题，查看出处并确定它的角色。<br><small>← → 切题 · S 加入 / 移出选择队列</small></div></div>
+          </section>
+        </div>
+        <section class="pool-panel pool-queue" aria-label="已选原题">
+          <div class="pool-panel-heading"><h2>选择队列 <span id="poolSelectedCount" class="pool-badge">0</span></h2><button type="button" class="pool-text-btn" id="poolClearSelection">清空选择</button></div>
+          <div id="poolSelected" class="pool-selected"></div>
+          <div class="pool-queue-actions">
+            <label>解析老师 <select id="poolTeacher"><option value="liangliang">梁梁</option><option value="xuefeng">雪峰</option><option value="taotao">韬韬</option><option value="ji">鸡</option></select></label>
+            <button type="button" class="pool-btn" id="poolPrepare">为选中题准备 AI 解析</button>
+            <button type="button" class="pool-btn primary" id="poolPreview">预览入库</button>
+            <span class="pool-muted">选择与浏览位置自动保存；准备解析不会直接入库。</span>
+          </div>
+          <p id="poolJobProgress" class="pool-job-progress" role="status" hidden></p>
+        </section>
+      </div>
+    </div>
+  </main>
+</div>
+<dialog id="poolSourcesDialog" class="pool-dialog"><div class="pool-dialog-heading"><div><p class="pool-eyebrow">保留原题与出处</p><h2>题源与导入</h2></div><button type="button" class="pool-btn" data-close-dialog="poolSourcesDialog">关闭</button></div>
+  <form id="poolUploadForm" class="pool-upload-form"><label>题源 / 书名<input id="poolUploadName" name="source_name" placeholder="留空使用文件名"></label><label>题源文件<input id="poolUploadFile" name="file" type="file" accept=".pdf,.docx,.txt,.json,.jsonl,.tex,.png,.jpg,.jpeg" required></label><button class="pool-btn primary" id="poolUploadButton" type="submit">上传并提取</button><label class="pool-ocr-option"><input id="poolUploadOcr" type="checkbox" checked> 使用 OCR 识别扫描页中的文字与公式</label></form>
+  <p class="pool-muted">支持 PDF、Word、扫描图片和结构化题源。依赖图形的题保留在暂缓清单，文字或公式图片可以识别。原文件仅供主人核对。</p>
+  <div id="poolSourcesList"></div>
+</dialog>
+<dialog id="poolPreviewDialog" class="pool-dialog"><div class="pool-dialog-heading"><div><p class="pool-eyebrow">最后核对</p><h2>确认入库</h2></div><button type="button" class="pool-btn" data-close-dialog="poolPreviewDialog">关闭</button></div><p class="pool-muted">只提交本次预览中可入库的题。角色冲突需返回归类修改；原答案与 AI 答案冲突须逐题确认。</p><div id="poolPreviewItems"></div><div class="pool-preview-footer"><span id="poolPreviewSummary"></span><button type="button" class="pool-btn primary" id="poolCommit">确认入库</button></div></dialog>
+<script src="nav.js?v=20261010pool"></script>
+<script src="question-pool.js?v=20261010b"></script>
+</body>
+</html>

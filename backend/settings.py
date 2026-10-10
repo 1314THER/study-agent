@@ -1,7 +1,7 @@
 """运行时设置：评分公式 / 老师模型 / API 密钥。
 
 设置保存在 backend/settings.json，保存后无需重启即热生效。
-API 密钥为空时回退到环境变量或 .env。
+注册账号的 API 密钥保存在中央账户库中；普通用户不继承主人的密钥。
 游客启用共享 AI 时，仅使用管理员指定的只读配置，不继承主人的环境。
 """
 
@@ -27,38 +27,34 @@ DEFAULTS = {
     },
     "teachers": {
         "liangliang": {
-            "solver": {"model": "deepseek-v4-flash", "reasoning_effort": None},
-            "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
-            "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
-            "grade": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
+            "solver": {"model": "deepseek-flash", "reasoning_effort": None},
+            "verifier": {"model": "deepseek-flash", "reasoning_effort": "low"},
+            "formatter": {"model": "deepseek-flash", "reasoning_effort": "low"},
+            "grade": {"model": "deepseek-flash", "reasoning_effort": "low"},
         },
         "taotao": {
             "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "low"},
-            "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
-            "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
-            "grade": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
+            "verifier": {"model": "deepseek-flash", "reasoning_effort": "medium"},
+            "formatter": {"model": "deepseek-flash", "reasoning_effort": "low"},
+            "grade": {"model": "deepseek-flash", "reasoning_effort": "medium"},
         },
         "xuefeng": {
             "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
-            "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
-            "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "low"},
-            "grade": {"model": "deepseek-v4-flash", "reasoning_effort": "medium"},
+            "verifier": {"model": "deepseek-flash", "reasoning_effort": "medium"},
+            "formatter": {"model": "deepseek-flash", "reasoning_effort": "low"},
+            "grade": {"model": "deepseek-flash", "reasoning_effort": "medium"},
         },
         "ji": {
             "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
-            "verifier": {"model": "deepseek-v4-flash", "reasoning_effort": "high"},
-            "formatter": {"model": "deepseek-v4-flash", "reasoning_effort": "high"},
-            "grade": {"model": "deepseek-v4-flash", "reasoning_effort": "high"},
+            "verifier": {"model": "deepseek-flash", "reasoning_effort": "high"},
+            "formatter": {"model": "deepseek-flash", "reasoning_effort": "high"},
+            "grade": {"model": "deepseek-flash", "reasoning_effort": "high"},
         },
     },
     "api": {
         "deepseek": {
             "base_url": "https://api.deepseek.com/v1",
-            "api_key": "",
-        },
-        "dashscope": {
-            "base_url": "https://dashscope.aliyuncs.com/compatible-mode/v1",
-            "model": "qwen-vl-max",
+            "vision_model": "deepseek-flash",
             "api_key": "",
         },
     },
@@ -78,7 +74,6 @@ DEFAULTS = {
 
 _ENV_KEYS = {
     "deepseek": "DEEPSEEK_API_KEY",
-    "dashscope": "DASHSCOPE_API_KEY",
 }
 
 # Indexed by the resolved file; visitors may have identically timestamped files.
@@ -94,12 +89,49 @@ def _deep_merge(base, patch):
     return out
 
 
+def _current_identity():
+    from backend.identity import current_identity
+    return current_identity()
+
+
+def _account_api_key():
+    from backend.auth import current_account_api_key
+    return current_account_api_key()
+
+
+def _migrate_settings(data):
+    """Drop the retired provider and use the current Flash model name.
+
+    This operates on a copy. Reading legacy settings never exposes or copies
+    a DashScope credential into another provider or workspace.
+    """
+    data = deepcopy(data)
+    api = data.get("api")
+    if isinstance(api, dict):
+        data["api"] = {"deepseek": api.get("deepseek", {})}
+        cfg = data["api"]["deepseek"]
+        if isinstance(cfg, dict):
+            cfg.pop("model", None)
+            if cfg.get("vision_model") in ("deepseek-v4-flash", "deepseek-v4-flash-vision-exp") or str(cfg.get("vision_model", "")).lower().startswith("qwen"):
+                cfg["vision_model"] = "deepseek-flash"
+    for cfg in (data.get("teachers") or {}).values():
+        if not isinstance(cfg, dict):
+            continue
+        for stage in cfg.values():
+            if isinstance(stage, dict) and (stage.get("model") in ("deepseek-v4-flash", "deepseek-v4-flash-vision-exp") or str(stage.get("model", "")).lower().startswith("qwen")):
+                stage["model"] = "deepseek-flash"
+    return data
+
+
 def _read_shared_ai_settings():
     """Read trusted AI configuration without caching or copying its secrets.
 
     Only a server environment variable selects this file. Visitor settings
     cannot select it, change shared endpoints, or write back to it.
     """
+    identity = _current_identity()
+    if identity and identity.get("role") in ("owner", "user"):
+        return None
     path = shared_ai_config_path()
     if path is None:
         return None
@@ -112,11 +144,11 @@ def _read_shared_ai_settings():
         return {}
     if not isinstance(data, dict) or not isinstance(data.get("api"), dict):
         return {}
-    return {
+    return _migrate_settings({
         section: deepcopy(data[section])
         for section in ("api", "teachers", "limits")
         if isinstance(data.get(section), dict)
-    }
+    })
 
 
 def _shared_api(shared: dict) -> dict:
@@ -131,6 +163,9 @@ def _shared_api(shared: dict) -> dict:
 
 def shared_ai_enabled() -> bool:
     """Whether this workspace can use at least one administrator AI key."""
+    identity = _current_identity()
+    if identity and identity.get("role") in ("owner", "user"):
+        return False
     shared = _read_shared_ai_settings()
     if shared is None:
         return False
@@ -148,7 +183,7 @@ def _read_file_settings(path=None):
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
-        return _deep_merge(defaults, data) if isinstance(data, dict) else defaults
+        return _deep_merge(defaults, _migrate_settings(data)) if isinstance(data, dict) else defaults
     except (json.JSONDecodeError, OSError):
         return defaults
 
@@ -179,7 +214,17 @@ def _write_settings(data: dict) -> None:
 
 def save_settings(patch: dict) -> dict:
     """浅层深合并补丁并落盘，返回合并后的完整设置。"""
-    merged = _deep_merge(get_settings(), patch or {})
+    patch = _migrate_settings(patch or {})
+    identity = _current_identity()
+    if identity and identity.get("role") in ("owner", "user"):
+        cfg = (patch.get("api") or {}).get("deepseek") or {}
+        key = cfg.pop("api_key", None)
+        if isinstance(key, str) and key.strip():
+            from backend.auth import set_current_account_api_key
+            set_current_account_api_key(key.strip())
+    merged = _migrate_settings(_deep_merge(get_settings(), patch))
+    if identity and identity.get("role") in ("owner", "user"):
+        merged["api"]["deepseek"]["api_key"] = ""
     _write_settings(merged)
     return merged
 
@@ -196,7 +241,8 @@ def get_scoring() -> dict:
 
 
 def get_teachers() -> dict:
-    shared = _read_shared_ai_settings()
+    identity = _current_identity()
+    shared = None if identity and identity.get("role") in ("owner", "user") else _read_shared_ai_settings()
     if shared is not None:
         return _deep_merge(deepcopy(DEFAULTS["teachers"]), shared.get("teachers", {}))
     return get_settings().get("teachers") or DEFAULTS["teachers"]
@@ -209,14 +255,19 @@ def get_teacher_config(teacher: str) -> dict:
 
 
 def get_api() -> dict:
-    shared = _read_shared_ai_settings()
+    identity = _current_identity()
+    if identity and identity.get("role") == "user":
+        # Account keys are sent only to the official, server-controlled endpoint.
+        return deepcopy(DEFAULTS["api"])
+    shared = None if identity and identity.get("role") == "owner" else _read_shared_ai_settings()
     if shared is not None:
         return _shared_api(shared)
     return get_settings().get("api") or DEFAULTS["api"]
 
 
 def get_limits() -> dict:
-    shared = _read_shared_ai_settings()
+    identity = _current_identity()
+    shared = None if identity and identity.get("role") in ("owner", "user") else _read_shared_ai_settings()
     if shared is not None:
         # Shared AI budgets and concurrency remain controlled by the owner.
         return _deep_merge(deepcopy(DEFAULTS["limits"]), shared.get("limits", {}))
@@ -224,8 +275,9 @@ def get_limits() -> dict:
 
 
 def _read_env_key(name: str) -> str:
-    # A demo workspace never inherits the owner's environment or project .env.
-    if workspace_directory() is None:
+    # Only the authenticated owner or private legacy process may use its env.
+    identity = _current_identity()
+    if (identity and identity.get("role") == "owner") or workspace_directory() is None:
         key = os.environ.get(name)
         if key:
             return key
@@ -243,8 +295,15 @@ def _read_env_key(name: str) -> str:
 
 
 def get_api_key(provider: str) -> str:
-    """取指定 API 的密钥：设置文件优先，其次环境变量 / .env。"""
-    shared = _read_shared_ai_settings()
+    """Account keys take precedence; users never fall back to shared secrets."""
+    if provider != "deepseek":
+        return ""
+    identity = _current_identity()
+    if identity and identity.get("role") in ("owner", "user"):
+        key = _account_api_key()
+        if key or identity.get("role") == "user":
+            return key
+    shared = None if identity and identity.get("role") == "owner" else _read_shared_ai_settings()
     if shared is not None:
         key = (_shared_api(shared).get(provider) or {}).get("api_key")
         return key.strip() if isinstance(key, str) else ""

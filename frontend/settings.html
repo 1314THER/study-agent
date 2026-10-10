@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="/auth.js?v=20261009a"></script>
 <script src="/jobs.js?v=20261009a"></script>
 <script src="/job-pages.js?v=20261009a"></script>
 <script>document.documentElement.classList.add("nav-init")</script>
@@ -189,10 +190,19 @@
         <main class="main-content">
             <div class="settings-wrap">
                 <h1>系统设置</h1>
-                <p class="subtitle">难度评分公式 · 老师模型 · API 密钥</p>
+                <p class="subtitle">账号 · DeepSeek API Key<span data-owner-only> · 系统配置</span></p>
+                <section id="accountSettings" class="account-settings" hidden>
+                    <h2>我的账号与 API Key</h2>
+                    <p id="accountSummary"></p>
+                    <form id="accountKeyForm" class="auth-form">
+                        <label class="auth-field">DeepSeek API Key<input id="accountApiKey" type="password" autocomplete="off" spellcheck="false" minlength="8" maxlength="512" required placeholder="粘贴新的密钥"><small id="accountKeyStatus"></small><small>文字解题、图片识别与教学共用此密钥。<a href="/deepseek-guide.html" target="_blank" rel="noopener">注册与密钥教程 ↗</a></small></label>
+                        <button class="auth-button primary" type="submit">保存我的密钥</button>
+                        <div id="accountKeyMessage" class="auth-message" role="status" hidden></div>
+                    </form>
+                </section>
                 <div id="statusBar" class="settings-status"></div>
 
-                <section class="settings-section">
+                <section class="settings-section" data-owner-only>
                     <div class="section-head">
                         <h2>难度评分公式</h2>
                         <span class="section-hint">保存后热生效；存量题目需要重跑才会用新公式</span>
@@ -236,7 +246,7 @@
                     </div>
                 </section>
 
-                <section class="settings-section">
+                <section class="settings-section" data-owner-only>
                     <div class="section-head">
                         <h2>老师模型</h2>
                         <span class="section-hint">三阶段分别配置模型与思考强度，保存后立即生效</span>
@@ -244,41 +254,32 @@
                     <div class="teacher-grid" id="teacherGrid"></div>
                 </section>
 
-                <section class="settings-section">
+                <section class="settings-section" data-owner-only>
                     <div class="section-head">
-                        <h2>API 接口</h2>
-                        <span class="section-hint">密钥留空表示保留现有值；明文保存在 backend/settings.json，请勿提交到 Git</span>
-                        <button class="settings-btn" onclick="openProviderModal()">服务商切换（CC Switch 风格）</button>
+                        <h2>DeepSeek 接口</h2>
+                        <span class="section-hint">文字与图片共用 DeepSeek，账号密钥在上方单独保存</span>
                     </div>
                     <div class="settings-grid">
                         <div class="settings-card">
-                            <h3>老师解答 / 对话 / AI 改卷（DeepSeek，可切换 Qwen / 豆包）</h3>
+                            <h3>文字解题 / 对话 / 图片识别 / AI 改卷</h3>
                             <div class="input-row">
-                                <label>接口地址</label>
-                                <input id="dsBase" type="text" spellcheck="false">
-                                <label>API Key</label>
+                                <label for="dsBase">接口地址</label>
+                                <input id="dsBase" type="url" spellcheck="false">
+                                <label for="dsVisionModel">图片模型</label>
+                                <input id="dsVisionModel" type="text" spellcheck="false" placeholder="deepseek-flash">
+                            </div>
+                            <div class="input-row" id="localKeyRow" hidden>
+                                <label for="dsKey">本地 API Key</label>
                                 <input id="dsKey" type="password" placeholder="未配置" autocomplete="off">
                                 <span id="dsKeyStatus" class="key-status"></span>
                             </div>
-                            <button class="settings-btn" onclick="testApi('deepseek')">测试连接</button>
-                        </div>
-                        <div class="settings-card">
-                            <h3>切题 / 多模态（DashScope 通义 Qwen-VL）</h3>
-                            <div class="input-row">
-                                <label>接口地址</label>
-                                <input id="dsScopeBase" type="text" spellcheck="false">
-                                <label>模型</label>
-                                <input id="dsScopeModel" type="text" spellcheck="false">
-                                <label>API Key</label>
-                                <input id="dsScopeKey" type="password" placeholder="未配置" autocomplete="off">
-                                <span id="dsScopeKeyStatus" class="key-status"></span>
-                            </div>
-                            <button class="settings-btn" onclick="testApi('dashscope')">测试连接</button>
+                            <button class="settings-btn" onclick="testApi()">测试 DeepSeek 连接</button>
+                            <a href="/deepseek-guide.html" target="_blank" rel="noopener" style="margin-left:12px;color:#0071e3;font-size:13px;text-decoration:none">注册与密钥教程 ↗</a>
                         </div>
                     </div>
                 </section>
 
-                <section class="settings-section">
+                <section class="settings-section" data-owner-only>
                     <div class="section-head">
                         <h2>性能与并发</h2>
                         <span class="section-hint">请求超时、最大输出、批量并发与默认数量，保存后热生效</span>
@@ -322,26 +323,12 @@
                     </div>
                 </section>
 
-                <div class="settings-actions">
+                <div class="settings-actions" data-owner-only>
                     <button class="save-btn" onclick="saveSettings()">保存设置</button>
                     <button class="reset-btn" onclick="resetSettings()">恢复默认</button>
                 </div>
             </div>
         </main>
-    </div>
-    <div id="providerModal" class="modal-mask" style="display:none">
-        <div class="modal-box">
-            <div class="modal-head">
-                <h2>服务商切换</h2>
-                <button class="modal-close" onclick="closeProviderModal()" aria-label="关闭">×</button>
-            </div>
-            <div class="provider-tabs" id="providerTabs"></div>
-            <div class="provider-panel" id="providerPanel"></div>
-            <div class="modal-foot">
-                <button class="reset-btn" onclick="restoreProviderPreset()">恢复内置默认</button>
-                <button class="save-btn" onclick="applyProvider()">应用并保存</button>
-            </div>
-        </div>
     </div>
     <script src="nav.js?v=20261004a"></script>
     <script>
@@ -496,14 +483,10 @@
                 buildTeacherGrid(data.teachers || {});
                 var api = data.api || {};
                 var ds = api.deepseek || {};
-                var scope = api.dashscope || {};
                 document.getElementById("dsBase").value = ds.base_url || "";
                 document.getElementById("dsKey").placeholder = ds.has_key ? "已配置（留空保留）" : "未配置";
-                document.getElementById("dsScopeBase").value = scope.base_url || "";
-                document.getElementById("dsScopeModel").value = scope.model || "";
-                document.getElementById("dsScopeKey").placeholder = scope.has_key ? "已配置（留空保留）" : "未配置";
+                document.getElementById("dsVisionModel").value = ds.vision_model || "deepseek-flash";
                 setKeyStatus("dsKeyStatus", ds);
-                setKeyStatus("dsScopeKeyStatus", scope);
                 var lim = data.limits || {};
                 document.getElementById("limApiTimeout").value = lim.api_timeout_seconds || 300;
                 document.getElementById("limApiMaxTokens").value = lim.api_max_tokens || 32000;
@@ -526,9 +509,8 @@
             var el = document.getElementById(id);
             if (!el) return;
             if (cfg && cfg.has_key) {
-                var source = cfg.key_source === "settings" ? "系统设置" : ".env";
                 el.className = "key-status has";
-                el.textContent = "已配置（" + source + "）：" + (cfg.api_key || "");
+                el.textContent = "已配置（留空保留，密钥不回显）";
             } else {
                 el.className = "key-status";
                 el.textContent = "未配置，将无法调用该接口";
@@ -548,8 +530,7 @@
                 },
                 teachers: {},
                 api: {
-                    deepseek: { base_url: val("dsBase") },
-                    dashscope: { base_url: val("dsScopeBase"), model: val("dsScopeModel") }
+                    deepseek: { base_url: val("dsBase"), vision_model: val("dsVisionModel") }
                 },
                 limits: {
                     api_timeout_seconds: limNum("limApiTimeout", 300),
@@ -573,8 +554,6 @@
             });
             var dsKey = val("dsKey");
             if (dsKey) payload.api.deepseek.api_key = dsKey;
-            var scopeKey = val("dsScopeKey");
-            if (scopeKey) payload.api.dashscope.api_key = scopeKey;
             return payload;
         }
 
@@ -592,7 +571,6 @@
                     return;
                 }
                 document.getElementById("dsKey").value = "";
-                document.getElementById("dsScopeKey").value = "";
                 setStatus("设置已保存并热生效", "ok");
                 loadSettings();
             } catch (e) {
@@ -607,7 +585,6 @@
                 var res = await fetch("/settings/reset", { method: "POST" });
                 if (!res.ok) throw new Error("HTTP " + res.status);
                 document.getElementById("dsKey").value = "";
-                document.getElementById("dsScopeKey").value = "";
                 await loadSettings();
                 setStatus("已恢复默认设置", "ok");
             } catch (e) {
@@ -615,17 +592,17 @@
             }
         }
 
-        async function testApi(provider) {
-            setStatus(provider === "deepseek" ? "正在测试 DeepSeek…" : "正在测试 DashScope…", "busy");
+        async function testApi() {
+            setStatus("正在测试 DeepSeek…", "busy");
             try {
                 var res = await fetch("/settings/test", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ provider: provider })
+                    body: JSON.stringify({ provider: "deepseek" })
                 });
                 var data = await res.json();
                 if (data.ok) {
-                    setStatus((provider === "deepseek" ? "DeepSeek" : "DashScope") + " 连接正常", "ok");
+                    setStatus("DeepSeek 连接正常", "ok");
                 } else {
                     setStatus("测试失败：" + (data.error || "未知错误"), "err");
                 }
@@ -634,244 +611,43 @@
             }
         }
 
-        // ---------- 服务商切换（CC Switch 风格） ----------
-        var PROVIDER_DEFAULTS = {
-            deepseek: {
-                name: "DeepSeek",
-                role: "对话解题",
-                base_url: "https://api.deepseek.com/v1",
-                models: { solver: "deepseek-v4-pro", verifier: "deepseek-v4-flash", formatter: "deepseek-v4-flash", grade: "deepseek-v4-flash" },
-                note: "DeepSeek 官方兼容接口，密钥在 platform.deepseek.com 创建。"
-            },
-            qwen: {
-                name: "Qwen 通义",
-                role: "对话解题 + 切题",
-                base_url: "https://dashscope.aliyuncs.com/compatible-mode/v1",
-                models: { solver: "qwen-plus", verifier: "qwen-plus", formatter: "qwen-plus", grade: "qwen-plus" },
-                extract_model: "qwen-vl-max",
-                note: "阿里云百炼 DashScope OpenAI 兼容接口：https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions，密钥在百炼控制台创建。应用后同时切换对话解题、AI 改卷和切题模型。"
-            },
-            doubao: {
-                name: "豆包 火山方舟",
-                role: "对话解题",
-                base_url: "https://ark.cn-beijing.volces.com/api/v3",
-                models: { solver: "doubao-seed-2-1-pro-260628", verifier: "doubao-seed-2-1-pro-260628", formatter: "doubao-seed-2-1-pro-260628", grade: "doubao-seed-2-1-pro-260628" },
-                note: "火山方舟 Ark OpenAI 兼容接口：https://ark.cn-beijing.volces.com/api/v3/chat/completions，密钥（ARK_API_KEY）在火山引擎控制台创建。模型填方舟 Model ID（如 doubao-seed-2-1-pro-260628）或接入点 ID（ep-...）。"
+        async function initializeSettings() {
+            var state = await window.StudyAuth.ready;
+            var account = document.getElementById('accountSettings');
+            account.hidden = false;
+            var user = state.user || {};
+            document.getElementById('accountSummary').textContent = user.role === 'guest' ?
+                '游客体验中的题库与进度临时保存。创建账号后可配置个人密钥并长期保存学习记录。' :
+                (user.username || 'studyadmin') + (user.email ? ' · ' + user.email : '') + ' · ' + (user.role === 'owner' ? '主人账号' : '个人学习空间');
+            document.getElementById('accountKeyStatus').textContent = user.api_key_configured ? '已配置。保存新密钥将替换旧密钥，留空无需保存。' : '尚未配置。AI 功能需要你自己的 DeepSeek 密钥。';
+            if (!state.enabled || user.role === 'guest') {
+                document.getElementById('accountKeyForm').hidden = true;
+                if (user.role === 'guest') {
+                    var login = document.createElement('a'); login.href = '/login.html'; login.textContent = '创建账号 / 登录账号 →'; login.style.color = '#0071e3'; account.appendChild(login);
+                }
             }
-        };
-        var PROVIDER_KEYS = ["deepseek", "qwen", "doubao"];
-        var _currentProvider = "deepseek";
-        var _presets = null;
-        var _pvSyncing = false;
-
-        function getPresets() {
-            if (_presets) return _presets;
-            var saved = {};
-            try { saved = JSON.parse(localStorage.getItem("provider_presets_v1") || "{}") || {}; } catch (e) { saved = {}; }
-            _presets = {};
-            PROVIDER_KEYS.forEach(function (k) {
-                _presets[k] = Object.assign({}, PROVIDER_DEFAULTS[k], saved[k] || {});
-                _presets[k].models = Object.assign({}, PROVIDER_DEFAULTS[k].models, (saved[k] || {}).models || {});
-            });
-            return _presets;
+            document.getElementById('localKeyRow').hidden = state.enabled;
+            if (window.StudyAuth.isOwner()) await loadSettings();
+            else document.getElementById('statusBar').hidden = true;
         }
-
-        function savePresetsCache() {
-            try { localStorage.setItem("provider_presets_v1", JSON.stringify(_presets)); } catch (e) {}
-        }
-
-        function cachedProviderKey(k) {
-            try { return localStorage.getItem("provider_key_" + k) || ""; } catch (e) { return ""; }
-        }
-
-        function openProviderModal() {
-            _currentProvider = "deepseek";
-            getPresets();
-            renderProviderTabs();
-            renderProviderPanel();
-            document.getElementById("providerModal").style.display = "flex";
-        }
-
-        function closeProviderModal() {
-            document.getElementById("providerModal").style.display = "none";
-        }
-
-        function renderProviderTabs() {
-            var box = document.getElementById("providerTabs");
-            box.innerHTML = "";
-            PROVIDER_KEYS.forEach(function (k) {
-                var btn = document.createElement("button");
-                btn.className = "provider-tab" + (k === _currentProvider ? " active" : "");
-                btn.textContent = getPresets()[k].name;
-                btn.onclick = function () { selectProviderTab(k); };
-                box.appendChild(btn);
-            });
-        }
-
-        function selectProviderTab(k) {
-            _currentProvider = k;
-            renderProviderTabs();
-            renderProviderPanel();
-        }
-
-        function buildProviderPayload(pre) {
-            var payload = {
-                api: {
-                    deepseek: { base_url: pre.base_url },
-                    dashscope: {}
-                },
-                teachers: {}
-            };
-            ["liangliang", "taotao", "xuefeng", "ji"].forEach(function (t) {
-                payload.teachers[t] = {
-                    solver: { model: pre.models.solver },
-                    verifier: { model: pre.models.verifier },
-                    formatter: { model: pre.models.formatter },
-                    grade: { model: pre.models.grade }
-                };
-            });
-            if (_currentProvider === "qwen") {
-                payload.api.dashscope = { base_url: pre.base_url, model: pre.extract_model };
-            }
-            return payload;
-        }
-
-        function renderProviderPanel() {
-            var pre = getPresets()[_currentProvider];
-            var cachedKey = cachedProviderKey(_currentProvider);
-            var box = document.getElementById("providerPanel");
-            var html = "";
-            html += '<div class="input-row"><label>API Key</label><input id="pvKey" type="password" value="" placeholder="' + (cachedKey ? "已缓存（留空沿用）" : "未配置") + '" autocomplete="off"></div>';
-            html += '<div class="input-row"><label>接口地址</label><input id="pvBase" type="text" value="' + pre.base_url + '" spellcheck="false"></div>';
-            html += '<div class="input-row"><label>Solver 模型</label><input id="pvModelSolver" type="text" value="' + pre.models.solver + '" spellcheck="false"></div>';
-            html += '<div class="input-row"><label>Verifier 模型</label><input id="pvModelVerifier" type="text" value="' + pre.models.verifier + '" spellcheck="false"></div>';
-            html += '<div class="input-row"><label>Formatter 模型</label><input id="pvModelFormatter" type="text" value="' + pre.models.formatter + '" spellcheck="false"></div>';
-            html += '<div class="input-row"><label>AI 改卷模型</label><input id="pvModelGrade" type="text" value="' + (pre.models.grade || pre.models.verifier) + '" spellcheck="false"></div>';
-            if (_currentProvider === "qwen") {
-                html += '<div class="input-row"><label>切题模型</label><input id="pvExtractModel" type="text" value="' + (pre.extract_model || "qwen-vl-max") + '" spellcheck="false"></div>';
-            }
-            html += '<div class="pv-note">' + pre.note + '</div>';
-            html += '<textarea id="pvJson" class="json-area" spellcheck="false"></textarea>';
-            box.innerHTML = html;
-            box.querySelectorAll("input").forEach(function (el) {
-                el.addEventListener("input", function () { if (!_pvSyncing) syncProviderJson(); });
-            });
-            var ta = document.getElementById("pvJson");
-            ta.addEventListener("input", parseProviderJson);
-            syncProviderJson();
-        }
-
-        function collectProviderInputs() {
-            var pre = getPresets()[_currentProvider];
-            pre.base_url = document.getElementById("pvBase").value.trim();
-            pre.models.solver = document.getElementById("pvModelSolver").value.trim();
-            pre.models.verifier = document.getElementById("pvModelVerifier").value.trim();
-            pre.models.formatter = document.getElementById("pvModelFormatter").value.trim();
-            pre.models.grade = document.getElementById("pvModelGrade").value.trim() || pre.models.verifier;
-            if (_currentProvider === "qwen") {
-                pre.extract_model = document.getElementById("pvExtractModel").value.trim();
-            }
-            return pre;
-        }
-
-        function syncProviderJson() {
-            var pre = collectProviderInputs();
-            var key = document.getElementById("pvKey").value.trim();
-            var payload = buildProviderPayload(pre);
-            if (key) {
-                payload.api.deepseek.api_key = key;
-                if (_currentProvider === "qwen" && payload.api.dashscope) payload.api.dashscope.api_key = key;
-            }
-            document.getElementById("pvJson").value = JSON.stringify(payload, null, 2);
-        }
-
-        function parseProviderJson() {
-            if (_pvSyncing) return;
-            var raw = document.getElementById("pvJson").value;
-            var obj = null;
-            try { obj = JSON.parse(raw); } catch (e) { return; }
-            var pre = getPresets()[_currentProvider];
-            _pvSyncing = true;
+        document.getElementById('accountKeyForm').addEventListener('submit', async function (event) {
+            event.preventDefault();
+            var input = document.getElementById('accountApiKey');
+            var button = this.querySelector('button');
+            var message = document.getElementById('accountKeyMessage');
+            var key = input.value.trim();
+            message.hidden = false;
+            if (/\s/.test(key)) { message.className = 'auth-message error'; message.textContent = 'API Key 不能包含空格或换行。'; return; }
+            button.disabled = true; message.className = 'auth-message'; message.textContent = '正在保存…';
             try {
-                if (obj.api && obj.api.deepseek) {
-                    var ds = obj.api.deepseek;
-                    if (ds.base_url) pre.base_url = ds.base_url;
-                    if (ds.api_key) document.getElementById("pvKey").value = ds.api_key;
-                    document.getElementById("pvBase").value = pre.base_url;
-                }
-                if (obj.teachers) {
-                    var first = obj.teachers[Object.keys(obj.teachers)[0]];
-                    if (first) {
-                        pre.models.solver = (first.solver && first.solver.model) || pre.models.solver;
-                        pre.models.verifier = (first.verifier && first.verifier.model) || pre.models.verifier;
-                        pre.models.formatter = (first.formatter && first.formatter.model) || pre.models.formatter;
-                        pre.models.grade = (first.grade && first.grade.model) || (first.verifier && first.verifier.model) || pre.models.grade;
-                        document.getElementById("pvModelSolver").value = pre.models.solver;
-                        document.getElementById("pvModelVerifier").value = pre.models.verifier;
-                        document.getElementById("pvModelFormatter").value = pre.models.formatter;
-                        var pvGrade = document.getElementById("pvModelGrade");
-                        if (pvGrade) pvGrade.value = pre.models.grade;
-                    }
-                }
-                if (obj.api && obj.api.dashscope) {
-                    pre.extract_model = obj.api.dashscope.model || pre.extract_model;
-                    var em = document.getElementById("pvExtractModel");
-                    if (em) em.value = pre.extract_model;
-                }
-            } finally {
-                _pvSyncing = false;
-            }
-        }
-
-        function restoreProviderPreset() {
-            _presets[_currentProvider] = Object.assign({}, PROVIDER_DEFAULTS[_currentProvider]);
-            _presets[_currentProvider].models = Object.assign({}, PROVIDER_DEFAULTS[_currentProvider].models);
-            savePresetsCache();
-            renderProviderPanel();
-        }
-
-        async function applyProvider() {
-            var pre = collectProviderInputs();
-            var payload = null;
-            try { payload = JSON.parse(document.getElementById("pvJson").value); } catch (e) {}
-            if (!payload || !payload.api || !payload.api.deepseek) {
-                setStatus("服务商配置 JSON 无效", "err");
-                return;
-            }
-            var key = document.getElementById("pvKey").value.trim();
-            if (key) {
-                payload.api.deepseek.api_key = key;
-                if (_currentProvider === "qwen" && payload.api.dashscope) payload.api.dashscope.api_key = key;
-                try { localStorage.setItem("provider_key_" + _currentProvider, key); } catch (e) {}
-            }
-            savePresetsCache();
-            setStatus("正在应用服务商配置…", "busy");
-            try {
-                var res = await fetch("/settings", {
-                    method: "PUT",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
-                });
-                var data = await res.json();
-                if (!res.ok || data.error) {
-                    setStatus("应用失败：" + (data.detail || data.error || res.status), "err");
-                    return;
-                }
-                document.getElementById("dsKey").value = "";
-                document.getElementById("dsScopeKey").value = "";
-                await loadSettings();
-                setStatus("已切换服务商并保存", "ok");
-                closeProviderModal();
-            } catch (e) {
-                setStatus("应用失败：" + (e.message || e), "err");
-            }
-        }
-
-        document.getElementById("providerModal").addEventListener("click", function (e) {
-            if (e.target.id === "providerModal") closeProviderModal();
+                await window.StudyAuth.request('/auth/api-key', 'PUT', {api_key: key});
+                input.value = '';
+                document.getElementById('accountKeyStatus').textContent = '已配置，密钥不回显。';
+                message.className = 'auth-message success'; message.textContent = '你的 DeepSeek 密钥已保存。';
+            } catch (error) { message.className = 'auth-message error'; message.textContent = error.message; }
+            finally { button.disabled = false; }
         });
-
-        document.addEventListener("DOMContentLoaded", loadSettings);
+        document.addEventListener('DOMContentLoaded', initializeSettings);
     </script>
 </body>
 </html>

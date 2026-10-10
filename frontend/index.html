@@ -1,7 +1,9 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="/auth.js?v=20261009a"></script>
 <script src="/jobs.js?v=20261005a"></script>
+<script src="/question-provenance.js?v=20261010a"></script>
 <script>document.documentElement.classList.add("nav-init")</script>
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache">
@@ -270,13 +272,14 @@ var _selectedTeacher = "liangliang";
                         html += '</div>';
                     }
                     if (cr.final_answer) {
-                        html += '<div class="final-answer">答案：' + cr.final_answer + '</div>';
+                        html += '<div class="final-answer">答案：' + escapeHtml(cr.final_answer) + '</div>';
                     }
                     html += '</div>';
                 }
             }
 
             // Token
+            if (window.QuestionProvenance) html += window.QuestionProvenance.html(data);
             if (totalTokens) {
                 html += '<div style="text-align:center;margin-top:20px;font-size:13px;color:#86868b;">消耗 ' + totalTokens + ' tokens</div>';
             }
@@ -672,7 +675,8 @@ document.getElementById('searchBtn').addEventListener('click', function() {
             var text = sourceMetaText(sourceType, m);
             if (!text) return '';
             if (sourceType === 'ai生成' && m.reference_id) {
-                var rid = String(m.reference_id).replace(/\D/g, '');
+                var ridNumber = Number(m.reference_id);
+                var rid = /^-?\d+$/.test(String(m.reference_id)) && Number.isSafeInteger(ridNumber) && ridNumber !== 0 ? String(ridNumber) : '';
                 if (rid) {
                     return '<a class="tag tag-source-meta tag-ref-link" href="javascript:void(0)" onclick="openReferenceQuestion(' + rid + ')" title="查看参考题详情">' + escapeHtml(text) + '</a>';
                 }
@@ -684,7 +688,7 @@ document.getElementById('searchBtn').addEventListener('click', function() {
             window.open('history.html', '_blank');
         }
         function getRememberedSource(){
-            try{var raw = localStorage.getItem('remembered_question_source'); return raw ? JSON.parse(raw) : null;}catch(e){return null;}
+            try{var raw = localStorage.getItem('remembered_question_source'); var data = raw ? JSON.parse(raw) : null; return data && data.source_type === '精选母题' && !window.StudyAuth.isOwner() ? null : data;}catch(e){return null;}
         }
         function saveRememberedSource(data){ localStorage.setItem('remembered_question_source', JSON.stringify(data)); }
         function clearRememberedSource(){ localStorage.removeItem('remembered_question_source'); }
@@ -764,6 +768,7 @@ document.getElementById('searchBtn').addEventListener('click', function() {
         }
 
         async function registerMotherQuestion(questionId, srcMeta) {
+            if (!window.StudyAuth.isOwner()) return;
             if (!srcMeta || !srcMeta.category || !srcMeta.pattern) return;
             try {
                 await fetch('/patterns/mother', {
@@ -829,7 +834,7 @@ document.getElementById('searchBtn').addEventListener('click', function() {
             
             html += '<div class="source-type-row">';
             html += '<label>来源标签</label>';
-            var srcTypes = ['ai生成', '高考题', '模拟题', '精选母题'];
+            var srcTypes = ['ai生成', '高考题', '模拟题', '精选母题'].filter(function (type) { return type !== '精选母题' || window.StudyAuth.isOwner(); });
             for (var si = 0; si < srcTypes.length; si++) {
                 var active = (currentSourceType === srcTypes[si]) ? ' active' : '';
                 html += '<span class="source-type-option' + active + '" onclick="selectSourceType(this)" data-value="' + srcTypes[si] + '">' + srcTypes[si] + '</span>';
@@ -887,7 +892,7 @@ document.getElementById('searchBtn').addEventListener('click', function() {
                 var overlay = document.querySelector('.save-dialog-overlay');
                 if (overlay) {
                     var qid = overlay.querySelector('.sd-btn-confirm') ? 
-                              parseInt(overlay.querySelector('.sd-btn-confirm').getAttribute('onclick').match(/\d+/)[0]) : null;
+                              parseInt(overlay.querySelector('.sd-btn-confirm').getAttribute('onclick').match(/-?\d+/)[0]) : null;
                     if (qid) {
                         fetch('/questions/' + qid + '/lists')
                             .then(function(r) { return r.json(); })

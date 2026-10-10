@@ -143,8 +143,7 @@ class WorkspaceIsolationTest(unittest.TestCase):
         path = self.root / "administrator-ai.json"
         path.write_text(json.dumps({
             "api": {
-                "deepseek": {"base_url": "https://trusted.example/v1", "api_key": "mock-shared-key"},
-                "dashscope": {"base_url": "https://vision.example/v1", "api_key": "", "model": "trusted-vision"},
+                "deepseek": {"base_url": "https://trusted.example/v1", "api_key": "mock-shared-key", "vision_model": "deepseek-flash"},
             },
             "teachers": {"liangliang": {"solver": {"model": "trusted-model"}}},
             "limits": {"api_max_tokens": 512, "generate_concurrency": 1},
@@ -171,8 +170,8 @@ class WorkspaceIsolationTest(unittest.TestCase):
                 self.assertEqual(settings.get_api_key("deepseek"), "mock-shared-key")
                 self.assertEqual(settings.get_api_key("dashscope"), "")
                 self.assertEqual(settings.get_api()["deepseek"]["base_url"], "https://trusted.example/v1")
-                self.assertEqual(settings.get_api()["dashscope"]["base_url"], "https://vision.example/v1")
-                self.assertEqual(settings.get_api()["dashscope"]["model"], "trusted-vision")
+                self.assertNotIn("dashscope", settings.get_api())
+                self.assertEqual(settings.get_api()["deepseek"]["vision_model"], "deepseek-flash")
                 self.assertEqual(settings.get_teacher_config("liangliang")["solver"]["model"], "trusted-model")
                 self.assertEqual(settings.get_limits()["api_max_tokens"], 512)
                 self.assertEqual(settings.get_limits()["generate_concurrency"], 1)
