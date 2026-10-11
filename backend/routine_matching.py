@@ -46,7 +46,7 @@ def question_record(question, *, solution="", answer="", categories=None,
                 categories=categories[:], completeness=completeness)
 
 
-def match_question(item, catalog, caller, *, attempts=2, initial=None, checkpoint=None, retriever=None):
+def match_question(item, catalog, caller, *, attempts=2, initial=None, checkpoint=None, retriever=None, cache_friendly=False):
     """Return an advisory match. Uncertain complete items get a full audit.
 
     A checkpoint contains the successful retrieval pass, so an interrupted or
@@ -63,7 +63,7 @@ def match_question(item, catalog, caller, *, attempts=2, initial=None, checkpoin
 
     def invoke(full, previous=None):
         nonlocal calls
-        system, user, allowed = rc.make_prompt(item, catalog, full_catalog=full, previous=previous, choices=choices)
+        system, user, allowed = rc.make_prompt(item, catalog, full_catalog=full, previous=previous, choices=choices, cache_friendly=cache_friendly)
         for attempt in range(attempts):
             try:
                 calls += 1

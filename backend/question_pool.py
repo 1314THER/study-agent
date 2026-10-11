@@ -619,8 +619,9 @@ def prepare_items(args, ctx):
             conn.execute("UPDATE pool_items SET status='preparing',preparing_job_id=?,prepare_error='' WHERE id=?", (getattr(ctx, "job_id", None), item_id))
         ctx.progress("pool_prepare", int(index * 100 / len(args["item_ids"])), f"正在准备第 {index + 1}/{len(args['item_ids'])} 道题")
         try:
+            from backend.question_assets import pool_asset_refs
             outcome = _solve({"question": item["question"], "question_type": item["question_type"] if item["question_type"] != "未知" else None,
-                              "teacher": args.get("teacher"), "save": False}, ctx)
+                              "teacher": args.get("teacher"), "save": False, "asset_refs": pool_asset_refs(item)}, ctx)
             result = outcome.value if hasattr(outcome, "value") else outcome
             _store_prepared(item_id, item["version"], result)
             results.append({"item_id": item_id, "status": "ready"})

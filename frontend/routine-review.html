@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>套路审核 · 成为数学高手</title>
+  <script src="/auth.js?v=20261009a"></script>
+  <script>document.documentElement.classList.add('nav-init')</script>
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/routine-review.css?v=20261011-web">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+</head>
+<body>
+<div class="app-layout">
+  <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
+  <aside class="sidebar"><button class="nav-expand-toggle" onclick="toggleNavExpand()" aria-label="展开导航">☰</button><nav>
+    <a href="multimodal.html" class="nav-item" data-page="multimodal" title="多模态解答"><span class="nav-icon">📎</span><span class="nav-label">多模态解答</span></a>
+    <a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+    <a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
+    <a href="question-pool.html" class="nav-item" data-page="question-pool" data-owner-only title="原题池"><span class="nav-icon">🗂️</span><span class="nav-label">原题池</span></a>
+    <a href="routine-review.html" class="nav-item active" data-page="routine-review" data-owner-only title="套路审核"><span class="nav-icon">📝</span><span class="nav-label">套路审核</span></a>
+    <a href="loop.html" class="nav-item" data-page="loop" title="套路循环"><span class="nav-icon">🔄</span><span class="nav-label">套路循环</span></a>
+    <a href="board.html" class="nav-item" data-page="board" title="闯关"><span class="nav-icon">🗺️</span><span class="nav-label">闯关</span></a>
+    <a href="settings.html" class="nav-item" data-page="settings" title="系统设置"><span class="nav-icon">⚙️</span><span class="nav-label">系统设置</span></a>
+  </nav></aside>
+  <main class="main-content"><div class="review-container" id="reviewApp" hidden>
+    <header class="review-header"><div><p class="review-eyebrow">主人工作台 · 全部题目，逐步确认</p><h1>套路审核</h1><p class="review-muted">按方法整理题目，保留全部匹配建议。每个套路可以有任意数量的代表题和变式。</p></div>
+      <div class="review-actions"><label>匹配方式<select id="matchEngine"><option value="codex_luna">Codex Luna · 已登录账号额度</option><option value="deepseek">DeepSeek · 省费模式（API 计费）</option></select></label><button id="applyEngine">应用到剩余题</button><button id="startRun" class="primary" disabled>匹配全部原题</button><button id="pauseRun">暂停</button><button id="resumeRun">继续匹配</button><button id="retryRun">重试失败题</button><a id="exportReport" hidden>导出统计报告</a></div>
+    </header>
+    <p id="reviewMessage" role="status" aria-live="polite"></p>
+    <section id="runSummary" class="review-summary" aria-label="处理进度"></section>
+    <p id="usageSummary" class="review-muted" aria-live="polite"></p>
+    <button id="openWebReview">ChatGPT 网页分批审核</button>
+    <section id="webReviewPanel" class="review-panel review-web-panel" hidden aria-label="网页分批审核">
+      <h2>ChatGPT 网页分批审核</h2>
+      <p class="review-muted">先暂停批次。把冻结提示词交给已登录的 ChatGPT 网页，再粘贴返回的完整 JSON。校验通过后保存为匹配建议，供你审核；不会调用付费 API。</p>
+      <p id="webPacketSummary" role="status"></p>
+      <label>冻结提示词<textarea id="webPrompt" rows="5" readonly></textarea></label>
+      <div class="review-actions"><button id="copyWebPrompt">复制提示词</button><a href="https://chatgpt.com/" target="_blank" rel="noopener noreferrer">打开 ChatGPT 网页</a></div>
+      <label>网页返回的完整 JSON<textarea id="webResponse" rows="8" placeholder="粘贴完整 JSON 或 JSON 代码块"></textarea></label>
+      <div class="review-actions"><button id="importWebResponse" class="primary">校验并保存这批建议</button><button id="closeWebReview">收起</button></div>
+    </section>
+    <div class="review-columns">
+      <aside class="review-panel review-catalog"><h2>套路与待处理项</h2>
+        <label>板块<select id="filterCategory"><option value="">全部板块</option></select></label>
+        <input id="groupSearch" type="search" placeholder="查找套路名称或编号" aria-label="查找套路">
+        <div id="specialGroups" class="review-special"></div><div id="groupList" class="review-groups"></div>
+      </aside>
+      <section class="review-panel review-list-panel" aria-label="题目列表">
+        <form id="filterForm" class="review-filters">
+          <input name="keyword" type="search" placeholder="题干关键词" aria-label="题干关键词">
+          <select name="review_status" aria-label="审核状态"><option value="">全部审核状态</option><option value="pending">未审核</option><option value="confirmed">已确认</option><option value="deferred">已暂缓</option><option value="rejected">已排除</option></select>
+          <select name="confidence" aria-label="建议置信度"><option value="">全部置信度</option><option value="high">高</option><option value="medium">中</option><option value="low">低</option></select>
+          <select name="completeness" aria-label="题干完整性"><option value="">全部完整性</option><option value="complete">文字完整</option><option value="needs_review">待核对</option><option value="deferred_graphic">依赖图形</option><option value="failed">提取失败</option></select>
+          <button type="submit">筛选</button>
+        </form>
+        <div class="review-list-heading"><h2 id="resultCount">等待批次</h2><label><input id="selectPage" type="checkbox"> 本页全选</label></div>
+        <div id="itemList" class="review-items"></div>
+        <div class="review-pagination"><button id="prevPage">上一页</button><span id="pageLabel"></span><button id="nextPage">下一页</button></div>
+        <div class="review-batch"><p id="selectionCount">已选 0 道题</p>
+          <label>操作范围<select id="actionScope"><option value="selected">跨页选中的题</option><option value="filtered">当前筛选全部题</option></select></label>
+          <select id="batchRoutine" aria-label="批量改组目标"></select>
+          <div class="review-actions"><button data-batch="confirm" class="primary">确认归属</button><button data-batch="assign">移至指定套路</button><button data-batch="defer">暂缓</button><button data-batch="reject">排除</button><button id="clearSelection">清空选择</button></div>
+        </div>
+      </section>
+      <section class="review-panel review-detail" aria-label="核对详情"><h2>核对与审核</h2><div id="itemDetail" class="review-muted">选择一道题，查看原文和匹配依据。</div></section>
+    </div>
+  </div><p id="accessMessage" class="review-container">正在确认主人权限…</p></main>
+</div>
+<script src="/pool-math.js?v=20261010a"></script><script src="/jobs.js?v=20261011-review"></script>
+<script src="/routine-review.js?v=20261011-single-task"></script><script src="/nav.js?v=20261011-review"></script>
+</body></html>

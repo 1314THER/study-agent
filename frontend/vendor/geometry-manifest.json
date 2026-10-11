@@ -1,0 +1,50 @@
+{
+  "packages": [
+    {
+      "name": "jsxgraph",
+      "version": "1.11.1",
+      "source": "https://registry.npmjs.org/jsxgraph/-/jsxgraph-1.11.1.tgz",
+      "license": "MIT",
+      "modification": null,
+      "files": [
+        {
+          "path": "jsxgraph-1.11.1/LICENSE.MIT",
+          "sha256": "43e325001487de7f09745fbe086b054bb1b70d4ab58060e87153849365b23ff1"
+        },
+        {
+          "path": "jsxgraph-1.11.1/distrib/jsxgraph.css",
+          "sha256": "3c50c360ea9166e1776688a51d7b29f04335edbb287a907d1529eee852ccb5fc"
+        },
+        {
+          "path": "jsxgraph-1.11.1/distrib/jsxgraphcore.js",
+          "sha256": "8d7e62e8582785d2647fe4833b9bfcdfb614af44983117aa6aeaf3f5f1c43145"
+        }
+      ]
+    },
+    {
+      "name": "three",
+      "version": "0.180.0",
+      "source": "https://registry.npmjs.org/three/-/three-0.180.0.tgz",
+      "license": "MIT",
+      "modification": "OrbitControls imports ../../../build/three.module.min.js",
+      "files": [
+        {
+          "path": "three-0.180.0/LICENSE",
+          "sha256": "bfe119ea4fd413f5f7ca3fcd63adb0c4a073ed39daa2fe7d3e6b769e21272601"
+        },
+        {
+          "path": "three-0.180.0/build/three.core.min.js",
+          "sha256": "61ba0df005b05991361d040d8ff670e1aadfd0ce7aeebd1fdb0725957a8957de"
+        },
+        {
+          "path": "three-0.180.0/build/three.module.min.js",
+          "sha256": "e2b5ee6bccd38fd6d8a2428546b83c5f2426d84b152ef82be8055556e3b40eb6"
+        },
+        {
+          "path": "three-0.180.0/examples/jsm/controls/OrbitControls.js",
+          "sha256": "7ccdd6ac6532c6be7a99383244440074faf1a6d4979fa70b52d995a8cd11fa36"
+        }
+      ]
+    }
+  ]
+}

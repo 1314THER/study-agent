@@ -144,7 +144,7 @@ def get_api_key() -> str:
 
 
 # ---------- 调用 DeepSeek ----------
-def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3, model: str = "deepseek-flash", reasoning_effort: str = None):
+def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3, model: str = "deepseek-flash", reasoning_effort: str = None, image_content: list = None):
     api_key = get_api_key()
     api_cfg = runtime_settings.get_api().get("deepseek") or {}
     limits = runtime_settings.get_limits()
@@ -157,7 +157,7 @@ def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3
         "model": model,
         "messages": [
             {"role": "system", "content": full_system},
-            {"role": "user", "content": user_prompt},
+            {"role": "user", "content": ([{"type": "text", "text": user_prompt}] + image_content) if image_content else user_prompt},
         ],
         "temperature": temperature,
         "max_tokens": limits.get("api_max_tokens", 32000),
@@ -165,6 +165,8 @@ def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3
     if reasoning_effort:
         body["reasoning_effort"] = reasoning_effort
         body["thinking"] = {"type": "enabled"}
+    elif image_content:
+        body["thinking"] = {"type": "disabled"}
     try:
         from backend.jobs import provider_slot, request_timeout
         with provider_slot("deepseek"):
@@ -694,14 +696,20 @@ def _xuebile(status: str, detail: str = "") -> dict:
 
 
 # ---------- Solver 步 ----------
-def step_solver_only(question: str, question_type: str = None, teacher: str = None) -> dict:
+def step_solver_only(question: str, question_type: str = None, teacher: str = None, asset_refs: list = None) -> dict:
     """Solver：解答 + 输出板块"""
     config = runtime_settings.get_teacher_config(teacher)
     prompt = SOLVER_PROMPT
     if question_type:
         prompt += f"\n\n注意：已知本题为{question_type}。"
     solver_cfg = config["solver"]
-    content, usage = call_deepseek(prompt, question, model=solver_cfg["model"], reasoning_effort=solver_cfg.get("reasoning_effort"))
+    from backend.question_assets import image_messages
+    images = image_messages(asset_refs)
+    if images:
+        prompt += "\n题图可能包含同页其他题目。只读取与当前题干明确对应的标注，不能混入其他题的条件，不能按图形外观猜测条件。"
+        content, usage = call_deepseek(prompt, question, model="deepseek-flash", image_content=images)
+    else:
+        content, usage = call_deepseek(prompt, question, model=solver_cfg["model"], reasoning_effort=solver_cfg.get("reasoning_effort"))
     viable_reason = _check_solver_viable(content)
     if viable_reason:
         return _xuebile("不可解", viable_reason)
@@ -1012,11 +1020,12 @@ def _call_formatter(question: str, chunk_results: list, token_total: dict, teach
 
 
 def step_final_check(question: str, chunk_results: list, chunks_raw: list, token_total: dict, teacher: str = None,
-                     solver_content: str = None, verifier_category: str = None, question_type: str = None) -> dict:
+                     solver_content: str = None, verifier_category: str = None, question_type: str = None, asset_refs: list = None) -> dict:
     """Formatter 评分 + 聚合；失败时重跑一次 Verifier 再试，仍失败则报错并保留新 Verifier 结果。"""
     result, reason = _call_formatter(question, chunk_results, token_total, teacher)
     if result:
-        return result
+        from backend.geometry import prepare_geometry
+        return prepare_geometry(question, result, teacher, asset_refs)
 
     retried = None
     if solver_content:
@@ -1031,7 +1040,8 @@ def step_final_check(question: str, chunk_results: list, chunks_raw: list, token
         if retried and not retried.get("error"):
             result, reason2 = _call_formatter(question, retried["chunk_results"], token_total, teacher)
             if result:
-                return result
+                from backend.geometry import prepare_geometry
+                return prepare_geometry(question, result, teacher, asset_refs)
             reason = reason2 or reason
 
     fallback_crs = retried["chunk_results"] if retried else chunk_results
@@ -1042,4 +1052,11 @@ def step_final_check(question: str, chunk_results: list, chunks_raw: list, token
         "Formatter 未通过校验，已保留 Verifier 结果，难度未知，可能有错误。"
         f"原因：{reason}"
     )
+    if asset_refs:
+        from backend.question_assets import validate_refs
+        fallback["asset_refs"] = validate_refs(asset_refs)
+    from backend.geometry import is_geometry, VERSION, fingerprint
+    if is_geometry(question, fallback):
+        fallback["geometry"] = {"version": VERSION, "status": "unavailable", "reason": "解析尚未通过最终校验，暂不预制图形。",
+                                "scenes": [], "steps": [], "issues": [], "source_hash": fingerprint(question, fallback, asset_refs)}
     return fallback

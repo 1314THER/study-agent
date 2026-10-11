@@ -4,7 +4,7 @@
   if (window.StudyJobs) return;
   var nativeFetch = window.fetch.bind(window), jobs = new Map(), waiters = new Map();
   var timer, polling = false, uploads = 0, pendingNavigation = null;
-  var titles = {solve:'题目解答',teach_start:'教学准备',teach_chat:'教学对话',teach_check:'步骤检查',teach_ack:'教学进度',teach_finish:'教学记录',generate:'仿题生成',grade:'AI 批改',parse_file:'文件识别',ocr_file:'手写识别',batch_solve:'批量解题',agent:'AI 教练',pattern_check:'套路检查',pattern_variants:'变式生成',provider_test:'连接测试',pool_prepare:'原题解析准备',pool_import:'原题来源采集'};
+  var titles = {solve:'题目解答',teach_start:'教学准备',teach_chat:'教学对话',teach_check:'步骤检查',teach_ack:'教学进度',teach_finish:'教学记录',generate:'仿题生成',grade:'AI 批改',parse_file:'文件识别',ocr_file:'手写识别',batch_solve:'批量解题',agent:'AI 教练',pattern_check:'套路检查',pattern_variants:'变式生成',provider_test:'连接测试',pool_prepare:'原题解析准备',pool_import:'原题来源采集',pool_collect:'在线找题',routine_match:'全量套路匹配'};
   function uuid() { return window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+'-'+Math.random().toString(36).slice(2); }
   function read(key) { try{return JSON.parse(localStorage.getItem('study_job_'+key)||'null');}catch(e){return null;} }
   function write(key,value) { try{localStorage.setItem('study_job_'+key,JSON.stringify(value));}catch(e){} }
@@ -119,6 +119,11 @@
           visibleResult=Object.assign({},j.result);delete visibleResult.loop;
         }
         renderValue(visibleResult,target,0);
+      }
+      if(j.kind==='routine_match'){
+        var reviewLink=node('a','打开套路审核');
+        reviewLink.href='routine-review.html?run='+encodeURIComponent(j.args&&j.args.run_id||j.result&&j.result.run_id||'');
+        target.appendChild(reviewLink);
       }
       if(j.status==='done'&&['solve','teach_start','teach_chat','teach_ack','grade','parse_file','ocr_file','batch_solve','pool_prepare','pool_import'].includes(j.kind)){
         var page={solve:'index.html',teach_start:'teach.html',teach_chat:'teach.html',teach_ack:'teach.html',grade:'grade.html',parse_file:'multimodal.html',ocr_file:'teach.html',batch_solve:'multimodal.html',pool_prepare:'question-pool.html',pool_import:'question-pool.html'}[j.kind];

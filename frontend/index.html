@@ -4,6 +4,8 @@
 <script src="/auth.js?v=20261009a"></script>
 <script src="/jobs.js?v=20261005a"></script>
 <script src="/question-provenance.js?v=20261010a"></script>
+<script src="/geometry.js?v=20261011a"></script>
+<link rel="stylesheet" href="/geometry.css?v=20261011a">
 <script>document.documentElement.classList.add("nav-init")</script>
     <meta charset="UTF-8">
     <meta http-equiv="Cache-Control" content="no-cache">
@@ -285,6 +287,7 @@ var _selectedTeacher = "liangliang";
             }
 
             result.innerHTML = html;
+            if(window.StudyGeometry) StudyGeometry.mount(result, data);
             result.style.display = 'block';
 
             // KaTeX 渲染

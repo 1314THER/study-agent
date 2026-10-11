@@ -17,6 +17,7 @@ from backend.solver import (
     step_verify_all,
 )
 from backend.database import find_question, save_question as db_save_question
+from backend.geometry import prepare_geometry, release_hint
 
 logger = logging.getLogger(__name__)
 _TURN_SNAPSHOT = ContextVar("teaching_turn_snapshot", default=None)
@@ -69,6 +70,9 @@ def _bs(crr):
             st["standard_writing"] = s.get("standard_writing", "")
             st["detailed_writing"] = s.get("detailed_writing", "")
             st["knowledge_point"] = s.get("knowledge_point", "")
+            st["step_level1"] = s.get("step_level1", "")
+            st["step_difficulty"] = deepcopy(s.get("step_difficulty"))
+            st["geometry_key"] = f"{cr.get('chunk_id', 1)}-{s.get('step_number', 0)}"
             if st["step_prompt"]:
                 ht = True
             r.append(st)
@@ -153,6 +157,9 @@ def teach_find_or_format(question, teacher=None):
     r = find_question(question)
     if not r or not r.get("chunk_results"):
         return {"found": False}
+    old_geometry = deepcopy(r.get("geometry"))
+    if not r.get("formatter_fallback"):
+        prepare_geometry(question, r, teacher)
     cr = r["chunk_results"]
     steps, ht = _bs(cr)
     if not ht:
@@ -163,16 +170,20 @@ def teach_find_or_format(question, teacher=None):
             db_save_question(question, r)
         except Exception:
             pass
+    elif r.get("geometry") != old_geometry:
+        db_save_question(question, r)
     fc = cr[0] if cr else {}
     cn = fc.get("category", {}).get("level1", "")
     return {"found": True, "question": question, "category": cn,
             "steps": steps, "total_steps": len(steps),
             "chunk_results": cr,
             "overall_difficulty": r.get("overall_difficulty"),
+            "geometry": r.get("geometry"), "asset_refs": r.get("asset_refs", []),
             "from_db": True}
 
-def teach_start(question, teacher=None):
-    sr = step_solver_only(question, teacher=teacher)
+def teach_start(question, teacher=None, asset_refs=None):
+    assets = {"asset_refs": asset_refs} if asset_refs else {}
+    sr = step_solver_only(question, teacher=teacher, **assets)
     if sr.get("error"):
         return sr
     vr = step_verify_all(sr["content"], question, sr.get("category"),
@@ -181,7 +192,7 @@ def teach_start(question, teacher=None):
         return vr
     final = step_final_check(
         question, vr["chunk_results"], [], {},
-        teacher=teacher, solver_content=sr["content"], verifier_category=sr.get("category"),
+        teacher=teacher, solver_content=sr["content"], verifier_category=sr.get("category"), **assets,
     )
     cr = final.get("chunk_results") or vr["chunk_results"]
     steps, _ = _bs(cr)
@@ -209,6 +220,7 @@ def teach_start(question, teacher=None):
             "steps": steps, "total_steps": len(steps),
             "chunk_results": cr,
             "overall_difficulty": final.get("overall_difficulty") or vr.get("overall_difficulty"),
+            "geometry": final.get("geometry"), "asset_refs": final.get("asset_refs", []),
             "formatter_fallback": final.get("formatter_fallback", False),
             "from_db": False}
 
@@ -302,18 +314,21 @@ class TeachSessionManager:
             finally:
                 _TURN_SNAPSHOT.reset(token)
 
-    def create(self, question: str, teacher: str = None) -> dict:
+    def create(self, question: str, teacher: str = None, asset_refs: list = None) -> dict:
         """创建新教学会话：解题 → 取步骤 → 存入 session"""
         # 先尝试从题库找
         from backend.database import find_question
         r = find_question(question)
         vr = None
         if r and r.get("chunk_results"):
+            if not r.get("formatter_fallback"):
+                prepare_geometry(question, r, teacher, asset_refs or r.get("asset_refs"))
             cr = r["chunk_results"]
         else:
             # 走完整解题流水线
             from backend.solver import step_final_check, step_solver_only, step_verify_all
-            sr = step_solver_only(question, teacher=teacher)
+            assets = {"asset_refs": asset_refs} if asset_refs else {}
+            sr = step_solver_only(question, teacher=teacher, **assets)
             if sr.get("error"):
                 return {"error": sr.get("error"), "detail": sr.get("detail", "")}
             vr = step_verify_all(sr["content"], question, sr.get("category"), teacher=teacher)
@@ -321,7 +336,7 @@ class TeachSessionManager:
                 return {"error": vr.get("error"), "detail": vr.get("detail", "")}
             final = step_final_check(
                 question, vr["chunk_results"], [], {},
-                teacher=teacher, solver_content=sr["content"], verifier_category=sr.get("category"),
+                teacher=teacher, solver_content=sr["content"], verifier_category=sr.get("category"), **assets,
             )
             cr = final.get("chunk_results") or vr["chunk_results"]
             # 入库
@@ -362,6 +377,9 @@ class TeachSessionManager:
                     "knowledge_point": s.get("knowledge_point", ""),
                     "step_answer": s.get("step_answer", s.get("standard_writing", "")),
                     "step_prompt": s.get("step_prompt", ""),
+                    "step_level1": s.get("step_level1", ""),
+                    "step_difficulty": deepcopy(s.get("step_difficulty")),
+                    "geometry_key": f"{cr_.get('chunk_id', 1)}-{s.get('step_number', 0)}",
                 })
             if fa:
                 final_answers.append({
@@ -383,7 +401,7 @@ class TeachSessionManager:
         save_aj["chunk_results"] = cr
         _set_category_from_chunks(save_aj)
         if 'aj' in dir():
-            for key in ("overall_difficulty", "knowledge_points", "final_answer", "formatter_fallback"):
+            for key in ("overall_difficulty", "knowledge_points", "final_answer", "formatter_fallback", "geometry", "asset_refs"):
                 if aj.get(key):
                     save_aj[key] = aj[key]
         save_aj.pop("error", None)
@@ -431,6 +449,9 @@ class TeachSessionManager:
             "revision": 0,
             "pending_job": None,
             "chunk_results": cr,
+            "geometry": deepcopy(save_aj.get("geometry")),
+            "asset_refs": save_aj.get("asset_refs", []),
+            "geometry_state": {"released": {}, "completed": []},
             "overall_difficulty": (r.get("overall_difficulty") if (r and r.get("chunk_results")) else (vr.get("overall_difficulty") if vr else None)),
         }
         with self._lock:
@@ -535,6 +556,7 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
 
         # 检查跳过命令（不调用 AI）
         if any(kw in student_message for kw in ["跳过", "skip", "跳過", "下一步", "下一题"]):
+            release_hint(sess, step, full=True)
             skipped_index = sess["current_step"]
             sess["step_results"].append({
                 "step_index": skipped_index,
@@ -576,10 +598,14 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
             if len(step.get("step_answer", "")) > hint_len:
                 partial += "..."
             feedback = f"给你一点提示：{partial}\n\n再想想看？"
+            drawing_hint = release_hint(sess, step)
+            if drawing_hint:
+                feedback = drawing_hint["text"]
             _session_manager.add_message(session_id, "teacher", feedback, metadata={"action": "guide"})
             return {"action": "guide", "message": feedback, "current_step": sess["current_step"] + 1, "total_steps": sess["total_steps"], "session_id": session_id}
         
         if any(kw in student_message for kw in ["答案", "answer", "看一下答案"]):
+            release_hint(sess, step, full=True)
             if not sess.get("step_viewed_answer"):
                 sess["stats"]["viewed_answer"] = sess["stats"].get("viewed_answer", 0) + 1
                 sess["step_viewed_answer"] = True
@@ -622,6 +648,7 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
         error_detail = check_result.get("error_detail")
 
         if is_correct:
+            release_hint(sess, step, full=True)
             # 答对 → 记录并推进到下一步
             sess["step_results"].append({
                 "step_index": sess["current_step"],
@@ -692,9 +719,9 @@ def teach_ack_prompt(session_id: str, expected_revision=None) -> dict:
     }
 
 
-def teach_session_start(question: str, teacher: str = None) -> dict:
+def teach_session_start(question: str, teacher: str = None, asset_refs: list = None) -> dict:
     """对外：创建教学会话，返回会话信息和第一轮 AI 引导"""
-    result = _session_manager.create(question, teacher)
+    result = _session_manager.create(question, teacher, asset_refs)
     if result.get("error"):
         return result
 
@@ -715,6 +742,8 @@ def teach_session_start(question: str, teacher: str = None) -> dict:
         "message": first_msg,
         "steps": sess["steps"],
         "chunk_results": sess["chunk_results"],
+        "geometry": sess.get("geometry"), "asset_refs": sess.get("asset_refs", []),
+        "geometry_state": sess.get("geometry_state", {"released": {}, "completed": []}),
         "total_steps": sess["total_steps"],
         "current_step": 1,
         "revision": sess.get("revision", 0),
@@ -737,6 +766,7 @@ def teach_session_chat(session_id: str, student_message: str, expected_revision=
             result["question_id"] = sess.get("question_id")
             result["saved_question_id"] = sess.get("question_id")
     result["revision"] = sess["revision"]
+    result["geometry_state"] = deepcopy(sess.get("geometry_state", {"released": {}, "completed": []}))
     return result
 
 
@@ -752,6 +782,7 @@ def _save_completed_session(sess, manual_errors=None):
     """Server-side completion cannot be lost when the summary page is closed."""
     from backend.database import add_step_error, get_step_errors
     result = {"chunk_results": sess.get("chunk_results") or [], "overall_difficulty": sess.get("overall_difficulty")}
+    result.update(geometry=sess.get("geometry"), asset_refs=sess.get("asset_refs", []))
     _set_category_from_chunks(result)
     if not sess.get("question_id"):
         sess["question_id"] = db_save_question(sess["question"], result)
@@ -806,6 +837,8 @@ def teach_get_session(session_id: str) -> Optional[dict]:
         "teacher": sess["teacher"],
         "steps": sess["steps"],
         "chunk_results": sess.get("chunk_results", []),
+        "geometry": sess.get("geometry"), "asset_refs": sess.get("asset_refs", []),
+        "geometry_state": sess.get("geometry_state", {"released": {}, "completed": []}),
         "current_step": sess["current_step"],
         "total_steps": sess["total_steps"],
         "messages": sess["messages"],

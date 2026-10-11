@@ -309,6 +309,14 @@
     function renderDetail(item) {
       var box = el('poolDetail'); box.replaceChildren(); var head = node('div', undefined, 'pool-detail-head'); head.append(node('strong', '原题 #' + item.id), badge(COMPLETENESS[item.completeness] || item.completeness, item.completeness === 'complete' ? 'green' : 'orange'), badge(STATUS[item.status] || item.status)); box.appendChild(head);
       math(box, item.question, 'pool-detail-question');
+      var geometryHost = node('div'); box.appendChild(geometryHost);
+      if (window.StudyGeometry) {
+        var prepared = item.prepared || {};
+        StudyGeometry.mount(geometryHost, prepared);
+        api('/question-pool/items/' + item.id + '/assets').then(function (data) {
+          if (geometryHost.isConnected) StudyGeometry.mount(geometryHost, Object.assign({}, prepared, {asset_refs: data.asset_refs}));
+        }).catch(function () {});
+      }
       if (item.reason) box.appendChild(node('p', item.reason, 'pool-check'));
       if (item.prepare_error) box.appendChild(node('p', '解析失败：' + item.prepare_error + '\n加入选择队列后可单独重试。', 'pool-check conflict'));
       if (item.completeness === 'failed') {

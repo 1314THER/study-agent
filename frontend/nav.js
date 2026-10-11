@@ -65,6 +65,23 @@
         document.head.appendChild(s);
     }
 
+    function injectRoutineReviewNav() {
+        if (!window.StudyAuth || !window.StudyAuth.isOwner()) return;
+        var nav = document.querySelector('nav');
+        if (!nav || nav.querySelector('a[data-page="routine-review"]')) return;
+        var link = document.createElement('a');
+        link.href = 'routine-review.html';
+        link.className = 'nav-item';
+        link.setAttribute('data-page', 'routine-review');
+        link.setAttribute('data-owner-only', '');
+        link.title = '套路审核';
+        var icon = document.createElement('span'); icon.className = 'nav-icon'; icon.textContent = '📝';
+        var label = document.createElement('span'); label.className = 'nav-label'; label.textContent = '套路审核';
+        link.append(icon, label);
+        var pool = nav.querySelector('a[data-page="question-pool"]');
+        if (pool) pool.after(link); else nav.appendChild(link);
+    }
+
     document.addEventListener('DOMContentLoaded', function () {
         try {
             var saved = localStorage.getItem('nav_expanded');
@@ -77,7 +94,7 @@
             }
         } catch (e) {}
         injectHomeNav();
-        if (window.StudyAuth) window.StudyAuth.ready.then(injectQuestionPoolNav);
+        if (window.StudyAuth) window.StudyAuth.ready.then(function () { injectQuestionPoolNav(); injectRoutineReviewNav(); });
         if (window.STUDY_DEMO) {
             document.querySelectorAll('a[href]').forEach(function(a) {
                 if (!/(?:grade|mother|loop|level-editor)\.html(?:[?#]|$)/.test(a.getAttribute('href'))) return;

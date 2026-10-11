@@ -345,6 +345,54 @@ class RoutineClassificationTests(unittest.TestCase):
         with self.assertRaises(ValueError): rc.make_http_caller(CONFIG, api_key="")
         with self.assertRaises(ValueError): rc.make_http_caller(dict(CONFIG, base_url="http://localhost"), api_key="MOCK")
 
+    def test_cache_prefix_identical_across_questions_stages_and_catalog_order(self):
+        catalog=deepcopy(self.catalog)
+        catalog['routines'].reverse()
+        first=rc.make_prompt(self.item,self.catalog,cache_friendly=True)
+        second=rc.make_prompt(self.items[1],catalog,full_catalog=True,previous=result(self.item),cache_friendly=True)
+        self.assertEqual(first[0],second[0])
+        self.assertNotIn(self.item['question'],first[0])
+        rows=json.loads(first[0].split('\n')[-1])['routines']
+        self.assertEqual(len(rows),288)
+        expected={r['id']:r for r in self.catalog['routines']}
+        for rid,name,category,steps,exclusions,others in rows:
+            self.assertEqual((steps,exclusions),(expected[rid]['key_steps'],expected[rid]['exclusions']))
+        self.assertEqual(set(json.loads(second[1])['allowed_ids']),set(expected))
+        self.assertNotIn('catalog',json.loads(first[1]))
+        self.assertNotEqual(rc.cache_key(self.item,self.catalog,CONFIG),rc.cache_key(self.item,self.catalog,dict(CONFIG,prompt_profile=rc.CACHE_PROMPT_VERSION)))
+
+    def test_compact_provider_disables_thinking_caps_stages_and_records_usage(self):
+        payloads=[];observed=[]
+        config=dict(CONFIG,thinking='disabled',json_output=True,max_tokens=1024,audit_max_tokens=2048)
+        class Response(io.StringIO):
+            def __enter__(self):return self
+            def __exit__(self,*args):self.close()
+        def fake(request,timeout):
+            payloads.append(json.loads(request.data))
+            return Response(json.dumps({'choices':[{'message':{'content':'{}','reasoning_content':''},'finish_reason':'stop'}],
+                'usage':{'prompt_tokens':1000,'completion_tokens':120,'prompt_cache_hit_tokens':900,'prompt_cache_miss_tokens':100,'completion_tokens_details':{'reasoning_tokens':0}}}))
+        with patch.object(rc,'urlopen',fake):
+            caller=rc.make_http_caller(config,api_key='MOCK',usage_callback=lambda *args:observed.append(args))
+            for stage in ('retrieved_match','full_catalog_audit'):
+                self.assertEqual(caller('JSON',json.dumps({'stage':stage}),self.item),'{}')
+        self.assertEqual([p['max_tokens'] for p in payloads],[1024,2048])
+        self.assertTrue(all(p['thinking']=={'type':'disabled'} and p['response_format']=={'type':'json_object'} for p in payloads))
+        self.assertEqual(observed[1][1],'full_catalog_audit')
+        self.assertEqual(observed[1][2]['reasoning_tokens'],0)
+
+    def test_truncated_response_usage_recorded_before_retry_and_missing_metrics_unknown(self):
+        seen=[]
+        class Response(io.StringIO):
+            def __enter__(self):return self
+            def __exit__(self,*args):self.close()
+        payload={'choices':[{'message':{'content':'{"partial":'},'finish_reason':'length'}],'usage':{'completion_tokens':1024}}
+        with patch.object(rc,'urlopen',return_value=Response(json.dumps(payload))):
+            caller=rc.make_http_caller(CONFIG,api_key='MOCK',usage_callback=lambda *args:seen.append(args))
+            with self.assertRaises(ValueError):caller('JSON','{}',self.item)
+        self.assertEqual(seen[0][2]['completion_tokens'],1024)
+        self.assertIsNone(seen[0][2]['reasoning_tokens'])
+        self.assertIsNone(seen[0][2]['prompt_cache_hit_tokens'])
+
 
 if __name__ == "__main__":
     unittest.main()

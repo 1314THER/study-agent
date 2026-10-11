@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="/geometry.js?v=20261011a"></script>
+<link rel="stylesheet" href="/geometry.css?v=20261011a">
 <script src="/auth.js?v=20261009a"></script>
 <script src="/jobs.js?v=20261009a"></script>
 <script src="/job-pages.js?v=20261009a"></script>
@@ -277,6 +279,7 @@ body.teach-standalone .teach-container { height: calc(100vh - 36px); }
               <div class="info-card-header"><span class="info-card-icon">📝</span>题目</div>
               <div class="info-card-body" id="teachQuestionDisplay"></div>
             </div>
+            <div id="teachGeometry"></div>
             <div id="teachStepList"></div>
             <div id="errorDialogOverlay" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.3);z-index:1000;" onclick="closeErrorDialog(event)">
               <div id="errorDialogBox" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:white;border-radius:16px;padding:24px;width:360px;max-width:90vw;box-shadow:0 8px 32px rgba(0,0,0,0.15);">
@@ -325,6 +328,7 @@ body.teach-standalone .teach-container { height: calc(100vh - 36px); }
         </div>
       </div>
 <div class="teach-summary" id="teachSummary">
+  <div id="teachSummaryGeometry"></div>
 <div class="teach-summary-card">
 <div class="teach-summary-icon">🎉</div>
 <div class="teach-summary-title">完成！</div>
@@ -496,6 +500,7 @@ function applyTeachState(d){
   _teachRevision=d.revision||0;window.studyTeachRevision=_teachRevision;
   _currentStepIndex=d.current_step||0;_totalSteps=d.total_steps||0;
   _stats=d.stats||{correct:0,wrong:0,skipped:0};_sessionSteps=d.steps||[];_sessionChunkResults=d.chunk_results||[];
+  window.studyTeachGeometry=d.geometry;window.studyTeachAssets=d.asset_refs||[];window.studyTeachGeometryState=d.geometry_state;
   if(d.question)document.getElementById('teachQuestionInput').value=d.question;
   if(d.teacher)_selectedTeacher=d.teacher;
   document.getElementById('teachInput').style.display='none';document.getElementById('quoteArea').style.display='none';
@@ -582,7 +587,7 @@ async function startTeaching(){
   clearSavedSession();_sessionId=null;_teachQuestionId=null;_stepErrorData={};_teachRevision=0;window.studyTeachRevision=undefined;localStorage.removeItem('teach_start_ignored');
   document.getElementById('teachError').style.display='none';document.getElementById('teachStartBtn').disabled=true;
   document.getElementById('teachProgressArea').style.display='block';startStepTimer();
-  try{var data=await StudyJobs.submit('teach_start',{question:q,teacher:_selectedTeacher},{key:'teach_start',onProgress:function(j){var el=document.getElementById('teachProgressText');if(el)el.textContent=j.detail||'正在后台准备教学，可以切换页面。';}});_sessionId=data.session_id;await refreshTeachState();}
+  try{var data=await StudyJobs.submit('teach_start',{question:q,teacher:_selectedTeacher,asset_refs:window.StudyGeometry?StudyGeometry.teachingAssets(q):[]},{key:'teach_start',onProgress:function(j){var el=document.getElementById('teachProgressText');if(el)el.textContent=j.detail||'正在后台准备教学，可以切换页面。';}});_sessionId=data.session_id;await refreshTeachState();}
   catch(e){stopStepTimer();showError(e.message);resetStartBtn();}
 }
 function resetStartBtn(){document.getElementById("teachStartBtn").disabled=false;document.getElementById("teachLoading").style.display="none";} // progress area kept visible during teaching
@@ -686,22 +691,10 @@ function skipStep(){
 }
 
 function showAnswer(){
-  if(!_sessionId)return;
-  var step=_sessionSteps[_currentStepIndex];
-  if(!step)return;
-  var answer=step.step_answer||step.standard_writing||"\u6682\u65E0\u7B54\u6848";
-  var title=step.title||"\u5F53\u524D\u6B65\u9AA4";
-  if(step.step_number===999){
-    addChatMessage("teacher","\u8FD9\u9053\u9898\u7684\u6700\u7EC8\u7B54\u6848\u662F\uFF1A\n\n"+answer+"\n\n\u4F60\u770B\u61C2\u4E86\u5417\uFF1F");
-  }else{
-    addChatMessage("teacher","\u7B2C "+(_currentStepIndex+1)+" \u6B65\uFF08"+title+"\uFF09\u7684\u7B54\u6848\u662F\uFF1A\n\n"+answer+"\n\n\u4F60\u770B\u61C2\u4E86\u5417\uFF1F");
-  }
-  document.getElementById("skipBtn").style.display="none";
-  document.getElementById("showAnswerBtn").style.display="none";
-  document.getElementById("understandBtn").style.display="inline-block";
-  setInputEnabled(false);
+  if(!_sessionId||_isWaiting)return;
+  var input=document.getElementById("teachChatInput");
+  if(input){input.value="查看答案";sendMessage();}
 }
-
 function understoodStep(){
   if(!_sessionId||_isWaiting)return;
   var stepIdx=_currentStepIndex;
@@ -719,7 +712,7 @@ async function saveTeachingResults(){
   try{
     var q=document.getElementById("teachQuestionInput").value.trim();
     if(!q||!_sessionChunkResults||!_sessionChunkResults.length){return null;}
-    var aj={chunk_results:_sessionChunkResults};
+    var aj={chunk_results:_sessionChunkResults,geometry:window.studyTeachGeometry,asset_refs:window.studyTeachAssets||[]};
     if(_sessionChunkResults.length>0){
       var first_cr=_sessionChunkResults[0];
       if(first_cr.difficulty)aj.overall_difficulty=first_cr.difficulty;

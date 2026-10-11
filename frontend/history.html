@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
+<script src="/geometry.js?v=20261011a"></script>
+<link rel="stylesheet" href="/geometry.css?v=20261011a">
 <script src="/auth.js?v=20261009a"></script>
 <script src="/jobs.js?v=20261009a"></script>
 <script src="/question-provenance.js?v=20261010a"></script>
@@ -1059,6 +1061,7 @@ function clearRememberedSource(){ localStorage.removeItem('remembered_question_s
             }
             if (window.QuestionProvenance) html += window.QuestionProvenance.html(data);
             result.innerHTML = html;
+            if(window.StudyGeometry) StudyGeometry.mount(result, data);
 
             try {
                 renderMathInElement(result, {

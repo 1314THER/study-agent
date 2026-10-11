@@ -33,13 +33,13 @@ logger = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parent.parent
 KINDS = {"solve", "teach_start", "teach_legacy_start", "teach_chat", "teach_check", "teach_ack", "teach_finish",
          "generate", "grade", "parse_file", "ocr_file", "batch_solve", "agent",
-         "pattern_check", "pattern_variants", "provider_test", "pool_prepare", "pool_import", "pool_collect"}
+         "pattern_check", "pattern_variants", "provider_test", "pool_prepare", "pool_import", "pool_collect", "routine_match"}
 TERMINAL = {"done", "error", "interrupted"}
 PRESET_TIMEOUT_SECONDS = 300
 _CURRENT = ContextVar("study_background_job", default=None)
 PROVIDER_CONCURRENCY = 20
 _SHARED_PROVIDER_LIMIT = threading.BoundedSemaphore(PROVIDER_CONCURRENCY)
-_PROVIDERS = {name: _SHARED_PROVIDER_LIMIT for name in ("deepseek",)}
+_PROVIDERS = {name: _SHARED_PROVIDER_LIMIT for name in ("deepseek", "codex")}
 _PROVIDER_LOCK = threading.Lock()
 _PROVIDER_ACTIVE = 0
 
@@ -500,6 +500,9 @@ def _text(args, key, required=True):
 
 
 def validate_args(kind, args):
+    if kind == "routine_match":
+        from backend.routine_review import validate_job_args
+        return validate_job_args(args)
     if not isinstance(args, dict):
         raise ValueError("args 必须是对象")
     args = json.loads(_dump(args))
@@ -516,6 +519,9 @@ def validate_args(kind, args):
         return validate_collect_args(args)
     if kind in ("solve", "teach_start", "teach_legacy_start", "teach_check"):
         args["question"] = _text(args, "question")
+        if args.get("asset_refs"):
+            from backend.question_assets import validate_refs
+            args["asset_refs"] = validate_refs(args["asset_refs"])
     if kind in ("teach_chat", "teach_ack", "teach_finish"):
         args["session_id"] = _text(args, "session_id")
         revision = args.get("expected_revision")
@@ -627,14 +633,15 @@ def _solve(args, ctx):
         if data.get("error") and not data.get("chunk_results"):
             raise RuntimeError(data.get("detail") or data.get("status") or data["error"])
     ctx.progress("solver", 13, "AI 正在解答")
-    solved = step_solver_only(question, question_type, teacher=teacher)
+    assets = {"asset_refs": args["asset_refs"]} if args.get("asset_refs") else {}
+    solved = step_solver_only(question, question_type, teacher=teacher, **assets)
     add(solved)
     ctx.progress("verifier", 78, "AI 正在拆分步骤与知识点")
     verified = step_verify_all(solved["content"], question, solved.get("category"), question_type=question_type, teacher=teacher)
     add(verified)
-    ctx.progress("formatter", 91, "AI 正在检查解析")
+    ctx.progress("formatter", 91, "AI 正在检查解析与预制几何演示")
     final = step_final_check(question, verified["chunk_results"], [], usage, teacher=teacher,
-                             solver_content=solved["content"], verifier_category=solved.get("category"), question_type=question_type)
+                             solver_content=solved["content"], verifier_category=solved.get("category"), question_type=question_type, **assets)
     final.update(source="live_ai", prepared_example=False)
     if args.get("preset_id"):
         from backend.demo_presets import get_preset, prepared_result
@@ -649,12 +656,12 @@ def _solve(args, ctx):
 def _teach_start(args, ctx):
     from backend.teach import teach_session_start
     ctx.progress("teaching", 15, "准备教学步骤与引导")
-    return teach_session_start(args["question"], args.get("teacher"))
+    return teach_session_start(args["question"], args.get("teacher"), **({"asset_refs": args["asset_refs"]} if args.get("asset_refs") else {}))
 
 
 def _teach_legacy_start(args, ctx):
     from backend.teach import teach_start
-    return teach_start(args["question"], args.get("teacher"))
+    return teach_start(args["question"], args.get("teacher"), **({"asset_refs": args["asset_refs"]} if args.get("asset_refs") else {}))
 
 
 def _teach_chat(args, ctx):
@@ -883,12 +890,17 @@ def _pool_collect(args, ctx):
     return collect_sources_job(args, ctx)
 
 
+def _routine_match(args, ctx):
+    from backend.routine_review import run_job
+    return run_job(args, ctx)
+
+
 RUNNERS = {"solve": _solve, "teach_start": _teach_start, "teach_legacy_start": _teach_legacy_start,
            "teach_chat": _teach_chat, "teach_ack": _teach_ack,
            "teach_finish": _teach_finish, "teach_check": _teach_check, "generate": _generate, "grade": _grade,
            "parse_file": _parse_file, "ocr_file": _ocr_file, "batch_solve": _batch_solve, "agent": _agent,
            "pattern_check": _pattern_check, "pattern_variants": _pattern_variants, "provider_test": _provider_test,
-           "pool_prepare": _pool_prepare, "pool_import": _pool_import, "pool_collect": _pool_collect}
+           "pool_prepare": _pool_prepare, "pool_import": _pool_import, "pool_collect": _pool_collect, "routine_match": _routine_match}
 _manager = JobManager()
 
 

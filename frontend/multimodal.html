@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="zh-CN" style="overflow:hidden;height:100%;overscroll-behavior:none;">
 <head>
+<script src="/geometry.js?v=20261011a"></script>
+<link rel="stylesheet" href="/geometry.css?v=20261011a">
 <script src="/auth.js?v=20261009a"></script>
 <script src="/jobs.js?v=20261009a"></script>
 <script>document.documentElement.classList.add("nav-init")</script>
@@ -17,7 +19,7 @@
 <script>
 function teachOpenMulti(btn) {
     var q = btn.getAttribute('data-question');
-    if (q) { localStorage.setItem('_teach_question', q); window.open('teach.html?standalone=1', '_blank'); }
+    if (q) { var item=_questions.find(function(x){return x.latex===q;});StudyGeometry.handoff(q,item&&item.asset_refs);localStorage.setItem('_teach_question', q); window.open('teach.html?standalone=1', '_blank'); }
 }
 function safeParseKps(kps){
     if(Array.isArray(kps)) return kps;
@@ -801,6 +803,7 @@ function renderPreview(idx){
     html+='</div>';
     updateSessionBody(idx,html);
     // KaTeX render preview
+    if(window.StudyGeometry) StudyGeometry.mount(document.getElementById('session_body_'+idx), q);
     try{renderMathInElement(document.getElementById('preview_'+idx),{delimiters:[{left:'$$',right:'$$',display:true},{left:'$',right:'$',display:false}],ignoredTags:[]});}catch(e){}
 }
 
@@ -836,6 +839,7 @@ function applyMultiResult(idx,data){
 function multiArgs(idx){
     var q=_questions[idx],checkbox=document.getElementById('autoSave_'+idx);
     var args={question:q.latex,teacher:q.recommended_teacher||'liangliang',question_type:document.getElementById('type_'+idx)?.value||q.question_type||null,save:checkbox?checkbox.checked!==false:_sessions[idx]?.autoSave!==false,source_type:q.source_type||null,source_meta:q.source_meta||null,client_page:'multimodal',client_index:idx};
+    args.asset_refs=q.asset_refs||[];
     var preset=window.STUDY_DEMO&&window.StudyDemoPresets&&window.StudyDemoPresets.idForQuestion(q.latex);
     if(preset)args.preset_id=preset;
     return args;
@@ -941,6 +945,7 @@ function renderSessionResult(idx,data,autoSave,keepOpen){
     html+='</div>';
     updateSessionBody(idx,html);
     renderDifficultyRadar(document.getElementById('radar_'+idx),getDifficultyDims(data));
+    if(window.StudyGeometry) StudyGeometry.mount(document.getElementById('session_body_'+idx), data);
     // Auto-collapse: populate compact view with question + answer + buttons
     var compact=document.getElementById('compact_'+idx);
     if(compact){
@@ -1393,7 +1398,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
 function teachOpenMulti(btn) {
     var q = btn.getAttribute('data-question');
-    if (q) { localStorage.setItem('_teach_question', q); window.open('teach.html?standalone=1', '_blank'); }
+    if (q) { var item=_questions.find(function(x){return x.latex===q;});StudyGeometry.handoff(q,item&&item.asset_refs);localStorage.setItem('_teach_question', q); window.open('teach.html?standalone=1', '_blank'); }
 }
 
 function safeParseKps(kps){

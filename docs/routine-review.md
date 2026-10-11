@@ -1,0 +1,85 @@
+# 全量套路审核
+
+主人从导航的“套路审核”进入 `/routine-review.html`。现有套路循环继续用于学生练习。
+
+## 匹配与恢复
+
+网页只使用一个全量匹配任务。首次“匹配全部原题”建立进度；已有任务后该按钮一直禁用，运行中可暂停，暂停后继续原进度。重复的新建请求也由后端拒绝。历史遗留的额外任务停用后不参与页面显示或续跑。
+
+“匹配当前全部原题”冻结当前原题池和参考目录，最多 8 并发，共用系统 20 请求槽。默认 Codex Luna 使用本机已经通过 ChatGPT 登录的官方 Codex CLI，每次全目录审核最多 20 道，逐题校验和保存；缺失或无效的结果只重试这些题。该模式消耗账号额度，不调用 DeepSeek，不自动购买额度或切换付费模型。
+
+也可以选择 DeepSeek 省费模式，使用主人配置的梁梁 Solver：显式关闭思考、只输出紧凑 JSON，普通分类上限 1,024 tokens，全目录复查上限 2,048（同时服从系统更小的上限）。所有题、阶段和重试共用固定的目录前缀，题目及候选编号放在后面。目录完整保留关键步骤和排除条件；有证据的新套路仍进入人工审核。官方缓存默认开启，没有独立预加载接口；前两份实际工作串行执行后扩到 8 并发，不增加专用预热请求。实际缓存命中率以响应为准，不能保证 100%。
+
+“应用到剩余题”切换当前暂停批次的模型，保留完成结果、人工决定和旧配置记录，仅重新绑定未完成题的缓存身份；应用后仍暂停。旧参数批次必须先更新才能续跑。逐题结果写入 `.runtime/routine-review.sqlite3`，不调用完整解题或额外 OCR，不修改正式题库、母题关联或学生进度。
+
+Codex CLI 子进程继承已有 HTTP/HTTPS 系统代理（包括 macOS 代理设置）；显式设置的代理环境变量优先，避免桌面应用能联网而后台 CLI 直连超时。
+
+所有题都进入清单，包括缺原解析及依赖图形的题。这些题可以得到归属建议，但保留“待补资料”。无法确定归属、真正的新套路候选和请求失败分别列出；不为了完成率强行匹配。每个套路保留全部题目，无四题或变式数量限制。
+
+刷新、切页和关闭浏览器不会停止后台匹配。可以暂停、继续或重试失败题。服务重启时显示中断；续跑复用完成结果与全目录复查检查点。认证、余额或模型配置错误会暂停批次，修正系统设置后再继续。缓存匹配题目、目录、提示词与模型配置，不保存密钥。
+
+网页与命令行共用账本：
+
+```bash
+python3 scripts/match_question_pool.py --new
+python3 scripts/match_question_pool.py --new --engine deepseek
+python3 scripts/match_question_pool.py --configure RUN_ID --engine codex_luna
+python3 scripts/match_question_pool.py --status
+python3 scripts/match_question_pool.py --report
+python3 scripts/match_question_pool.py --resume RUN_ID
+python3 scripts/match_question_pool.py --retry-failed RUN_ID
+```
+
+## 人工审核
+
+
+“导出统计报告”提供当前总处理数、全部套路题数、待补资料、新套路候选及失败数。后台每 30 秒更新运行目录中的该批次 Markdown 报告，匹配结束后再保存最终进度；未跑完的报告会明确说明剩余题数。
+
+页面及报告记录每次响应的输入、输出、缓存命中/未命中、思考 tokens；失败校验或输出截断的已计费用量也保存。没有返回的字段显示未知，不当作零。旧请求没有保存用量，无法追溯回补。Luna CLI 没有报告思考细项时只展示输出总数。五小时额度是账号共享的可变额度，不能用 API 单价折算成固定题数。
+
+左栏选择板块或套路，列表每页 50 道。支持关键词、置信度、题干完整性和审核状态筛选；缺资料、未匹配、新套路候选、归属不确定及失败题有单独入口。
+
+详情保留原题干、原答案、原解析、AI 理由与原文引用，并提供已下载题图、原件及出处。原题版本改变时提示过期，并阻止把旧快照确认到当前题目。
+
+可以跨页选择题目，或者明确选择“当前筛选全部题”，执行确认、改组、暂缓与排除。全筛选操作检查预览数量和审核版本，遇到并发变化要求刷新，避免误审核新增结果。逐题可设置主套路、最多三个辅助套路、说明，以及代表题/变式标记；同一套路的标记题数不限。
+
+人工归属优先于 AI；正在返回的模型请求和后续批次不会覆盖有效人工结论。原题版本或内容改变后，需要重新审核。确认分类不会确认题干或原答案正确，也不发布正式课程。
+
+新套路草案须在详情填写说明并明确确认，复用目录哈希校验与防重复逻辑；只扩展参考目录。目录改变后过期草案须按当前目录重新匹配。单题重新匹配不覆盖已有人工决定，也不重新运行其他题。
+
+## 接口与验收
+
+全部 `/routine-review` 接口及页面都要求主人权限，浏览器不能传密钥、模型服务地址或数据库路径。
+
+| 接口 | 行为 |
+|---|---|
+| `GET /runs/latest`、`GET /runs/{id}` | 最近批次、进度和数量 |
+| `POST /runs` | 冻结全部原题并提交匹配任务，request_id 去重 |
+| `POST /runs/{id}/control` | pause / resume / retry_failed / optimize（省费） / use_luna（账号额度）；后两者保持暂停 |
+| `GET /runs/{id}/groups`、`GET /runs/{id}/items` | 全部题组与筛选分页 |
+| `GET /runs/{id}/report` | 下载当前全部套路统计报告 |
+| `GET /runs/{id}/items/{qid}`、`/assets/{index}` | 完整快照与受限原件访问 |
+| `POST /runs/{id}/decisions` | 逐题或批量审核；检查 expected_revision，全部筛选还检查 expected_count |
+| `POST /runs/{id}/items/{qid}/rematch` | 按当前参考目录重新匹配单题 |
+| `POST /runs/{id}/items/{qid}/create-routine` | 人工确认新套路 |
+
+接口路径统一加 `/routine-review` 前缀。批量任务种类为 `routine_match`，任务面板中可以查看进度。测试使用临时工作区和模拟模型：`python3 -m unittest tests.test_routine_review -v`；完整回归见 `tests/README.md`。
+
+运行账本及缓存不随 Git 部署，迁移时应单独备份。此阶段不包含公网部署。
+
+## ChatGPT 网页分批审核
+
+审核页的“ChatGPT 网页分批审核”入口冻结默认 5 道待匹配题与完整目录。暂停批次后，复制提示词到已登录的 ChatGPT 网页，再把完整 JSON 回复粘贴回页面校验保存。服务端只准备和接收数据包；网页操作由用户或当前 Codex 浏览器会话完成，不把网页登录当成后台 API，也不回退到付费 API。
+
+题号、原文证据、题目内容、目录与配置快照都要通过校验。结果仍是待人工审核的建议。重复导入不重复计数；人工决定优先。改动配置或快照后旧包失效，重新导出；运行中的批次不能导入网页结果。网页接口收到的失败原回复也在本机 SQLite 中保留，错误提示包含题号，便于修正。
+
+Luna 批量请求同样保留原回复和逐题校验失败原因；第二次尝试只发送尚未通过的题，并反馈对应错误。两次后仍无效的题进入失败清单，可单独重试；有效结果立即保存。
+
+CLI 同样使用主人的 SQLite 账本：
+
+```sh
+python3 scripts/match_question_pool_web.py --export RUN_ID --limit 5
+python3 scripts/match_question_pool_web.py --import PACKET_ID --response LOCAL_FILE.json
+```
+
+主人接口：`POST /routine-review/runs/{run_id}/web-packet`（`limit` 为 1–20）；`POST /routine-review/web-packets/{packet_id}/response`（`response` 为完整回复文本）。接口不接受数据库路径、浏览器凭据或 API 密钥。提示词、本地回复及导入摘要保留在本机运行目录与 SQLite 中，网页未返回的 tokens 明细记为未知。

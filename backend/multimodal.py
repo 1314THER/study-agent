@@ -272,12 +272,23 @@ def _post_process(questions: list) -> list:
             "difficulty": difficulty,
             "recommended_teacher": teacher_map.get(difficulty, "liangliang"),
             "question_type": question_type,
+            "asset_refs": q.get("asset_refs", []),
         })
     return result
 
 
 def _image_mime(ext: str) -> str:
     return {"jpg": "jpeg", "jpeg": "jpeg", "png": "png"}.get(ext.lower(), "png")
+
+
+def _retain_preview(encoded):
+    # Image retention must never discard a successfully extracted text question.
+    from backend.question_assets import store_image
+    try:
+        return [store_image(base64.b64decode(encoded, validate=True))]
+    except (ValueError, OSError):
+        logger.warning("题图留存失败，继续交付文字题干")
+        return []
 
 
 # ---------- 主入口 ----------
@@ -293,6 +304,10 @@ def parse_file(file_path: str, original_filename: str = "", progress=None) -> li
                 progress(page_num, total)
             raw = _call_deepseek_vision(image_base64=page_b64, text=_EXTRACTION_PROMPT)
             page_qs = _parse_questions(raw)
+            refs = _retain_preview(page_b64)
+            for q in page_qs:
+                if isinstance(q, dict):
+                    q["asset_refs"] = refs
             all_questions.extend(page_qs)
             del page_b64
         return _post_process(all_questions)
@@ -304,6 +319,10 @@ def parse_file(file_path: str, original_filename: str = "", progress=None) -> li
         b64 = image_to_base64(file_path)
         raw = _call_deepseek_vision(image_base64=b64, text=_EXTRACTION_PROMPT)
         questions = _parse_questions(raw)
+        refs = _retain_preview(b64)
+        for q in questions:
+            if isinstance(q, dict):
+                q["asset_refs"] = refs
         return _post_process(questions)
     
     # docx / txt → 文本提取 → 调 text-only API

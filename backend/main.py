@@ -3,7 +3,7 @@ import logging
 import os
 import threading
 
-from fastapi import FastAPI, UploadFile, Query
+from fastapi import FastAPI, UploadFile, Query, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
@@ -24,6 +24,7 @@ from backend.categories import get_all_categories
 from backend.steps import get_step_structure, get_all_question_types
 import backend.settings as runtime_settings
 from backend.logging_conf import setup_logging
+from backend.teach import TeachingConflict
 
 setup_logging()
 
@@ -132,6 +133,7 @@ class SolveRequest(BaseModel):
 
 class Step1Request(BaseModel):
     question: str
+    asset_refs: List[str] = Field(default_factory=list)
     question_type: Optional[str] = Field(None, description="题型（可选）")
     teacher: Optional[str] = Field(None, description="老师（可选）")
 
@@ -145,6 +147,7 @@ class Step2Request(BaseModel):
 
 class Step3Request(BaseModel):
     question: str = Field(..., description="原题")
+    asset_refs: List[str] = Field(default_factory=list)
     chunk_results: str = Field(..., description="Verifier 输出的各块结果 JSON")
     teacher: Optional[str] = Field(None, description="老师（可选）")
     save: bool = False
@@ -177,7 +180,7 @@ class StepErrorBatchRequest(BaseModel):
 @app.post("/solve/step1")
 def api_step1(req: Step1Request):
     """第1步：解答"""
-    result = step_solver_only(req.question, req.question_type, teacher=req.teacher)
+    result = step_solver_only(req.question, req.question_type, teacher=req.teacher, **({"asset_refs": req.asset_refs} if req.asset_refs else {}))
     if result.get("error"):
         return result
     return result
@@ -229,6 +232,7 @@ def api_step3(req: Step3Request):
         solver_content=req.content,
         verifier_category=req.category,
         question_type=req.question_type,
+        asset_refs=req.asset_refs,
     )
 
     if req.save:
@@ -981,6 +985,7 @@ def api_steps():
 # ---------- 教学系统 ----------
 class TeachStartRequest(BaseModel):
     question: str
+    asset_refs: List[str] = Field(default_factory=list)
     teacher: Optional[str] = Field(None, description="老师（可选）")
 
 class TeachCheckRequest(BaseModel):
@@ -1014,6 +1019,8 @@ def api_teach_find(req: TeachStartRequest):
                     "standard_writing": step.get("standard_writing", ""),
                     "detailed_writing": step.get("detailed_writing", ""),
                     "knowledge_point": step.get("knowledge_point", ""),
+                    "step_difficulty": step.get("step_difficulty"),
+                    "geometry_key": f"{cr.get('chunk_id', 1)}-{step.get('step_number', 0)}",
                 })
             if final_answer:
                 all_steps.append({
@@ -1036,6 +1043,7 @@ def api_teach_find(req: TeachStartRequest):
             "total_steps": len(all_steps),
             "chunk_results": chunk_results,
             "overall_difficulty": result.get("overall_difficulty"),
+            "geometry": result.get("geometry"), "asset_refs": result.get("asset_refs", []),
             "from_db": True,
         }
     return {"found": False}
@@ -1044,7 +1052,7 @@ def api_teach_find(req: TeachStartRequest):
 @app.post("/teach/start")
 def api_teach_start(req: TeachStartRequest):
     """开启教学会话：解题并返回所有步骤"""
-    result = teach_start(req.question, teacher=req.teacher)
+    result = teach_start(req.question, teacher=req.teacher, asset_refs=req.asset_refs)
     return result
 
 
@@ -1058,17 +1066,19 @@ def api_teach_check(req: TeachCheckRequest):
 # ---------- 对话式教学会话 ----------
 class TeachSessionStartRequest(BaseModel):
     question: str
+    asset_refs: List[str] = Field(default_factory=list)
     teacher: Optional[str] = Field(None, description="老师（可选）")
 
 
 class TeachSessionChatRequest(BaseModel):
     message: str
+    expected_revision: Optional[int] = Field(None, ge=0)
 
 
 @app.post("/teach/session/start")
 def api_teach_session_start(req: TeachSessionStartRequest):
     """创建新的对话式教学会话"""
-    result = teach_session_start(req.question, teacher=req.teacher)
+    result = teach_session_start(req.question, teacher=req.teacher, asset_refs=req.asset_refs)
     return result
 
 
@@ -1077,7 +1087,10 @@ def api_teach_session_chat(session_id: str, req: TeachSessionChatRequest):
     """在现有会话中发送学生消息"""
     if not teach_get_session(session_id):
         return {"error": "session_not_found", "detail": "会话不存在"}
-    result = teach_session_chat(session_id, req.message)
+    try:
+        result = teach_session_chat(session_id, req.message, **({"expected_revision": req.expected_revision} if req.expected_revision is not None else {}))
+    except TeachingConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc))
     return result
 
 
@@ -1412,6 +1425,11 @@ from backend.question_pool import router as question_pool_router
 app.include_router(question_pool_router)
 from backend.routine_matching_api import router as routine_matching_router
 app.include_router(routine_matching_router)
+from backend.routine_review import router as routine_review_router, page_router as routine_review_page_router
+app.include_router(routine_review_router)
+app.include_router(routine_review_page_router)
+from backend.question_assets import router as question_assets_router
+app.include_router(question_assets_router)
 
 @app.get("/demo/presets")
 def demo_presets():
