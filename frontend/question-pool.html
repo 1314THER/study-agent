@@ -81,10 +81,15 @@
 <dialog id="poolSourcesDialog" class="pool-dialog"><div class="pool-dialog-heading"><div><p class="pool-eyebrow">保留原题与出处</p><h2>题源与导入</h2></div><button type="button" class="pool-btn" data-close-dialog="poolSourcesDialog">关闭</button></div>
   <form id="poolUploadForm" class="pool-upload-form"><label>题源 / 书名<input id="poolUploadName" name="source_name" placeholder="留空使用文件名"></label><label>题源文件<input id="poolUploadFile" name="file" type="file" accept=".pdf,.docx,.txt,.json,.jsonl,.tex,.png,.jpg,.jpeg" required></label><button class="pool-btn primary" id="poolUploadButton" type="submit">上传并提取</button><label class="pool-ocr-option"><input id="poolUploadOcr" type="checkbox" checked> 使用 OCR 识别扫描页中的文字与公式</label></form>
   <p class="pool-muted">支持 PDF、Word、扫描图片和结构化题源。依赖图形的题保留在暂缓清单，文字或公式图片可以识别。原文件仅供主人核对。</p>
+  <section class="pool-source-card"><h3>在线找题</h3><p class="pool-muted">搜集完整模考卷及导数、概率专题，保留原文件与题图，题目不要求原答案。</p>
+    <form id="poolCollectForm" class="pool-upload-form"><label>题源年份<input id="poolCollectYears" value="2025,2026" placeholder="2025,2026" required></label><label class="pool-ocr-option"><input id="poolCollectTopics" type="checkbox" checked> 同时找导数与概率专题</label><label class="pool-ocr-option"><input id="poolCollectOcr" type="checkbox" checked> 识别扫描题目（使用已配置 DeepSeek，最多 20 并发）</label><button type="submit" id="poolCollectButton" class="pool-btn primary">开始找题</button></form>
+    <p id="poolCollectionStatus" class="pool-muted" role="status" aria-live="polite"></p>
+    <div id="poolCollectionReport"></div>
+  </section>
   <div id="poolSourcesList"></div>
 </dialog>
 <dialog id="poolPreviewDialog" class="pool-dialog"><div class="pool-dialog-heading"><div><p class="pool-eyebrow">最后核对</p><h2>确认入库</h2></div><button type="button" class="pool-btn" data-close-dialog="poolPreviewDialog">关闭</button></div><p class="pool-muted">只提交本次预览中可入库的题。角色冲突需返回归类修改；原答案与 AI 答案冲突须逐题确认。</p><div id="poolPreviewItems"></div><div class="pool-preview-footer"><span id="poolPreviewSummary"></span><button type="button" class="pool-btn primary" id="poolCommit">确认入库</button></div></dialog>
 <script src="nav.js?v=20261010pool"></script>
-<script src="question-pool.js?v=20261010b"></script>
+<script src="question-pool.js?v=20261010collect"></script>
 </body>
 </html>

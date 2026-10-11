@@ -1,0 +1,16 @@
+{"id":101,"version":1,"question":"设 A={x|a<x<3}，B={x|0<x<4}，求 A 为 B 子集时 a 的范围。","answer":"a≥0","solution":"先讨论空集：a≥3 时 A 为空集；a<3 时比较区间端点，需 a≥0。合并得 a≥0。","categories":["集合与逻辑用语"],"completeness":"complete"}
+{"id":102,"version":1,"question":"设 A={x|a<x<5}，B={x|1<x<6}，求 A 为 B 子集时 a 的范围。","answer":"a≥1","solution":"先讨论空集：a≥5 时为空；非空时比较区间端点，左端开区间允许 a=1。合并得 a≥1。","categories":["集合与逻辑用语"],"completeness":"complete"}
+{"id":103,"version":1,"question":"已知非空区间 A=[a,2] 且 a<2，B=(-1,3]，求 A 为 B 子集时 a 的范围。","answer":"-1<a<2","solution":"已知非空，无需空集分支。比较端点，A 左端取到 a 而 B 不取 -1，故 a>-1；再与 a<2 取交集。","categories":["集合与逻辑用语"],"completeness":"complete"}
+{"id":104,"version":1,"question":"设 A=[a,1]，在 a=1 时 A 为 B=(0,2) 的子集吗？","answer":"是","solution":"区间端点相等退化成单点 {1}，单独检验 1 属于 (0,2)，所以满足子集关系。","categories":["集合与逻辑用语"],"completeness":"complete"}
+{"id":105,"version":1,"question":"含参方程 m x²+x+1=0 有实根，求 m 的范围。","answer":"m≤1/4","solution":"先讨论二次项系数为零的退化情形：m=0 时一次方程有根；m≠0 时用判别式 1-4m≥0。合并得 m≤1/4。","categories":["一元二次式"],"completeness":"complete"}
+{"id":106,"version":1,"question":"求过定点 (0,-1) 且与曲线 y=x² 相切的直线。","answer":"y=2x-1 或 y=-2x-1","solution":"设切点为 (t,t²)，导数给斜率 2t，切线为 y=2tx-t²。代入定点得 t²=1，再求两条切线。","categories":["函数与导数"],"completeness":"complete"}
+{"id":107,"version":1,"question":"求曲线 y=x² 在已知切点 (1,1) 的切线方程。","answer":"y=2x-1","solution":"已知切点在曲线上，导数在 x=1 处为 2，直接写点斜式 y-1=2(x-1)。","categories":["函数与导数"],"completeness":"complete"}
+{"id":108,"version":1,"question":"求数列 a_n=1/[n(n+1)] 的前 n 项和。","answer":"n/(n+1)","solution":"有理式裂项：a_n=1/n-1/(n+1)，求和后相邻项相消，保留首尾得到 1-1/(n+1)。","categories":["数列"],"completeness":"complete"}
+{"id":109,"version":1,"question":"求数列 a_n=n·2^n 的前 n 项和。","answer":"(n-1)2^(n+1)+2","solution":"设和式为 S，乘公比 2 得 2S，再错位相减，剩余等比求和并整理首尾项。","categories":["数列"],"completeness":"complete"}
+{"id":110,"version":1,"question":"袋中有3个红球2个白球，无放回抽取2球，求红球个数的分布列。","answer":"P(X=0)=1/10，P(X=1)=6/10，P(X=2)=3/10","solution":"无放回抽样用超几何计数。X 取 0、1、2，用组合数选择红白球后除以总抽法 C(5,2)，检查概率和为一。","categories":["概率统计"],"completeness":"complete"}
+{"id":111,"version":1,"question":"袋中有3个红球2个白球，每次有放回抽球，抽2次求红球出现次数分布。","answer":"X~B(2,3/5)","solution":"有放回使两次独立且成功概率同为 3/5；成功次数服从二项分布，按二项概率计算。","categories":["概率统计"],"completeness":"complete"}
+{"id":112,"version":1,"question":"椭圆 x²/4+y²=1 的一条弦中点为 (1/2,1/4)，求弦所在直线。","answer":"y=-x/2+1/2","solution":"中点弦用点差法。两端点方程相减，再用中点坐标替换坐标和，得到斜率 -1/2；检查直线与椭圆确有两个交点。","categories":["解析几何"],"completeness":"complete"}
+{"id":113,"version":1,"question":"设 A=(a,3)，B=(0,4)，求 A 为 B 子集的参数范围。","answer":"a≥0","solution":"","categories":["集合与逻辑用语"],"completeness":"complete"}
+{"id":114,"version":1,"question":"综合题：(1)求有限集合 {1,2} 与 {2,3} 的交集；(2)讨论方程 x²-m=0 的实根个数。","answer":"(1){2}；(2)按 m 正零负分类","solution":"第一问列举共同元素得到 {2}；第二问用二次方程判别式或平方关系按参数分类，两问需要不同套路。","categories":["集合与逻辑用语","一元二次式"],"completeness":"complete"}
+{"id":115,"version":1,"question":"如图，在棱锥中证明指定直线与底面平行。","answer":"见原图","solution":"利用图中的中点构造中位线，找到面内平行线后证明线面平行；文字未提供中点位置。","categories":["立体几何"],"completeness":"deferred_graphic"}
+{"id":116,"version":1,"question":"按题设新定义的三状态迭代运算求输出，规则尚未给全。","answer":"待核对","solution":"来源只提到新定义状态迭代，缺少状态之间的转移规则，不能确认关键方法。","categories":[],"completeness":"needs_review"}

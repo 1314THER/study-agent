@@ -27,6 +27,7 @@ from starlette.concurrency import run_in_threadpool
 from backend.categories import CATEGORIES
 from backend.data_paths import data_path
 from backend.identity import require_catalog_editor as _require_catalog_editor, current_identity
+from backend.source_policy import MIN_YEAR, apply_year_policy, is_old, year_evidence, default_mock_years
 
 ROOT = Path(__file__).resolve().parent.parent
 COMPLETENESS = {"complete", "needs_review", "deferred_graphic", "failed"}
@@ -105,6 +106,15 @@ def _connection():
           request_id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, result_json TEXT NOT NULL,
           created_at TEXT DEFAULT CURRENT_TIMESTAMP);
     """)
+    # Add evidence per occurrence: a duplicate can have several exam years.
+    migrations = {"pool_occurrences": {"year": "TEXT DEFAULT ''", "year_evidence_json": "TEXT DEFAULT '{}'"},
+                  "pool_sources": {"import_report_json": "TEXT DEFAULT '{}'"}}
+    for table, columns in migrations.items():
+        present = {r[1] for r in conn.execute(f"PRAGMA table_info({table})")}
+        for column, definition in columns.items():
+            if column not in present:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+    conn.commit()
     path.chmod(0o600)
     return conn
 
@@ -120,6 +130,19 @@ def _text(value):
 def _canonical(text):
     # Do not remove internal whitespace inside mathematics or \text{}.
     return "\n".join(line.rstrip() for line in unicodedata.normalize("NFC", str(text)).replace("\r\n", "\n").splitlines()).strip()
+
+
+def _record_fingerprint(question, source_id, key, raw):
+    """Images are conditions too; identical text with different diagrams is distinct."""
+    refs = (raw or {}).get("image_refs") or []
+    images = [str(ref.get("sha256") or ref.get("url") or ref.get("path") or "")
+              if isinstance(ref, dict) else str(ref) for ref in refs]
+    value = question if question else f"missing:{source_id}:{key}"
+    if images:
+        value += "\nimage_refs:" + _dump(images)
+    elif (raw or {}).get("graphic_file"):
+        value += "\ngraphic_file:" + _dump(raw["graphic_file"])
+    return sha256(value.encode()).hexdigest()
 
 
 def _categories(values):
@@ -151,6 +174,7 @@ def _source_public(conn, row):
     source.pop("fingerprint", None)
     source.pop("file_token", None)
     source["options"] = _load(source.pop("options_json"), {})
+    source["import_report"] = _load(source.pop("import_report_json", "{}"), {})
     source["publication_allowed"] = bool(source["publication_allowed"])
     source["has_file"] = bool(row["file_token"])
     source["stats"] = _source_stats(conn, source["id"])
@@ -181,9 +205,22 @@ def _retry_failed_record(conn, locator, record):
     if not conn.in_transaction:
         conn.execute("BEGIN IMMEDIATE")
     old = conn.execute("SELECT * FROM pool_items WHERE id=?", (locator["item_id"],)).fetchone()
-    if old["status"] != "unreviewed" or old["version"] != 1:
+    fingerprint = _record_fingerprint(question, locator["source_id"], locator["source_key"], record.get("raw"))
+    previous_raw = _load(locator["raw_json"], {}) or {}
+    automatic_version = previous_raw.get("automatic_repair_version")
+    if old["status"] != "unreviewed" or (old["version"] != 1 and automatic_version != old["version"]):
         return False  # Never replace the owner's corrections or prepared work.
+    if (question == locator["original_question"] and _text(record.get("answer")) == locator["original_answer"]
+            and _text(record.get("solution")) == locator["original_solution"] and record.get("completeness") == locator["completeness"]
+            and previous_raw.get("conversion_pending_pages") == (record.get("raw") or {}).get("conversion_pending_pages")
+            and fingerprint == old["fingerprint"]
+            and previous_raw.get("image_refs") == (record.get("raw") or {}).get("image_refs")
+            and previous_raw.get("image_assets") == (record.get("raw") or {}).get("image_assets")
+            and previous_raw.get("conversion_parser") == (record.get("raw") or {}).get("conversion_parser")
+            and record.get("question_type") == old["question_type"]):
+        return False
     raw = deepcopy(record.get("raw") or {})
+    raw["automatic_repair_version"] = old["version"] + 1
     raw["previous_extraction_attempts"] = _load(locator["raw_json"], {}).get("previous_extraction_attempts", []) + [{
         "question": locator["original_question"], "answer": locator["original_answer"], "solution": locator["original_solution"],
         "reason": locator["reason"], "raw": _load(locator["raw_json"], {}),
@@ -192,7 +229,6 @@ def _retry_failed_record(conn, locator, record):
     completeness = record.get("completeness", "needs_review")
     if completeness not in COMPLETENESS:
         completeness = "needs_review"
-    fingerprint = sha256(question.encode()).hexdigest()
     match = conn.execute("SELECT id FROM pool_items WHERE fingerprint=?", (fingerprint,)).fetchone()
     sole = conn.execute("SELECT count(*) FROM pool_occurrences WHERE item_id=?", (old["id"],)).fetchone()[0] == 1
     fields = (fingerprint, question, _text(record.get("answer")), _text(record.get("solution")), _dump(values),
@@ -207,10 +243,12 @@ def _retry_failed_record(conn, locator, record):
     else:
         target_id = conn.execute("INSERT INTO pool_items (fingerprint,question,answer,solution,categories_json,question_type,year,region,completeness,reason) VALUES (?,?,?,?,?,?,?,?,?,?)", fields).lastrowid
         _set_categories(conn, target_id, values)
-    conn.execute("""UPDATE pool_occurrences SET item_id=?,page_start=?,page_end=?,question_no=?,original_question=?,original_answer=?,original_solution=?,raw_json=?,completeness=?,reason=?,is_duplicate=? WHERE id=?""",
+    raw["automatic_repair_version"] = conn.execute("SELECT version FROM pool_items WHERE id=?", (target_id,)).fetchone()[0]
+    conn.execute("""UPDATE pool_occurrences SET item_id=?,page_start=?,page_end=?,question_no=?,original_question=?,original_answer=?,original_solution=?,raw_json=?,completeness=?,reason=?,is_duplicate=?,year=?,year_evidence_json=? WHERE id=?""",
                  (target_id, record.get("page_start"), record.get("page_end"), _text(record.get("question_no")),
                   question, _text(record.get("answer")), _text(record.get("solution")), _dump(raw), completeness, _text(record.get("reason")),
-                  int(bool(match and match["id"] != old["id"])), locator["id"]))
+                  int(bool(match and match["id"] != old["id"])), _text(record.get("year")),
+                  _dump(record["raw"].get("year_evidence", {})), locator["id"]))
     if target_id != old["id"] and sole:
         conn.execute("DELETE FROM pool_categories WHERE item_id=?", (old["id"],))
         conn.execute("DELETE FROM pool_items WHERE id=?", (old["id"],))
@@ -222,22 +260,52 @@ def import_records(source, records, *, retry_failed=False):
     _require_owner()
     source_id = create_source(source) if isinstance(source, dict) else int(source)
     with closing(_connection()) as conn:
-        if not conn.execute("SELECT id FROM pool_sources WHERE id=?", (source_id,)).fetchone():
+        source_row = conn.execute("SELECT * FROM pool_sources WHERE id=?", (source_id,)).fetchone()
+        if not source_row:
             raise HTTPException(404, "来源不存在。")
         conn.execute("UPDATE pool_sources SET import_status='running',import_error='' WHERE id=?", (source_id,))
         conn.commit()
-        processed, recovered = 0, 0
+        processed, recovered, skipped_old, unknown_year, total_read = 0, 0, 0, 0, 0
+        def report():
+            return {"minimum_year": MIN_YEAR, "total_read": total_read, "skipped_old": skipped_old, "unknown_year": unknown_year}
+        def checkpoint():
+            conn.execute("UPDATE pool_sources SET import_report_json=? WHERE id=?", (_dump(report()), source_id))
+            conn.commit()
         try:
             for index, record in enumerate(records):
                 if not isinstance(record, dict):
                     record = {"source_key": str(index), "completeness": "failed", "reason": "来源条目格式错误", "raw": {"value": _text(record)}}
+                total_read += 1
+                if is_old(record, dict(source_row)):
+                    skipped_old += 1
+                    continue
+                record = apply_year_policy(record, dict(source_row))
+                unknown_year += int(record["year"] is None)
                 key = _text(record.get("source_key")) or str(index)
-                locator = conn.execute("SELECT * FROM pool_occurrences WHERE source_id=? AND source_key=?", (source_id, key)).fetchone()
+                locator = conn.execute("SELECT o.*,i.fingerprint AS item_fingerprint FROM pool_occurrences o JOIN pool_items i ON i.id=o.item_id WHERE o.source_id=? AND o.source_key=?", (source_id, key)).fetchone()
+                raw = record.get("raw") or {}
+                if not locator and raw.get("collector") and raw.get("paper_validation", {}).get("valid") and record.get("question_no"):
+                    # Verified whole papers have unique question IDs even when
+                    # OCR ordering or heading normalization changes a locator.
+                    choices = conn.execute("SELECT o.*,i.fingerprint AS item_fingerprint FROM pool_occurrences o JOIN pool_items i ON i.id=o.item_id WHERE o.source_id=? AND o.question_no=?", (source_id, _text(record["question_no"]))).fetchall()
+                    choices = [o for o in choices if _load(o["raw_json"], {}).get("collector") and _load(o["raw_json"], {}).get("file_sha256") == raw.get("file_sha256")]
+                    if len(choices) == 1:
+                        locator = choices[0]
+                        key = locator["source_key"]
                 if locator:
-                    waiting_scan = not locator["original_question"] and (_load(locator["raw_json"], {}) or {}).get("scan")
-                    if retry_failed and (locator["completeness"] == "failed" or waiting_scan):
+                    previous_raw = _load(locator["raw_json"], {}) or {}
+                    raw = record.get("raw") or {}
+                    waiting_scan = not locator["original_question"] and previous_raw.get("scan")
+                    pending_pages = previous_raw.get("conversion_pending_pages")
+                    image_identity_changed = raw.get("image_refs") and (_record_fingerprint(
+                        _canonical(_text(record.get("question"))), source_id, key, raw) != locator["item_fingerprint"]
+                        or raw.get("image_refs") != previous_raw.get("image_refs")
+                        or raw.get("image_assets") != previous_raw.get("image_assets"))
+                    conversion_changed = raw.get("collector") and (locator["original_question"] != _canonical(_text(record.get("question"))) or raw.get("conversion_parser") != previous_raw.get("conversion_parser"))
+                    if retry_failed and (locator["completeness"] == "failed" or waiting_scan or pending_pages or image_identity_changed or conversion_changed):
                         recovered += int(_retry_failed_record(conn, locator, record))
-                        conn.commit()
+                        if recovered % 250 == 0:
+                            checkpoint()
                     continue
                 question = _canonical(_text(record.get("question")))
                 completeness = record.get("completeness", "complete")
@@ -247,7 +315,7 @@ def import_records(source, records, *, retry_failed=False):
                 if not question and not (record.get("raw") or {}).get("scan"):
                     completeness, reason = "failed", reason or "缺少题干，保留来源条目待修正"
                 values = [v for v in record.get("categories", []) if v in CATEGORIES]
-                fingerprint = sha256((question if question else f"missing:{source_id}:{key}").encode()).hexdigest()
+                fingerprint = _record_fingerprint(question, source_id, key, record.get("raw"))
                 answer, solution = _text(record.get("answer")), _text(record.get("solution"))
                 previous = conn.execute("SELECT * FROM pool_items WHERE fingerprint=?", (fingerprint,)).fetchone()
                 if previous:
@@ -268,20 +336,22 @@ def import_records(source, records, *, retry_failed=False):
                     item_id = cursor.lastrowid
                     _set_categories(conn, item_id, values)
                 conn.execute("""INSERT INTO pool_occurrences
-                    (item_id,source_id,source_key,page_start,page_end,question_no,original_question,original_answer,original_solution,raw_json,completeness,reason,is_duplicate)
-                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""", (item_id, source_id, key, record.get("page_start"), record.get("page_end"),
-                    _text(record.get("question_no")), question, answer, solution, _dump(record.get("raw") or {}), completeness, reason, int(previous is not None)))
+                    (item_id,source_id,source_key,page_start,page_end,question_no,original_question,original_answer,original_solution,raw_json,completeness,reason,is_duplicate,year,year_evidence_json)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""", (item_id, source_id, key, record.get("page_start"), record.get("page_end"),
+                    _text(record.get("question_no")), question, answer, solution, _dump(record.get("raw") or {}), completeness, reason, int(previous is not None),
+                    _text(record.get("year")), _dump(record["raw"]["year_evidence"])))
                 processed += 1
-                if processed % 250 == 0 or isinstance(source, int):
-                    conn.commit()
+                if processed % 250 == 0:
+                    checkpoint()
             conn.execute("UPDATE pool_sources SET import_status='done' WHERE id=?", (source_id,))
-            conn.commit()
+            checkpoint()
         except Exception as exc:
-            conn.commit()  # Completed records remain available for an idempotent retry.
+            checkpoint()  # Completed records remain available for an idempotent retry.
             conn.execute("UPDATE pool_sources SET import_status='error',import_error=? WHERE id=?", (str(exc)[:500], source_id))
             conn.commit()
             raise
-        return {"source_id": source_id, "added_occurrences": processed, "recovered_occurrences": recovered, "stats": _source_stats(conn, source_id)}
+        return {"source_id": source_id, "added_occurrences": processed, "recovered_occurrences": recovered,
+                "report": report(), "stats": _source_stats(conn, source_id)}
 
 
 def _occurrences(conn, ids):
@@ -293,6 +363,7 @@ def _occurrences(conn, ids):
         FROM pool_occurrences o JOIN pool_sources s ON s.id=o.source_id WHERE o.item_id IN ({marks}) ORDER BY o.id""", ids):
         data = dict(row)
         data["raw"] = _load(data.pop("raw_json"), {})
+        data["year_evidence"] = _load(data.pop("year_evidence_json", "{}"), {})
         data["publication_allowed"] = bool(data["publication_allowed"])
         result[data["item_id"]].append(data)
     return result
@@ -308,6 +379,7 @@ def _item_public(row, occurrences=None, full=True):
     item["has_prepared"] = bool(prepared)
     item["answer_check"] = _load(item.pop("answer_check_json"), {"status": "unverified", "detail": "尚未生成 AI 解析"})
     item["occurrences"] = occurrences or []
+    item["year_status"] = "known" if item.get("year") else "unknown"
     if not full:
         item["solution"] = ""
         for occurrence in item["occurrences"]:
@@ -431,7 +503,9 @@ def update_item(item_id, changes):
         if "question" in values:
             if not values["question"]:
                 raise HTTPException(400, "题干不能为空。")
-            fingerprint = sha256(_canonical(values["question"]).encode()).hexdigest()
+            origin = conn.execute("SELECT source_id,source_key,raw_json FROM pool_occurrences WHERE item_id=? ORDER BY id LIMIT 1", (item_id,)).fetchone()
+            fingerprint = _record_fingerprint(_canonical(values["question"]), origin["source_id"] if origin else "",
+                                              origin["source_key"] if origin else "", _load(origin["raw_json"], {}) if origin else {})
             duplicate = conn.execute("SELECT id FROM pool_items WHERE fingerprint=? AND id<>?", (fingerprint, item_id)).fetchone()
             if duplicate:
                 raise HTTPException(409, f"题干与原题 #{duplicate[0]} 相同，请使用已有原题。")
@@ -520,6 +594,8 @@ def validate_prepare_args(args):
         raise ValueError("老师选项无效")
     for item_id in args["item_ids"]:
         item = get_item(item_id)
+        if is_old(item):
+            raise ValueError(f"原题 #{item_id} 已确认早于 {MIN_YEAR} 年，不能准备入库。")
         if item["completeness"] != "complete" or not item["question"]:
             raise ValueError(f"原题 #{item_id} 请先核对题干并标记完整，图形题暂缓。")
         if item["status"] == "imported":
@@ -533,7 +609,7 @@ def prepare_items(args, ctx):
     results = []
     for index, item_id in enumerate(_ids(args.get("item_ids"))):
         item = get_item(item_id)
-        if item["status"] == "imported" or item["completeness"] != "complete":
+        if is_old(item) or item["status"] == "imported" or item["completeness"] != "complete":
             results.append({"item_id": item_id, "status": "error", "error": "原题状态已改变，请重新选择。"})
             continue
         with _LOCK, closing(_connection()) as conn, conn:
@@ -578,6 +654,8 @@ def _preview_one(item, pattern_conn):
     assignment = item["assignment"]
     role = assignment.get("role", "question")
     errors = []
+    if is_old(item):
+        errors.append(f"已确认早于 {MIN_YEAR} 年，禁止入库。")
     qid = item.get("formal_question_id") or _formal_id(item["question"])
     existing_answer, existing_check = "", None
     if qid:
@@ -651,7 +729,8 @@ def preview_items(item_ids, confirmed_conflicts=None):
 
 
 def _provenance(item):
-    return [{k: occurrence.get(k) for k in ("source_name", "source_key", "kind", "url", "revision", "license", "publication_allowed", "question_no", "page_start", "page_end", "original_answer", "original_solution")}
+    return [{**{k: occurrence.get(k) for k in ("source_name", "source_key", "kind", "url", "revision", "license", "publication_allowed", "question_no", "page_start", "page_end", "original_answer", "original_solution", "year", "year_evidence")},
+             "paper": (occurrence.get("raw") or {}).get("paper", ""), "file": (occurrence.get("raw") or {}).get("file", "")}
             for occurrence in item["occurrences"]]
 
 
@@ -693,6 +772,9 @@ def commit_items(item_ids, request_id, confirmed_conflicts=None):
     from backend.patterns import link_question_to_pattern
     _require_owner()
     ids = _ids(item_ids)
+    # Guard even a replay of a commit recorded before the year policy existed.
+    if any(is_old(get_item(item_id)) for item_id in ids):
+        raise HTTPException(400, f"已确认早于 {MIN_YEAR} 年的题目禁止入库。")
     if not isinstance(request_id, str) or not 8 <= len(request_id) <= 128:
         raise HTTPException(400, "入库请求编号无效。")
     confirmed = set(confirmed_conflicts or [])
@@ -728,7 +810,9 @@ def commit_items(item_ids, request_id, confirmed_conflicts=None):
                 result["pool_item_id"] = item_id
                 origin = item["occurrences"][0] if item["occurrences"] else {}
                 result["source_type"] = "高考题" if origin.get("kind") in ("compilation", "gaokao") else "模拟题"
-                result["source_meta"] = {"paper": origin.get("source_name", ""), "question_no": origin.get("question_no", "")}
+                result["source_meta"] = {"paper": (origin.get("raw") or {}).get("paper") or origin.get("source_name", ""),
+                                         "question_no": origin.get("question_no", ""), "year": item.get("year") or None,
+                                         "region": item.get("region", ""), "year_status": item.get("year_status", "unknown")}
                 qid = row["question_id"] or save_question(item["question"], result, overwrite_existing=False, match_existing=False)
                 if not qid:
                     raise ValueError("题目保存失败")
@@ -806,6 +890,15 @@ def import_source_job(args, ctx):
     _require_owner()
     path, source = _source_file(args["source_id"])
     options = _load(source.get("options_json"), {})
+    options.update(filename=source.get("filename") or path.name, resume=True, retry_failed=True,
+                   cache_dir=files_directory().parent / "conversion-cache")
+    conversion_stats = {}
+    options["stats"] = conversion_stats
+    def page_progress(stats):
+        done, total = stats.get("completed_pages", 0), stats.get("total_pages", 1)
+        ctx.progress("pool_import", min(95, round(5 + 85 * done / max(1, total))),
+                     f"完成页 {done}/{total} · 缓存命中 {stats.get('cache_hits', 0)} · 失败页 {stats.get('failed_pages', 0)}")
+    options["progress"] = page_progress
     if source["kind"] == "pdf":
         with closing(_connection()) as conn:
             failures = conn.execute("SELECT item_id,page_start,page_end FROM pool_occurrences WHERE source_id=? AND completeness='failed'", (source["id"],)).fetchall()
@@ -817,17 +910,66 @@ def import_source_job(args, ctx):
             start, end = failure["page_start"], failure["page_end"]
             if isinstance(start, int) and start > 0:
                 pages.update(range(start, max(start, end or start) + 1))
-        if pages:
+        # A whole-source retry also visits any unprocessed tail. Successful
+        # pages are free cache hits; only an explicit selection restricts pages.
+        if pages and selected:
             options["page_numbers"] = sorted(pages)
     ctx.progress("pool_import", 5, "正在读取原题与出处")
     def records():
+        nonlocal seen_keys
         for index, record in enumerate(iter_source_records(path, source["kind"], options)):
-            if index % 20 == 0:
+            if source["kind"] != "pdf" and index % 20 == 0:
                 ctx.progress("pool_import", min(95, 10 + index // 10), f"已读取 {index} 个来源条目")
+            seen_keys.add(record["source_key"])
             yield record
+    seen_keys = set()
     result = import_records(source["id"], records(), retry_failed=True)
+    # A scan/failed-page placeholder may become an answer page or continuation,
+    # producing no standalone OCR question. Remove only untouched empty items.
+    if source["kind"] == "pdf":
+        success_pages = set(conversion_stats.get("processed_page_numbers", [])) - set(conversion_stats.get("failed_page_numbers", []))
+        with _LOCK, closing(_connection()) as conn, conn:
+            placeholders = conn.execute("SELECT o.*,i.version,i.status FROM pool_occurrences o JOIN pool_items i ON i.id=o.item_id WHERE o.source_id=? AND o.original_question=''", (source["id"],)).fetchall()
+            for placeholder in placeholders:
+                if (placeholder["source_key"] not in seen_keys and placeholder["page_start"] in success_pages
+                        and placeholder["version"] == 1 and placeholder["status"] == "unreviewed"):
+                    iid = placeholder["item_id"]
+                    conn.execute("DELETE FROM pool_occurrences WHERE id=?", (placeholder["id"],))
+                    if not conn.execute("SELECT 1 FROM pool_occurrences WHERE item_id=?", (iid,)).fetchone():
+                        conn.execute("DELETE FROM pool_categories WHERE item_id=?", (iid,))
+                        conn.execute("DELETE FROM pool_items WHERE id=?", (iid,))
+            result["stats"] = _source_stats(conn, source["id"])
+    result["conversion"] = conversion_stats
+    with closing(_connection()) as conn, conn:
+        conn.execute("UPDATE pool_sources SET import_report_json=? WHERE id=?", (_dump({**result["report"], "conversion": conversion_stats}), source["id"]))
     ctx.progress("pool_import", 100, "来源采集完成，候选题尚未进入正式题库")
     return result
+
+
+def validate_collect_args(args):
+    _require_owner()
+    years = args.get("years", default_mock_years())
+    if not isinstance(years, list) or not 1 <= len(years) <= 10 or any(type(y) is not int or not 2016 <= y <= 2100 for y in years):
+        raise ValueError("请选择 2016 年及以后的题源年份")
+    concurrency = args.get("concurrency", 20)
+    if type(concurrency) is not int or not 1 <= concurrency <= 20:
+        raise ValueError("OCR 并发应为 1 至 20")
+    return {"years": sorted(set(years)), "concurrency": concurrency, "max_pages": 32,
+            "topics": args.get("topics", True) is True, "ocr": args.get("ocr", True) is True,
+            "structured": True, "convert": True, "import_pool": True}
+
+
+def collect_sources_job(args, ctx):
+    from backend.question_source_collector import collect
+    _require_owner()
+    root = files_directory().parent / "collections"
+    def progress(report):
+        percentages = {"starting": 0, "structured": 5, "discover": 15, "download": 35, "ocr": 65, "convert": 85, "done": 100}
+        value = percentages.get(report["stage"], 0)
+        if report["stage"] in ("ocr", "convert"):
+            value = 35 + int(60 * report["converted"] / max(report["downloaded"], 1))
+        ctx.progress("pool_collect", value, report["message"])
+    return collect(args, root, progress)
 
 
 router = APIRouter(prefix="/question-pool", tags=["原题池"])
@@ -861,6 +1003,31 @@ class SelectionRequest(BaseModel):
     teacher: Optional[str] = None
     request_id: Optional[str] = None
     confirmed_conflicts: list[int] = Field(default_factory=list)
+
+
+class CollectRequest(BaseModel):
+    years: list[int] = Field(default_factory=default_mock_years)
+    topics: bool = True
+    ocr: bool = True
+    concurrency: int = 20
+    request_id: Optional[str] = None
+
+
+@router.post("/collect", status_code=202)
+def api_collect(req: CollectRequest):
+    from backend.jobs import submit_job, _submission_error
+    _require_owner()
+    try:
+        return submit_job("pool_collect", {"years": req.years, "topics": req.topics, "ocr": req.ocr, "concurrency": req.concurrency}, req.request_id or uuid.uuid4().hex)
+    except (ValueError, RuntimeError) as exc:
+        raise _submission_error(exc)
+
+
+@router.get("/collection")
+def api_collection():
+    _require_owner()
+    path = files_directory().parent / "collections/progress.json"
+    return json.loads(path.read_text(encoding="utf-8")) if path.exists() else {"stage": "idle", "message": "尚未运行在线找题"}
 
 
 @router.post("/prepare", status_code=202)

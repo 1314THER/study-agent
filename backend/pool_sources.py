@@ -13,8 +13,9 @@ from typing import Iterator
 from xml.etree import ElementTree as ET
 
 from backend.categories import CATEGORIES
+from backend.source_policy import year_evidence
 
-SOURCE_KINDS = ("compilation", "highmath", "conic10k", "jsonl", "pdf", "docx", "image", "txt")
+SOURCE_KINDS = ("compilation", "highmath", "conic10k", "gaokao_related", "jsonl", "pdf", "docx", "image", "txt")
 COMPLETENESS = {"complete", "needs_review", "deferred_graphic", "failed"}
 
 # Strong evidence of information specified only in an unavailable drawing.
@@ -189,6 +190,7 @@ def _iter_json(root: Path, kind: str):
                 categories = [categories] if isinstance(categories, str) else []
             categories = [c for c in categories if c in CATEGORIES] or classify_categories(_string(question), hint)
             qtype = _question_type(item)
+            source_raw = item.get("raw") if kind == "jsonl" and isinstance(item.get("raw"), dict) else {}
             yield _record(
                 item.get("source_key", key) if kind == "jsonl" else key, question, answer, solution,
                 categories=categories, question_type=qtype, year=item.get("year"),
@@ -196,7 +198,8 @@ def _iter_json(root: Path, kind: str):
                 page_start=item.get("page_start"), page_end=item.get("page_end"),
                 completeness=item.get("completeness", "complete") if kind == "jsonl" else "complete",
                 reason=_string(item.get("reason", "")) if kind == "jsonl" else "",
-                raw={"file": rel, "index": number, "original": item},
+                raw={**source_raw, "file": source_raw.get("file", rel), "index": source_raw.get("index", number),
+                     "original": source_raw.get("original", item), "input_locator": {"file": rel, "index": number}},
             )
 
 
@@ -335,8 +338,7 @@ def _iter_compilation(root: Path):
             continue
         chapter = re.search(r"\\chapter(?:\[[^\]]*\])?\{([^}]+)\}", text)
         title = chapter[1] if chapter else file.stem
-        year_match = re.search(r"(?:19|20)\d{2}", title + " " + rel)
-        year = int(year_match[0]) if year_match else None
+        year = year_evidence({"raw": {"paper": title, "file": rel}})["year"]
         for index, start in enumerate(starts, 1):
             end = starts[index].start() if index < len(starts) else len(text)
             block = text[start.start():end]
@@ -363,10 +365,12 @@ def _iter_compilation(root: Path):
                           question_type=qtype, year=year, region=region, question_no=str(index), raw=raw)
 
 
-_QUESTION_START = re.compile(r"^\s*(?:第\s*(\d{1,3})\s*题\s*[.、:：]?|(\d{1,3})\s*[.．、]\s*)(.*)$")
+_QUESTION_START = re.compile(r"^\s*(?:第\s*(\d{1,3})\s*题\s*[.、:：]?|(\d{1,3})\s*[.．、](?!\d)\s*)(.*)$")
 _ANSWER_SECTION = re.compile(r"^\s*(?:参考答案|答案与解析|参考答案及解析|答案解析)\s*[:：]?\s*$")
 _INLINE_ANSWER = re.compile(r"(?:【答案】|\[答案\]|^答案\s*[:：])", re.M)
 _INLINE_SOLUTION = re.compile(r"(?:【(?:解析|分析|详解)】|\[(?:解析|分析|详解)\]|^(?:解析|分析|详解)\s*[:：])", re.M)
+_QUESTION_SECTION = re.compile(r"^\s*(?:[一二三四五六七八九十]+|\d{1,2})[、.．]\s*(?:单项选择题|多项选择题|单选题|多选题|选择题|填空题|解答题)(?=[:：\s（(]|$)")
+_EXAM_INSTRUCTIONS = re.compile(r"^\s*(?:注意事项|考生须知|答题须知|考试说明)\s*[:：]?")
 
 
 def _split_answer(text):
@@ -384,18 +388,22 @@ def _split_answer(text):
     return question, answer, solution
 
 
-def _text_page_records(pages, filename: str, force_review=True):
+def _single_paper_records(pages, filename: str, force_review=True):
     """Join numbered questions across pages and attach numbered answer sections.
 
     Plain text extraction cannot prove mathematical formula fidelity, so PDF/DOCX
     fragments require owner review. Unnumbered text is retained as a fragment.
     """
+    pages = list(pages)
     questions = []
     answers = {}
     current = None
     answer_mode = False
     intro = []
     intro_start = None
+    last_page = None
+    question_section = True
+    question_type = "未知"
 
     def finish():
         nonlocal current
@@ -407,16 +415,28 @@ def _text_page_records(pages, filename: str, force_review=True):
             current = None
 
     for page, text in pages:
+        if last_page is not None and page > last_page + 1:
+            finish()  # Never concatenate across omitted/failed pages.
+        last_page = page
         for line in text.splitlines():
+            if _EXAM_INSTRUCTIONS.match(line):
+                finish()
+                question_section = False
+            if _QUESTION_SECTION.match(line):
+                finish()
+                question_section = True
+                question_type = ("多选题" if "多项" in line or "多选" in line else "填空题" if "填空" in line
+                                 else "大题" if "解答" in line else "选择题")
+                continue
             if _ANSWER_SECTION.match(line):
                 finish()
                 answer_mode = True
                 continue
             match = _QUESTION_START.match(line)
-            if match:
+            if match and (question_section or answer_mode):
                 finish()
                 current = {"number": match[1] or match[2], "start": page, "end": page,
-                           "lines": [match[3]], "fragments": [{"page": page, "text": line}]}
+                           "type": question_type, "lines": [match[3]], "fragments": [{"page": page, "text": line}]}
             elif current:
                 current["end"] = page
                 current["lines"].append(line)
@@ -431,11 +451,14 @@ def _text_page_records(pages, filename: str, force_review=True):
                       reason="未编号原文片段，保留以防切题遗漏", page_start=intro_start, page_end=intro[-1]["page"],
                       raw={"file": filename, "fragments": intro})
     seen = {}
+    counts = {}
+    for item in questions:
+        counts[item["number"]] = counts.get(item["number"], 0) + 1
     for item in questions:
         number = item["number"]
         seen[number] = seen.get(number, 0) + 1
         question, answer, solution = _split_answer("\n".join(item["lines"]))
-        matches = answers.pop(number, [])
+        matches = answers.pop(number, []) if counts[number] == 1 else []
         if len(matches) == 1:
             _, extra_answer, extra_solution = _split_answer("\n".join(matches[0]["lines"]))
             answer = answer or extra_answer or "\n".join(matches[0]["lines"]).strip()
@@ -443,8 +466,10 @@ def _text_page_records(pages, filename: str, force_review=True):
         reason = "文件文字提取结果，请核对公式与切题边界" if force_review else ""
         if len(matches) > 1:
             reason += "；答案区存在重号，未自动关联"
+        if counts[number] > 1:
+            reason += "；题干区存在重号，未自动关联答案"
         yield _record(f"{filename}#q{number}-p{item['start']}-{seen[number]}", question, answer, solution,
-                      question_no=number, page_start=item["start"], page_end=item["end"],
+                      question_no=number, question_type=item["type"], page_start=item["start"], page_end=item["end"],
                       completeness="needs_review" if force_review else "complete", reason=reason,
                       raw={"file": filename, "fragments": item["fragments"], "answer_fragments": matches})
     for number, fragments in answers.items():
@@ -452,6 +477,101 @@ def _text_page_records(pages, filename: str, force_review=True):
             yield _record(f"{filename}#answer-{number}-p{item['start']}-{index}", "\n".join(item["lines"]),
                           completeness="needs_review", reason="未匹配到题干的答案片段", question_no=number,
                           page_start=item["start"], page_end=item["end"], raw={"file": filename, "fragments": item["fragments"]})
+
+
+def _paper_title(line):
+    """Recognize headings conservatively; question content is not a heading."""
+    line = line.strip()
+    if not 6 <= len(line) <= 180 or _QUESTION_START.match(line) or re.search(r"第\s*\d+\s*页|共\s*\d+\s*页", line):
+        return None
+    if not re.search(r"(?:19|20)\d{2}|第[一二三四五六七八九十\d]+套", line):
+        return None
+    if not re.search(r"数学|全国.*卷|新课标.*卷", line) or not re.search(r"卷|试题|模拟|联考|考试|测试|检测|调研|调考|月考|练习|期[中末]", line):
+        return None
+    if re.search(r"求|已知|设[函数集合]|证明|[？?]", line):
+        return None
+    return line
+
+
+def _title_identity(title):
+    return re.sub(r"[\s（()）:：·]|参考答案(?:及解析)?|答案(?:与|及)?解析|参考答案|答案|试题", "", title)
+
+
+def _text_page_records(pages, filename: str, force_review=True):
+    """Separate papers first, then attach answers only inside each paper.
+
+    Repeated headers are recognized, answer books may revisit earlier named
+    papers, and an unexplained question-number reset creates a review segment.
+    """
+    pages = list(pages)
+    papers = []
+    named = {}
+    def new_paper(title="", uncertain=False):
+        paper = {"id": len(papers) + 1, "title": title or Path(filename).stem,
+                 "uncertain": uncertain, "pages": [], "answer_mode": False, "last_number": 0}
+        papers.append(paper)
+        return paper
+    current = new_paper()
+    def append(page, line):
+        if current["pages"] and current["pages"][-1][0] == page:
+            current["pages"][-1][1].append(line)
+        else:
+            current["pages"].append([page, [line]])
+    question_section = True
+    for page, text in pages:
+        lines = text.splitlines()
+        skip_next = False
+        for index, line in enumerate(lines):
+            if skip_next:
+                skip_next = False
+                continue
+            title = _paper_title(line)
+            if not title and index + 1 < len(lines) and re.match(r"^\s*数学(?:试[卷题])?\s*$", lines[index + 1]):
+                title = _paper_title(line + " " + lines[index + 1])
+                skip_next = bool(title)
+            if title:
+                identity = _title_identity(title)
+                if identity in named:
+                    current = named[identity]
+                elif len(papers) == 1 and not current["pages"]:
+                    current["title"] = title
+                    named[identity] = current
+                else:
+                    current = new_paper(title)
+                    named[identity] = current
+                if "答案" in title:
+                    current["answer_mode"] = True
+                    current["last_number"] = 0
+                    append(page, "参考答案")
+                question_section = True
+                continue
+            if _EXAM_INSTRUCTIONS.match(line):
+                question_section = False
+            if _QUESTION_SECTION.match(line):
+                question_section = True
+            if _ANSWER_SECTION.match(line):
+                current["answer_mode"] = True
+                current["last_number"] = 0
+            match = _QUESTION_START.match(line)
+            if match and (question_section or current["answer_mode"]):
+                number = int(match[1] or match[2])
+                if number == 1 and current["last_number"] >= 1:
+                    current = new_paper(uncertain=True)
+                current["last_number"] = number
+            append(page, line)
+    multiple = len(papers) > 1
+    for paper in papers:
+        page_text = [(p, "\n".join(lines)) for p, lines in paper["pages"]]
+        for item in _single_paper_records(page_text, filename, force_review):
+            if multiple:
+                item["source_key"] += f"-paper{paper['id']}"
+            item["raw"].update(paper=paper["title"], paper_id=f"paper-{paper['id']}",
+                               boundary_uncertain=paper["uncertain"])
+            item["year"] = year_evidence({"raw": {"paper": paper["title"], "file": filename}})["year"]
+            if paper["uncertain"]:
+                item["completeness"] = "needs_review" if item["completeness"] == "complete" else item["completeness"]
+                item["reason"] += "；试卷边界仅由题号重置推测，请核对原文件"
+            yield item
 
 
 _W = "{http://schemas.openxmlformats.org/wordprocessingml/2006/main}"
@@ -527,76 +647,163 @@ def _docx_pages(file: Path):
 _OCR_PROMPT = """将本页所有数学题、原答案和原解析忠实转录为 JSON 数组。
 每项字段：question（题干与所有选项，用 LaTeX）、answer（原答案，没有则空字符串）、
 solution（原解析，没有则空字符串）、question_no（原题号）、continuation（是否为上页续文）、
-requires_graphic（是否必须看图才能作答）。只转录原文，不补条件、不解题。
+requires_graphic（是否必须看图才能作答）、paper_title（原卷标题，未见则空）、
+paper_start（本页是否开始新卷）、section（question/answer/fragment）、blank_page（是否空白页）。
+表格必须保留行列，可用 LaTeX array/tabular；不能将表格展平为无对应关系的数字。
+只转录原文，不补条件、不解题。答案区的条目 section=answer，不得伪装成新题。
 页面若只有续文也必须保留；无法识别的内容用[无法识别]标记，不能省略。
+"""
+_OCR_QUESTIONS_PROMPT = """只转录本页原始数学题，不解题，不转录答案和解析。返回 JSON 数组。
+每项包含 question（完整题干和所有选项，公式用 LaTeX）、question_no（单个原题号）、
+question_type（按原卷题型，选择题/多选题/填空题/大题/未知）、requires_graphic、
+continuation、paper_title、section（question/fragment/answer）。每道题单独一项，不能合并题号。
+表格按原行列转为 LaTeX array，图表文字和数据完整保留；无法识别的内容写[无法识别]，不要补条件。
+试卷说明和页眉页脚是 fragment。只有答案解析的页面返回一项 question=[原卷答案区]、section=answer。
 """
 
 
-def _ocr_items(base64_image, filename, page):
+def _ocr_items(base64_image, filename, page, *, prompt=_OCR_PROMPT):
     from backend.multimodal import _call_deepseek_vision
-    raw_response = _call_deepseek_vision(image_base64=base64_image, text=_OCR_PROMPT)
+    raw_response = _call_deepseek_vision(image_base64=base64_image, text=prompt)
     match = re.search(r"```(?:json)?\s*(.*?)```", raw_response, re.S)
     value = json.loads(match[1] if match else raw_response)
-    if not isinstance(value, list) or not value:
+    if not isinstance(value, list):
         raise ValueError("OCR 未返回题目列表，保留原页待重试")
+    if not value:
+        yield _record(f"{filename}#p{page}-ocr1", "[本页 OCR 未识别出题目，请核对原页]", completeness="needs_review",
+                      reason="未识别出条目，不能确认本页为空白", page_start=page, page_end=page,
+                      raw={"file": filename, "page": page, "ocr_empty": True})
     for index, item in enumerate(value, 1):
         if not isinstance(item, dict):
             yield _error(f"{filename}#p{page}-ocr{index}", "OCR 题目不是对象", {"response": raw_response}, page_start=page, page_end=page)
             continue
+        if item.get("blank_page") is True:
+            continue
         question = item.get("question", "")
+        if item.get("section") == "answer" and not question:
+            question = "【答案】" + _string(item.get("answer")) + "\n【解析】" + _string(item.get("solution"))
         continuation = item.get("continuation") is True
         yield _record(f"{filename}#p{page}-ocr{index}", question, item.get("answer", ""), item.get("solution", ""),
                       question_no=_string(item.get("question_no", "")), page_start=page, page_end=page,
+                      question_type=item.get("question_type", "未知"),
                       completeness="deferred_graphic" if item.get("requires_graphic") is True else "needs_review",
                       reason="OCR 转录需人工核对" + ("；上页续文，请与相邻页合并" if continuation else ""),
                       raw={"file": filename, "page": page, "ocr": item, "continuation": continuation})
 
 
 def _read_pdf_records(file: Path, options):
+    from backend.source_conversion import read_pdf_pages
+    from backend.jobs import JobStopped
+    filename = options.get("filename") or file.name
     try:
-        import fitz
-        document = fitz.open(file)
+        from functools import partial
+        prompt = _OCR_QUESTIONS_PROMPT if options.get("questions_only") else _OCR_PROMPT
+        units = read_pdf_pages(file, options, partial(_ocr_items, prompt=prompt), prompt)
+    except JobStopped:
+        raise
     except Exception as exc:
-        yield _error(f"{file.name}#file", exc, {"file": file.name})
+        yield _error(f"{filename}#file", exc, {"file": filename})
         return
-    pending_pages = []
-    page_numbers = set(options.get("page_numbers") or [])
-    with document:
-        for number, page in enumerate(document, 1):
-            if page_numbers and number not in page_numbers:
-                continue
-            text = page.get_text("text", sort=True).strip()
-            # Scans may have only an embedded text header or page number.
-            scan = not text
-            if text and len(text) < 120:
-                try:
-                    page_area = page.rect.width * page.rect.height
-                    scan = any(rect.width * rect.height > page_area * 0.65
-                               for image in page.get_images() for rect in page.get_image_rects(image[0]))
-                except Exception:
-                    # Text stays reviewable when a PDF does not expose image bounds.
-                    scan = False
-            if text and not scan:
-                pending_pages.append((number, text))
-                continue
-            if pending_pages:
-                yield from _text_page_records(pending_pages, file.name)
-                pending_pages = []
-            if options.get("ocr") is True:
-                try:
-                    import base64
-                    from backend.multimodal import _pdf_render_scale
-                    scale = _pdf_render_scale(page, 180)
-                    png = page.get_pixmap(matrix=fitz.Matrix(scale, scale)).tobytes("png")
-                    yield from _ocr_items(base64.b64encode(png).decode(), file.name, number)
-                except Exception as exc:
-                    yield _error(f"{file.name}#p{number}-ocr1", exc, {"file": file.name, "page": number}, page_start=number, page_end=number)
-            else:
-                yield _record(f"{file.name}#p{number}-ocr1", completeness="needs_review",
-                              reason="本页疑似扫描内容，等待显式启用 OCR；原页及已有文字片段已保留", page_start=number, page_end=number,
-                              raw={"file": file.name, "page": number, "scan": True, "extracted_fragment": text})
-        if pending_pages:
-            yield from _text_page_records(pending_pages, file.name)
+    pages, extras, metadata = [], [], {}
+    for unit in units:
+        number = unit["page"]
+        metadata[number] = unit.get("metadata", {})
+        if unit["status"] == "failed":
+            extras.append(_error(f"{filename}#p{number}-ocr1", unit["error"],
+                                 {"file": filename, "page": number, "page_metadata": metadata[number]}, page_start=number, page_end=number))
+        elif unit["kind"] == "scan":
+            extras.append(_record(f"{filename}#p{number}-ocr1", completeness="needs_review",
+                                  reason="本页疑似扫描内容，等待显式启用 OCR；原页及已有文字片段已保留", page_start=number, page_end=number,
+                                  raw={"file": filename, "page": number, "scan": True, "extracted_fragment": unit["text"]}))
+        elif unit["kind"] == "text":
+            pages.append((number, unit["text"]))
+        else:
+            lines = []
+            section_type = None
+            def remember_section(line):
+                nonlocal section_type
+                section_type = ("多选题" if "多项" in line or "多选" in line else "填空题" if "填空" in line
+                                else "大题" if "解答" in line else "选择题")
+            metadata[number]["source_records"] = unit["records"]
+            for record in unit["records"]:
+                ocr = record["raw"].get("ocr", {})
+                title = _string(ocr.get("paper_title"))
+                if title and _paper_title(title):
+                    lines.append(title)
+                if ocr.get("section") == "fragment" and not record["raw"].get("continuation"):
+                    # Instructions can arrive after questions in OCR output.
+                    # Retain them without allowing their numbered steps or
+                    # page footers to masquerade as new questions.
+                    extras.append({**record, "source_key": record["source_key"] + "-fragment", "question_no": ""})
+                    for line in record["question"].splitlines():
+                        if _QUESTION_SECTION.match(line) or _ANSWER_SECTION.match(line):
+                            lines.append(line)
+                            if _QUESTION_SECTION.match(line):
+                                remember_section(line)
+                    continue
+                if ocr.get("section") == "answer":
+                    lines.append("参考答案")
+                    if options.get("questions_only"):
+                        extras.append({**record, "source_key": record["source_key"] + "-answer", "question_no": ""})
+                        continue
+                # A section heading may be bundled with the first question.
+                body_lines = record["question"].splitlines()
+                while body_lines and _QUESTION_SECTION.match(body_lines[0]):
+                    heading = body_lines.pop(0)
+                    lines.append(heading)
+                    remember_section(heading)
+                record["question"] = "\n".join(body_lines)
+                if section_type and record["question_type"] != section_type:
+                    record["raw"]["ocr_type_conflict"] = {"ocr": record["question_type"], "printed_section": section_type}
+                    record["question_type"] = section_type
+                existing = _QUESTION_START.match(record["question"])
+                if existing and (existing[1] or existing[2]) == str(record["question_no"]):
+                    record["question"] = record["question"][existing.start(3):]
+                first_line = record["question"].splitlines()[0] if record["question"] else ""
+                if not existing and re.match(r"^\s*[A-D][.、．]", first_line):
+                    # An option-only block with its original question number
+                    # is a continuation, never another numbered question.
+                    record["raw"]["continuation"] = True
+                if not record["raw"].get("continuation") and ocr.get("section") != "answer":
+                    heading = {"选择题": "一、单项选择题", "多选题": "二、多项选择题", "填空题": "三、填空题", "大题": "四、解答题"}.get(record["question_type"])
+                    if heading:
+                        lines.append(heading)
+                # A grouped OCR block (e.g. 12-14) already contains numbering.
+                prefix = (str(record["question_no"]) + ". " if str(record["question_no"]).isdigit() and not record["raw"].get("continuation")
+                          and ocr.get("section") != "fragment" and not _QUESTION_SECTION.match(first_line) else "")
+                lines.append(prefix + record["question"])
+                if record["answer"] and "【答案】" not in record["question"]:
+                    lines.append("【答案】" + record["answer"])
+                if record["solution"] and "【解析】" not in record["question"]:
+                    lines.append("【解析】" + record["solution"])
+            pages.append((number, "\n".join(lines)))
+    records = list(_text_page_records(pages, filename))
+    for record in records:
+        start, end = record.get("page_start"), record.get("page_end")
+        page_meta = {str(n): metadata[n] for n in range(start or 1, (end or start or 1) + 1) if n in metadata}
+        record["raw"]["page_metadata"] = page_meta
+        origins = [o for m in page_meta.values() for o in m.get("source_records", [])
+                   if o["question_no"] == record["question_no"] and o["raw"].get("ocr", {}).get("section") != "answer"
+                   and _split_answer(o["question"])[0] in record["question"]]
+        if origins:
+            # Preserve legacy OCR locators so repairing a failed page replaces
+            # its placeholder instead of accumulating another candidate.
+            if origins[0].get("page_start") == start:
+                record["source_key"] = origins[0]["source_key"]
+            record["raw"]["ocr_fragments"] = origins
+            if any(o["raw"].get("ocr_type_conflict") for o in origins):
+                record["reason"] += "；OCR 题型与原卷段落标记不同，采用原卷标记，请核对"
+            origin_types = {o["question_type"] for o in origins if o.get("question_type") in ("选择题", "多选题", "填空题", "大题")}
+            if len(origin_types) == 1:
+                record["question_type"] = next(iter(origin_types))
+            elif len(origin_types) > 1:
+                record["reason"] += "；OCR 题型冲突，请核对原卷"
+            if any(o["completeness"] == "deferred_graphic" for o in origins):
+                record["completeness"] = "deferred_graphic"
+        if any(m.get("tables") or m.get("image_rects") for m in page_meta.values()):
+            record["reason"] += "；原页含表格或图片，已保留位置/单元格，请核对条件完整性"
+        record["raw"]["conversion_pending_pages"] = [u["page"] for u in units if u["status"] == "failed" or u["kind"] == "scan"]
+    yield from sorted(records + extras, key=lambda r: (r.get("page_start") or 0, r["source_key"]))
 
 
 def _iter_pdf(file: Path, options):
@@ -605,7 +812,8 @@ def _iter_pdf(file: Path, options):
         continuation = item["raw"].get("continuation") is True
         adjacent = previous and previous.get("page_end") and item.get("page_start") == previous["page_end"] + 1
         same_number = previous and (not item["question_no"] or item["question_no"] == previous["question_no"])
-        if continuation and adjacent and same_number and previous["completeness"] != "failed":
+        same_paper = previous and previous["raw"].get("paper_id") == item["raw"].get("paper_id")
+        if continuation and adjacent and same_number and same_paper and previous["completeness"] != "failed":
             previous["question"] = "\n".join(filter(None, [previous["question"], item["question"]]))
             previous["solution"] = "\n".join(filter(None, [previous["solution"], item["solution"]]))
             if item["answer"] and item["answer"] != previous["answer"]:
@@ -634,8 +842,16 @@ def iter_source_records(path, kind, options=None) -> Iterator[dict]:
         raise ValueError("题源文件不存在")
     if kind == "compilation":
         yield from _iter_compilation(root)
+    elif kind == "gaokao_related":
+        from backend.gaokao_related import iter_gaokao_related
+        yield from iter_gaokao_related(root, options)
     elif kind in ("jsonl", "highmath", "conic10k"):
-        yield from _iter_json(root, kind)
+        first = next(_json_items(root), (None, None, None))[1] if kind == "jsonl" and root.is_file() else None
+        if isinstance(first, dict) and {"stem", "paperTitle", "qNo"}.issubset(first):
+            from backend.gaokao_related import iter_gaokao_related
+            yield from iter_gaokao_related(root, options)
+        else:
+            yield from _iter_json(root, kind)
     elif kind == "pdf":
         yield from _iter_pdf(root, options)
     elif kind == "docx":

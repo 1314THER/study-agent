@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "checked_on": "2026-10-11",
+  "policy": {
+    "minimum_year": 2016,
+    "mock_years": [2025, 2026],
+    "excluded_mock_regions": ["北京", "天津", "上海"],
+    "mock_structure": "8 single + 3 multiple + 3 fill + 5 solve",
+    "answers_required": false,
+    "ocr_concurrency": 20
+  },
+  "sources": [
+    {
+      "id": "gaokao-related-math",
+      "name": "新高考数学结构化题库",
+      "strategy": "huggingface_jsonl",
+      "repository": "cheese233/gaokao-related-math",
+      "url": "https://huggingface.co/datasets/cheese233/gaokao-related-math",
+      "download_hosts": ["https://huggingface.co", "https://hf-mirror.com"],
+      "file": "data/jsonl/problems.jsonl",
+      "pinned_revision": "202c7cfc5b32264cecccf629c31b592cc702afed",
+      "pinned_sha256": "03a70bdbe7329e43f94abb14db9547bc04cec3c2682df2c19d065e44f02d7289",
+      "upstream_updated_at": "2026-06-26T13:12:26.000Z",
+      "adapter": "gaokao_related",
+      "status": "download_verified",
+      "notes": "13915 条，699 卷；本轮筛出 229 套完整 19 题模考。源数据和图片一并存本地；缺答案不影响采集。上游更新频率没有承诺。"
+    },
+    {
+      "id": "gaokao-compilation",
+      "url": "https://github.com/DxAThing/Gaokao-Math-Problems-Compilation",
+      "strategy": "github_latex",
+      "adapter": "compilation",
+      "pinned_revision": "009953bcd079a219e18166d1e443ce8931b9c731",
+      "local_directory": "compilation-20261004",
+      "status": "download_verified",
+      "notes": "高考真题的 LaTeX 主源；已有本地采集清单。导入时按试卷年份过滤，不能把 release 日期当作题源年份。"
+    },
+    {
+      "id": "china-gaokao-papers",
+      "url": "https://github.com/qingshuo/China-Gaokao-Papers-Collection",
+      "strategy": "github_csv_index",
+      "index": "data/exams.csv",
+      "status": "index_verified",
+      "notes": "可读取年份、学科、文件路径、来源、SHA256；真题补漏渠道，不能视作最新模考全集。"
+    },
+    {
+      "id": "deekur-gaokaomath",
+      "url": "https://github.com/deekur/gaokaomath",
+      "strategy": "github_pdf",
+      "adapter": "pdf",
+      "status": "repository_verified",
+      "notes": "截至 2026 年的数学真题 PDF；与 LaTeX 汇编来源有重叠。"
+    },
+    {
+      "id": "wh111-mocks",
+      "url": "https://www.wh111.com/shuxue/jingxuanshiti/gaozhongshuxue/gaosanshuxueyuekao/",
+      "strategy": "public_listing",
+      "status": "download_verified",
+      "notes": "已取得 72 份 2025/2026 模考试卷 PDF，原件全部缓存；初次另下载的独立标答已排除。高三教案专题目录也已扫描，本轮没有额外取得免费专题附件。采集脚本自动遍历公开分页，收费或返回网页的链接保留失败清单。"
+    },
+    {
+      "id": "jimutu-mocks",
+      "url": "https://www.jimutu.cn/wenku/list/104",
+      "strategy": "public_listing",
+      "status": "blocked_403",
+      "notes": "索引有 2026 模考，但实际访问 403，不能作为稳定自动采集入口。"
+    },
+    {
+      "id": "wechat-zhejiang-math",
+      "name": "浙江省高中数学（冯杰老师）",
+      "url": "https://www.wzgk.net/chsys/ueditor/asp/upload/file/20260525/17796976099058165.pdf",
+      "strategy": "teacher_attachment",
+      "status": "indexed_download_failed_tls",
+      "notes": "搜索索引可见导数专题及公众号署名；下载遇到证书域名错误，尚未取得文件，不计作已获得题库。"
+    },
+    {
+      "id": "gaokao-rag",
+      "url": "https://github.com/ttzc/gaokao_rag",
+      "status": "excluded_no_public_question_data",
+      "notes": "代码仓库，README 明确 data 不入库、初始知识库为空；不能拿作者的 233 份私人资料当公开题库。"
+    }
+  ]
+}

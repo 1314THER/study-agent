@@ -146,7 +146,7 @@ def _call_deepseek_vision(image_base64: Optional[str] = None, text: Optional[str
     messages = [{"role": "user", "content": []}]
     
     if image_base64:
-        # One image per request: PDF pages are processed sequentially.
+        # One page per request; callers may overlap requests under provider_slot.
         try:
             image_bytes = base64.b64decode(image_base64, validate=True)
         except (ValueError, base64.binascii.Error) as exc:

@@ -1,0 +1,18 @@
+{
+  "101": {"primary_routine_id":"SET-017","representative_score":98,"variant_features":["空集与非空两分支"]},
+  "102": {"primary_routine_id":"SET-017","representative_score":90,"variant_features":["空集与非空两分支"]},
+  "103": {"primary_routine_id":"SET-018","variant_features":["明确非空","开闭端点"]},
+  "104": {"primary_routine_id":"SET-019","variant_features":["退化单点"]},
+  "105": {"primary_routine_id":"QUAD-014","variant_features":["最高次项为零"]},
+  "106": {"primary_routine_id":"FUNC-023","variant_features":["外点两条切线"]},
+  "107": {"primary_routine_id":"FUNC-022","variant_features":["已知切点"]},
+  "108": {"primary_routine_id":"SEQ-018","variant_features":["相邻分式相消"]},
+  "109": {"primary_routine_id":"SEQ-016","variant_features":["等差乘等比"]},
+  "110": {"primary_routine_id":"PROB-018","variant_features":["无放回"]},
+  "111": {"primary_routine_id":"PROB-017","variant_features":["有放回"]},
+  "112": {"primary_routine_id":"GEO-020","variant_features":["中点弦"]},
+  "113": {"primary_routine_id":"SET-017"},
+  "114": {"primary_routine_id":"SET-009","secondary_routine_ids":["QUAD-010"],"composite":true},
+  "115": {"primary_routine_id":"SOLID-002"},
+  "116": {"primary_routine_id":null,"confidence":"low","suggested_routine":{"name":"状态迭代：先补齐转移规则再分析","category":"数列","key_steps":["核对转移规则","明确初始状态","判断是否属于已有递推方法"]}}
+}

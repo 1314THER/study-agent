@@ -331,18 +331,18 @@ class JobsTest(unittest.TestCase):
                 with lock:
                     counts[0] += 1
                     counts[1] = max(counts[1], counts[0])
-                    if counts[0] == 2:
+                    if counts[0] == jobs.PROVIDER_CONCURRENCY:
                         entered.set()
                 self.assertTrue(release.wait(3))
                 with lock:
                     counts[0] -= 1
-        threads = [threading.Thread(target=run, args=(provider,)) for provider in ("deepseek", "deepseek", "deepseek")]
+        threads = [threading.Thread(target=run, args=("deepseek",)) for _ in range(jobs.PROVIDER_CONCURRENCY + 1)]
         try:
             for thread in threads:
                 thread.start()
             self.assertTrue(entered.wait(2))
-            self.assertEqual(jobs.provider_active_count(), 2)
-            self.assertEqual(counts[1], 2)
+            self.assertEqual(jobs.provider_active_count(), jobs.PROVIDER_CONCURRENCY)
+            self.assertEqual(counts[1], jobs.PROVIDER_CONCURRENCY)
         finally:
             release.set()
             for thread in threads:

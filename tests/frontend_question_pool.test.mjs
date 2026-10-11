@@ -79,6 +79,8 @@ function apiMock() {
       value = {items: body.item_ids.map(id => { Object.assign(items.get(id), {status: 'imported', formal_question_id: id + 1000}); return {item_id: id, status: 'imported', question_id: id + 1000}; })};
     } else if (/^\/question-pool\/sources\/\d+$/.test(path) && method === 'PATCH') { Object.assign(sources[0], body); value = sources[0]; }
     else if (path === '/question-pool/uploads' || /^\/question-pool\/sources\/\d+\/retry$/.test(path)) value = {job_id: 'import-job', status: 'done', result: {}};
+    else if (path === '/question-pool/collect') value = {job_id: 'collect-job', kind: 'pool_collect', status: 'queued'};
+    else if (path === '/question-pool/collection') value = {stage: 'idle'};
     else if (path.startsWith('/jobs/')) value = {job_id: path.split('/').pop(), status: 'done', result: {}};
     else throw new Error('Unexpected API: ' + path);
     return {ok: true, status: 200, json: async () => structuredClone(value)};
@@ -109,6 +111,31 @@ await denied.controller.init();
 assert.equal(denied.server.calls.length, 0);
 assert.equal(denied.field('poolWorkspace').hidden, true);
 assert.match(denied.field('poolAccess').textContent, /主人/);
+
+// Collection submits a background intake job with 20 OCR slots and no solver.
+const collection = runtime();
+await collection.controller.init();
+collection.field('poolCollectYears').value = '2026，2025,2026';
+collection.field('poolCollectTopics').checked = true;
+collection.field('poolCollectOcr').checked = true;
+collection.context.window.StudyJobs.get = async id => ({job_id: id, kind: 'pool_collect', status: 'done', result: {
+  stage: 'done', message: '采集完成', downloaded: 2, question_records: 38, added_occurrences: 19,
+  verified_papers: 1, unverified_papers: 1, completed_pages: 8, cache_page_hits: 7, failed_pages: 1,
+  resources: [], failures: [{title: '<不安全来源>', url: 'javascript:alert(1)', error: '需手动获取'}],
+  conversion_results: [{title: '待核对卷', url: 'https://example.org/paper', valid: false}]
+}});
+await collection.controller.collect({preventDefault() {}});
+const collectionCall = collection.server.calls.find(call => call.path === '/question-pool/collect');
+assert.deepEqual(collectionCall.body, {years: [2026, 2025], topics: true, ocr: true, concurrency: 20});
+assert.match(collection.field('poolCollectionReport').textContent, /通过整卷核验 1 份.*缓存命中 7.*失败页 1/);
+assert.match(collection.field('poolCollectionReport').textContent, /待核对卷.*尚未通过整卷/);
+assert.equal(collection.field('poolCollectionReport').querySelectorAll('a').some(link => link.href.startsWith('javascript:')), false);
+assert.equal(collection.server.calls.some(call => /prepare|commit/.test(call.path)), false);
+assert.equal(collection.controller.state.pendingJob, null);
+collection.field('poolCollectYears').value = '2015';
+await collection.controller.collect({preventDefault() {}});
+assert.equal(collection.server.calls.filter(call => call.path === '/question-pool/collect').length, 1);
+assert.match(collection.field('poolNotice').textContent, /2016/);
 
 // Server pagination covers every text candidate without loading the whole corpus.
 const workbench = runtime();

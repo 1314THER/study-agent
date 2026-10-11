@@ -1410,6 +1410,8 @@ from backend.jobs import router as jobs_router
 app.include_router(jobs_router)
 from backend.question_pool import router as question_pool_router
 app.include_router(question_pool_router)
+from backend.routine_matching_api import router as routine_matching_router
+app.include_router(routine_matching_router)
 
 @app.get("/demo/presets")
 def demo_presets():

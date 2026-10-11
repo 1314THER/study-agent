@@ -149,6 +149,7 @@
     function updateBusy() {
       ['poolPrepare', 'poolPreview'].forEach(function (id) { el(id).disabled = state.busy || !state.selected.size; });
       el('poolUploadButton').disabled = state.busy; el('poolRefresh').disabled = state.busy;
+      el('poolCollectButton').disabled = state.busy;
       el('poolCommit').disabled = state.busy || !eligiblePreview(state.preview, state.confirmations).length;
     }
     function badge(text, style) { return node('span', text, 'pool-badge' + (style ? ' ' + style : '')); }
@@ -338,6 +339,21 @@
     }
     function showDialog(id) { var dialog = el(id); if (dialog.showModal) { if (!dialog.open) dialog.showModal(); } else { dialog.hidden = false; dialog.open = true; } }
     function closeDialog(id) { var dialog = el(id); if (dialog.close) dialog.close(); else { dialog.hidden = true; dialog.open = false; } }
+    function renderCollectionReport(report) {
+      var box = el('poolCollectionReport'); box.replaceChildren();
+      if (!report || report.stage === 'idle') return;
+      el('poolCollectionStatus').textContent = report.message || '正在找题…';
+      if (report.stage !== 'done') return;
+      box.appendChild(node('p', (report.structured ? '结构化整卷 ' + report.structured.papers + ' 份 · ' : '') + '通过整卷核验 ' + (report.verified_papers || 0) + ' 份 · 待核对 ' + (report.unverified_papers || 0) + ' 份 · 完成 ' + (report.completed_pages || 0) + ' 页 · 缓存命中 ' + (report.cache_page_hits || 0) + ' · 失败页 ' + (report.failed_pages || 0), 'pool-muted'));
+      var entries = (report.failures || []).map(function (entry) { return {entry: entry, detail: entry.error}; });
+      (report.conversion_results || []).filter(function (entry) { return !entry.valid; }).forEach(function (entry) { entries.push({entry: entry, detail: '尚未通过整卷题号与题型核验，原卷和候选题已保留'}); });
+      if (entries.length) {
+        var details = node('details'), summary = node('summary', '查看未完成项目（' + entries.length + '）'), list = node('ul');
+        entries.forEach(function (item) { var li = node('li'), url = safeUrl(item.entry.url); if (url) { var link = node('a', item.entry.title || item.entry.source || '题源'); link.href = url; link.target = '_blank'; link.rel = 'noopener noreferrer'; li.appendChild(link); } else li.appendChild(node('span', item.entry.title || item.entry.source || '题源')); li.appendChild(node('span', '：' + (item.detail || '待核对'))); list.appendChild(li); });
+        details.append(summary, list); box.appendChild(details);
+      }
+    }
+    async function loadCollectionReport() { try { renderCollectionReport(await api('/question-pool/collection')); } catch (error) { el('poolCollectionStatus').textContent = '上次采集报告暂时无法读取：' + error.message; } }
     function renderSources() {
       var box = el('poolSourcesList'); box.replaceChildren();
       (state.meta.sources || []).forEach(function (source) {
@@ -348,6 +364,9 @@
         card.appendChild(node('p', parts.join(' · ') || '尚未处理', 'pool-source-stats'));
         if (source.detail || source.error) card.appendChild(node('p', source.detail || source.error, 'pool-muted'));
         if (source.import_status && source.import_status !== 'ready') card.appendChild(node('p', '导入状态：' + ({queued: '等待处理', running: '处理中', error: '提取失败', interrupted: '提取已中断', done: '完成'}[source.import_status] || source.import_status), 'pool-source-stats'));
+        var report = source.import_report || {};
+        if (report.minimum_year) card.appendChild(node('p', '最低年份 ' + report.minimum_year + ' · 跳过旧题 ' + (report.skipped_old || 0) + ' · 未知年份 ' + (report.unknown_year || 0), 'pool-source-stats'));
+        if (report.conversion) { var conversion = report.conversion; card.appendChild(node('p', '完成页 ' + (conversion.completed_pages || 0) + '/' + (conversion.total_pages || 0) + ' · 缓存命中 ' + (conversion.cache_hits || 0) + ' · 失败页 ' + (conversion.failed_pages || 0), 'pool-source-stats')); }
         if (source.import_error) card.appendChild(node('p', source.import_error, 'pool-preview-error'));
         var form = node('form', undefined, 'pool-source-edit'), name = node('input'), license = node('input'), allowed = node('input'); name.value = source.name || ''; name.setAttribute('aria-label', '题源名称'); license.value = source.license || ''; license.placeholder = '许可说明 / 使用范围'; license.setAttribute('aria-label', '许可说明'); allowed.type = 'checkbox'; allowed.checked = !!source.publication_allowed;
         var label = node('label'); label.append(allowed, node('span', '允许将选中题目公开为共享母题或变式（原文件仍仅主人可见）'));
@@ -364,7 +383,7 @@
     async function trackJob(job) {
       var id = job.job_id || job.id; if (!id) throw new Error('服务器未确认任务，请重试。');
       state.pendingJob = id; persist(); el('poolJobProgress').hidden = false;
-      function progress(current) { var labels = {queued: '等待执行', running: '进行中', done: '完成', error: '失败', interrupted: '任务已中断'}; el('poolJobProgress').textContent = '后台任务 · ' + (labels[current.status] || current.status || '已提交') + (current.detail || current.stage ? ' · ' + (current.detail || current.stage) : '') + (current.progress ? ' · ' + current.progress + '%' : ''); }
+      function progress(current) { var labels = {queued: '等待执行', running: '进行中', done: '完成', error: '失败', interrupted: '任务已中断'}; el('poolJobProgress').textContent = '后台任务 · ' + (labels[current.status] || current.status || '已提交') + (current.detail || current.stage ? ' · ' + (current.detail || current.stage) : '') + (current.progress ? ' · ' + current.progress + '%' : ''); if (current.kind === 'pool_collect' || job.kind === 'pool_collect') el('poolCollectionStatus').textContent = current.detail || '正在找题…'; }
       progress(job);
       try {
         var result;
@@ -372,7 +391,10 @@
         else { var currentJob = job; while (!['done', 'error', 'interrupted'].includes(currentJob.status)) { await new Promise(function (resolve) { setTimeout(resolve, 2200); }); currentJob = await api('/jobs/' + encodeURIComponent(id)); progress(currentJob); } if (currentJob.status !== 'done') throw new Error(currentJob.error && currentJob.error.detail || currentJob.error || '后台任务未完成'); result = currentJob.result; }
         state.pendingJob = null; persist(); await refresh();
         var failed = result && Number(result.failed) || 0;
-        notice(failed ? '本次 ' + (Number(result.ready) || 0) + ' 题已准备，' + failed + ' 题失败。失败项可逐题查看原因并单独重试。' : '后台处理完成。请逐题核对原题与 AI 解析，再预览入库。', !!failed);
+        if (result && Array.isArray(result.resources)) {
+          var message = '找题完成：取得 ' + result.downloaded + ' 份文件，读取 ' + result.question_records + ' 条题目，新增出处 ' + result.added_occurrences + '。';
+          renderCollectionReport(result); notice(message);
+        } else notice(failed ? '本次 ' + (Number(result.ready) || 0) + ' 题已准备，' + failed + ' 题失败。失败项可逐题查看原因并单独重试。' : '后台处理完成。请逐题核对原题与 AI 解析，再预览入库。', !!failed);
       } catch (error) { if (error.job && ['error', 'interrupted'].includes(error.job.status)) { state.pendingJob = null; persist(); } await refresh(); throw error; }
     }
     async function prepare() {
@@ -439,6 +461,14 @@
       try { notice('正在上传题源文件，请等待服务器确认。'); var job = await api('/question-pool/uploads', 'POST', form); closeDialog('poolSourcesDialog'); el('poolUploadFile').value = ''; await trackJob(job); }
       catch (error) { notice(error.message, true); } finally { state.busy = false; updateBusy(); }
     }
+    async function collect(event) {
+      event.preventDefault(); if (state.busy || !editorNavigation()) return;
+      var years = Array.from(new Set(el('poolCollectYears').value.split(/[,，、\s]+/).filter(Boolean).map(Number)));
+      if (!years.length || years.some(function (y) { return !Number.isInteger(y) || y < 2016 || y > 2100; })) return notice('请输入 2016 年及以后的年份，例如 2025,2026。', true);
+      state.busy = true; updateBusy();
+      try { var job = await api('/question-pool/collect', 'POST', {years: years, topics: el('poolCollectTopics').checked, ocr: el('poolCollectOcr').checked, concurrency: 20}); closeDialog('poolSourcesDialog'); notice('在线找题已启动，可以切换页面，任务会继续。'); await trackJob(job); }
+      catch (error) { notice(error.message, true); } finally { state.busy = false; updateBusy(); }
+    }
     async function refresh() { if (!editorNavigation()) return; await loadMeta(); await loadItems(); }
     async function resetFilters() { if (!editorNavigation()) return; state.filters = Object.assign({}, DEFAULT_FILTERS); state.page = 1; state.activeId = null; syncFilters(); persist(); await loadItems(); }
     function listen(id, event, handler) { el(id).addEventListener(event, function (e) { Promise.resolve(handler(e)).catch(function (error) { notice(error.message, true); }); }); }
@@ -450,7 +480,8 @@
       listen('poolRefresh', 'click', refresh); listen('poolReset', 'click', resetFilters); listen('poolPreviousItem', 'click', function () { return moveItem(-1); }); listen('poolNextItem', 'click', function () { return moveItem(1); });
       listen('poolSelectPage', 'change', function () { var selected = el('poolSelectPage').checked; state.items.forEach(function (item) { if (item.status !== 'imported') { if (selected) state.selected.add(Number(item.id)); else state.selected.delete(Number(item.id)); } }); invalidatePreview(); renderQueue(); renderSelectionState(); });
       listen('poolClearSelection', 'click', function () { state.selected.clear(); invalidatePreview(); renderQueue(); renderSelectionState(); }); listen('poolTeacher', 'change', persist);
-      listen('poolPrepare', 'click', prepare); listen('poolPreview', 'click', preview); listen('poolCommit', 'click', commit); listen('poolSourcesButton', 'click', function () { renderSources(); showDialog('poolSourcesDialog'); }); listen('poolUploadForm', 'submit', upload);
+      listen('poolPrepare', 'click', prepare); listen('poolPreview', 'click', preview); listen('poolCommit', 'click', commit); listen('poolSourcesButton', 'click', async function () { renderSources(); showDialog('poolSourcesDialog'); await loadCollectionReport(); }); listen('poolUploadForm', 'submit', upload);
+      listen('poolCollectForm', 'submit', collect);
       doc.querySelectorAll('[data-close-dialog]').forEach(function (entry) { entry.addEventListener('click', function () { closeDialog(entry.dataset.closeDialog); }); });
       doc.addEventListener('keydown', function (event) {
         if (!auth || !auth.isOwner() || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
@@ -467,10 +498,11 @@
       var routeJob = window.location && new URLSearchParams(window.location.search || '').get('job');
       Object.assign(state, {filters: saved.filters, page: saved.page, pageSize: saved.pageSize, activeId: saved.activeId, selected: new Set(saved.selected), pendingJob: routeJob || saved.pendingJob, commitIntent: saved.commitIntent});
       el('poolTeacher').value = saved.teacher; syncFilters(); bind(); el('poolWorkspace').hidden = false; renderQueue();
+      var collectionYear = new Date().getFullYear(); el('poolCollectYears').value = (collectionYear - 1) + ',' + collectionYear;
       try { await refresh(); if (state.pendingJob) { state.busy = true; updateBusy(); try { await trackJob(await api('/jobs/' + encodeURIComponent(state.pendingJob))); } finally { state.busy = false; updateBusy(); } } }
       catch (error) { if (error.status === 404 && state.pendingJob) { state.pendingJob = null; persist(); } notice(error.message, true); }
     }
-    return {init: init, state: state, loadItems: loadItems, refresh: refresh, selectItem: selectItem, toggleSelection: toggleSelection, prepare: prepare, preview: preview, commit: commit, moveItem: moveItem, upload: upload};
+    return {init: init, state: state, loadItems: loadItems, refresh: refresh, selectItem: selectItem, toggleSelection: toggleSelection, prepare: prepare, preview: preview, commit: commit, moveItem: moveItem, upload: upload, collect: collect};
   }
   window.QuestionPool = {createController: createController, makeQuery: makeQuery, restoreState: restoreState, safeUrl: safeUrl, finalAnswer: finalAnswer, sourceLocation: sourceLocation, eligiblePreview: eligiblePreview, storageKey: STORAGE_KEY};
   document.addEventListener('DOMContentLoaded', function () { window.QuestionPool.controller = createController(); window.QuestionPool.controller.init(); });

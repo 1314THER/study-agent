@@ -77,6 +77,85 @@ class QuestionPoolTests(unittest.TestCase):
         record.update(changes)
         return record
 
+    def test_diagram_conditions_are_part_of_duplicate_identity(self):
+        first = self.record(raw={"image_refs": [{"url": "https://example.org/ellipse-1.png"}]})
+        other = self.record(2, question=first["question"], raw={"image_refs": [{"url": "https://example.org/ellipse-2.png"}]})
+        replay = self.record(3, question=first["question"], raw=deepcopy(first["raw"]))
+        result = self.pool.import_records(self.source(), [first, other, replay])
+        self.assertEqual(result["stats"]["unique"], 2)
+        self.assertEqual(result["stats"]["duplicates"], 1)
+        items = self.pool.list_items(completeness="", page_size=100)["data"]
+        self.pool.update_item(items[0]["id"], {"question": first["question"]})
+        result = self.pool.import_records(self.source(), [first, other, replay], retry_failed=True)
+        self.assertEqual(result["added_occurrences"], 0)
+
+    def test_pdf_diagram_identity_survives_edits_and_replay(self):
+        first = self.record(raw={"graphic_file": {"sha256": "first-pdf", "page_start": 1, "question_no": "1"}})
+        other = self.record(2, question=first["question"], raw={"graphic_file": {"sha256": "second-pdf", "page_start": 1, "question_no": "1"}})
+        result = self.pool.import_records(self.source(), [first, other])
+        self.assertEqual(result["stats"]["unique"], 2)
+        self.assertEqual(self.pool.import_records(self.source(), [first, other], retry_failed=True)["added_occurrences"], 0)
+
+    def test_online_collection_is_owner_only_and_bounds_years_and_concurrency(self):
+        self.assertEqual(jobs.validate_args('pool_collect', {'years': [2026, 2025, 2026]})['years'], [2025, 2026])
+        for args in ({'years': [2015]}, {'concurrency': 21}, {'years': [True]}):
+            with self.assertRaises(ValueError):
+                jobs.validate_args('pool_collect', args)
+        with identity_context({'id': 'guest', 'username': 'guest', 'role': 'guest'}):
+            with self.assertRaises(HTTPException) as caught:
+                jobs.validate_args('pool_collect', {'years': [2026]})
+            self.assertEqual(caught.exception.status_code, 403)
+
+    def test_collection_reparse_uses_question_identity_and_preserves_manual_edits(self):
+        raw = {"collector": True, "file_sha256": "fixture-file", "paper_validation": {"valid": True}, "conversion_parser": 1}
+        first = self.record(raw=raw)
+        result = self.pool.import_records(self.source(), [first])
+        sid = result["source_id"]
+        updated = self.record(source_key="reordered-ocr-locator", question="集合的完整新条件", raw={**raw, "conversion_parser": 2})
+        second = self.pool.import_records(sid, [updated], retry_failed=True)
+        self.assertEqual(second["added_occurrences"], 0)
+        self.assertEqual(second["recovered_occurrences"], 1)
+        item = self.pool.list_items(completeness="", page_size=100)["data"][0]
+        self.assertEqual(item["question"], updated["question"])
+        self.pool.update_item(item["id"], {"question": "主人已修订的条件"})
+        replay = self.pool.import_records(sid, [first], retry_failed=True)
+        self.assertEqual(replay["added_occurrences"], 0)
+        self.assertEqual(replay["recovered_occurrences"], 0)
+        self.assertEqual(self.pool.get_item(item["id"])["question"], "主人已修订的条件")
+
+    def test_collection_api_submits_job_and_keeps_report_owner_only(self):
+        from backend.source_conversion import atomic_json
+        atomic_json(self.pool.files_directory().parent / "collections/progress.json", {"stage": "done", "question_records": 19})
+        def submit(kind, args, request_id):
+            validated = jobs.validate_args(kind, args)
+            self.assertEqual(validated["concurrency"], 20)
+            return {"job_id": "collection-test", "kind": kind, "status": "queued"}
+        with patch.object(jobs, "submit_job", side_effect=submit), self.client() as client:
+            response = client.post("/question-pool/collect", json={"years": [2026]})
+            self.assertEqual(response.status_code, 202)
+            self.assertEqual(response.json()["kind"], "pool_collect")
+            self.assertEqual(client.get("/question-pool/collection").json()["question_records"], 19)
+            self.assertEqual(client.post("/question-pool/collect", json={"years": [2015]}).status_code, 400)
+            with identity_context({"id": "guest", "username": "guest", "role": "guest"}):
+                self.assertEqual(client.get("/question-pool/collection").status_code, 403)
+
+    def test_repair_into_existing_item_uses_target_version_before_manual_edit(self):
+        import json
+        raw = {"collector": True, "file_sha256": "shared-pdf", "conversion_parser": 1, "paper_validation": {"valid": True}}
+        failed = self.record(question="", completeness="failed", raw=raw)
+        existing = self.record(2)
+        sid = self.pool.import_records(self.source(), [failed, existing])["source_id"]
+        repaired = self.record(question=existing["question"], raw=raw)
+        self.pool.import_records(sid, [repaired], retry_failed=True)
+        with self.pool._connection() as conn:
+            occurrence = conn.execute("SELECT * FROM pool_occurrences WHERE source_id=? AND source_key=?", (sid, failed["source_key"])).fetchone()
+            version = conn.execute("SELECT version FROM pool_items WHERE id=?", (occurrence["item_id"],)).fetchone()[0]
+        self.assertEqual(json.loads(occurrence["raw_json"])["automatic_repair_version"], version)
+        self.pool.update_item(occurrence["item_id"], {"categories": ["概率统计"]})
+        replay = self.pool.import_records(sid, [self.record(question="新提取条件", raw={**raw, "conversion_parser": 2})], retry_failed=True)
+        self.assertEqual(replay["recovered_occurrences"], 0)
+        self.assertEqual(self.pool.get_item(occurrence["item_id"])["categories"], ["概率统计"])
+
     def import_one(self, record=None, source=None):
         record = record or self.record()
         self.pool.import_records(source or self.source(), [record])
