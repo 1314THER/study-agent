@@ -130,7 +130,7 @@ def pool_asset_data(item):
     A complete occurrence wins over incomplete duplicate provenance. Reading
     assets never changes the candidate's review or import state.
     """
-    from backend.question_pool import files_directory, _source_file
+    from backend.question_pool import files_directory, _source_file, source_asset_path
     root = files_directory().parent.resolve()
     best = {"asset_refs": [], "assets": [], "missing": [], "required": has_pool_graphics(item)}
     for origin in item.get("occurrences") or []:
@@ -159,10 +159,10 @@ def pool_asset_data(item):
                 assets.append({"ref": ref, "label": label})
             except (ValueError, OSError) as exc:
                 missing.append({"label": label, "reason": str(exc)})
-        original = Path(raw["original_file"]) if isinstance(raw.get("original_file"), str) and raw["original_file"] else None
+        original = source_asset_path(raw["original_file"]) if isinstance(raw.get("original_file"), str) and raw["original_file"] else None
         # Directory sources use their preserved root; snapshots use the pinned
         # revision's directory. Neither path can escape this owner's pool.
-        base = Path(raw["source_root"]) if isinstance(raw.get("source_root"), str) and raw["source_root"] else None
+        base = source_asset_path(raw["source_root"]) if isinstance(raw.get("source_root"), str) and raw["source_root"] else None
         if base is None and original:
             base = next((p for p in original.parents if p.parent.name == "snapshots" and p.is_relative_to(root)), None)
         refs = raw.get("image_refs") if isinstance(raw.get("image_refs"), list) else []

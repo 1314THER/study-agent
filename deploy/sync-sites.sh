@@ -15,7 +15,6 @@ STOPPED=0
 SUCCESS=0
 DRAINED_PORTS=()
 CREATED_DROPINS=()
-RUNTIME=(study_agent.db mastery.db .runtime/jobs.sqlite3 backend/patterns.yaml backend/board_order.yaml backend/settings.json .env)
 
 dropin() { printf '/run/systemd/system/%s.service.d/90-study-agent-sync.conf' "$1"; }
 assert_no_dropins() {
@@ -110,8 +109,9 @@ if "backend.main:app" not in unit or "--host 127.0.0.1" not in unit or "--port 8
     raise SystemExit("主人启动命令与当前部署不符；请先检查 systemd 配置")
 if "--reload" in unit or any(n != "1" for n in workers + env_workers):
     raise SystemExit("主人服务必须是单 worker 且不使用 reload")
-if re.search(r"STUDY_AGENT_(?:DATA|JOB)_DIR=", unit):
-    raise SystemExit("自定义数据或任务目录需要单独制定备份路径，当前脚本只支持默认目录")
+auth_roots = re.findall(r"(?:^|\s)STUDY_AUTH_ROOT=(\S+)", unit)
+if re.search(r"STUDY_AGENT_(?:DATA|JOB)_DIR=", unit) or (auth_roots and auth_roots != ["/opt/study-agent/.accounts"]):
+    raise SystemExit("自定义数据、任务或账号目录需要单独制定备份路径，当前脚本只支持默认目录")
 '
 if systemctl cat study-agent-demo >/dev/null 2>&1; then
     systemctl show study-agent-demo -p Environment --value | python3 -c '
@@ -160,7 +160,7 @@ git_owner merge-base --is-ancestor "$OLD_COMMIT" "$TARGET" || { echo '指定提�
 STAGING=$(mktemp -d "$SYNC_DIR/staging.XXXXXXXX")
 install -d -m 755 "$STAGING/code"
 git_owner archive "$TARGET" | tar -x -C "$STAGING/code"
-for relative in requirements.txt deploy/install-demo.sh deploy/rollback-sites.sh backend/jobs.py backend/demo.py frontend/demo-home.html; do
+for relative in requirements.txt deploy/install-demo.sh deploy/rollback-sites.sh backend/jobs.py backend/demo.py frontend/demo-home.html deploy/runtime_snapshot.py; do
     [[ -f $STAGING/code/$relative ]] || { echo "指定提交缺少 $relative。" >&2; exit 1; }
 done
 cp -a "$APP_DIR/.venv" "$STAGING/.venv"
@@ -172,7 +172,7 @@ if ! cmp -s "$STAGING/requirements.old" "$STAGING/code/requirements.txt"; then
     runuser -u studyagent -- env PIP_DEFAULT_TIMEOUT=120 PIP_RETRIES=10 \
         "$STAGING/.venv/bin/python" -m pip install -r "$STAGING/code/requirements.txt"
 fi
-"$STAGING/.venv/bin/python" -c 'import fastapi, uvicorn, multipart, httpx, yaml, fitz, docx'
+"$STAGING/.venv/bin/python" -c 'import fastapi, uvicorn, multipart, httpx, yaml, fitz, docx, cryptography'
 "$STAGING/.venv/bin/python" -m pip check
 # _gen.py is an unused, versioned debug placeholder from an older checkout.
 # Keep the user's file, but do not let that placeholder block a release.
@@ -265,8 +265,26 @@ assert_clean_code
 assert_no_dropins
 [[ $(git_owner rev-parse HEAD) == "$OLD_COMMIT" ]] || { echo '准备期间服务器提交发生变化，停止同步。' >&2; exit 1; }
 
+# Check capacity before stopping a service. Owner source files and the original
+# figures can be several GB even when the Git checkout is small.
+python3 - "$STAGING/code/deploy" "$APP_DIR" "$DEMO_DATA_DIR" "$SYNC_DIR" <<'PY'
+import shutil, sys
+from pathlib import Path
+sys.path.insert(0,sys.argv[1])
+from runtime_snapshot import required_bytes, walk_files
+owner, demo, destination=map(Path,sys.argv[2:])
+size=required_bytes(owner)
+if demo.exists():size+=sum(p.stat().st_size for p in walk_files(demo))
+required=int(size*1.2)+100*1024*1024
+free=shutil.disk_usage(destination).free
+if free<required:
+    raise SystemExit(f'备份空间不足：至少需要 {required//1024//1024} MiB，可用 {free//1024//1024} MiB；网站尚未停止。')
+print(f'备份空间已检查：需预留 {required//1024//1024} MiB。',flush=True)
+PY
+
 BACKUP=$(mktemp -d "$SYNC_DIR/backups/sites.XXXXXXXX")
 cp "$STAGING/code/deploy/rollback-sites.sh" "$BACKUP/rollback-sites.sh"
+cp "$STAGING/code/deploy/runtime_snapshot.py" "$BACKUP/runtime_snapshot.py"
 chmod 700 "$BACKUP/rollback-sites.sh"
 printf '%s\n' "$OLD_COMMIT" > "$BACKUP/owner.old-commit"
 printf '%s\n' "$TARGET" > "$BACKUP/owner.target-commit"
@@ -284,33 +302,7 @@ touch "$BACKUP/system-snapshot-complete"
 STOPPED=1
 systemctl stop study-agent-demo 2>/dev/null || true
 systemctl stop study-agent
-python3 - "$APP_DIR" "$BACKUP/owner-data" <<'PY'
-from pathlib import Path
-import os, shutil, sqlite3, sys
-source, backup = map(Path, sys.argv[1:])
-backup.mkdir(mode=0o700)
-for name in ("study_agent.db", "mastery.db", ".runtime/jobs.sqlite3"):
-    src = source / name
-    if not src.is_file():
-        if name == ".runtime/jobs.sqlite3":
-            continue
-        raise SystemExit("主人数据库不存在：" + name)
-    dest = backup / name
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(src.as_uri() + "?mode=ro", uri=True) as original, sqlite3.connect(dest) as saved:
-        original.backup(saved)
-        if saved.execute("PRAGMA integrity_check").fetchone()[0] != "ok":
-            raise SystemExit("数据库备份校验失败：" + name)
-    os.chmod(backup / name, 0o600)
-for name in ("backend/patterns.yaml", "backend/board_order.yaml", "backend/settings.json", ".env"):
-    src = source / name
-    if src.is_file():
-        dest = backup / name
-        dest.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(src, dest)
-        os.chmod(dest, 0o600)
-print("主人数据库与私有配置快照已校验。", flush=True)
-PY
+python3 "$BACKUP/runtime_snapshot.py" backup "$APP_DIR" "$BACKUP/owner-data"
 if [[ -e $DEMO_DATA_DIR ]]; then
     verify_demo_tree "$DEMO_DATA_DIR"
     cp -a -- "$DEMO_DATA_DIR" "$BACKUP/demo-data"
@@ -329,13 +321,12 @@ if git_owner ls-files --error-unmatch backend/patterns.yaml >/dev/null 2>&1; the
     git_owner restore --source=HEAD --worktree -- backend/patterns.yaml
 fi
 git_owner merge --ff-only "$TARGET"
-for relative in "${RUNTIME[@]}"; do
-    if [[ -f $BACKUP/owner-data/$relative ]]; then
-        install -D -o studyagent -g studyagent -m 600 "$BACKUP/owner-data/$relative" "$APP_DIR/$relative"
-    fi
-done
-rm -f -- "$APP_DIR/study_agent.db-wal" "$APP_DIR/study_agent.db-shm" "$APP_DIR/mastery.db-wal" "$APP_DIR/mastery.db-shm" \
-    "$APP_DIR/.runtime/jobs.sqlite3-wal" "$APP_DIR/.runtime/jobs.sqlite3-shm"
+# Runtime files are outside the Git archive. Restore only the tracked YAML
+# export after fast-forward; all other live data remains in place. The complete
+# verified snapshot is reserved for rollback, avoiding a second copy of assets.
+if [[ -f $BACKUP/owner-data/backend/patterns.yaml ]]; then
+    install -D -o studyagent -g studyagent -m 600 "$BACKUP/owner-data/backend/patterns.yaml" "$APP_DIR/backend/patterns.yaml"
+fi
 install -d -o studyagent -g studyagent -m 700 "$APP_DIR/.runtime"
 mv "$APP_DIR/.venv" "$BACKUP/owner.venv"
 mv "$STAGING/.venv" "$APP_DIR/.venv"

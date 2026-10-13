@@ -76,3 +76,5 @@ bash -n deploy/sync-sites.sh deploy/rollback-sites.sh deploy/install-demo.sh
 ```
 
 同步脚本的 systemd、权限、Git 快进、虚拟环境切换与回滚需要在 Ubuntu 上验收，Bash 语法通过不能证明这些操作已在服务器完成。按 [部署说明](../deploy/ubuntu.md#第四步验收) 检查两个本机端口、公开 HTTPS、主人密码保护和两个游客浏览器的数据隔离；部署日志应记录固定提交 SHA 与备份目录。内部任务状态/暂停接口只接受回环请求，健康检查与内部检查不应计入活跃任务。
+
+`python3 -m unittest tests.test_runtime_snapshot -v` 使用临时目录验证完整运行数据往返、题源/题图/图谱覆盖、SQLite WAL 归并、缺失数据恢复、摘要防篡改、路径与链接拒绝、恢复前目标检查及磁盘估算。套路审核回归另验证跨电脑迁移后原图与原件仍可读取。图谱浏览器测试还注入一次保存失败，检查重试成功会清除错误状态。

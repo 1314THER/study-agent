@@ -188,7 +188,7 @@ runuser -u studyagent -- /bin/sh -c 'printf "\n/.cache/pip/\n" >> /opt/study-age
 
 该规则仅匹配仓库根目录的 pip 缓存，缓存继续保留；其他代码改动与未跟踪文件仍会触发检查。如果错误列出了其他路径，应先检查那些文件。
 
-脚本在 `/opt/study-agent-sync/backups/` 创建 root 私有快照：用 SQLite 备份 API 保存并检查两个主人数据库及已有的 `.runtime/jobs.sqlite3` 任务/教学记录，保存套路、看板顺序、设置、`.env`、Caddy、公开首页、systemd 配置、AI 快照与旧 Python 环境。两个服务停站后还会复制 `/var/lib/study-agent-demo` 的游客数据库、任务、配置与日志，保留权限及归属，并通过 SQLite 备份 API 归并快照中的数据库临时日志。复制前后拒绝链接和特殊文件，校验数据库完整性；恢复采用已校验的目录复制。脚本支持默认数据路径；如果 systemd 设置了自定义 `STUDY_AGENT_DATA_DIR`、`STUDY_AGENT_JOB_DIR` 或游客 `STUDY_DEMO_ROOT`，会停止并要求另行确认备份路径。遗留同步维护配置会在停站前阻止发布，脚本仅清理本次创建的维护配置。服务器代码必须能从当前 `main` 快进到指定提交；除运行时 `backend/patterns.yaml` 外有代码改动、暂存改动或意外未跟踪文件时会停止，避免覆盖人工改动。它仅临时还原该套路导出文件的 Git 版本以完成 `merge --ff-only`，随后恢复主人原文件，**不使用 `git reset --hard`**。
+脚本在 `/opt/study-agent-sync/backups/` 创建 root 私有快照：用 SQLite 备份 API 保存并检查两个主人数据库、已有的 `.runtime/jobs.sqlite3` 任务/教学记录、`.runtime/question_pool.db` 原题池和 `.runtime/routine-review.sqlite3` 审核账本；同时保存 `.runtime/question-pool/` 题源原件、`.runtime/question-assets/` 题图、`.runtime/routine-matching/` 新套路目录与图谱布局、默认 `.accounts/` 账号数据，以及套路、看板顺序、设置、`.env`、Caddy、公开首页、systemd 配置、AI 快照与旧 Python 环境。`runtime_snapshot.py` 保存每个文件的大小与 SHA-256，数据库临时日志通过备份 API 归并。发布前检查备份磁盘空间；空间不足时不停止网站。代码更新保留原有运行文件，失败回滚时才从完整快照恢复；旧格式快照仍兼容。两个服务停站后还会复制 `/var/lib/study-agent-demo` 的游客数据库、任务、配置与日志，保留权限及归属，并归并数据库临时日志。复制前后拒绝链接和特殊文件，校验数据库完整性。脚本支持默认数据路径；如果 systemd 设置了自定义 `STUDY_AGENT_DATA_DIR`、`STUDY_AGENT_JOB_DIR`、`STUDY_AUTH_ROOT` 或游客 `STUDY_DEMO_ROOT`，会停止并要求另行制定备份路径。遗留同步维护配置会在停站前阻止发布，脚本仅清理本次创建的维护配置。服务器代码必须能从当前 `main` 快进到指定提交；除运行时 `backend/patterns.yaml` 外有代码改动、暂存改动或意外未跟踪文件时会停止，避免覆盖人工改动。它仅临时还原该套路导出文件的 Git 版本以完成 `merge --ff-only`，随后恢复主人原文件，**不使用 `git reset --hard`**。
 
 依赖清单变化时，先在候选虚拟环境安装与检查；通过后才停站。主人服务保留现有 systemd 配置，游客使用独立用户 `studydemo`、独立代码发布目录和 `/var/lib/study-agent-demo`；两个服务分别运行在 `127.0.0.1:8000`、`127.0.0.1:8001`，各一个 worker。游客 Python 环境每次从本次主人环境重新复制，防止两站依赖版本不同。主人配置被读取为 `/etc/study-agent-demo/ai.json` 的只读快照（root 所有、studydemo 只读），新游客仍使用临时独立数据库。既有网站密码哈希与 API 密钥保持原值，无需重设。备份含私有密钥配置，不要上传到 Git 或发到聊天。
 
@@ -238,6 +238,8 @@ journalctl -u study-agent-sites-rollback -n 120 --no-pager
 ## 4. 更新与备份
 
 ### 从 Mac 迁移当前数据
+
+GitHub 只同步源码，不包含原题池、审核结果、题图、新套路和图谱布局。下面的旧版五文件导入脚本仅适用于旧题库，不能用于迁移本轮审核数据。需要同时迁移这些数据时，应先确认服务器已有题库与账号的保留范围，另做完整数据快照与定向导入；`runtime_snapshot.py restore` 是同一台服务器的回滚工具，会恢复快照时的数据范围，不应直接拿本机快照覆盖服务器账号。图谱和题图读取已支持 `.runtime/question-pool/` 根路径跨电脑变化，保留原始出处记录。
 
 在 Mac 上用 SQLite 备份 API 制作两个数据库快照，再将它们与 `patterns.yaml`、`settings.json`、`.env` 打包为恰好五个文件。通过 SSH 将压缩包上传至服务器。验证压缩包 SHA-256 后，在服务器上运行 `deploy/import-local-data.sh 压缩包路径`。该脚本先验证数据库及配置，然后停止服务、备份服务器原有数据、导入、重启并检查接口；失败时尝试恢复原数据。若 Workbench 容易断线，可通过 `systemd-run --unit=study-agent-import /bin/bash /opt/study-agent/deploy/import-local-data.sh 压缩包路径` 独立运行，并用 `journalctl -u study-agent-import -n 80 --no-pager` 查看结果。成功后删除 `studyviewer` 家目录里的上传压缩包，因为它包含 API 密钥。
 

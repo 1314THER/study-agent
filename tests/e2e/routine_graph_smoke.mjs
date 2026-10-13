@@ -26,8 +26,15 @@ try{
   assert.match(await page.locator('#detailContent h2').textContent(),/子集个数/);
   await page.screenshot({path:shots+'/routine.png'});
   const node=page.locator('.graph-node[data-id="SET-014"]'),before=await node.getAttribute('style'),box=await node.boundingBox();
+  let failedSave=false;
+  await page.route('**/routine-graph/layout',async route=>{if(!failedSave){failedSave=true;await route.fulfill({status:503,json:{detail:'测试保存失败，请重试'}});}else await route.continue();});
   await page.mouse.move(box.x+25,box.y+25);await page.mouse.down();await page.mouse.move(box.x+95,box.y+55,{steps:8});await page.mouse.up();
+  await page.waitForFunction(()=>document.getElementById('saveStatus').className==='error');
+  await page.locator('#saveStatus').click();
   await page.waitForFunction(()=>document.getElementById('saveStatus').textContent==='布局已保存');
+  assert.equal(await page.locator('#saveStatus').getAttribute('class'),'');
+  assert.equal(await page.locator('#graphMessage').textContent(),'');
+  await page.unroute('**/routine-graph/layout');
   const moved=await node.getAttribute('style');assert.notEqual(moved,before);
   await page.reload();await page.waitForSelector('.graph-node[data-id="SET-014"]');
   assert.equal(await page.locator('.graph-node[data-id="SET-014"]').getAttribute('style'),moved);

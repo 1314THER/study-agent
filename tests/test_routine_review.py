@@ -79,6 +79,23 @@ class RoutineReviewTests(unittest.TestCase):
             row=self.store.item(run['run_id'],iid)
             self.assertEqual(row['kind'],'insufficient_content');self.assertEqual(row['needs_content'],1)
 
+    def test_migrated_pool_images_and_review_originals_use_current_workspace(self):
+        from PIL import Image
+        from backend.question_assets import pool_asset_data
+        root=pool.files_directory().parent
+        figure=root/'snapshots/revision/figure.png';figure.parent.mkdir(parents=True)
+        Image.new('RGB',(30,20),'white').save(figure)
+        original='/old-mac/project/.runtime/question-pool/snapshots/revision'
+        raw={'source_root':original,'original_file':original+'/figure.png',
+             'image_refs':[{'path':'figure.png','label':'迁移题图'}]}
+        with sqlite3.connect(pool.storage_path()) as conn:
+            conn.execute('UPDATE pool_occurrences SET raw_json=? WHERE item_id=1',(json.dumps(raw),))
+        data=pool_asset_data(pool.get_item(1))
+        self.assertEqual(len(data['assets']),1);self.assertEqual(data['missing'],[])
+        run=self.create();saved=self.store.item(run['run_id'],1)
+        self.assertIn(figure.resolve(),rr.asset_paths(saved['occurrences']))
+        self.assertEqual(pool.source_asset_path(original+'/../outside/../../../../secret'),Path(original+'/../outside/../../../../secret'))
+
     def test_backfilled_images_show_on_existing_snapshot_without_rematching(self):
         from PIL import Image
         from io import BytesIO

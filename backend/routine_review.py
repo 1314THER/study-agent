@@ -483,11 +483,11 @@ def filter_sql(run_id, filters):
 
 def asset_paths(provenance):
     paths=[]
-    from backend.question_pool import files_directory
+    from backend.question_pool import files_directory, source_asset_path
     allowed=[files_directory().parent.resolve(),(ROOT/'.runtime/question-pool').resolve()]
     for origin in provenance:
         raw=origin.get('raw') or {}
-        original=Path(raw['original_file']) if raw.get('original_file') else None
+        original=source_asset_path(raw['original_file']) if raw.get('original_file') else None
         candidates=[]
         if original and original.suffix.lower() in ('.pdf','.docx','.txt','.tex','.png','.jpg','.jpeg'):
             candidates.append(original)
@@ -495,7 +495,7 @@ def asset_paths(provenance):
             snapshot=next((p for p in original.parents if p.parent.name=='snapshots'),None)
             if snapshot:
                 candidates.extend(snapshot/a['path'] for a in raw.get('image_assets',[]) if isinstance(a,dict) and a.get('path'))
-        base=Path(raw['source_root']) if raw.get('source_root') else None
+        base=source_asset_path(raw['source_root']) if raw.get('source_root') else None
         if base:
             candidates.extend(base/a['path'] for a in raw.get('image_refs',[]) if isinstance(a,dict) and isinstance(a.get('path'),str))
         for candidate in candidates:

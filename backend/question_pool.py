@@ -54,6 +54,24 @@ def files_directory():
     return Path(data_path("question-pool", ROOT / ".runtime" / "question-pool")) / "files"
 
 
+def source_asset_path(value):
+    """Locate preserved originals after copying the pool to another machine.
+
+    Historical provenance keeps its original path. Only paths in the known
+    .runtime/question-pool tree can be relocated into this request's pool.
+    Callers still check containment, existence and image hashes before serving.
+    """
+    path=Path(value);root=files_directory().parent.resolve()
+    if path.resolve().is_relative_to(root):return path
+    parts=path.parts
+    for i in range(len(parts)-1):
+        if parts[i:i+2]==('.runtime','question-pool'):
+            candidate=root.joinpath(*parts[i+2:]).resolve()
+            if candidate.is_relative_to(root):return candidate
+            break
+    return path
+
+
 def _dump(value):
     return json.dumps(value, ensure_ascii=False, sort_keys=True)
 

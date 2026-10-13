@@ -63,6 +63,10 @@ if [[ -f $BACKUP/data-snapshot-complete ]]; then
         [[ ! -e $BACKUP/demo-data && ! -L $BACKUP/demo-data ]] || { echo '游客快照的缺失标记与目录不一致，拒绝恢复。' >&2; exit 1; }
     fi
 fi
+if [[ -f $BACKUP/owner-data/snapshot-manifest.json ]]; then
+    [[ -f $BACKUP/runtime_snapshot.py ]] || { echo '完整运行数据快照缺少校验工具。' >&2; exit 1; }
+    python3 "$BACKUP/runtime_snapshot.py" verify "$BACKUP/owner-data"
+fi
 cleanup() {
     local code=$?
     trap - EXIT
@@ -132,16 +136,22 @@ if [[ $CURRENT != "$OLD" ]]; then
     git_owner reset --keep "$OLD"
 fi
 if [[ -f $BACKUP/data-snapshot-complete ]]; then
-    install -d -o studyagent -g studyagent -m 700 "$APP_DIR/.runtime"
-    for relative in study_agent.db mastery.db .runtime/jobs.sqlite3 backend/patterns.yaml backend/board_order.yaml backend/settings.json .env; do
-        if [[ -f $BACKUP/owner-data/$relative ]]; then
-            install -D -o studyagent -g studyagent -m 600 "$BACKUP/owner-data/$relative" "$APP_DIR/$relative"
-        else
-            rm -f -- "$APP_DIR/$relative"
-        fi
-    done
-    rm -f -- "$APP_DIR/study_agent.db-wal" "$APP_DIR/study_agent.db-shm" "$APP_DIR/mastery.db-wal" "$APP_DIR/mastery.db-shm" \
-        "$APP_DIR/.runtime/jobs.sqlite3-wal" "$APP_DIR/.runtime/jobs.sqlite3-shm"
+    if [[ -f $BACKUP/owner-data/snapshot-manifest.json ]]; then
+        [[ -f $BACKUP/runtime_snapshot.py ]] || { echo '完整运行数据快照缺少恢复工具。' >&2; exit 1; }
+        python3 "$BACKUP/runtime_snapshot.py" restore "$BACKUP/owner-data" "$APP_DIR" --owner studyagent
+    else
+        # Compatibility with snapshots created by the older release script.
+        install -d -o studyagent -g studyagent -m 700 "$APP_DIR/.runtime"
+        for relative in study_agent.db mastery.db .runtime/jobs.sqlite3 backend/patterns.yaml backend/board_order.yaml backend/settings.json .env; do
+            if [[ -f $BACKUP/owner-data/$relative ]]; then
+                install -D -o studyagent -g studyagent -m 600 "$BACKUP/owner-data/$relative" "$APP_DIR/$relative"
+            else
+                rm -f -- "$APP_DIR/$relative"
+            fi
+        done
+        rm -f -- "$APP_DIR/study_agent.db-wal" "$APP_DIR/study_agent.db-shm" "$APP_DIR/mastery.db-wal" "$APP_DIR/mastery.db-shm" \
+            "$APP_DIR/.runtime/jobs.sqlite3-wal" "$APP_DIR/.runtime/jobs.sqlite3-shm"
+    fi
     if [[ -e $DEMO_DATA_DIR ]]; then
         FAILED_DEMO_DATA=$(mktemp -d "$SYNC_DIR/failed-demo-data.XXXXXXXX")
         rmdir "$FAILED_DEMO_DATA"
