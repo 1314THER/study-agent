@@ -24,7 +24,7 @@
   </nav></aside>
   <main class="main-content"><div class="review-container" id="reviewApp" hidden>
     <header class="review-header"><div><p class="review-eyebrow">主人工作台 · 全部题目，逐步确认</p><h1>套路审核</h1><p class="review-muted">按方法整理题目，保留全部匹配建议。每个套路可以有任意数量的代表题和变式。</p></div>
-      <div class="review-actions"><label>匹配方式<select id="matchEngine"><option value="codex_luna" disabled>Codex Luna · 本地账号额度（暂不可用）</option><option value="deepseek" selected>DeepSeek · 省费模式（API 计费）</option></select></label><button id="applyEngine">应用到剩余题</button><button id="startRun" class="primary" disabled>匹配全部原题</button><button id="pauseRun">暂停</button><button id="resumeRun">继续匹配</button><button id="retryRun">重试失败题</button><a id="exportReport" hidden>导出统计报告</a></div>
+      <div class="review-actions"><a id="openRoutineGraph" href="/routine-graph.html">套路图谱 ↗</a><label>匹配方式<select id="matchEngine"><option value="codex_luna" disabled>Codex Luna · 本地账号额度（暂不可用）</option><option value="deepseek" selected>DeepSeek · 省费模式（API 计费）</option></select></label><button id="applyEngine">应用到剩余题</button><button id="startRun" class="primary" disabled>匹配全部原题</button><button id="pauseRun">暂停</button><button id="resumeRun">继续匹配</button><button id="retryRun">重试失败题</button><a id="exportReport" hidden>导出统计报告</a></div>
     </header>
     <p id="reviewMessage" role="status" aria-live="polite"></p>
     <section id="runSummary" class="review-summary" aria-label="处理进度"></section>
@@ -76,5 +76,5 @@
   </div><p id="accessMessage" class="review-container">正在确认主人权限…</p></main>
 </div>
 <script src="/pool-math.js?v=20261010a"></script><script src="/jobs.js?v=20261011-review"></script>
-<script src="/routine-review.js?v=20261012images-20261012-local-models"></script><script src="/nav.js?v=20261011-review"></script>
+<script src="/routine-review.js?v=20261013graph"></script><script src="/nav.js?v=20261013graph"></script>
 </body></html>

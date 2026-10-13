@@ -122,6 +122,7 @@ macOS 双击「一键打开.command」会在后台启动服务并打开首页，
 | 巩固日历 | `frontend/calendar.html` | 套路巩固排期 + 一键规划入口 |
 | 闯关 | `frontend/board.html` | 只读闯关任务路线 |
 | 关卡编辑 | `frontend/level-editor.html` | 自由拖拽思维导图编辑关卡、套路与顺序 |
+| 套路图谱 | `frontend/routine-graph.html` | 现有板块与易混淆关系、自由拖动保存、新增套路、直达对应审核题目 |
 | AI 改卷 | `frontend/grade.html` | 选择题/填空题直接判答案，大题按标准步骤 AI 判分，记录作答来源与防欺骗信号 |
 | 系统设置 | `frontend/settings.html` | 难度评分公式、老师模型、API 密钥与服务商切换、性能与并发限制 |
 

@@ -1,0 +1,75 @@
+import assert from 'node:assert/strict';
+import {spawn} from 'node:child_process';
+import {createRequire} from 'node:module';
+import {mkdir} from 'node:fs/promises';
+import {tmpdir} from 'node:os';
+const require=createRequire(import.meta.url);
+const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
+const server=spawn(process.env.GRAPH_PYTHON||'python3',['tests/e2e/routine_graph_server.py'],{cwd:new URL('../../',import.meta.url),env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},stdio:['ignore','pipe','pipe']});
+let output='';server.stderr.on('data',c=>output+=c.toString());
+const port=await new Promise((resolve,reject)=>{let text='';server.stdout.on('data',c=>{text+=c.toString();const m=text.match(/GRAPH_PORT=(\d+)/);if(m)resolve(Number(m[1]));});server.on('exit',code=>reject(new Error('Server exited '+code+'\n'+output)));setTimeout(()=>reject(new Error('Server timed out\n'+output)),20000).unref();});
+const base='http://127.0.0.1:'+port,shots=process.env.GRAPH_SHOTS||tmpdir()+'/routine-graph-shots';await mkdir(shots,{recursive:true});let browser;
+try{
+  for(let i=0;i<60;i++){try{if((await fetch(base+'/health')).ok)break;}catch{}await new Promise(r=>setTimeout(r,100));}
+  browser=await chromium.launch({headless:true,executablePath:process.env.CHROME_PATH||chromium.executablePath()});
+  const page=await browser.newPage({viewport:{width:1440,height:950}}),errors=[];
+  page.on('pageerror',e=>errors.push(e.message));
+  await page.goto(base+'/routine-graph.html');await page.waitForSelector('#graphApp:not([hidden])');
+  assert.equal(await page.locator('.graph-node').count(),13);
+  assert.match(await page.locator('#catalogCount').textContent(),/288/);
+  assert.equal(await page.locator('.sidebar nav a[data-page]').count(),16);
+  await page.screenshot({path:shots+'/overview.png'});
+  await page.locator('#graphSearch').fill('SET-014');await page.locator('#searchResults button').first().click();
+  await page.waitForSelector('.graph-question-card');
+  assert.equal(await page.locator('.graph-node.kind-routine').count(),12);
+  assert.equal(await page.locator('.graph-question-card').count(),8);
+  assert.match(await page.locator('#detailContent h2').textContent(),/子集个数/);
+  await page.screenshot({path:shots+'/routine.png'});
+  const node=page.locator('.graph-node[data-id="SET-014"]'),before=await node.getAttribute('style'),box=await node.boundingBox();
+  await page.mouse.move(box.x+25,box.y+25);await page.mouse.down();await page.mouse.move(box.x+95,box.y+55,{steps:8});await page.mouse.up();
+  await page.waitForFunction(()=>document.getElementById('saveStatus').textContent==='布局已保存');
+  const moved=await node.getAttribute('style');assert.notEqual(moved,before);
+  await page.reload();await page.waitForSelector('.graph-node[data-id="SET-014"]');
+  assert.equal(await page.locator('.graph-node[data-id="SET-014"]').getAttribute('style'),moved);
+  await page.waitForSelector('.graph-question-card');
+  const href=await page.locator('.graph-question-card a').first().getAttribute('href');
+  assert.match(href,/routine=SET-014/);assert.match(href,/item=1/);
+  await page.locator('.graph-question-pagination button').last().click();await page.waitForFunction(()=>document.querySelector('.graph-question-pagination')?.textContent.includes('2/4'));
+  await page.goto(base+href);await page.waitForFunction(()=>document.getElementById('itemDetail').textContent.includes('原题 #1 ·'));
+  assert.equal(await page.locator('#groupList button.active').count(),1);
+  assert.match(await page.locator('#groupList button.active').textContent(),/子集个数/);
+  assert.equal(await page.locator('.sidebar nav a[data-page]').count(),16);
+  await page.goto(base+'/routine-graph.html');await page.waitForSelector('#graphApp:not([hidden])');
+  await page.locator('#addRoutine').click();await page.locator('[name="name"]').fill('手动新增浏览器测试套路');
+  await page.locator('[name="signals"]').fill('条件随参数变化');await page.locator('[name="key_steps"]').fill('先求临界点\n再分别讨论');await page.locator('[name="exclusions"]').fill('固定条件可直接求解');
+  await page.locator('#saveRoutine').click();await page.waitForFunction(()=>document.getElementById('catalogCount').textContent.includes('289'));
+  assert.match(await page.locator('#detailContent h2').textContent(),/手动新增/);
+  assert.match(await page.locator('#graphMessage').textContent(),/SET-029/);
+  const reviewLink=await page.locator('.detail-review').getAttribute('href');await page.goto(base+reviewLink);
+  await page.waitForFunction(()=>document.querySelector('#groupList button.active')?.textContent.includes('手动新增'));
+  // Pages with formerly incomplete markup now retain every authorized entry.
+  for(const path of ['/question-pool.html','/home.html','/routine-review.html']){
+    await page.goto(base+path);await page.waitForFunction(()=>document.querySelectorAll('.sidebar nav a[data-page]').length===16);
+    assert.equal(await page.locator('.sidebar nav a[data-page="teach"]').count(),1);
+    assert.equal(await page.locator('.sidebar nav a[data-page="routine-graph"]').count(),1);
+  }
+  await page.setViewportSize({width:1100,height:550});
+  await page.evaluate(()=>{document.body.classList.add('nav-expanded');document.body.classList.remove('nav-collapsed');});
+  await page.locator('.sidebar nav a[data-page="settings"]').scrollIntoViewIfNeeded();
+  const settingsBox=await page.locator('.sidebar nav a[data-page="settings"]').boundingBox();assert(settingsBox.y>=0&&settingsBox.y+settingsBox.height<=550);
+  assert(await page.evaluate(()=>{const nav=document.querySelector('.sidebar>nav');return nav.scrollHeight>nav.clientHeight;}));
+  await page.goto(base+'/routine-graph.html');await page.setViewportSize({width:390,height:844});await page.waitForSelector('#graphApp:not([hidden])');
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth),true);
+  await page.screenshot({path:shots+'/mobile.png'});
+  await page.locator('.mobile-nav-toggle').click();await page.waitForFunction(()=>document.querySelector('.sidebar').getBoundingClientRect().x>=0);assert(await page.locator('.sidebar nav a[data-page="routine-graph"]').isVisible());
+  await page.screenshot({path:shots+'/mobile-nav.png'});
+  const learner=await browser.newPage({viewport:{width:1100,height:750}});
+  await learner.route('**/auth/config',route=>route.fulfill({json:{enabled:true}}));
+  await learner.route('**/auth/me',route=>route.fulfill({json:{authenticated:true,user:{id:'learner',username:'learner',role:'user'}}}));
+  await learner.goto(base+'/routine-graph.html');await learner.waitForFunction(()=>document.querySelectorAll('.sidebar nav a[data-page]').length===16);
+  assert.match(await learner.locator('#accessMessage').textContent(),/仅供主人/);
+  for(const name of ['question-pool','routine-review','routine-graph','level-editor'])assert.equal(await learner.locator('.sidebar a[data-page="'+name+'"]').isVisible(),false);
+  await learner.close();
+  assert.deepEqual(errors,[]);
+  console.log('Graph browser checks passed: existing relationships, question links/pagination, drag/reload persistence, manual creation, unified navigation and mobile layout. Screenshots: '+shots);
+}finally{if(browser)await browser.close();server.kill('SIGTERM');}

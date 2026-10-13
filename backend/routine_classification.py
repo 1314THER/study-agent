@@ -65,7 +65,7 @@ def validate_catalog(catalog):
             raise ValueError(f"未知板块：{category}")
         for key in ("signals", "retrieval_terms", "key_steps", "exclusions"):
             _strings(routine.get(key), f"{rid}.{key}")
-        _strings(routine.get("confusable_ids"), f"{rid}.confusable_ids")
+        _strings(routine.get("confusable_ids"), f"{rid}.confusable_ids", minimum=0)
         _strings(routine.get("aliases", []), f"{rid}.aliases", minimum=0)
         ids.add(rid)
         names.add(name.strip())

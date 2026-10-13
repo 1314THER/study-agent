@@ -36,3 +36,5 @@ fill_denghui.py
 /backend/routine_codex.py
 /tests/test_routine_codex.py
 /outputs/routine-review-*.png
+
+/outputs/routine-graph/

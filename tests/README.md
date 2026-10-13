@@ -54,6 +54,8 @@ node tests/frontend_routine_review.test.mjs
 
 套路审核测试验证不限题数组、50 道分页、跨页选择、全筛选操作的数量和版本契约、刷新恢复，以及过期详情响应不会覆盖最新题目。后端 `tests.test_routine_review` 使用临时原题池、独立审核 SQLite 和模拟模型，覆盖快照、缓存、并发暂停续跑、失败重试、人工结论保护和主人权限。
 
+套路图谱：`python3 -m unittest tests.test_routine_graph -v` 检查现有关系覆盖、题数随人工审核更新、布局保存与冲突、新套路与审核目录共享、重试去重及主人权限。`GRAPH_PYTHON=python3 node tests/e2e/routine_graph_smoke.mjs` 启动独立临时服务，实测题目链接、分页、拖动与刷新恢复、新套路录入、各页导航一致性、矮窗口滚动及手机布局；不调用真实 AI。可用 `PLAYWRIGHT_MODULE`、`CHROME_PATH` 和 `GRAPH_SHOTS` 指定浏览器依赖、可执行文件和截图目录。
+
 原题池测试另外覆盖主人访问保护、数据库分页与跨页选择恢复、仅为选中题生成解析、安全文字和公式渲染、未保存编辑保护、原文件回看与导入重试、发布范围设置、答案冲突与未验证答案的逐题确认、角色冲突拦截、入库请求重试去重，以及过期分页响应不覆盖当前结果。
 
 需要后端已启动，且本机可用 Playwright/Chrome：

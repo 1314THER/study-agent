@@ -1438,6 +1438,9 @@ app.include_router(routine_matching_router)
 from backend.routine_review import router as routine_review_router, page_router as routine_review_page_router
 app.include_router(routine_review_router)
 app.include_router(routine_review_page_router)
+from backend.routine_graph import router as routine_graph_router, page_router as routine_graph_page_router
+app.include_router(routine_graph_router)
+app.include_router(routine_graph_page_router)
 from backend.question_assets import router as question_assets_router
 app.include_router(question_assets_router)
 

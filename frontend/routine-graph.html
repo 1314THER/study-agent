@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>套路图谱 · 成为数学高手</title>
+  <script src="/auth.js?v=20261009a"></script>
+  <script src="/jobs.js?v=20261011-review"></script>
+  <script>document.documentElement.classList.add('nav-init')</script>
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/routine-graph.css?v=20261013a">
+  <link rel="stylesheet" href="/vendor/katex/katex.min.css">
+  <script defer src="/vendor/katex/katex.min.js"></script>
+</head>
+<body>
+<div class="app-layout">
+  <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
+  <aside class="sidebar"><button class="nav-expand-toggle" onclick="toggleNavExpand()" aria-label="展开导航">☰</button><nav>
+    <a href="home.html" class="nav-item" data-page="home" title="首页"><span class="nav-icon">🏠</span><span class="nav-label">首页</span></a>
+    <a href="history.html" class="nav-item" data-page="history" title="个人题库"><span class="nav-icon">📋</span><span class="nav-label">个人题库</span></a>
+    <a href="mother.html" class="nav-item" data-page="mother" title="母题看板"><span class="nav-icon">🧠</span><span class="nav-label">母题看板</span></a>
+    <a href="routine-review.html" class="nav-item" data-page="routine-review" data-owner-only title="套路审核"><span class="nav-icon">📝</span><span class="nav-label">套路审核</span></a>
+    <a href="routine-graph.html" class="nav-item active" data-page="routine-graph" data-owner-only title="套路图谱"><span class="nav-icon">🕸️</span><span class="nav-label">套路图谱</span></a>
+    <a href="settings.html" class="nav-item" data-page="settings" title="系统设置"><span class="nav-icon">⚙️</span><span class="nav-label">系统设置</span></a>
+  </nav></aside>
+  <main class="main-content graph-main">
+    <p id="accessMessage">正在加载套路与审核进度…</p>
+    <div id="graphApp" hidden>
+      <header class="graph-header"><div><p class="graph-eyebrow">METHOD ATLAS / 解题方法的联系</p><h1>套路图谱 <span id="catalogCount"></span></h1><p class="graph-subtitle">整理现有套路，随时回到对应题目。</p></div>
+        <div class="graph-header-actions"><span id="saveStatus" role="status" aria-live="polite">布局已保存</span><button id="refreshGraph">刷新题数</button><button id="addRoutine" class="graph-primary">＋ 添加套路</button></div>
+      </header>
+      <p id="graphMessage" role="status" aria-live="polite"></p>
+      <div class="graph-workspace">
+        <aside class="graph-library">
+          <div class="graph-search"><label for="graphSearch">查找方法</label><input id="graphSearch" type="search" placeholder="名称、编号、关键步骤…" autocomplete="off"><div id="searchResults" hidden></div></div>
+          <p class="graph-eyebrow">知识板块</p>
+          <button id="overview" class="graph-overview">◎ 查看全局</button>
+          <div id="libraryList"></div>
+          <div class="graph-library-note"><strong>使用已有联系</strong><p>实线表示现有板块归属，虚线来自目录中已有的易混淆关系。</p></div>
+        </aside>
+        <section class="graph-board" aria-label="可编辑思维导图">
+          <div class="graph-toolbar"><div><strong id="sceneTitle">知识板块</strong><span id="sceneCount"></span></div><div class="graph-map-pages"><button id="prevGraphPage" aria-label="上一组套路">‹</button><span id="graphPageLabel"></span><button id="nextGraphPage" aria-label="下一组套路">›</button></div><label><input id="pendingOnly" type="checkbox">只看待审核</label><label><input id="showConfusable" type="checkbox">易混淆连线</label></div>
+          <div id="graphViewport" class="graph-viewport" tabindex="0" aria-label="图谱画布，拖动空白平移，滚轮缩放">
+            <div id="graphWorld" class="graph-world"><svg id="graphLines" aria-hidden="true"><defs><marker id="graphArrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="#8193ba"/></marker></defs><g id="lineLayer"></g></svg><div id="nodeLayer"></div></div>
+            <div id="canvasEmpty" class="graph-canvas-empty" hidden>这个分组暂无待审核题目，取消“只看待审核”可查看所有套路。</div>
+            <div class="graph-canvas-tools"><button id="zoomOut" aria-label="缩小">−</button><span id="zoomLabel">100%</span><button id="zoomIn" aria-label="放大">＋</button><button id="fitGraph">适应画布</button><button id="arrangeGraph">整理当前布局</button></div>
+            <div class="graph-canvas-hint">拖动节点调整位置 · 拖空白移动 · 滚轮缩放</div>
+          </div>
+          <footer class="graph-legend"><span><i></i>知识归属</span><span><i class="confusable"></i>易混淆</span><span id="runLabel"></span></footer>
+        </section>
+        <aside class="graph-detail" aria-label="套路内容与审核题目"><div id="detailContent"></div></aside>
+      </div>
+    </div>
+  </main>
+</div>
+<dialog id="routineDialog" class="graph-dialog">
+  <form id="routineForm"><div class="graph-dialog-head"><div><p class="graph-eyebrow">扩展你的方法库</p><h2>添加新套路</h2></div><button type="button" id="closeRoutine" aria-label="关闭">×</button></div>
+    <label>套路名称<input name="name" required maxlength="200" placeholder="例如：含参绝对值函数的零点讨论"></label>
+    <label>知识板块<select name="category" id="newCategory" required></select></label>
+    <label>识别特征<textarea name="signals" required rows="2" placeholder="什么时候用这个方法？每行一条"></textarea></label>
+    <label>关键步骤<textarea name="key_steps" required rows="3" placeholder="如何解这类题？每行一步"></textarea></label>
+    <label>适用边界与排除条件<textarea name="exclusions" required rows="2" placeholder="哪些情形需要换方法？每行一条"></textarea></label>
+    <label>易混淆套路（可选，最多 3 个）<select name="confusable_ids" id="newConfusable" multiple size="3"></select></label>
+    <p class="graph-muted">保存后可在审核页将题目归入这个套路。</p><p id="routineFormError" class="graph-error" role="alert"></p><button type="submit" class="graph-primary" id="saveRoutine">保存套路</button>
+  </form>
+</dialog>
+<script src="/pool-math.js?v=20261010a"></script><script src="/routine-graph.js?v=20261013a"></script><script src="/nav.js?v=20261013graph"></script>
+</body></html>
