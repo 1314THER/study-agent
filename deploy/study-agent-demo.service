@@ -1,5 +1,5 @@
 [Unit]
-Description=Study Agent temporary visitor demo
+Description=Study Agent project showcase
 After=network-online.target
 Wants=network-online.target
 
@@ -11,11 +11,8 @@ WorkingDirectory=/opt/study-agent-demo/current
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=STUDY_DEMO_ROOT=/var/lib/study-agent-demo
-Environment=STUDY_LOCAL_CODEX=0
 Environment=STUDY_AGENT_LOG_DIR=/var/lib/study-agent-demo/logs
-Environment=STUDY_DEMO_AI_ENABLED=1
-Environment=STUDY_DEMO_AI_CONFIG=/etc/study-agent-demo/ai.json
-ExecStart=/opt/study-agent-demo/.venv/bin/python -m uvicorn backend.demo:app --host 127.0.0.1 --port 8001 --workers 1
+ExecStart=/opt/study-agent-demo/.venv/bin/python -m uvicorn backend.showcase:app --host 127.0.0.1 --port 8001 --workers 1
 Restart=on-failure
 RestartSec=5
 UMask=0077

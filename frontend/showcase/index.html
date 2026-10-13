@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="登辉项目：基于大模型的高考数学解答题步骤级诊断与方法迁移训练系统。查看研究方案、预制功能样例与研发计划。">
+  <meta name="theme-color" content="#f8faff">
+  <title>步骤之间 · 登辉项目演示</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23225bdc'/%3E%3Cpath d='M7 24h7V9h12M7 24l6-6m1-9 6 6 6-6' fill='none' stroke='white' stroke-width='2' stroke-linejoin='round'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="/geometry.css">
+  <link rel="stylesheet" href="/showcase/style.css">
+  <script defer src="/vendor/katex/katex.min.js"></script>
+  <script defer src="/geometry.js"></script>
+  <script defer src="/showcase/app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">跳到正文</a>
+  <header class="site-header">
+    <div class="header-inner">
+      <a class="brand" href="#project" aria-label="步骤之间，回到项目介绍">
+        <span class="brand-symbol" aria-hidden="true"><svg viewBox="0 0 32 32"><path d="M6 23h7V9h13M6 23l6-6m1-8 6 6 7-6"/><circle cx="6" cy="23" r="2"/><circle cx="13" cy="9" r="2"/><circle cx="26" cy="9" r="2"/></svg></span>
+        <span class="brand-name">步骤之间<span>登辉项目 · 功能展示</span></span>
+      </a>
+      <button class="menu-toggle" id="menu-toggle" type="button" aria-label="展开导航" aria-controls="main-nav" aria-expanded="false"><span></span><span></span><span></span></button>
+      <nav id="main-nav" class="main-nav" aria-label="项目导航">
+        <a href="#project">项目介绍</a><a href="#research">研究方法</a><a href="#examples">交互演示</a><a href="#roadmap">未来规划</a><a href="#team">进展与团队</a>
+      </nav>
+      <a class="header-cta" href="#examples">查看演示 <span aria-hidden="true">↗</span></a>
+    </div>
+  </header>
+
+  <main id="main-content">
+    <section class="hero section-shell" id="project" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="eyebrow"><span class="eyebrow-line"></span> DENGHUI RESEARCH PROJECT</p>
+        <div class="hero-status"><span class="status-dot" aria-hidden="true"></span> 登辉项目 · 持续研发中</div>
+        <h1 id="hero-title">看见错误发生的<span class="blue-text">那一步。</span><br>练会可以迁移的<span class="blue-text">方法。</span></h1>
+        <p class="hero-project-name">基于大模型的高考数学解答题<br class="desktop-break">步骤级诊断与方法迁移训练系统</p>
+        <p class="hero-description">答案之外，我们关心解题的过程：从学生的作答证据出发，寻找首次错误、解释关键条件，再把一次反馈连接到下一次训练。</p>
+        <div class="hero-actions"><a class="button button-primary" href="#examples">打开交互样例 <span aria-hidden="true">→</span></a><a class="button button-text" href="#research">了解研究方案 <span aria-hidden="true">↓</span></a></div>
+        <p class="hero-note"><span aria-hidden="true">◉</span> 预制样例可直接浏览，无需登录。</p>
+      </div>
+      <div class="hero-visual" aria-label="步骤级诊断研究思路示意">
+        <div class="visual-topline"><span>从一道题，到一种方法</span><span class="tiny-label">研究思路示意</span></div>
+        <div class="evidence-card">
+          <div class="evidence-heading"><span class="outline-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6zM14 3v5h5M9 12h7M9 16h5"/></svg></span><div><span class="tiny-label">作答证据</span><strong>不只看最后的答案</strong></div><span class="paper-tag">示意</span></div>
+          <div class="evidence-step"><span class="step-dot">1</span><div><strong>识别题目中的条件</strong><span>条件、对象与目标</span></div><span class="step-check" aria-hidden="true">✓</span></div>
+          <div class="evidence-step error-step"><span class="step-dot">2</span><div><strong>定位首次错误</strong><span>这一推理是否遗漏了约束？</span></div><span class="first-error">关注点</span></div>
+          <div class="evidence-step muted-step"><span class="step-dot">3</span><div><strong>解释后续推理</strong><span>区分源头错误与连带影响</span></div></div>
+        </div>
+        <div class="visual-connector" aria-hidden="true"><span></span><svg viewBox="0 0 24 24"><path d="m7 10 5 5 5-5M12 2v13"/></svg><span></span></div>
+        <div class="method-card"><div><span class="tiny-label">从反馈到训练</span><h2>把这一次的错，<br>变成下一次的方法。</h2></div><div class="method-links"><span>关键步骤</span><i aria-hidden="true">→</i><span>方法识别</span><i aria-hidden="true">→</i><span>变式迁移</span></div><svg class="method-orbit" viewBox="0 0 220 130" aria-hidden="true"><path d="M12 90C40 10 130 0 200 40S175 135 85 112 35 40 135 55"/><circle cx="36" cy="48" r="5"/><circle cx="143" cy="57" r="5"/><circle cx="196" cy="97" r="5"/></svg></div>
+        <div class="visual-bottomline"><span class="blue-dot" aria-hidden="true"></span> 以步骤为单位，以迁移为目标</div>
+      </div>
+    </section>
+
+    <section class="problem-band" aria-label="研究要解决的问题">
+      <div class="section-shell problem-grid">
+        <div class="problem-intro"><span class="eyebrow">WHY THIS PROJECT</span><h2>一道错题之后，<br>还有两个问题。</h2></div>
+        <article class="problem-item"><span class="problem-number">01</span><h3>我究竟从哪一步开始错？</h3><p>整体对错难以解释中间过程。需要结合条件与作答证据，辨别首次错误和后续连带影响。</p></article>
+        <article class="problem-item"><span class="problem-number">02</span><h3>换一道题，我还能独立做吗？</h3><p>看懂解析不等于掌握方法。需要从母题、仿练走向独立重做与同方法变式，检验迁移。</p></article>
+      </div>
+    </section>
+
+    <section class="research-section section-shell section-space" id="research" aria-labelledby="research-title">
+      <div class="section-heading"><div><p class="eyebrow">01 / RESEARCH APPROACH</p><h2 id="research-title">把解题过程组织起来，<br>让反馈有据可循。</h2></div><p class="section-intro">申请书的核心研究方向，是将步骤级诊断与方法迁移训练连接成可验证的学习过程。</p></div>
+      <div class="research-map" aria-label="研究对象关联示意：知识点、题目、方法、解法路径、关键步骤、作答证据采用多对多关联">
+        <div class="research-map-heading"><span class="badge badge-plan">研究方案</span><p>六类对象 · 多对多关联</p></div>
+        <div class="concept-chain">
+          <div class="concept-node"><span>知识基础</span><strong>知识点</strong><p>题目涉及什么</p></div>
+          <div class="concept-node"><span>问题载体</span><strong>题目</strong><p>条件、对象与目标</p></div>
+          <div class="concept-node"><span>方法选择</span><strong>方法</strong><p>识别何时使用</p></div>
+          <div class="concept-node"><span>推理路线</span><strong>解法路径</strong><p>组织可行的解法</p></div>
+          <div class="concept-node concept-highlight"><span>诊断单位</span><strong>关键步骤</strong><p>检查推理与条件</p></div>
+          <div class="concept-node"><span>反馈依据</span><strong>作答证据</strong><p>解释诊断依据</p></div>
+        </div>
+        <p class="map-caption">六类对象按多对多关系组织：一道题可涉及多个知识点与方法，一种方法也可用于不同题目；具体解法路径、关键步骤与作答证据共同支持诊断。此处为研究框架示意。</p>
+        <p class="map-caption">下方套路图谱只展示参考目录中已有的归属与易混淆关系。</p>
+      </div>
+      <div class="training-heading"><div><h3>六阶段循环训练</h3><p>不止完成一道题，还要检验学生能否独立运用同一种方法。</p></div><span class="badge badge-plan">整体流程为研究方案</span></div>
+      <ol class="training-loop">
+        <li><span class="loop-number">01</span><h4>方法识别</h4><p>从题设特征判断可以采用的方法。</p></li>
+        <li><span class="loop-number">02</span><h4>母题学习</h4><p>理解代表题的思路与关键步骤。</p></li>
+        <li><span class="loop-number">03</span><h4>分步仿练</h4><p>沿关键步骤练习，发现具体卡点。</p></li>
+        <li><span class="loop-number">04</span><h4>无提示重做</h4><p>撤去提示，检验独立完成能力。</p></li>
+        <li><span class="loop-number">05</span><h4>同方法变式迁移</h4><p>换题设与表达，检验方法迁移。</p></li>
+        <li><span class="loop-number">06</span><h4>延迟复查</h4><p>间隔后再检查，观察知识保持。</p></li>
+      </ol>
+      <p class="section-footnote">现有母题、变式、练习与巩固日历为原型基础；完整六阶段流程及训练效果仍需研究验证。</p>
+    </section>
+
+    <section class="examples-section section-space" id="examples" aria-labelledby="examples-title">
+      <div class="section-shell">
+        <div class="section-heading"><div><p class="eyebrow">02 / INTERACTIVE EXAMPLES</p><h2 id="examples-title">先点开一个样例，<br>看看系统怎样表达过程。</h2></div><div class="section-intro"><p>四组预制交互演示。内容已准备好，点击即可查看。</p><div class="status-legend"><span><i class="legend-existing"></i>已有功能</span><span><i class="legend-prototype"></i>功能原型</span><span><i class="legend-plan"></i>研究规划</span></div></div></div>
+        <p id="demo-status" class="demo-status" role="status" aria-live="polite">正在准备预制交互样例…</p>
+        <div class="demo-shell">
+          <div class="demo-tabs" role="tablist" aria-label="选择功能演示">
+            <button type="button" class="demo-tab" id="tab-solution" data-demo-tab="solution" role="tab" aria-selected="true" aria-controls="panel-solution" tabindex="0"><span class="tab-number">01</span><span>分步解析<small>看见解题路径</small></span></button>
+            <button type="button" class="demo-tab" id="tab-diagnosis" data-demo-tab="diagnosis" role="tab" aria-selected="false" aria-controls="panel-diagnosis" tabindex="-1"><span class="tab-number">02</span><span>作答诊断<small>找到错误源头</small></span></button>
+            <button type="button" class="demo-tab" id="tab-geometry" data-demo-tab="geometry" role="tab" aria-selected="false" aria-controls="panel-geometry" tabindex="-1"><span class="tab-number">03</span><span>几何动画<small>把构造变直观</small></span></button>
+            <button type="button" class="demo-tab" id="tab-graph" data-demo-tab="graph" role="tab" aria-selected="false" aria-controls="panel-graph" tabindex="-1"><span class="tab-number">04</span><span>套路图谱<small>整理方法联系</small></span></button>
+          </div>
+          <section class="demo-panel" id="panel-solution" data-demo-panel="solution" role="tabpanel" aria-labelledby="tab-solution">
+            <div class="panel-heading"><div><span class="badge badge-existing">已有功能 · 预制高考题</span><h3>答案可以展开，思路可以回看。</h3><p>选择例题，查看标准过程、详细解释与步骤难度。</p></div><label class="field-label" for="example-select">选择预置例题<select id="example-select"><option value="">正在载入例题…</option></select></label></div>
+            <div id="solution-content" class="solution-content" aria-live="polite"><p class="loading-message">正在载入预制解析样例…</p></div>
+            <details class="pipeline-details"><summary>查看解答链路说明 <span class="tiny-label">现有实现结构</span></summary><div class="pipeline-options" aria-label="解答链路说明"><button type="button" data-pipeline="solver">解答</button><span aria-hidden="true">→</span><button type="button" data-pipeline="verifier">验证</button><span aria-hidden="true">→</span><button type="button" data-pipeline="formatter">结构化表达</button></div><div id="pipeline-stage" class="pipeline-stage"><p>选择环节，查看其在解答过程中的作用。</p></div></details>
+          </section>
+          <section class="demo-panel" id="panel-diagnosis" data-demo-panel="diagnosis" role="tabpanel" aria-labelledby="tab-diagnosis" hidden>
+            <div class="panel-heading"><div><span class="badge badge-prototype">功能原型 · 人工预制反馈</span><h3>第一次偏离正确推理，在哪里？</h3><p>用一个遗漏定义域的作答样例，展示定位、解释与修正。</p></div><span class="sample-label">演示数据，非真实学生报告</span></div>
+            <div id="diagnosis-content" class="diagnosis-content" aria-live="polite"><p class="loading-message">正在载入预制诊断样例…</p></div>
+            <div class="diagnosis-actions"><button type="button" id="diagnosis-reveal" class="button button-primary">查看诊断依据 <span aria-hidden="true">→</span></button><button type="button" id="diagnosis-reset" class="button button-secondary">重置样例</button></div>
+            <p class="panel-footnote">首次错误自动定位是研究方向。本例的学生作答与诊断说明均为预制内容，不代表已完成的诊断评测。</p>
+          </section>
+          <section class="demo-panel" id="panel-geometry" data-demo-panel="geometry" role="tabpanel" aria-labelledby="tab-geometry" hidden>
+            <div class="panel-heading"><div><span class="badge badge-existing">已有功能 · 自拟几何样例</span><h3>转一个角度，看清截面如何形成。</h3><p>旋转正方体、调整参数，按步骤观察辅助构造与截面。</p></div><span class="sample-label">参数化正方体截面</span></div>
+            <div id="geometry-host" class="geometry-host"><p class="loading-message">正在载入本地几何画板…</p></div>
+            <div class="geometry-caption"><span class="caption-icon" aria-hidden="true">↔</span><p>鼠标或触摸拖动可旋转；使用画板参数与步骤按钮，也能逐步观察。三维视图支持情况由当前浏览器决定。</p></div>
+          </section>
+          <section class="demo-panel" id="panel-graph" data-demo-panel="graph" role="tabpanel" aria-labelledby="tab-graph" hidden>
+            <div class="panel-heading"><div><span class="badge badge-existing">已有功能 · 固定目录展示</span><h3>方法之间的联系，也可以被看见。</h3><p>筛选知识板块，点击节点查看识别特征与关键步骤。</p></div><span class="sample-label">288 个套路参考条目</span></div>
+            <div class="graph-toolbar"><label class="field-label" for="graph-category">知识板块<select id="graph-category"><option value="">全部板块</option></select></label><label class="field-label graph-search-field" for="graph-search">搜索套路<input type="search" id="graph-search" placeholder="名称、识别特征、关键步骤…" autocomplete="off"></label><div class="graph-tools" aria-label="图谱缩放"><button type="button" id="graph-zoom-out" aria-label="缩小图谱">−</button><button type="button" id="graph-zoom-in" aria-label="放大图谱">＋</button><button type="button" id="graph-reset">复位</button></div></div>
+            <p id="graph-count" class="graph-count" role="status" aria-live="polite"></p>
+            <div class="graph-layout"><div class="graph-stage"><svg id="graph-canvas" viewBox="0 0 850 460" role="group" aria-label="套路图谱，使用 Tab 键选择节点" tabindex="0"></svg><div class="graph-stage-note"><span><i></i>板块归属</span><span><i class="dashed"></i>已有易混淆关系</span></div></div><aside class="graph-detail" id="graph-detail" aria-label="所选套路说明" aria-live="polite"><div class="graph-detail-placeholder"><span aria-hidden="true">◎</span><h4>选择一个方法</h4><p>查看它的识别特征、关键步骤和适用边界。</p></div></aside></div>
+            <p class="panel-footnote">图谱仅展示目录中已有的联系。条目是方法参考目录，题库审核与方法归类仍在进行。</p>
+          </section>
+        </div>
+        <noscript><p class="noscript-note">交互样例需要启用 JavaScript；项目介绍、研究方案和研发计划仍可直接阅读。</p></noscript>
+        <div class="supporting-heading"><h3>把解答留在一个持续学习的流程里。</h3><p>现有系统还提供题目整理、组卷与巩固安排。以下为界面示意。</p></div>
+        <div class="support-grid">
+          <article class="support-card"><div class="support-top"><span class="mini-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 5h6l2 3h8v12H4zM8 12h8M8 16h5"/></svg></span><span class="badge badge-existing">已有功能</span></div><h4>个人题库</h4><p>保存解析，按知识板块检索，回到需要复习的题目。</p><div class="mini-ui"><div class="mini-ui-bar"><span>我的题目</span><span>检索 · 筛选</span></div><div class="mini-row"><span class="mini-square"></span><span>函数与导数</span><span class="mini-chip">已保存</span></div><div class="mini-row"><span class="mini-square soft"></span><span>立体几何</span><span class="mini-chip">已保存</span></div><div class="mini-row"><span class="mini-square lighter"></span><span>概率与统计</span><span class="mini-chip">已保存</span></div></div></article>
+          <article class="support-card"><div class="support-top"><span class="mini-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M6 3h12v18H6zM9 7h6M9 11h6M9 15h4"/></svg></span><span class="badge badge-existing">已有功能</span></div><h4>组卷与导出</h4><p>将题目组织成试卷，切换学生版与教师版并导出 PDF。</p><div class="mini-ui mini-paper"><div class="mini-paper-title">练习试卷 <span>界面示意</span></div><div class="paper-line"><b>01</b><span></span></div><div class="paper-line"><b>02</b><span></span></div><div class="paper-line"><b>03</b><span></span></div><div class="mini-paper-bottom"><span>学生版</span><span>教师版</span><span>PDF</span></div></div></article>
+          <article class="support-card"><div class="support-top"><span class="mini-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M4 6h16v15H4zM4 10h16M8 3v5M16 3v5M8 14h2M14 14h2M8 18h2"/></svg></span><span class="badge badge-prototype">原型基础</span></div><h4>巩固日历</h4><p>将复习安排落到日期，为延迟复查提供流程基础。</p><div class="mini-ui mini-calendar"><div class="mini-ui-bar"><span>巩固安排</span><span>本周示意</span></div><div class="mini-week"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span><i></i><i class="scheduled"></i><i></i><i class="scheduled"></i><i></i><i class="scheduled"></i><i></i></div><div class="calendar-task"><span></span>复查关键步骤</div></div></article>
+        </div>
+        <p class="resource-note"><strong>资源基础</strong><span>截至 2026 年 10 月 13 日，本机已收集 23,255 道原题，尚未完成人工审核；288 个套路为参考目录。以上数字不代表线上已导入数量或评测成果。</span></p>
+      </div>
+    </section>
+
+    <section class="roadmap-section section-shell section-space" id="roadmap" aria-labelledby="roadmap-title">
+      <div class="section-heading"><div><p class="eyebrow">03 / WHAT COMES NEXT</p><h2 id="roadmap-title">从单题过程，<br>走向可验证的学习支持。</h2></div><p class="section-intro">以下内容来自申请书与研发方向，属于未来规划。用报告、架构和评测方案说明下一步要做什么。</p></div>
+      <div class="future-grid">
+        <article class="future-card report-card"><div class="future-card-header"><span class="future-index">01</span><span class="badge badge-plan">研究规划</span></div><h3>一张试卷，两种视角。</h3><p>学生端整卷报告解释知识与方法薄弱点；试卷质量报告分析题目组成和测量质量，支持教师与教研端。</p><div class="report-pair"><div class="report-mini"><span>STUDENT</span><strong>学生整卷报告</strong><div class="report-row"><span>步骤表现</span><i style="--width:76%"></i></div><div class="report-row"><span>方法掌握</span><i style="--width:58%"></i></div><small>面向下一次训练</small></div><div class="report-mini"><span>PAPER</span><strong>试卷质量报告</strong><div class="report-row"><span>内容覆盖</span><i style="--width:68%"></i></div><div class="report-row"><span>题目组成</span><i style="--width:84%"></i></div><small>面向教师与教研</small></div></div><p class="illustration-note">报告结构示意；图中条形不表示真实测评数据。</p></article>
+        <article class="future-card capture-card"><div class="future-card-header"><span class="future-index">02</span><span class="badge badge-plan">研究规划</span></div><h3>让手写过程成为证据。</h3><p>探索手写笔采集客户端与 iOS App 原型，将作答轨迹连接到步骤表达、诊断与训练反馈。</p><div class="capture-visual" aria-label="手写输入、步骤整理、训练反馈的规划流程示意"><div class="capture-tablet"><svg viewBox="0 0 180 110" aria-hidden="true"><path class="handwriting" d="M25 36q14-18 25 1m-12-15-3 37M58 32h28m-28 10h28M102 23l-5 34m-3-33 20 3m-3 0-22 26m-28 24q14-13 25-1 15 16 27-5"/><path class="tablet-highlight" d="M23 66h97"/></svg><span>作答轨迹</span></div><svg class="capture-arrow" viewBox="0 0 48 24" aria-hidden="true"><path d="M2 12h40m-8-7 8 7-8 7"/></svg><div class="capture-result"><span>步骤整理</span><span>证据关联</span><span>反馈与复查</span></div></div><p class="illustration-note">采集与反馈流程示意，尚未作为完整链路上线。</p></article>
+        <article class="future-card architecture-card"><div class="future-card-header"><span class="future-index">03</span><span class="badge badge-plan">研究规划</span></div><h3>让知识与专用 Agent 协同。</h3><p>以 RAG 支持知识检索，通过 API / MCP 连接工具，探索解答、验证与诊断 Agent 的分工协作。</p><div class="architecture"><div class="architecture-input"><span>题目与作答证据</span><span>方法知识库 · RAG</span></div><div class="architecture-link" aria-hidden="true">↓</div><div class="architecture-agents"><span>解答 Agent</span><span>验证 Agent</span><span>诊断 Agent</span></div><div class="architecture-link" aria-hidden="true">↓</div><div class="architecture-output">步骤表达 · 诊断报告 · 训练建议</div><small>API / MCP 连接工具与流程</small></div></article>
+        <article class="future-card benchmark-card"><div class="future-card-header"><span class="future-index">04</span><span class="badge badge-plan">研究目标</span></div><h3>把“有效”放到评测中检验。</h3><p>围绕首次错误定位、评分与方法迁移建立 Benchmark，以基线对照和封存测试集检验系统表现。</p><div class="benchmark-targets"><div><strong>≥95<span>%</span></strong><p>首次错误定位准确率目标</p></div><div><strong>≥90<span>%</span></strong><p>作答评分偏差不超过<br>该题满分 5% 的比例目标</p></div></div><div class="benchmark-dataset"><span><strong>100</strong>题目族</span><span><strong>300</strong>份作答</span><span><strong>20%</strong>封存测试</span></div><p class="illustration-note">均为申请书设定的研究目标，非已测结果；评测口径与数据集需在研究中落实。</p></article>
+      </div>
+    </section>
+
+    <section class="team-section section-space" id="team" aria-labelledby="team-title">
+      <div class="section-shell">
+        <div class="section-heading"><div><p class="eyebrow">04 / PROGRESS & PEOPLE</p><h2 id="team-title">有原型作起点，<br>也有清晰的验证路线。</h2></div><p class="section-intro">当前阶段以功能原型和资源整理为基础。接下来按申请书推进研发、受控试用与结题评测。</p></div>
+        <div class="timeline-header"><h3>申请书阶段计划</h3><span class="badge badge-plan">以下为计划安排</span></div>
+        <ol class="timeline">
+          <li><div class="timeline-date"><span>2026</span><strong>10—11 月</strong></div><div class="timeline-body"><h4>规范内容，打通主要流程</h4><p>内容规范、学生端主要流程、账号体系与两类整卷报告原型。</p><span>内容与流程基础</span></div></li>
+          <li><div class="timeline-date"><span>2026.12 — 2027.01</span><strong>12—1 月</strong></div><div class="timeline-body"><h4>建立评测首版，探索采集客户端</h4><p>Benchmark 首版与基线、多用户支持、手写笔采集客户端和 iOS App 原型。</p><span>评测与客户端原型</span></div></li>
+          <li><div class="timeline-date"><span>2027</span><strong>2—4 月</strong></div><div class="timeline-body"><h4>连接师生端与专用工具</h4><p>师生端、API / MCP / Agent / RAG、受控试用或离线回放，拓展全端支持。</p><span>协作流程与受控验证</span></div></li>
+          <li><div class="timeline-date"><span>2027</span><strong>5—6 月</strong></div><div class="timeline-body"><h4>封存评测，整理研究成果</h4><p>真人试用或回放、封存评测、结题材料与论文。</p><span>验证与结题</span></div></li>
+        </ol>
+        <div class="people-panel"><div class="people-intro"><p class="eyebrow">PROJECT TEAM</p><h3>计算与智能创新学院</h3><p>围绕高考数学解答题，连接系统开发、方法组织与研究验证。</p></div><div class="person"><span class="person-avatar" aria-hidden="true">施</span><div><small>项目成员</small><strong>施棋智</strong></div></div><div class="person"><span class="person-avatar secondary" aria-hidden="true">杨</span><div><small>项目成员</small><strong>杨瀚淳</strong></div></div><div class="person"><span class="person-avatar mentor" aria-hidden="true">钱</span><div><small>指导教师</small><strong>钱振兴</strong></div></div></div>
+        <div class="closing-callout"><div><span class="eyebrow">EXPLORE THE PROTOTYPE</span><h3>从一个步骤开始，理解我们的研究。</h3></div><div><a class="button button-primary" href="#examples">回到交互演示 <span aria-hidden="true">↑</span></a><a class="button button-secondary" href="https://github.com/1314THER/study-agent" target="_blank" rel="noopener noreferrer">查看代码仓库 <span aria-hidden="true">↗</span></a></div></div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer"><div class="section-shell footer-inner"><div><strong>步骤之间</strong><span>登辉项目 · 项目介绍与功能展示</span></div><p>已有功能、原型与研究规划分别标注。<br>展示数据为预制样例，研究目标不代表评测结果。</p><a href="#project">返回顶部 <span aria-hidden="true">↑</span></a></div></footer>
+</body>
+</html>

@@ -1,6 +1,6 @@
 # Ubuntu 26.04 / 阿里云 ECS 部署
 
-主人应用使用 FastAPI + SQLite，由一个后端进程提供页面与 API，通过 Caddy 提供 HTTPS 和密码保护，只监听 `127.0.0.1:8000`。公开游客演示使用独立用户、进程和临时数据库，只监听 `127.0.0.1:8001`；两站通过同一套发布流程更新。
+主人应用使用 FastAPI + SQLite，由一个后端进程提供页面与 API，通过 Caddy 提供 HTTPS 和密码保护，只监听 `127.0.0.1:8000`。公开项目展示使用独立用户和进程，只提供固定介绍与预制样例，只监听 `127.0.0.1:8001`；两站通过同一套发布流程更新。
 
 ## 1. 先完成服务器本机部署
 
@@ -102,7 +102,7 @@ curl -I https://150.chat/home.html
 
 网站开通后还需按所在地要求办理公安联网备案，并在取得公安备案号后展示。不要将 `.env`、`backend/settings.json` 或数据库提交到 Git。
 
-## 3. 追加游客演示
+## 3. 追加项目展示站
 
 两站都运行在公网 IP **`47.117.107.156`** 的同一台 ECS 上。DNS 的 `@` 与 `demo` 两条 A 记录都指向这个 IP；Caddy 按域名转发，外部只使用 80/443。
 
@@ -112,17 +112,15 @@ curl -I https://150.chat/home.html
 | systemd 服务 | `study-agent` | `study-agent-demo` |
 | Linux 用户 | `studyagent` | `studydemo` |
 | 内部地址 | `127.0.0.1:8000` | `127.0.0.1:8001` |
-| 运行数据 | `/opt/study-agent` 中的正式数据库与 `.runtime/` | `/var/lib/study-agent-demo/session-*`，每个游客独立 |
-| AI 配置 | 正式站原配置 | `/etc/study-agent-demo/ai.json`，只读连接快照 |
+| 运行数据 | `/opt/study-agent` 中的正式数据库与 `.runtime/` | 固定公开展示素材；旧体验数据保留供回滚 |
+| AI 配置 | 正式站原配置 | 不读取 AI 配置，不调用模型 |
 
-两个代码目录来自同一个 Git 提交，但不共用数据库。demo 首页使用 `frontend/demo-home.html`，教程使用 `frontend/demo-session.js/css`；多模态等现有页面共用源代码，仅游客服务加载演示配置。同步脚本同时更新两站，保留正式站账户、题库和密钥配置。
-
+两个代码目录来自同一个 Git 提交。项目展示站运行独立 `backend.showcase:app`，提供专属页面、固定样例与本地数学/几何资源；不导入主人后端，不创建游客题库，不加载学习教程。同步保留正式站账号、题库和密钥配置。
 主人继续使用 `https://150.chat/home.html`：用户名 **`studyadmin`**，密码是部署 Caddy 时自设的网站密码，主数据持续保存。Caddy 保存的是不可逆密码哈希，无法从配置反查明文；忘记时，在 Workbench 运行 `caddy hash-password` 设置新密码，然后在 `/etc/caddy/Caddyfile` 仅替换 `studyadmin` 后的旧哈希，执行 `caddy validate --config /etc/caddy/Caddyfile` 与 `systemctl reload caddy`。不要将密码或哈希提交到 Git。
 
-游客入口为 `https://demo.150.chat/home.html`，**无需账号密码**。每个浏览器获得独立的示例数据库、套路与看板配置，2 小时后失效，点击「重新开始」会立即恢复示例数据；同一浏览器的不同标签页共享这次体验，重置后旧标签页需刷新。关闭浏览器不会立即清除服务器数据，到期后服务自动清理；游客服务重启会保留未过期体验与已完成任务，未完成任务标记为中断，不自动重复调用。游客可真实调用 AI 解题、教学、仿题与上传识别，使用主人授权的接口额度；AI 生成内容仍只保存到该游客的临时题库。游客不能更改服务商连接或查看 API 密钥。demo 的 AI 改卷、母题看板、套路循环、关卡编辑统一显示“暂未开发完成”；正式站继续保留现有功能。
+项目展示入口为 `https://demo.150.chat/home.html`，无需账号密码。已有功能通过分步解析、作答诊断、几何动画和只读套路图谱展示；未来能力用图文规划说明。所有交互在浏览器运行，展示站不开放教学、上传、生成与写入接口。原有体验目录及旧 AI 快照不主动删除，便于版本回滚。
 
-先在 Mac 试用时，运行 `python3 scripts/run_demo.py`，打开 `http://127.0.0.1:8000/home.html`。演示首页自动开启教程，引导依次介绍进入多模态页面、选择预设真题、启动解答、等待期间体验题库与组卷、集合首关、查看解析和教学，每一步定位实际控件，可跳过单步或重新开始；完成后可继续体验或直接前往 `150.chat`。三道预设为近年数列与导数、解三角形和对数函数大题，不含立体几何。该脚本创建私有 AI 配置快照并启动游客服务，不会覆盖本地原来的数据库。端口 8000 若已有服务，先停止对应服务；`Ctrl+C` 可停止游客预览。
-
+本地预览运行 `.venv/bin/python scripts/run_demo.py --port 8301`，打开 `http://127.0.0.1:8301/home.html`，无需 API 密钥。`Ctrl+C` 停止预览。详细内容和验收见 [展示站说明](../docs/showcase-demo.md)。
 ### 第一步：添加子域名解析
 
 在阿里云云解析 DNS 新增一条记录：类型 **A**，主机记录 **`demo`**，记录值 **`47.117.107.156`**。保留原来的 `@` 记录。在 Mac 运行 `dig +short A demo.150.chat`，确认解析正确。现有安全组的 TCP 80/443 规则继续使用，8000/8001 无需对公网开放。
@@ -188,11 +186,11 @@ runuser -u studyagent -- /bin/sh -c 'printf "\n/.cache/pip/\n" >> /opt/study-age
 
 该规则仅匹配仓库根目录的 pip 缓存，缓存继续保留；其他代码改动与未跟踪文件仍会触发检查。如果错误列出了其他路径，应先检查那些文件。
 
-脚本在 `/opt/study-agent-sync/backups/` 创建 root 私有快照：用 SQLite 备份 API 保存并检查两个主人数据库、已有的 `.runtime/jobs.sqlite3` 任务/教学记录、`.runtime/question_pool.db` 原题池和 `.runtime/routine-review.sqlite3` 审核账本；同时保存 `.runtime/question-pool/` 题源原件、`.runtime/question-assets/` 题图、`.runtime/routine-matching/` 新套路目录与图谱布局、默认 `.accounts/` 账号数据，以及套路、看板顺序、设置、`.env`、Caddy、公开首页、systemd 配置、AI 快照与旧 Python 环境。`runtime_snapshot.py` 保存每个文件的大小与 SHA-256，数据库临时日志通过备份 API 归并。发布前检查备份磁盘空间；空间不足时不停止网站。代码更新保留原有运行文件，失败回滚时才从完整快照恢复；旧格式快照仍兼容。两个服务停站后还会复制 `/var/lib/study-agent-demo` 的游客数据库、任务、配置与日志，保留权限及归属，并归并数据库临时日志。复制前后拒绝链接和特殊文件，校验数据库完整性。脚本支持默认数据路径；如果 systemd 设置了自定义 `STUDY_AGENT_DATA_DIR`、`STUDY_AGENT_JOB_DIR`、`STUDY_AUTH_ROOT` 或游客 `STUDY_DEMO_ROOT`，会停止并要求另行制定备份路径。遗留同步维护配置会在停站前阻止发布，脚本仅清理本次创建的维护配置。服务器代码必须能从当前 `main` 快进到指定提交；除运行时 `backend/patterns.yaml` 外有代码改动、暂存改动或意外未跟踪文件时会停止，避免覆盖人工改动。它仅临时还原该套路导出文件的 Git 版本以完成 `merge --ff-only`，随后恢复主人原文件，**不使用 `git reset --hard`**。
+脚本在 `/opt/study-agent-sync/backups/` 创建 root 私有快照：用 SQLite 备份 API 保存并检查两个主人数据库、已有的 `.runtime/jobs.sqlite3` 任务/教学记录、`.runtime/question_pool.db` 原题池和 `.runtime/routine-review.sqlite3` 审核账本；同时保存 `.runtime/question-pool/` 题源原件、`.runtime/question-assets/` 题图、`.runtime/routine-matching/` 新套路目录与图谱布局、默认 `.accounts/` 账号数据，以及套路、看板顺序、设置、`.env`、Caddy、公开首页、systemd 配置、AI 快照与旧 Python 环境。`runtime_snapshot.py` 保存每个文件的大小与 SHA-256，数据库临时日志通过备份 API 归并。发布前检查备份磁盘空间；空间不足时不停止网站。代码更新保留原有运行文件，失败回滚时才从完整快照恢复；旧格式快照仍兼容。两个服务停站后还会复制 `/var/lib/study-agent-demo` 的游客数据库、任务、配置与日志，保留权限及归属，并归并数据库临时日志。复制前后拒绝链接和特殊文件，校验数据库完整性。脚本支持默认数据路径；如果 systemd 设置了自定义 `STUDY_AGENT_DATA_DIR`、`STUDY_AGENT_JOB_DIR`、`STUDY_AUTH_ROOT`、`STUDY_OWNER_DATA_DIR` 或游客 `STUDY_DEMO_ROOT`，会停止并要求另行制定备份路径。遗留同步维护配置会在停站前阻止发布，脚本仅清理本次创建的维护配置。服务器代码必须能从当前 `main` 快进到指定提交；除运行时 `backend/patterns.yaml` 外有代码改动、暂存改动或意外未跟踪文件时会停止，避免覆盖人工改动。它仅临时还原该套路导出文件的 Git 版本以完成 `merge --ff-only`，随后恢复主人原文件，**不使用 `git reset --hard`**。
 
-依赖清单变化时，先在候选虚拟环境安装与检查；通过后才停站。主人服务保留现有 systemd 配置，游客使用独立用户 `studydemo`、独立代码发布目录和 `/var/lib/study-agent-demo`；两个服务分别运行在 `127.0.0.1:8000`、`127.0.0.1:8001`，各一个 worker。游客 Python 环境每次从本次主人环境重新复制，防止两站依赖版本不同。主人配置被读取为 `/etc/study-agent-demo/ai.json` 的只读快照（root 所有、studydemo 只读），新游客仍使用临时独立数据库。既有网站密码哈希与 API 密钥保持原值，无需重设。备份含私有密钥配置，不要上传到 Git 或发到聊天。
+依赖清单变化时，先在候选虚拟环境安装与检查；通过后才停站。主人服务保留现有 systemd 配置，游客使用独立用户 `studydemo`、独立代码发布目录和 `/var/lib/study-agent-demo`；两个服务分别运行在 `127.0.0.1:8000`、`127.0.0.1:8001`，各一个 worker。游客 Python 环境每次从本次主人环境重新复制，防止两站依赖版本不同。新展示服务不读取主人 AI 配置或原题库，不创建临时数据库；旧 AI 快照和体验数据保留在备份/原目录，以支持回滚。既有网站密码哈希与 API 密钥保持原值，无需重设。备份含私有密钥配置，不要上传到 Git 或发到聊天。
 
-新版本启动时暂处于维护状态，完成两端口健康检查、游客 HTTPS、主人公开首页与密码保护检查后才开放写入。脚本发生错误会尝试自动恢复旧代码、数据、依赖、入口配置与原服务状态，并保留备份。同步保留未过期游客体验与已完成任务；主人数据库持续保存。
+新版本启动时暂处于维护状态，完成两端口健康检查、展示站 HTTPS、主人公开首页与密码保护检查后才解除维护。脚本发生错误会尝试自动恢复旧代码、数据、依赖、入口配置与原服务状态，并保留备份。同步保留原体验数据与已完成任务供回滚；主人数据库持续保存。
 
 ### 第四步：验收
 
@@ -208,20 +206,20 @@ curl -I https://150.chat/home.html
 journalctl -u study-agent -u study-agent-demo -n 80 --no-pager
 ```
 
-游客健康检查应包含 `"mode":"demo","ai_enabled":true`；主人公开首页返回 `200`，未输入网站密码的 `/home.html` 返回 `401`。Caddy 在 DNS 和 80/443 可达时自动申请 HTTPS，首次证书失败还可查看 `journalctl -u caddy -n 100 --no-pager`。不需要开放 8000/8001。
+展示站健康检查应包含 `"mode":"demo","demo_mode":"showcase","ai_enabled":false`；主人公开首页返回 `200`，未输入网站密码的 `/home.html` 返回 `401`。Caddy 在 DNS 和 80/443 可达时自动申请 HTTPS，首次证书失败还可查看 `journalctl -u caddy -n 100 --no-pager`。不需要开放 8000/8001。
 
 在浏览器验证：
 
-1. 打开 `https://150.chat/`，应有「游客体验」「主人登录」及备案信息。
+1. 打开 `https://150.chat/`，应有「项目演示」「主人登录」及备案信息。
 2. 主人登录仍用 `studyadmin` 和原网站密码，核对原题库与学习记录。
-3. 打开 `https://demo.150.chat/home.html`，应有临时体验提示与引导，并可发起 AI 任务；切页后可在后台任务面板继续查看结果。预设真题先真实调用 AI，超过 300 秒时明确标注并展示预备解析。
-4. 用另一个浏览器或无痕窗口体验；一边编辑题目应不影响另一边，也不影响主人题库。
+3. 打开 `https://demo.150.chat/home.html`，应有五部分项目介绍及四组可点击样例；无需登录、倒计时或 AI 等待。核对公式、几何旋转与参数、图谱筛选缩放，并确认未来功能和目标数值的状态标注。
+4. 用手机或无痕窗口打开展示站；旧 `/teach.html`、`/routine-graph.html` 等链接应跳到展示章节。主人和账号版游客继续在原入口核对题库、学习记录及账号隔离。
 
-游客 API 没有体验 Cookie 时返回 401；验证页面请实际打开 `/home.html`，不要只对它执行匿名 `curl -I`。默认上限为 40 个活跃体验、每个来源每小时新建 10 次、每个体验每分钟 120 个动态请求；文字提交上限 1 MiB，上传单文件上限 16 MiB。到期或重置时，已经开始的后台任务完成后才清理旧工作区。示例数据不自动同步主人的实时题目。
+展示站只提供公开静态资源及本机维护接口；教学、上传、生成、账号与写入 API 返回 404，不设置体验 Cookie、不创建访客工作区。浏览器交互只加载同源静态资源，不调用模型或主人题库。原账号版游客功能继续由主人应用提供。
 
 ### 日后同步与回滚
 
-以后仍然在 Mac 提交并推送，复制新的完整 SHA，再运行上面的后台命令，**删掉最后的 `--bootstrap`**。脚本会检查并等待当前任务，更新两站到同一提交，并刷新游客共享 AI 配置快照。不要再只更新一站，也不要直接 `git pull` 覆盖运行时套路文件。
+以后仍然在 Mac 提交并推送，复制新的完整 SHA，再运行上面的后台命令，**删掉最后的 `--bootstrap`**；GitHub 网络不通时按 [离线同步说明](../docs/offline-server-sync.md)制作源码包。脚本会检查并等待当前任务，更新两站到同一提交，验收展示模式和主人访问保护。展示站无需 AI 快照。不要再只更新一站，也不要直接 `git pull` 覆盖运行时套路文件。
 
 需要恢复某次快照时，先确定要恢复的备份路径；日志中有完整路径，`/opt/study-agent-sync/latest-backup` 保存最近一次路径。**手动回滚会恢复快照时的主人及游客数据，发布后新产生的编辑不会保留在运行站点**。回滚前的游客目录会另存至 `/opt/study-agent-sync/failed-demo-data.XXXXXXXX`，供人工检查。在 Workbench 运行：
 
@@ -239,7 +237,9 @@ journalctl -u study-agent-sites-rollback -n 120 --no-pager
 
 ### 从 Mac 迁移当前数据
 
-GitHub 只同步源码，不包含原题池、审核结果、题图、新套路和图谱布局。下面的旧版五文件导入脚本仅适用于旧题库，不能用于迁移本轮审核数据。需要同时迁移这些数据时，应先确认服务器已有题库与账号的保留范围，另做完整数据快照与定向导入；`runtime_snapshot.py restore` 是同一台服务器的回滚工具，会恢复快照时的数据范围，不应直接拿本机快照覆盖服务器账号。图谱和题图读取已支持 `.runtime/question-pool/` 根路径跨电脑变化，保留原始出处记录。
+GitHub 只同步源码，不包含原题池、审核结果、题图、新套路和图谱布局。本轮 23,255 道原题已有独立数据包，按 [题池数据导入说明](../docs/question-data-server-import.md)手动上传后执行。新工具校验所有附件和两库引用，在候选副本中合并并拒绝冲突；停站后从最新服务器数据重建候选，备份后安装，失败自动回滚。不更改账号、密码、API 配置或学习数据库。
+
+下面的旧版五文件导入脚本仅适用于旧题库，不能用于迁移本轮审核数据；`runtime_snapshot.py restore` 是同一台服务器的回滚工具，不应直接拿本机快照覆盖服务器账号。图谱和题图读取已支持 `.runtime/question-pool/` 根路径跨电脑变化，保留原始出处记录。
 
 在 Mac 上用 SQLite 备份 API 制作两个数据库快照，再将它们与 `patterns.yaml`、`settings.json`、`.env` 打包为恰好五个文件。通过 SSH 将压缩包上传至服务器。验证压缩包 SHA-256 后，在服务器上运行 `deploy/import-local-data.sh 压缩包路径`。该脚本先验证数据库及配置，然后停止服务、备份服务器原有数据、导入、重启并检查接口；失败时尝试恢复原数据。若 Workbench 容易断线，可通过 `systemd-run --unit=study-agent-import /bin/bash /opt/study-agent/deploy/import-local-data.sh 压缩包路径` 独立运行，并用 `journalctl -u study-agent-import -n 80 --no-pager` 查看结果。成功后删除 `studyviewer` 家目录里的上传压缩包，因为它包含 API 密钥。
 

@@ -21,8 +21,10 @@ assert_no_dropins() {
     local unit path
     for unit in study-agent study-agent-demo; do
         path=$(dropin "$unit")
-        [[ ! -e $path && ! -L $path ]] || { echo "存在遗留维护配置 $path，停止同步；请先人工检查。" >&2; return 1; }
+        [[ ! -e $path && ! -L $path ]] || { echo "存在遗留维护配置 ${path}，停止同步；请先人工检查。" >&2; return 1; }
     done
+    path=/run/systemd/system/study-agent.service.d/91-study-agent-data-import.conf
+    [[ ! -e $path && ! -L $path ]] || { echo "存在题库导入维护配置 ${path}，停止同步；请先完成原导入或恢复。" >&2; return 1; }
 }
 verify_demo_tree() {
     # Directory copies avoid archive path traversal. Reject links and special
@@ -110,7 +112,8 @@ if "backend.main:app" not in unit or "--host 127.0.0.1" not in unit or "--port 8
 if "--reload" in unit or any(n != "1" for n in workers + env_workers):
     raise SystemExit("主人服务必须是单 worker 且不使用 reload")
 auth_roots = re.findall(r"(?:^|\s)STUDY_AUTH_ROOT=(\S+)", unit)
-if re.search(r"STUDY_AGENT_(?:DATA|JOB)_DIR=", unit) or (auth_roots and auth_roots != ["/opt/study-agent/.accounts"]):
+owner_roots = re.findall(r"(?:^|\s)STUDY_OWNER_DATA_DIR=(\S+)", unit)
+if re.search(r"STUDY_AGENT_(?:DATA|JOB)_DIR=", unit) or (auth_roots and auth_roots != ["/opt/study-agent/.accounts"]) or (owner_roots and owner_roots != ["/opt/study-agent"]):
     raise SystemExit("自定义数据、任务或账号目录需要单独制定备份路径，当前脚本只支持默认目录")
 '
 if systemctl cat study-agent-demo >/dev/null 2>&1; then
@@ -125,6 +128,39 @@ fi
 [[ ! -L $DEMO_DATA_DIR ]] || { echo '游客运行目录是符号链接，停止同步。' >&2; exit 1; }
 if [[ -e $DEMO_DATA_DIR ]]; then
     [[ -d $DEMO_DATA_DIR && $(realpath "$DEMO_DATA_DIR") == "$DEMO_DATA_DIR" ]] || { echo '游客运行目录路径异常，停止同步。' >&2; exit 1; }
+fi
+# Optional gate for this release: finish the c9-locked data import before the
+# code advances. It runs under the shared deployment/import lock, before fetch
+# or drain, and never opens private databases for writing.
+if [[ ${STUDY_SYNC_REQUIRE_QUESTION_IMPORT:-0} == 1 ]]; then
+    python3 - "$APP_DIR" <<'PY'
+from contextlib import closing
+from pathlib import Path
+import sqlite3, sys
+
+message = "请先完成本轮23,255题和审核导入；网站尚未停止"
+root = Path(sys.argv[1])
+run_id = "a4b37d61d62147939df3b08634e7cbb5"
+try:
+    paths = (root / ".runtime/question_pool.db", root / ".runtime/routine-review.sqlite3")
+    if root.is_symlink() or (root / ".runtime").is_symlink() or any(path.is_symlink() or not path.is_file() for path in paths):
+        raise ValueError("缺少默认原题池或审核数据库")
+    with closing(sqlite3.connect(paths[0].resolve().as_uri() + "?mode=ro", uri=True)) as pool:
+        totals = [pool.execute("SELECT count(*) FROM " + table).fetchone()[0]
+                  for table in ("pool_items", "pool_sources", "pool_occurrences")]
+        if any(actual < minimum for actual, minimum in zip(totals, (23255, 61, 23536))):
+            raise ValueError("原题、来源或出处数量不足")
+    with closing(sqlite3.connect(paths[1].resolve().as_uri() + "?mode=ro", uri=True)) as review:
+        if review.execute("SELECT 1 FROM review_runs WHERE run_id=?", (run_id,)).fetchone() is None:
+            raise ValueError("本轮审核批次未导入")
+        total, matched = review.execute("SELECT count(*),coalesce(sum(primary_id IS NOT NULL),0) FROM review_items WHERE run_id=?", (run_id,)).fetchone()
+        if total < 23255 or matched < 17005:
+            raise ValueError("本轮审核快照或主套路匹配数量不足")
+except (OSError, ValueError, sqlite3.Error) as error:
+    detail = str(error) if isinstance(error, ValueError) else "默认数据库或数据表不可读取"
+    raise SystemExit(message + "（" + detail + "）")
+print("本轮23,255题和审核导入检查通过；尚未停止网站。")
+PY
 fi
 OWNER_BRANCH=$(runuser -u studyagent -- git -C "$APP_DIR" symbolic-ref --short HEAD)
 [[ $OWNER_BRANCH == main ]] || { echo '主人仓库必须在 main 分支；请先检查当前分支。' >&2; exit 1; }
@@ -152,31 +188,86 @@ if bad:
 '
 }
 assert_clean_code
-echo '正在拉取 GitHub；尚未停止网站。'
-timeout 300 runuser -u studyagent -- git -C "$APP_DIR" -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=30 fetch --no-tags origin main
+# The offline bootstrap passes a verified, root-owned Git bundle when the ECS
+# cannot reach GitHub. Only Git objects/refs change here; services still run.
+if [[ -n ${STUDY_SYNC_BUNDLE:-} ]]; then
+    [[ -f $STUDY_SYNC_BUNDLE && ! -L $STUDY_SYNC_BUNDLE ]] || { echo '离线 Git 包不可用。' >&2; exit 1; }
+    echo '正在读取离线 Git 包；尚未停止网站。'
+    git_owner bundle verify "$STUDY_SYNC_BUNDLE"
+    FETCH_REF="refs/study-agent-sync/bundle-$TARGET"
+    git_owner fetch --no-tags "$STUDY_SYNC_BUNDLE" "refs/heads/main:$FETCH_REF"
+else
+    echo '正在拉取 GitHub；尚未停止网站。'
+    timeout 300 runuser -u studyagent -- git -C "$APP_DIR" -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=30 fetch --no-tags origin main
+    FETCH_REF=origin/main
+fi
 TARGET=$(git_owner rev-parse --verify "$TARGET^{commit}")
-git_owner merge-base --is-ancestor "$TARGET" origin/main || { echo '指定提交不在已获取的 origin/main 历史中。' >&2; exit 1; }
+git_owner merge-base --is-ancestor "$TARGET" "$FETCH_REF" || { echo '指定提交不在已获取的发布历史中。' >&2; exit 1; }
+if [[ -n ${STUDY_SYNC_BUNDLE:-} && $(git_owner rev-parse "$FETCH_REF") != "$TARGET" ]]; then
+    echo '离线包的 main 与指定发布提交不同，停止同步。' >&2
+    exit 1
+fi
 git_owner merge-base --is-ancestor "$OLD_COMMIT" "$TARGET" || { echo '指定提交无法从服务器当前提交快进，停止同步。' >&2; exit 1; }
 STAGING=$(mktemp -d "$SYNC_DIR/staging.XXXXXXXX")
 install -d -m 755 "$STAGING/code"
 git_owner archive "$TARGET" | tar -x -C "$STAGING/code"
-for relative in requirements.txt deploy/install-demo.sh deploy/rollback-sites.sh backend/jobs.py backend/demo.py frontend/demo-home.html deploy/runtime_snapshot.py; do
-    [[ -f $STAGING/code/$relative ]] || { echo "指定提交缺少 $relative。" >&2; exit 1; }
+for relative in requirements.txt deploy/install-demo.sh deploy/rollback-sites.sh backend/jobs.py deploy/runtime_snapshot.py; do
+    [[ -f $STAGING/code/$relative ]] || { echo "指定提交缺少 ${relative}。" >&2; exit 1; }
 done
+if [[ -f $STAGING/code/backend/showcase.py ]]; then
+    for relative in frontend/showcase/index.html frontend/showcase/style.css frontend/showcase/app.js frontend/showcase/data.json; do
+        [[ -f $STAGING/code/$relative ]] || { echo "指定展示提交缺少 ${relative}。" >&2; exit 1; }
+    done
+else
+    for relative in backend/demo.py frontend/demo-home.html; do
+        [[ -f $STAGING/code/$relative ]] || { echo "指定提交缺少 ${relative}。" >&2; exit 1; }
+    done
+fi
 cp -a "$APP_DIR/.venv" "$STAGING/.venv"
 chmod 755 "$SYNC_DIR" "$STAGING"
 chown -R studyagent:studyagent "$STAGING/.venv"
 git_owner show "$OLD_COMMIT:requirements.txt" > "$STAGING/requirements.old"
 if ! cmp -s "$STAGING/requirements.old" "$STAGING/code/requirements.txt"; then
-    echo '依赖清单已变化，先在候选环境安装；网站继续运行。'
-    runuser -u studyagent -- env PIP_DEFAULT_TIMEOUT=120 PIP_RETRIES=10 \
-        "$STAGING/.venv/bin/python" -m pip install -r "$STAGING/code/requirements.txt"
+    PIP_SOURCE_ARGS=()
+    PIP_ENV_ARGS=()
+    if [[ -n ${STUDY_SYNC_WHEELHOUSE:-} ]]; then
+        [[ -d $STUDY_SYNC_WHEELHOUSE && ! -L $STUDY_SYNC_WHEELHOUSE ]] || { echo '离线依赖目录不可用。' >&2; exit 1; }
+        PIP_SOURCE_ARGS=(--no-index --find-links "$STUDY_SYNC_WHEELHOUSE" --only-binary=:all: --disable-pip-version-check --no-cache-dir)
+        PIP_ENV_ARGS=(-u PIP_FIND_LINKS -u PIP_INDEX_URL -u PIP_EXTRA_INDEX_URL PIP_CONFIG_FILE=/dev/null)
+        echo '依赖清单已变化，使用离线 wheel 在候选环境安装；网站继续运行。'
+    else
+        echo '依赖清单已变化，先在候选环境安装；网站继续运行。'
+    fi
+    runuser -u studyagent -- env "${PIP_ENV_ARGS[@]}" PIP_DEFAULT_TIMEOUT=120 PIP_RETRIES=10 \
+        "$STAGING/.venv/bin/python" -m pip install "${PIP_SOURCE_ARGS[@]}" -r "$STAGING/code/requirements.txt"
 fi
 "$STAGING/.venv/bin/python" -c 'import fastapi, uvicorn, multipart, httpx, yaml, fitz, docx, cryptography'
+"$STAGING/.venv/bin/python" - <<'PY'
+from io import BytesIO
+from cryptography.fernet import Fernet
+from PIL import Image
+fernet = Fernet(Fernet.generate_key())
+assert fernet.decrypt(fernet.encrypt(b'deploy-check')) == b'deploy-check'
+image_data = BytesIO()
+Image.new('RGB', (2, 2), (12, 34, 56)).save(image_data, format='PNG')
+image_data.seek(0)
+with Image.open(image_data) as image:
+    image.load()
+    assert image.getpixel((0, 0)) == (12, 34, 56)
+PY
 "$STAGING/.venv/bin/python" -m pip check
 # _gen.py is an unused, versioned debug placeholder from an older checkout.
 # Keep the user's file, but do not let that placeholder block a release.
 "$STAGING/.venv/bin/python" -m compileall -q -x '(^|/)_gen\.py$' "$STAGING/code/backend"
+if [[ -f $STAGING/code/backend/showcase.py ]]; then
+    (cd "$STAGING/code" && "$STAGING/.venv/bin/python" - <<'PY'
+from backend.showcase import ASSET_PATHS, FRONTEND
+missing = [path for path in ASSET_PATHS | {"/showcase/index.html"} if not (FRONTEND / path.lstrip("/")).is_file()]
+if missing:
+    raise SystemExit("候选展示资源缺失：" + ", ".join(sorted(missing)))
+PY
+    )
+fi
 chmod 700 "$SYNC_DIR"
 
 status_json() { curl --noproxy '*' --connect-timeout 2 --max-time 5 -fsS "http://127.0.0.1:$1/_internal/deploy-status"; }
@@ -218,8 +309,12 @@ for port in "${PORTS[@]}"; do
         python3 - "$STAGING/status.$port.json" <<'PY'
 import json, sys
 state = json.load(open(sys.argv[1], encoding="utf-8"))
-if not all(isinstance(state.get(k), int) and state[k] >= 0 for k in ("active_requests", "active_jobs")):
+if not all(type(state.get(k)) is int and state[k] >= 0 for k in ("active_requests", "active_jobs")):
     raise SystemExit("内部部署状态格式异常，停止同步")
+if type(state.get("draining")) is not bool:
+    raise SystemExit("内部部署维护状态格式异常，停止同步")
+if state["draining"]:
+    raise SystemExit("网站已处于维护状态，停止同步；请先完成原维护操作")
 PY
         set_drain "$port" true
         DRAINED_PORTS+=("$port")
@@ -353,8 +448,10 @@ wait_health http://127.0.0.1:8001/health
 python3 - "$STAGING/health.json" <<'PY'
 import json, sys
 state = json.load(open(sys.argv[1], encoding="utf-8"))
-if state.get("mode") != "demo" or state.get("ai_enabled") is not True:
-    raise SystemExit("游客健康检查未确认 AI 已开启")
+showcase = state.get("demo_mode") == "showcase" and state.get("ok") is True and state.get("ai_enabled") is False
+experience = state.get("demo_mode") in (None, "experience") and state.get("ai_enabled") is True
+if state.get("mode") != "demo" or not (showcase or experience):
+    raise SystemExit("演示健康检查没有确认展示模式或旧游客体验模式")
 PY
 for port in 8000 8001; do
     status_json "$port" > "$STAGING/status.$port.json"
@@ -377,7 +474,7 @@ CREATED_DROPINS=()
 systemctl daemon-reload
 SUCCESS=1
 touch "$BACKUP/sync-complete"
-echo "双站已同步到 $TARGET。主人题库、网站密码和 API 配置已保留。"
+echo "双站已同步到 ${TARGET}。主人题库、网站密码和 API 配置已保留。"
 echo "备份：$BACKUP"
 echo "回滚：bash $BACKUP/rollback-sites.sh $BACKUP"
-echo '主人：https://150.chat/home.html；游客：https://demo.150.chat/home.html'
+echo '主人：https://150.chat/home.html；项目演示：https://demo.150.chat/home.html'

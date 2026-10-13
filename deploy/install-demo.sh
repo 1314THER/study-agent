@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Install a separate demo release; only its private AI snapshot is shared.
+# Install a read-only project showcase, preserving old demo data for rollback.
 set -Eeuo pipefail
 
 APP_DIR=/opt/study-agent
@@ -73,8 +73,6 @@ finish() {
             fi
             if [[ -f $BACKUP/ai.json ]]; then
                 cp -a "$BACKUP/ai.json" /etc/study-agent-demo/ai.json
-            else
-                rm -f /etc/study-agent-demo/ai.json
             fi
             if [[ -n $OLD_CURRENT ]]; then
                 ln -sfn "$OLD_CURRENT" "$DEMO_DIR/current"
@@ -99,9 +97,9 @@ trap finish EXIT
 
 # A git archive contains versioned example data, never .env or runtime settings.
 runuser -u studyagent -- git -C "$APP_DIR" archive "$REF" | tar -x -C "$RELEASE"
-for relative in backend/demo.py backend/data_paths.py deploy/prepare-demo-ai.py deploy/study-agent-demo.service deploy/study-agent-demo.caddy frontend/demo-session.js frontend/demo-home.html; do
+for relative in backend/showcase.py deploy/study-agent-demo.service deploy/study-agent-demo.caddy deploy/public/index.html frontend/showcase/index.html frontend/showcase/style.css frontend/showcase/app.js frontend/showcase/data.json frontend/geometry.js frontend/geometry.css frontend/vendor/katex/katex.min.js frontend/vendor/katex/katex.min.css frontend/vendor/three-0.180.0/build/three.module.min.js frontend/vendor/three-0.180.0/build/three.core.min.js frontend/vendor/three-0.180.0/examples/jsm/controls/OrbitControls.js frontend/vendor/jsxgraph-1.11.1/distrib/jsxgraphcore.js frontend/vendor/jsxgraph-1.11.1/distrib/jsxgraph.css; do
     if [[ ! -f $RELEASE/$relative ]]; then
-        echo "提交缺少 $relative，请先从 Mac 提交并推送全部游客功能文件。" >&2
+        echo "提交缺少 ${relative}，请先从 Mac 提交并推送全部项目展示文件。" >&2
         exit 1
     fi
 done
@@ -112,7 +110,14 @@ chown -R root:root "$STAGED_VENV"
 chmod -R a+rX "$STAGED_VENV"
 chown -R root:root "$RELEASE"
 chmod -R a+rX "$RELEASE"
-"$STAGED_VENV/bin/python" -c 'import fastapi, uvicorn, multipart, httpx, yaml, fitz, docx'
+(cd "$RELEASE" && "$STAGED_VENV/bin/python" - <<'PY'
+import fastapi, uvicorn
+from backend.showcase import ASSET_PATHS, FRONTEND
+missing = [path for path in ASSET_PATHS | {"/showcase/index.html"} if not (FRONTEND / path.lstrip("/")).is_file()]
+if missing:
+    raise SystemExit("展示资源缺失：" + ", ".join(sorted(missing)))
+PY
+)
 SERVICE_CHANGED=1
 systemctl stop study-agent-demo || true
 if [[ -d $DEMO_DIR/.venv ]]; then
@@ -121,16 +126,17 @@ fi
 VENV_CHANGED=1
 mv -- "$STAGED_VENV" "$DEMO_DIR/.venv"
 STAGED_VENV=
-"$DEMO_DIR/.venv/bin/python" "$RELEASE/deploy/prepare-demo-ai.py" --source "$APP_DIR" --output /etc/study-agent-demo/ai.json
-chown root:studydemo /etc/study-agent-demo/ai.json
-chmod 640 /etc/study-agent-demo/ai.json
 ln -sfn "$RELEASE" "$DEMO_DIR/current"
 install -m 644 "$RELEASE/deploy/study-agent-demo.service" /etc/systemd/system/study-agent-demo.service
 systemctl daemon-reload
 systemctl enable --now study-agent-demo
 ready=0
 for _ in $(seq 1 30); do
-    if curl -fsS http://127.0.0.1:8001/health >/dev/null 2>&1; then
+    if curl --noproxy '*' --connect-timeout 2 --max-time 5 -fsS http://127.0.0.1:8001/health | "$DEMO_DIR/.venv/bin/python" -c '
+import json, sys
+state = json.load(sys.stdin)
+raise SystemExit(0 if state.get("ok") is True and state.get("mode") == "demo" and state.get("demo_mode") == "showcase" and state.get("ai_enabled") is False else 1)
+'; then
         ready=1
         break
     fi
@@ -150,8 +156,8 @@ install -d -m 755 /var/www/study-agent-public
 install -m 644 "$RELEASE/deploy/public/index.html" /var/www/study-agent-public/index.html
 systemctl reload caddy
 SUCCESS=1
-echo "游客服务已启动，主账号及主数据保持原配置。备份：$BACKUP"
-echo '游客入口：https://demo.150.chat/home.html（无需账号密码）'
+echo "项目展示服务已启动，主账号及主数据保持原配置。备份：$BACKUP"
+echo '项目演示：https://demo.150.chat/home.html（无需账号密码，无 AI 调用）'
 echo '主人入口：https://150.chat/home.html（studyadmin / 原网站密码）'
 echo '请确认 DNS 已添加 demo 的 A 记录 -> 47.117.107.156。'
 echo '日志：journalctl -u study-agent-demo -n 60 --no-pager'

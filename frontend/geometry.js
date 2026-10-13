@@ -117,7 +117,8 @@
     const scene = new THREE.Scene(); scene.background = new THREE.Color('#fbfcff');
     const renderer = new THREE.WebGLRenderer({antialias:true,alpha:false});
     renderer.setPixelRatio(Math.min(global.devicePixelRatio || 1,2)); host.append(renderer.domElement);
-    const camera = new THREE.PerspectiveCamera(38,1,.001,1e8), controls = new OrbitControls(camera,renderer.domElement);
+    const initialAspect=Math.max(100,host.clientWidth)/Math.max(100,host.clientHeight);
+    const camera = new THREE.PerspectiveCamera(38,initialAspect,.001,1e8), controls = new OrbitControls(camera,renderer.domElement);
     controls.enableDamping=false;
     const entries=new Map(), byId=new Map(objects.map(o=>[o.id,o])), labels=[];
     const p = id => new THREE.Vector3(...byId.get(id).coords);
@@ -129,10 +130,18 @@
     });
     if(box.isEmpty())box.set(new THREE.Vector3(-2,-2,-2),new THREE.Vector3(2,2,2));
     const center=box.getCenter(new THREE.Vector3()), scale=Math.max(box.getSize(new THREE.Vector3()).length(),1);
-    camera.position.copy(center).add(new THREE.Vector3(1.2,-1.6,1.2).normalize().multiplyScalar(scale*1.35));
+    // Fit the bounding sphere in both horizontal and vertical fields of view,
+    // leaving space for labels on narrow phone canvases.
+    const fitDistance=aspect=>{
+      const vertical=camera.fov*Math.PI/360,horizontal=Math.atan(Math.tan(vertical)*aspect);
+      return scale*.55/Math.sin(Math.min(vertical,horizontal));
+    };
+    camera.position.copy(center).add(new THREE.Vector3(1.2,-1.6,1.2).normalize().multiplyScalar(fitDistance(initialAspect)));
     camera.up.set(0,0,1); camera.lookAt(center); controls.target.copy(center);
     camera.near=scale/10000;camera.far=scale*1000;camera.updateProjectionMatrix();
-    if(savedCamera){camera.position.fromArray(savedCamera.position);controls.target.fromArray(savedCamera.target);controls.update();}
+    if(savedCamera){camera.position.fromArray(savedCamera.position);controls.target.fromArray(savedCamera.target);
+      if(savedCamera.aspect>0)camera.position.sub(controls.target).multiplyScalar(fitDistance(initialAspect)/fitDistance(savedCamera.aspect)).add(controls.target);
+      controls.update();}
     function line(points, color, dashed) {
       const geometry=new THREE.BufferGeometry().setFromPoints(points);
       const mat=dashed ? new THREE.LineDashedMaterial({color,dashSize:scale*.035,gapSize:scale*.02}) : new THREE.LineBasicMaterial({color});
@@ -192,8 +201,10 @@
     update(visibility,highlight);
     return {
       update,
-      resize(){const w=Math.max(100,host.clientWidth),h=Math.max(100,host.clientHeight);renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix();render();},
-      snapshot(){return {position:camera.position.toArray(),target:controls.target.toArray()};},
+      resize(){const w=Math.max(100,host.clientWidth),h=Math.max(100,host.clientHeight),aspect=w/h;renderer.setSize(w,h,false);
+        if(aspect!==camera.aspect)camera.position.sub(controls.target).multiplyScalar(fitDistance(aspect)/fitDistance(camera.aspect)).add(controls.target);
+        camera.aspect=aspect;camera.updateProjectionMatrix();render();},
+      snapshot(){return {position:camera.position.toArray(),target:controls.target.toArray(),aspect:camera.aspect};},
       dispose(){controls.removeEventListener('change',render);controls.dispose();scene.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();});renderer.dispose();renderer.forceContextLoss();host.replaceChildren();}
     };
   }
@@ -245,7 +256,7 @@
           if(scene.frames) {
             const label=node('span','',scene.parameter.name),slider=node('input');slider.type='range';slider.min=0;slider.max=scene.frames.length-1;slider.value=this.frame;
             const value=node('span','',scene.frames[this.frame].value.toFixed(3));
-            const apply=()=>{this.frame=Number(slider.value);value.textContent=scene.frames[this.frame].value.toFixed(3);if(this.renderer){this.savedCamera=this.renderer.snapshot?this.renderer.snapshot():null;this.renderer.dispose();}this.renderer=null;this.renderFrame(scene,viewFor(this.data.geometry,this.state,this.activeKey,this.index,!!this.options.teaching),false);};
+            const apply=()=>{this.frame=Number(slider.value);value.textContent=scene.frames[this.frame].value.toFixed(3);if(this.renderer){this.savedCamera=this.renderer.snapshot?this.renderer.snapshot():null;this.renderer.dispose();}this.renderer=null;const token=++this.version;this.renderFrame(scene,viewFor(this.data.geometry,this.state,this.activeKey,this.index,!!this.options.teaching),false,token).catch(error=>{if(token===this.version&&!this.disposed)this.failed(error);});};
             slider.oninput=()=>{if(this.parameterTimer)clearInterval(this.parameterTimer);apply();};
             const play=node('button','','播放');play.type='button';play.onclick=()=>{if(this.parameterTimer){clearInterval(this.parameterTimer);this.parameterTimer=null;play.textContent='播放';return;}play.textContent='暂停';this.parameterTimer=setInterval(()=>{if(this.disposed)return;slider.value=(Number(slider.value)+1)%scene.frames.length;apply();},140);};
             this.parameter.append(label,slider,value,play);
@@ -255,8 +266,9 @@
         this.parameter.hidden=!scene.frames;
         if(this.initial){this.visible=new Set(view.visible);this.initial=false;}
         await this.renderFrame(scene,view,replay,token);
-      }catch(e){if(token!==this.version||this.disposed)return;this.note.textContent='画板暂不可用：'+e.message+'。文字解析和原题图仍可查看。';}
+      }catch(e){if(token!==this.version||this.disposed)return;this.failed(e);}
     }
+    failed(error){clearInterval(this.parameterTimer);this.parameterTimer=null;this.parameter.hidden=true;this.stage.hidden=true;this.replay.disabled=true;this.note.textContent='画板暂不可用：'+error.message+'。文字解析和原题图仍可查看。';}
     async renderFrame(scene,view,replay,token) {
       token=token||++this.version;
       if(!this.renderer){
