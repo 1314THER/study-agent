@@ -31,6 +31,16 @@ setup_logging()
 logger = logging.getLogger("backend.main")
 
 app = FastAPI(title="你好，我是张雪峰老师")
+from backend.local_models import request_context as local_model_request_context, router as local_models_router
+app.include_router(local_models_router)
+
+
+@app.middleware("http")
+async def local_model_guard(request, call_next):
+    with local_model_request_context(request):
+        return await call_next(request)
+
+
 _deploy_lock = threading.Lock()
 _active_requests = 0
 _deploy_draining = os.environ.get("STUDY_DEPLOY_DRAIN", "0") == "1"

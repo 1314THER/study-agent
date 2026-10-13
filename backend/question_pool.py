@@ -216,6 +216,7 @@ def _retry_failed_record(conn, locator, record):
             and fingerprint == old["fingerprint"]
             and previous_raw.get("image_refs") == (record.get("raw") or {}).get("image_refs")
             and previous_raw.get("image_assets") == (record.get("raw") or {}).get("image_assets")
+            and previous_raw.get("question_assets") == (record.get("raw") or {}).get("question_assets")
             and previous_raw.get("conversion_parser") == (record.get("raw") or {}).get("conversion_parser")
             and record.get("question_type") == old["question_type"]):
         return False
@@ -280,6 +281,8 @@ def import_records(source, records, *, retry_failed=False):
                     skipped_old += 1
                     continue
                 record = apply_year_policy(record, dict(source_row))
+                from backend.question_assets import hydrate_pool_record
+                record = hydrate_pool_record(record, source_id)
                 unknown_year += int(record["year"] is None)
                 key = _text(record.get("source_key")) or str(index)
                 locator = conn.execute("SELECT o.*,i.fingerprint AS item_fingerprint FROM pool_occurrences o JOIN pool_items i ON i.id=o.item_id WHERE o.source_id=? AND o.source_key=?", (source_id, key)).fetchone()
@@ -302,7 +305,8 @@ def import_records(source, records, *, retry_failed=False):
                         or raw.get("image_refs") != previous_raw.get("image_refs")
                         or raw.get("image_assets") != previous_raw.get("image_assets"))
                     conversion_changed = raw.get("collector") and (locator["original_question"] != _canonical(_text(record.get("question"))) or raw.get("conversion_parser") != previous_raw.get("conversion_parser"))
-                    if retry_failed and (locator["completeness"] == "failed" or waiting_scan or pending_pages or image_identity_changed or conversion_changed):
+                    asset_changed = raw.get("question_assets") != previous_raw.get("question_assets") and bool(raw.get("question_assets"))
+                    if retry_failed and (locator["completeness"] == "failed" or waiting_scan or pending_pages or image_identity_changed or conversion_changed or asset_changed):
                         recovered += int(_retry_failed_record(conn, locator, record))
                         if recovered % 250 == 0:
                             checkpoint()
@@ -379,6 +383,10 @@ def _item_public(row, occurrences=None, full=True):
     item["has_prepared"] = bool(prepared)
     item["answer_check"] = _load(item.pop("answer_check_json"), {"status": "unverified", "detail": "尚未生成 AI 解析"})
     item["occurrences"] = occurrences or []
+    saved_assets = [o.get("raw", {}).get("question_assets") for o in item["occurrences"]]
+    saved_assets = [a for a in saved_assets if isinstance(a, dict)]
+    best_assets = next((a for a in saved_assets if a.get("asset_refs") and not a.get("missing")), None)
+    item["asset_count"] = len((best_assets or {}).get("asset_refs", []))
     item["year_status"] = "known" if item.get("year") else "unknown"
     if not full:
         item["solution"] = ""
@@ -398,7 +406,7 @@ def get_item(item_id):
 
 
 def list_items(*, category=None, source_id=None, year=None, region=None, question_type=None, keyword=None,
-               completeness="text_only", status=None, has_answer=None, page=1, page_size=40):
+               completeness="", status=None, has_answer=None, page=1, page_size=40):
     if type(page) is not int or page < 1 or type(page_size) is not int or not 1 <= page_size <= 100:
         raise HTTPException(400, "分页参数无效。")
     clauses, params = [], []
@@ -589,6 +597,8 @@ def _store_prepared(item_id, version, result):
 
 def validate_prepare_args(args):
     _require_owner()
+    from backend.local_models import validate_engine
+    validate_engine(args.get("engine", "deepseek"))
     args["item_ids"] = _ids(args.get("item_ids"))
     if args.get("teacher") is not None and not isinstance(args["teacher"], str):
         raise ValueError("老师选项无效")
@@ -597,7 +607,9 @@ def validate_prepare_args(args):
         if is_old(item):
             raise ValueError(f"原题 #{item_id} 已确认早于 {MIN_YEAR} 年，不能准备入库。")
         if item["completeness"] != "complete" or not item["question"]:
-            raise ValueError(f"原题 #{item_id} 请先核对题干并标记完整，图形题暂缓。")
+            raise ValueError(f"原题 #{item_id} 请先核对题干与题图并标记完整。")
+        from backend.question_assets import pool_asset_refs
+        pool_asset_refs(item, require_complete=True)
         if item["status"] == "imported":
             raise ValueError(f"原题 #{item_id} 已入库。")
     return args
@@ -619,10 +631,14 @@ def prepare_items(args, ctx):
             conn.execute("UPDATE pool_items SET status='preparing',preparing_job_id=?,prepare_error='' WHERE id=?", (getattr(ctx, "job_id", None), item_id))
         ctx.progress("pool_prepare", int(index * 100 / len(args["item_ids"])), f"正在准备第 {index + 1}/{len(args['item_ids'])} 道题")
         try:
-            from backend.question_assets import pool_asset_refs
+            from backend.question_assets import pool_asset_refs, pool_asset_data
+            refs = pool_asset_refs(item, require_complete=True)
+            data = pool_asset_data(item)
+            labels = ["、".join(a["label"] for a in data["assets"] if a["ref"] == ref) for ref in refs]
             outcome = _solve({"question": item["question"], "question_type": item["question_type"] if item["question_type"] != "未知" else None,
-                              "teacher": args.get("teacher"), "save": False, "asset_refs": pool_asset_refs(item)}, ctx)
+                              "teacher": args.get("teacher"), "save": False, "asset_refs": refs, "asset_labels": labels}, ctx)
             result = outcome.value if hasattr(outcome, "value") else outcome
+            result["model_provider"] = args.get("engine", "deepseek")
             _store_prepared(item_id, item["version"], result)
             results.append({"item_id": item_id, "status": "ready"})
         except Exception as exc:
@@ -693,7 +709,7 @@ def _preview_one(item, pattern_conn):
     imported = item["status"] == "imported"
     if not imported:
         if item["completeness"] != "complete":
-            errors.append("请先修正并确认题干完整；依赖图形的题本阶段暂缓。")
+            errors.append("请先核对题干、选项与题图，并确认题干完整。")
         if not item["categories"]:
             errors.append("请确认至少一个大板块。")
         if not item["prepared"] or item.get("prepared_version") != item["version"]:
@@ -983,7 +999,7 @@ def api_meta():
 
 @router.get("/items")
 def api_items(category: str = "", source_id: Optional[int] = None, year: str = "", region: str = "", question_type: str = "", keyword: str = "",
-              completeness: str = "text_only", status: str = "", has_answer: Optional[bool] = None, page: int = Query(1, ge=1), page_size: int = Query(40, ge=1, le=100)):
+              completeness: str = "", status: str = "", has_answer: Optional[bool] = None, page: int = Query(1, ge=1), page_size: int = Query(40, ge=1, le=100)):
     return list_items(category=category, source_id=source_id, year=year, region=region, question_type=question_type, keyword=keyword,
                       completeness=completeness, status=status, has_answer=has_answer, page=page, page_size=page_size)
 
@@ -1002,6 +1018,7 @@ def api_update_item(item_id: int, changes: dict):
 class SelectionRequest(BaseModel):
     item_ids: list[int] = Field(..., min_items=1, max_items=200)
     teacher: Optional[str] = None
+    engine: str = "deepseek"
     request_id: Optional[str] = None
     confirmed_conflicts: list[int] = Field(default_factory=list)
 
@@ -1036,7 +1053,9 @@ def api_prepare(req: SelectionRequest):
     from backend.jobs import submit_job, _submission_error
     _require_owner()
     try:
-        return submit_job("pool_prepare", {"item_ids": req.item_ids, "teacher": req.teacher}, req.request_id or uuid.uuid4().hex)
+        from backend.local_models import validate_engine
+        validate_engine(req.engine)
+        return submit_job("pool_prepare", {"item_ids": req.item_ids, "teacher": req.teacher, "engine": req.engine}, req.request_id or uuid.uuid4().hex)
     except (ValueError, RuntimeError) as exc:
         raise _submission_error(exc)
 

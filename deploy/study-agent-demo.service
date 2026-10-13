@@ -11,6 +11,7 @@ WorkingDirectory=/opt/study-agent-demo/current
 Environment=PYTHONUNBUFFERED=1
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=STUDY_DEMO_ROOT=/var/lib/study-agent-demo
+Environment=STUDY_LOCAL_CODEX=0
 Environment=STUDY_AGENT_LOG_DIR=/var/lib/study-agent-demo/logs
 Environment=STUDY_DEMO_AI_ENABLED=1
 Environment=STUDY_DEMO_AI_CONFIG=/etc/study-agent-demo/ai.json

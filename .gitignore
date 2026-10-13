@@ -30,3 +30,9 @@ desktop-launcher.py
 close-helper.applescript
 close-helper.py
 fill_denghui.py
+
+# Local Codex CLI integrations are never part of a cloud deployment.
+/.local-codex/
+/backend/routine_codex.py
+/tests/test_routine_codex.py
+/outputs/routine-review-*.png

@@ -25,7 +25,7 @@ _GRAPH_DEPENDENCY = re.compile(
     r"图\s*[1-9一二三四]\s*(?:所示|给出|中))"
 )
 _GRAPH_COMMAND = re.compile(
-    r"\\(?:bitmapfigure|choicebitmap|includegraphics|tikzfigure|input|include)\b(?:\[[^\]]*\])?\s*\{[^}]*\}"
+    r"\\(?:bitmapfigure|choicebitmap|bitmapinclude|texfigure|examfiguregroup|includegraphics|tikzfigure|input|include)\b(?:\[[^\]]*\])?\s*\{[^}]*\}"
     r"|\\begin\{(?:tikzpicture|pspicture|picture)\}"
     r"|!\[[^\]]*\]\([^)]*\)|<img\b[^>]*>", re.I
 )
@@ -105,9 +105,9 @@ def _record(key, question="", answer="", solution="", **fields):
     if not record["question"]:
         record["completeness"] = "failed"
         reasons.append("题干为空，保留来源原文待修正")
-    elif _GRAPH_DEPENDENCY.search(record["question"]) or r"\choicebitmap" in record["question"]:
+    elif _GRAPH_DEPENDENCY.search(record["question"]) or record["raw"].get("image_refs") or r"\choicebitmap" in record["question"]:
         record["completeness"] = "deferred_graphic"
-        reasons.append("题干引用图形信息，本阶段暂缓，保留出处")
+        reasons.append("题干引用图形信息，等待加载原题图")
     elif _GRAPH_COMMAND.search(record["question"]):
         record["completeness"] = "needs_review"
         reasons.append("原题含图形标记，请确认文字条件是否完整")
@@ -225,7 +225,41 @@ def _balanced(text: str, start: int):
     return None, start
 
 
-def _tex_text(text: str) -> str:
+_FIGURE = re.compile(r"\\(?:bitmapfigure|choicebitmap|bitmapinclude|texfigure|includegraphics)\b(?:\[[^\]]*\])?\s*\{([^}]+)\}")
+
+
+def compilation_images(text):
+    """Question figures only; order and A–D option association are evidence."""
+    refs = []
+    for match in _FIGURE.finditer(text):
+        path = match[1].strip()
+        if path in [ref["path"] for ref in refs]:
+            continue
+        choice = re.search(r"(?:^|\n)([A-D])\.\s*$", text[:match.start()])
+        refs.append({"path": path, "label": "选项 " + choice[1] if choice else "题图 " + str(len(refs) + 1)})
+    return refs
+
+
+def _figure_text(text):
+    # Expand groups to their contained figures and discard layout dimensions.
+    for name, count in (("FigureLayoutDeclare", 3), ("examfiguregroup", 2)):
+        for match in reversed(list(re.finditer(r"\\" + name + r"\b(?:\[[^\]]*\])?", text))):
+            pos, values = match.end(), []
+            for _ in range(count):
+                value, end = _balanced(text, pos)
+                if value is None:
+                    break
+                values.append(value)
+                pos = end
+            if len(values) == count:
+                text = text[:match.start()] + (values[1] if name == "examfiguregroup" else "") + text[pos:]
+    refs = compilation_images(text)
+    labels = {ref["path"]: ref["label"] for ref in refs}
+    text = _FIGURE.sub(lambda match: "[" + labels[match[1].strip()] + "]", text)
+    return re.sub(r"\\(?:begingroup|endgroup|hfill)\b", "", text)
+
+
+def _tex_text(text: str, *, figures=True) -> str:
     """Convert source layout macros, preserving mathematical LaTeX."""
     text = re.sub(r"(?m)(?<!\\)%.*$", "", text)
     # The UI renders safe text and math, not LaTeX's page-layout environments.
@@ -296,6 +330,8 @@ def _tex_text(text: str) -> str:
         return "\n" + (optional[1] if optional else label) + " "
     text = re.sub(r"\\(?:begin|end)\{(?:enumerate|itemize|circlelist)\}(?:\[[^\]]*\])?|\\item(?:\[[^\]]*\])?[ \t]*", list_token, text)
     text = re.sub(r"\\(?:begin|end)\{(?:center|flushleft|flushright)\}", "\n", text)
+    if figures:
+        text = _figure_text(text)
     return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
@@ -320,6 +356,13 @@ def _without_answers(text):
 
 
 def _iter_compilation(root: Path):
+    previews = {}
+    manifest = root / "question-graphics.json" if root.is_dir() else root.parent / "question-graphics.json"
+    if manifest.is_file():
+        try:
+            previews = json.loads(manifest.read_text(encoding="utf-8"))
+        except (ValueError, OSError):
+            pass
     files = list(_files(root, {".tex"}))
     # Full repo directories contain layout/figure TeX; only content files are papers.
     if root.is_dir() and (root / "content").is_dir():
@@ -351,6 +394,12 @@ def _iter_compilation(root: Path):
                 yield _error(f"{rel}#{index}", "problem 环境未闭合", raw, year=year, question_no=str(index))
                 continue
             stem = _without_answers(text[start.end():start.start() + question_end])
+            # Extract after choices expansion, so image options retain A–D.
+            raw["source_root"] = str((root if root.is_dir() else root.parent).resolve())
+            raw["original_file"] = str(file.resolve())
+            raw["image_refs"] = compilation_images(_tex_text(stem, figures=False))
+            if isinstance(previews, dict) and isinstance(previews.get(f"{rel}#{index}"), list):
+                raw["image_refs"] = previews[f"{rel}#{index}"]
             answer = _environment(block, "answer") or "\n".join(v for _, _, v in _macro_arguments(block, "answer"))
             solution = _environment(block, "solution") or "\n".join(v for _, _, v in _macro_arguments(block, "solution"))
             section_matches = list(re.finditer(r"\\section\*?(?:\[[^\]]*\])?\{([^}]+)\}", text[:start.start()]))

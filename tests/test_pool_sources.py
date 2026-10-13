@@ -105,6 +105,20 @@ class PoolSourceTests(unittest.TestCase):
         self.assertIn("数量 | 3 | 4", item["question"])
         self.assertNotIn("tabular", item["question"])
 
+    def test_compilation_loads_question_figures_with_option_labels_only(self):
+        file = self.write("paper.tex", r"""\begin{problem}选择图象。
+\choices{\choicebitmap{img/a.png}}{\choicebitmap{img/b.png}}{3}{4}
+\FigureLayoutDeclare{img/c.png}{2cm}{0bp}
+\examfiguregroup{img/c.png}{\bitmapinclude{img/c.png}\bitmapinclude{img/d.png}}
+\end{problem}\begin{answer}A\end{answer}
+\begin{solution}\bitmapfigure{img/solution.png}\end{solution}""")
+        item = next(iter_source_records(file, "compilation"))
+        self.assertEqual([r["path"] for r in item["raw"]["image_refs"]], ["img/a.png", "img/b.png", "img/c.png", "img/d.png"])
+        self.assertEqual([r["label"] for r in item["raw"]["image_refs"]][:2], ["选项 A", "选项 B"])
+        self.assertIn("A. [选项 A]", item["question"])
+        self.assertNotIn("FigureLayoutDeclare", item["question"])
+        self.assertNotIn("examfiguregroup", item["question"])
+
     def test_row_spacing_is_not_a_display_delimiter_and_macro_arguments_stay_grouped(self):
         file = self.write("paper.tex", r"""\begin{problem}
 设 \(f(x)=\begin{cases}1,&x>0,\\[4pt]0,&x\le0\end{cases}\)。

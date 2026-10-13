@@ -508,6 +508,8 @@ def validate_args(kind, args):
     args = json.loads(_dump(args))
     if len(_dump(args).encode()) > 1024 * 1024:
         raise ValueError("提交内容超过 1 MiB")
+    if args.get("engine") == "codex_cli" and kind != "pool_prepare":
+        raise ValueError("此入口暂不支持本地 Codex，请从原题池准备解析。")
     if kind == "pool_prepare":
         from backend.question_pool import validate_prepare_args
         return validate_prepare_args(args)
@@ -634,7 +636,8 @@ def _solve(args, ctx):
             raise RuntimeError(data.get("detail") or data.get("status") or data["error"])
     ctx.progress("solver", 13, "AI 正在解答")
     assets = {"asset_refs": args["asset_refs"]} if args.get("asset_refs") else {}
-    solved = step_solver_only(question, question_type, teacher=teacher, **assets)
+    solver_assets = {**assets, "asset_labels": args["asset_labels"]} if args.get("asset_labels") else assets
+    solved = step_solver_only(question, question_type, teacher=teacher, **solver_assets)
     add(solved)
     ctx.progress("verifier", 78, "AI 正在拆分步骤与知识点")
     verified = step_verify_all(solved["content"], question, solved.get("category"), question_type=question_type, teacher=teacher)
@@ -877,7 +880,9 @@ def _provider_test(args, ctx):
 
 def _pool_prepare(args, ctx):
     from backend.question_pool import prepare_items
-    return prepare_items(args, ctx)
+    from backend.local_models import pipeline
+    with pipeline(args.get("engine", "deepseek")):
+        return prepare_items(args, ctx)
 
 
 def _pool_import(args, ctx):

@@ -85,6 +85,7 @@ def start(open_browser: bool, smoke: bool = False) -> int:
     process = subprocess.Popen(
         [str(VENV_PYTHON), "-m", "uvicorn", "backend.main:app", "--host", "127.0.0.1", "--port", "8000"],
         cwd=ROOT,
+        env=dict(os.environ, STUDY_LOCAL_CODEX="1" if (ROOT / ".local-codex/provider.py").is_file() else "0"),
     )
     try:
         deadline = time.monotonic() + 30

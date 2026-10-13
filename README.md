@@ -6,7 +6,9 @@
 
 账号版提供游客登录、邮箱验证注册和账号登录三入口，个人学习数据按用户隔离，公共母题仅主人 `studyadmin` 维护。启用配置、主人迁移及个人 ICP 下验证码服务的门槛见 [账号与验证码方案](docs/accounts-and-verification.md)。生产启用 `STUDY_AUTH_ENABLED=1` 后，现有 `backend.main:app` 自动切换为账号版；本地预览使用 `python3 scripts/run_accounts.py`。
 
-主人可从导航或母题看板进入 [原题池](http://127.0.0.1:8000/question-pool.html)：先筛选、确定套路与角色，再为选中题准备 AI 解析，对照原答案后批量确认入库。候选、原文件和出处独立保存；图形依赖题暂缓，来源许可未确认时不自动公开。使用方法见 [原题池工作流](docs/question-pool.md)，固定题源和采集数量见 [来源与导入](docs/question-pool-sources.md)。
+主人可从导航或母题看板进入 [原题池](http://127.0.0.1:8000/question-pool.html)：先筛选、确定套路与角色，再为选中题准备 AI 解析，对照原答案后批量确认入库。候选、原文件和出处独立保存；图形题加载原题图或原卷页，来源许可未确认时不自动公开。使用方法见 [原题池工作流](docs/question-pool.md)，固定题源和采集数量见 [来源与导入](docs/question-pool-sources.md)。
+
+原题池预留本地模型解析入口。本机安装私有 Codex CLI 接入后可跑三步管线；实际调用和 Codex 匹配实现被 Git 忽略，云端按钮暂不可用。接口边界见 [本地模型说明](docs/local-models.md)。
 
 原题池新增「在线找题」：自动发现新模考与导数、概率题源，下载原文件和题图、缓存 OCR，并输出可供后续 agent 离线读取的 JSONL。缺原答案不影响采集。网页入口和一条命令运行方法见 [在线找题与 agent 指南](docs/question-pool-agent-guide.md)。
 
@@ -18,6 +20,7 @@
 
 | 系统 | 命令 |
 |------|------|
+| macOS（双击） | [一键打开.command](一键打开.command) |
 | macOS（终端） | `./start.sh` |
 | Windows（命令提示符或 PowerShell） | `start.bat` 或 `./start.bat` |
 
@@ -28,6 +31,8 @@ cd study-agent
 ```
 
 首次运行会创建 `.venv`、安装 `requirements.txt`，并从 `demo-data/` 复制题库和学习记录快照到本地；随后启动服务并打开[首页](http://127.0.0.1:8000/home.html)。再次运行不会覆盖本地数据库。终端按 `Ctrl+C` 停止服务。克隆后的题库已有 25 道题，以及套路、闯关和练习记录，便于直接查看各页面。
+
+macOS 双击「一键打开.command」会在后台启动服务并打开首页，重复双击复用同一个后台，终端窗口可以关闭。已有题库、套路审核的旧任务和匹配结果会保留，打开页面不会自动开始匹配。启动日志在 `logs/local-server.log`。
 
 **AI 功能统一使用 DeepSeek API 密钥，包括图片识别。**注册账号需填写自己的密钥，密钥会在账户库中加密保存；也可以在[系统设置](http://127.0.0.1:8000/settings.html)更新。私人部署的主人可将 `.env.example` 复制为 `.env` 后填写 `DEEPSEEK_API_KEY`。仅浏览现有题库、记录和页面无需密钥。`.env`、运行时 `backend/settings.json` 和本地数据库不会提交到 Git。图片接口和迁移说明见 [DeepSeek 图片配置](docs/deepseek-image-api.md)。
 

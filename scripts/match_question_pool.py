@@ -1,6 +1,7 @@
 """Run or resume the owner's whole-pool matching ledger, without a web server."""
 import argparse
 import json
+import os
 from pathlib import Path
 import sys
 import uuid
@@ -10,6 +11,7 @@ sys.path.insert(0,str(ROOT))
 
 
 def main():
+    os.environ.setdefault('STUDY_LOCAL_CODEX','1' if (ROOT/'.local-codex/provider.py').is_file() else '0')
     from backend.routine_review import get_store, model_config, reference_store, execute_run, ai_caller
     from backend.question_pool import storage_path
     parser=argparse.ArgumentParser(description='全量套路匹配；不修改正式题库或课程')
@@ -20,7 +22,7 @@ def main():
     mode.add_argument('--status',action='store_true',help='只查看最近批次')
     mode.add_argument('--report',action='store_true',help='导出最近批次的全部套路统计')
     mode.add_argument('--configure',metavar='RUN_ID',help='更新剩余题的模型设置，保持暂停')
-    parser.add_argument('--engine',choices=('codex_luna','deepseek'),default='codex_luna',help='新批次或配置使用的模型；默认现有 Codex Luna 账号额度')
+    parser.add_argument('--engine',choices=('codex_luna','deepseek'),default='deepseek',help='匹配方式；Codex 仅支持安装本地接入的电脑')
     args=parser.parse_args()
     store=get_store()
     if args.configure:

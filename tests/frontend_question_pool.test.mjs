@@ -20,6 +20,7 @@ class Element {
   addEventListener(name, callback) { (this.listeners[name] ||= []).push(callback); }
   dispatch(name, extra = {}) { const event = { target: this, preventDefault() {}, stopPropagation() {}, ...extra }; return Promise.all((this.listeners[name] || []).map(callback => callback(event))); }
   descendants() { return this.children.flatMap(c => [c, ...c.descendants()]); }
+  contains(el) { return this === el || this.descendants().includes(el); }
   querySelectorAll(selector) { return this.descendants().filter(el => matches(el, selector)); }
   querySelector(selector) { return this.querySelectorAll(selector)[0] || null; }
   showModal() { this.open = true; }
@@ -47,7 +48,7 @@ function storageMock(initial = {}) { const values = new Map(Object.entries(initi
 function item(id, extra = {}) {
   return { id, question: '已知集合 $A=\\{1,2\\}$，求 $A\\cap\\{2,3\\}$。' + id, answer: '$\\{2\\}$', solution: '取公共元素。', categories: ['集合'], question_type: '填空题', completeness: 'complete', status: 'reviewed', year: '2024', version: 1, assignment: { role: 'question' }, prepared: null, answer_check: {status: 'unverified', detail: '尚未生成'}, occurrences: [{source_id: 1, source_name: '题源 A', source_key: 'paper:' + id, question_no: id, page_start: 2, page_end: 3, url: 'https://example.org/paper', license: '待核验', publication_allowed: false}], ...extra };
 }
-function apiMock() {
+function apiMock({localCodex = false} = {}) {
   const items = new Map(Array.from({length: 85}, (_, index) => [index + 1, item(index + 1)]));
   items.set(86, item(86, {completeness: 'deferred_graphic', question: '如图所示，求面积。'}));
   const calls = [], sources = [{id: 1, name: '题源 A', kind: 'upload', has_file: true, license: '待核验', publication_allowed: false, stats: {total: 86, unique: 86, collected: 85, duplicates: 0, deferred_graphic: 1, failed: 0}}];
@@ -55,7 +56,8 @@ function apiMock() {
   async function fetch(path, opts = {}) {
     const method = opts.method || 'GET', body = opts.body && typeof opts.body === 'string' ? JSON.parse(opts.body) : opts.body;
     calls.push({path, method, body}); const url = new URL(path, 'http://localhost'); let value;
-    if (path === '/question-pool/meta') value = {categories: ['集合', '立体几何'], question_types: ['选择题', '填空题', '大题', '未知'], sources, stats: {total: 86, complete: 85, needs_review: 0, imported: 0}, coverage: [{category: '集合', candidates: 85, patterns: 7, mothers: 5, gaps: [{pattern_id: 1, name: '互异性排除参数', mother_missing: true, missing_roles: ['variant1', 'variant3']}]}]};
+    if (path === '/local-models/status') value = {codex_cli: {available: localCodex}};
+    else if (path === '/question-pool/meta') value = {categories: ['集合', '立体几何'], question_types: ['选择题', '填空题', '大题', '未知'], sources, stats: {total: 86, complete: 85, needs_review: 0, imported: 0}, coverage: [{category: '集合', candidates: 85, patterns: 7, mothers: 5, gaps: [{pattern_id: 1, name: '互异性排除参数', mother_missing: true, missing_roles: ['variant1', 'variant3']}]}]};
     else if (path === '/patterns') value = [{id: 1, name: '交并补', category: '集合', mother_id: 100, variant_ids: []}];
     else if (url.pathname === '/question-pool/items') {
       const filters = url.searchParams;
@@ -65,6 +67,8 @@ function apiMock() {
       if (filters.get('keyword')) rows = rows.filter(row => row.question.includes(filters.get('keyword')));
       const page = Number(filters.get('page')), size = Number(filters.get('page_size'));
       value = {data: rows.slice((page - 1) * size, page * size).map(row => ({...row, prepared: null})), total: rows.length, page, page_size: size};
+    } else if (/^\/question-pool\/items\/\d+\/assets$/.test(path)) {
+      value = {asset_refs: [], assets: [], missing: [], required: false};
     } else if (/^\/question-pool\/items\/\d+$/.test(path)) {
       const id = Number(path.split('/').pop());
       if (method === 'PATCH') { Object.assign(items.get(id), body); delete items.get(id).expected_version; }
@@ -95,8 +99,10 @@ function runtime({owner = true, storage = storageMock(), server = apiMock()} = {
   return {api, controller, document, storage, server, context, field: id => document.getElementById(id)};
 }
 
-// Default excludes deferred graphics, and explicitly choosing all must survive the query.
+// Default includes graphics, migrates the old hidden filter, and preserves explicit all.
 const pure = runtime();
+assert.equal(pure.api.restoreState(storageMock()).filters.completeness, '');
+assert.equal(pure.api.restoreState(storageMock({question_pool_workbench_v1: JSON.stringify({filters: {completeness: 'text_only'}})})).filters.completeness, '');
 assert.equal(new URLSearchParams(pure.api.makeQuery({completeness: 'text_only'}, 1, 40)).get('completeness'), 'text_only');
 assert.equal(new URLSearchParams(pure.api.makeQuery({completeness: ''}, 1, 40)).has('completeness'), true);
 assert.equal(new URLSearchParams(pure.api.makeQuery({keyword: '$A&B$', completeness: ''}, 2, 80)).get('keyword'), '$A&B$');
@@ -104,6 +110,18 @@ assert.equal(pure.api.safeUrl('javascript:alert(1)'), null);
 assert.equal(pure.api.safeUrl('data:text/html,<script>alert(1)</script>'), null);
 assert.equal(pure.api.safeUrl('https://example.org/a?b=1'), 'https://example.org/a?b=1');
 assert.equal(pure.api.sourceLocation({page_start: 3, page_end: 4, question_no: 7}), '第 3–4 页 · 第 7 题');
+
+// Figures render with labels even without the geometry player; partial errors stay visible.
+const imageServer = apiMock(), imageFetch = imageServer.fetch;
+imageServer.fetch = async (path, opts) => path.endsWith('/assets') ? {ok: true, status: 200, json: async () => ({
+  assets: [{ref: 'a'.repeat(64) + '.png', label: '选项 A'}, {ref: '../unsafe.png', label: 'unsafe'}],
+  missing: [{label: '选项 B', reason: '原图文件缺失'}]
+})} : imageFetch(path, opts);
+const imageWorkbench = runtime({server: imageServer});
+await imageWorkbench.controller.init(); await settle();
+assert.equal(imageWorkbench.field('poolDetail').querySelectorAll('img').length, 1);
+assert.equal(imageWorkbench.field('poolDetail').querySelector('img').alt, '选项 A');
+assert.match(imageWorkbench.field('poolDetail').textContent, /题图未补齐：选项 B/);
 
 // Non-owners never load private source text or expose intake controls.
 const denied = runtime({owner: false});
@@ -141,7 +159,7 @@ assert.match(collection.field('poolNotice').textContent, /2016/);
 const workbench = runtime();
 await workbench.controller.init();
 assert.equal(workbench.controller.state.items.length, 40);
-assert.equal(workbench.controller.state.total, 85);
+assert.equal(workbench.controller.state.total, 86);
 assert.match(workbench.field('poolCoverage').textContent, /候选 85.*套路 7.*母题 5/);
 assert.match(workbench.field('poolCoverage').textContent, /互异性排除参数缺母题.*缺变式 1.*缺变式 3/);
 assert.equal(workbench.field('poolCoverage').textContent.includes('[object Object]'), false);
@@ -153,7 +171,7 @@ assert.equal(workbench.controller.state.items[0].id, 41);
 workbench.controller.toggleSelection(41, true);
 assert.deepEqual(plain([...workbench.controller.state.selected]), [2, 41]);
 await workbench.field('poolNext').dispatch('click'); await settle();
-assert.deepEqual(plain(workbench.controller.state.items.map(row => row.id)), [81, 82, 83, 84, 85]);
+assert.deepEqual(plain(workbench.controller.state.items.map(row => row.id)), [81, 82, 83, 84, 85, 86]);
 assert.equal(workbench.field('poolNext').disabled, true);
 
 // Browser refresh restores selection, filters and focus; it does not start an AI task.
@@ -309,7 +327,7 @@ racing.state.page = 3;
 await racing.loadItems();
 release(); await second;
 assert.equal(racing.state.items[0].id, 81);
-assert.equal(racing.state.total, 85);
+assert.equal(racing.state.total, 86);
 
 // Drafts entered during a slow detail request survive the eventual response.
 const editingRace = runtime();
@@ -329,5 +347,36 @@ assert.equal(protectedController.state.activeId, 1);
 assert.equal(protectedController.state.editorDirty, true);
 assert.equal(editingRace.field('poolDetail').querySelector('.pool-assignment'), activeAssignment);
 assert.match(editingRace.field('poolNotice').textContent, /尚未保存/);
+
+// Local Codex is explicitly selected; cloud placeholders cannot submit a job.
+const cloudCodex = runtime();
+await cloudCodex.controller.init();
+cloudCodex.controller.toggleSelection(1, true);
+assert.equal(cloudCodex.field('poolPrepareCodex').disabled, true);
+assert.match(cloudCodex.field('poolPrepareCodex').textContent, /暂不可用/);
+await cloudCodex.controller.prepare('codex_cli');
+assert.equal(cloudCodex.server.calls.filter(call => call.path === '/question-pool/prepare').length, 0);
+const localCodex = runtime({server: apiMock({localCodex: true})});
+await localCodex.controller.init();
+assert.equal(localCodex.field('poolPrepareCodex').disabled, true);
+localCodex.controller.toggleSelection(1, true);
+localCodex.controller.toggleSelection(2, true);
+assert.equal(localCodex.field('poolPrepareCodex').disabled, false);
+await localCodex.field('poolPrepareCodex').dispatch('click');
+const localRequest = localCodex.server.calls.find(call => call.path === '/question-pool/prepare');
+assert.equal(localRequest.body.engine, 'codex_cli');
+assert.deepEqual(plain(localRequest.body.item_ids), [1, 2]);
+assert.equal(localCodex.server.calls.filter(call => call.path === '/question-pool/commit').length, 0);
+
+// Removed bookmarks must not hide valid pool rows or block the new entry.
+const staleSource = apiMock();
+const staleFetch = async (path, opts) => path === '/question-pool/items/9999'
+  ? {ok:false,status:404,json:async()=>({detail:'原题不存在。'})}
+  : staleSource.fetch(path,opts);
+const staleBookmark = runtime({server:{...staleSource,fetch:staleFetch},storage:storageMock({[pure.api.storageKey]:JSON.stringify({activeId:9999})})});
+await staleBookmark.controller.init();
+assert.equal(staleBookmark.controller.state.activeId,1);
+assert.equal(staleBookmark.controller.state.items.length,40);
+assert(!staleBookmark.field('poolList').textContent.includes('读取失败'));
 
 console.log('Question pool checks passed: owner access, server pagination, persistence, selected-only AI, step rendering, safe text, edit protection including in-flight navigation, source permission/retry, answer confirmations, idempotent commits, stale response protection.');

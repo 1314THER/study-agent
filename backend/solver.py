@@ -145,6 +145,11 @@ def get_api_key() -> str:
 
 # ---------- 调用 DeepSeek ----------
 def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3, model: str = "deepseek-flash", reasoning_effort: str = None, image_content: list = None):
+    from backend.local_models import current_caller
+    local_caller = current_caller()
+    if local_caller is not None:
+        full_system = system_prompt + "\n\n" + _LATEX_RULES if _LATEX_RULES else system_prompt
+        return local_caller(full_system, user_prompt, image_content=image_content)
     api_key = get_api_key()
     api_cfg = runtime_settings.get_api().get("deepseek") or {}
     limits = runtime_settings.get_limits()
@@ -696,7 +701,7 @@ def _xuebile(status: str, detail: str = "") -> dict:
 
 
 # ---------- Solver 步 ----------
-def step_solver_only(question: str, question_type: str = None, teacher: str = None, asset_refs: list = None) -> dict:
+def step_solver_only(question: str, question_type: str = None, teacher: str = None, asset_refs: list = None, asset_labels: list = None) -> dict:
     """Solver：解答 + 输出板块"""
     config = runtime_settings.get_teacher_config(teacher)
     prompt = SOLVER_PROMPT
@@ -707,7 +712,13 @@ def step_solver_only(question: str, question_type: str = None, teacher: str = No
     images = image_messages(asset_refs)
     if images:
         prompt += "\n题图可能包含同页其他题目。只读取与当前题干明确对应的标注，不能混入其他题的条件，不能按图形外观猜测条件。"
-        content, usage = call_deepseek(prompt, question, model="deepseek-flash", image_content=images)
+        solver_input = question
+        if asset_labels:
+            if not isinstance(asset_labels, list) or len(asset_labels) != len(images) or any(not isinstance(label, str) for label in asset_labels):
+                raise ValueError("题图标签与附件数量不一致")
+            solver_input += "\n\n附图对应关系（按附件顺序）：\n" + "\n".join(
+                f"第 {i + 1} 张附图：{label}" for i, label in enumerate(asset_labels))
+        content, usage = call_deepseek(prompt, solver_input, model="deepseek-flash", image_content=images)
     else:
         content, usage = call_deepseek(prompt, question, model=solver_cfg["model"], reasoning_effort=solver_cfg.get("reasoning_effort"))
     viable_reason = _check_solver_viable(content)

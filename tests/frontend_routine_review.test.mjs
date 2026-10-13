@@ -23,10 +23,13 @@ let run={run_id:'real-run',created_at:1791720000,revision:0,total:53,status:'don
 const groups=[{id:'SET-014',name:'子集个数',category:'集合与逻辑用语',total:53,confirmed:0},{id:'SET-015',name:'受限子集',category:'集合与逻辑用语',total:0,confirmed:0}];
 const rows=Array.from({length:53},(_,i)=>({item_id:i+1,item:{question:'原题 '+(i+1),answer:'4',solution:'原解析',version:1,completeness:'complete'},primary_id:'SET-014',secondary_ids:[],review_status:'pending',confidence:'high',needs_content:0,status:'classified',kind:'',marks:[],result:{classification:{method_summary:'原文理由',evidence:[]}},occurrences:[],assets:[],human:null}));
 let requests=[], resolveOld;
+let localAvailable=true;
+const codexOption=new Element('option');codexOption.value='codex_luna';codexOption.disabled=true;elements.get('matchEngine').append(codexOption);
 const fetch=async(url,options={})=>{
   const parsed=new URL(url,'http://localhost');const body=options.body?JSON.parse(options.body):null;requests.push({url,body});
   let data;
-  if(url.endsWith('/runs/latest'))data={run};
+  if(url==='/local-models/status')data={codex_cli:{available:localAvailable}};
+  else if(url.endsWith('/runs/latest'))data={run};
   else if(url.endsWith('/groups'))data={groups,catalog:{routines:groups},unmatched:0};
   else if(url.includes('/items?')){const page=Number(parsed.searchParams.get('page'));data={data:rows.slice((page-1)*50,page*50),total:53,page,page_size:50};}
   else if(url.endsWith('/decisions')){assert.equal(body.expected_revision,run.revision);run={...run,revision:run.revision+1};data={updated:body.all_filtered?53:body.item_ids.length,revision:run.revision};}
@@ -40,12 +43,16 @@ const fetch=async(url,options={})=>{
   return {ok:true,json:async()=>structuredClone(data)};
 };
 const saved=new Map();let confirmations=[];
+let now=1791720000000;
+const timers=new Map();
 const window={addEventListener(){},PoolMath:null,history:{replaceState(_state,_title,url){context.location.search=new URL(url,'http://localhost').search;}}};
 const context={document,window,fetch,URLSearchParams,crypto:{randomUUID:()=> 'unique-request'},location:{search:'?run=discarded-run'},localStorage:{getItem:k=>saved.get(k)||null,setItem:(k,v)=>saved.set(k,v),removeItem:k=>saved.delete(k)},
-  StudyAuth:{ready:Promise.resolve(),isOwner:()=>true,state:{user:{id:'owner'}}},setInterval(){},confirm:text=>{confirmations.push(text);return true;},FormData:class{constructor(form){this.form=form;}*[Symbol.iterator](){for(const el of this.form.elements)yield [el.name,el.value];}},console};
+  StudyAuth:{ready:Promise.resolve(),isOwner:()=>true,state:{user:{id:'owner'}}},Date:class extends Date{static now(){return now;}},setInterval(callback,ms){timers.set(ms,callback);},confirm:text=>{confirmations.push(text);return true;},FormData:class{constructor(form){this.form=form;}*[Symbol.iterator](){for(const el of this.form.elements)yield [el.name,el.value];}},console};
 vm.runInNewContext(fs.readFileSync(new URL('../frontend/routine-review.js',import.meta.url),'utf8'),context);
 const flush=async()=>{for(let i=0;i<8;i++)await new Promise(resolve=>setImmediate(resolve));};
 await flush();
+assert.equal(codexOption.disabled,false);
+assert.equal(elements.get('matchEngine').value,'codex_luna');
 assert.equal(elements.get('itemList').children.length,50);
 assert.match(elements.get('resultCount').textContent,/53/);
 assert.match(elements.get('groupList').textContent,/53/);
@@ -93,4 +100,68 @@ await elements.get('importWebResponse').onclick();await flush();
 assert.equal(requests.findLast(r=>r.url.endsWith('/web-test/response')).body.response,'{"packet_id":"web-test","results":[]}');
 assert.equal(elements.get('webResponse').value,'');
 assert.match(elements.get('reviewMessage').textContent,/已保存 5 道网页匹配建议/);
-console.log('Routine review checks passed: all 53 questions, pagination, cross-page selection, explicit whole-filter scope, count/revision contract, restored state and stale detail protection.');
+
+// Forecasts are calibrated by new saved results, then count down independently.
+const tick=async(ms)=>{timers.get(ms)();await flush();};
+assert.equal(elements.get('matchEta').textContent,'已完成');
+run={...run,status:'running',stop:0,total:100,processed:0,counts:{classified:0}};
+await tick(5000);
+assert.equal(elements.get('matchEta').textContent,'等待结果');
+now+=10000;run={...run,processed:10,counts:{classified:10}};await tick(1000);
+assert.equal(elements.get('matchSpeed').textContent,'60.0 道/分钟');
+assert.equal(elements.get('matchEta').textContent,'1 分 30 秒');
+assert.equal(elements.get('forecastProgress').value,10);
+now+=1000;await tick(1000);
+assert.equal(elements.get('matchEta').textContent,'1 分 29 秒');
+assert.equal(elements.get('forecastProgress').value,11);
+// A poll without new results must not reset the ETA or change the measured speed.
+await tick(5000);
+assert.equal(elements.get('matchEta').textContent,'1 分 29 秒');
+assert.equal(elements.get('matchSpeed').textContent,'60.0 道/分钟');
+assert.match(elements.get('runSummary').textContent,/实际已处理 10 \/ 100/);
+now+=9000;run={...run,processed:30,counts:{classified:30}};await tick(1000);
+assert.equal(elements.get('matchSpeed').textContent,'90.0 道/分钟');
+assert.equal(elements.get('matchEta').textContent,'47 秒');
+assert.equal(elements.get('forecastProgress').value,30);
+
+// Pause, stop-in-flight, and queue freeze the countdown; resume excludes idle time.
+run={...run,stop:1};await tick(1000);
+assert.equal(elements.get('matchEta').textContent,'正在暂停');
+assert.equal(elements.get('forecastProgress').value,30);
+run={...run,status:'paused'};await tick(1000);
+now+=120000;await tick(1000);
+assert.equal(elements.get('matchEta').textContent,'已暂停');
+assert.equal(elements.get('forecastProgress').value,30);
+run={...run,status:'queued',stop:0};await tick(5000);
+assert.equal(elements.get('matchEta').textContent,'排队中');
+run={...run,status:'running'};await tick(1000);
+assert.equal(elements.get('matchSpeed').textContent,'等待结果');
+now+=10000;run={...run,processed:40,counts:{classified:40}};await tick(1000);
+assert.equal(elements.get('matchSpeed').textContent,'60.0 道/分钟');
+assert.equal(elements.get('matchEta').textContent,'1 分 0 秒');
+
+// Expired estimates wait for a real return, never claim completion or go negative.
+now+=70000;await tick(1000);
+assert.equal(elements.get('matchEta').textContent,'等待下一次结果');
+assert(elements.get('forecastProgress').value<100);
+assert.equal(elements.get('forecastLabel').textContent,'预期进度 99.9%');
+assert.match(elements.get('runSummary').textContent,/实际已处理 40 \/ 100/);
+run={...run,processed:20,counts:{classified:20}};await tick(1000);
+assert.equal(elements.get('matchSpeed').textContent,'等待结果');
+assert.equal(elements.get('forecastProgress').value,20);
+run={...run,processed:100,status:'done',counts:{classified:100}};await tick(1000);
+assert.equal(elements.get('matchEta').textContent,'已完成');
+assert.equal(elements.get('forecastProgress').value,100);
+assert.equal(requests.filter(r=>r.url.endsWith('/runs')&&r.body).length,0);
+// A cloud page reserves the option but cannot resume a local-only configuration.
+localAvailable=false;
+run={...run,status:'paused',processed:90,counts:{classified:90,error:10},model_config:{engine:'codex_luna'}};
+vm.runInNewContext(fs.readFileSync(new URL('../frontend/routine-review.js',import.meta.url),'utf8'),context);
+await flush();
+assert.equal(codexOption.disabled,true);
+assert.match(codexOption.textContent,/暂不可用/);
+assert.equal(elements.get('matchEngine').value,'deepseek');
+assert.equal(elements.get('retryRun').disabled,true);
+assert.equal(elements.get('resumeRun').disabled,true);
+
+console.log('Routine review checks passed: review workflows, single task, forecast recalibration, per-second countdown, pause/resume, retry resets and true completion.');

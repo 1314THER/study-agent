@@ -79,6 +79,24 @@ class RoutineReviewTests(unittest.TestCase):
             row=self.store.item(run['run_id'],iid)
             self.assertEqual(row['kind'],'insufficient_content');self.assertEqual(row['needs_content'],1)
 
+    def test_backfilled_images_show_on_existing_snapshot_without_rematching(self):
+        from PIL import Image
+        from io import BytesIO
+        run=self.create();self.run_fake(run)
+        previous=self.store.item(run['run_id'],1)
+        root=pool.files_directory().parent;root.mkdir(parents=True)
+        buffer=BytesIO();Image.new('RGB',(30,20),'white').save(buffer,format='PNG')
+        (root/'figure.png').write_bytes(buffer.getvalue())
+        with sqlite3.connect(pool.storage_path()) as conn:
+            origin=conn.execute('SELECT id,raw_json FROM pool_occurrences WHERE item_id=1').fetchone()
+            raw=json.loads(origin[1]);raw.update(source_root=str(root),image_refs=[{'path':'figure.png','label':'选项 A'}])
+            conn.execute('UPDATE pool_occurrences SET raw_json=? WHERE id=?',(json.dumps(raw),origin[0]))
+        current=self.store.item(run['run_id'],1)
+        self.assertEqual(current['source_assets']['assets'][0]['label'],'选项 A')
+        self.assertEqual(current['item'],previous['item'])
+        self.assertEqual(current['result'],previous['result'])
+        self.assertEqual(self.store.run(run['run_id'])['calls'],run['calls']+13)
+
     def test_invalid_source_record_has_explicit_reason_and_does_not_stop_pool(self):
         with sqlite3.connect(pool.storage_path()) as conn:
             conn.execute("UPDATE pool_items SET question='' WHERE id=1")
@@ -254,30 +272,6 @@ class RoutineReviewTests(unittest.TestCase):
         self.assertEqual(rr.asset_paths([{'raw':{'original_file':str(inside)}}]),[inside.resolve()])
         self.assertEqual(rr.asset_paths([{'raw':{'original_file':str(outside)}}]),[])
 
-    def test_switch_remaining_to_luna_keeps_results_humans_and_checkpoints(self):
-        run=self.create()
-        item=self.store.item(run['run_id'],1)['item']
-        result={'classification':fake('','',item)}
-        self.store.save_result(run['run_id'],1,result,'classified',1)
-        partial={'classification':fake('','',self.store.item(run['run_id'],2)['item']),'audit_pending':True}
-        self.store.save_result(run['run_id'],2,partial,'matching',1)
-        oldkeys={r['item_id']:r['cache_key'] for r in self.store.rows(run['run_id'])['data']}
-        self.store.decide(run['run_id'],rr.DecisionRequest(action='assign',item_ids=[1],primary_id='SET-015',expected_revision=0))
-        changed=self.store.configure(run['run_id'],rr.model_config('codex_luna'))
-        self.assertEqual((changed['status'],changed['stop'],changed['calls']),('paused',1,2))
-        self.assertEqual(self.store.item(run['run_id'],1)['primary_id'],'SET-015')
-        self.assertEqual(self.store.item(run['run_id'],1)['cache_key'],oldkeys[1])
-        self.assertNotEqual(self.store.item(run['run_id'],2)['cache_key'],oldkeys[2])
-        self.assertTrue(self.store.item(run['run_id'],2)['result']['audit_pending'])
-        self.assertEqual(self.store.item(run['run_id'],2)['result']['classification'],partial['classification'])
-        self.store.control(run['run_id'],'resume')
-        calls=[]
-        def batch_provider(s,u,i):
-            data=json.loads(u);calls.append((i['id'],data['stage']))
-            return {'results':[{'id':item['id'],'classification':fake(s,u,item)} for item in data['question_records']]}
-        self.run_fake(run,batch_provider)
-        self.assertNotIn(1,[i for i,stage in calls]);self.assertIn((2,'full_catalog_audit'),calls)
-        self.assertEqual(self.store.run(run['run_id'])['processed'],13)
 
     def test_usage_unknown_is_not_zero_and_survives_failed_classification(self):
         run=self.create();self.assertIsNone(run['usage']['completion_tokens'])
@@ -293,12 +287,12 @@ class RoutineReviewTests(unittest.TestCase):
         response=self.client.post(base+'/control',json={'action':'resume','request_id':'old-resume-intent'})
         self.assertEqual(response.status_code,409)
 
-    def test_api_selects_luna_by_default(self):
+    def test_api_defaults_to_deepseek_when_local_is_not_selected(self):
         with patch.object(rr,'ai_caller') as provider,patch.object(rr,'enqueue_run',return_value={'accepted':True}) as enqueue:
             response=self.client.post('/routine-review/runs',json={'request_id':'new-luna-default'})
         self.assertEqual(response.status_code,202)
-        self.assertEqual(provider.call_args.args[0]['engine'],'codex_luna')
-        self.assertEqual(self.store.run()['model_config']['model'],'gpt-6-luna')
+        self.assertEqual(provider.call_args.args[0]['engine'],'deepseek')
+        self.assertEqual(self.store.run()['model_config']['engine'],'deepseek')
         self.assertTrue(enqueue.called)
 
     def test_existing_progress_blocks_all_new_starts_and_preserves_results(self):
@@ -330,49 +324,8 @@ class RoutineReviewTests(unittest.TestCase):
         self.assertEqual(self.client.get('/routine-review/runs/discarded-run').status_code,404)
         self.assertEqual(self.client.post('/routine-review/runs/discarded-run/control',json={'action':'resume','request_id':'legacy-resume'}).status_code,404)
 
-    def test_luna_batch_retries_only_missing_items_and_counts_real_requests(self):
-        config=rr.model_config('codex_luna')
-        run=self.store.create('batch-luna-0001',self.catalog,config,pool.storage_path())
-        calls=[]
-        def provider(s,u,item):
-            data=json.loads(u);items=data['question_records'];calls.append([i['id'] for i in items])
-            # The first response omits one item; twelve valid results survive.
-            accepted=items[:-1] if len(calls)==1 else items
-            return {'results':[{'id':i['id'],'classification':fake(s,u,i)} for i in accepted]}
-        result=self.run_fake(run,provider)
-        self.assertEqual(result['processed'],13);self.assertEqual(result['calls'],2)
-        self.assertEqual(calls[1],[13]);self.assertEqual(result['counts'],{'classified':13})
-        self.assertTrue(self.store.item(run['run_id'],1)['result']['catalog_audited'])
 
-    def test_luna_batch_retries_evidence_errors_with_feedback_and_archives_raw(self):
-        run=self.store.create('batch-luna-evidence',self.catalog,rr.model_config('codex_luna'),pool.storage_path())
-        calls=[]
-        def provider(s,u,item):
-            data=json.loads(u);calls.append(data)
-            entries=[{'id':i['id'],'classification':fake(s,u,i)} for i in data['question_records']]
-            if len(calls)==1:
-                entries[-1]['classification']['evidence'][0]['quote']='改写的证据'
-            return {'results':entries}
-        result=self.run_fake(run,provider)
-        self.assertEqual(result['counts'],{'classified':13})
-        self.assertEqual([i['id'] for i in calls[1]['question_records']],[13])
-        self.assertEqual(calls[1]['validation_errors'],[{'id':13,'reason':'证据不是题干或原解析中的原文'}])
-        with self.store.connection() as conn:
-            replies=conn.execute('SELECT response_text,validation_errors_json FROM review_batch_responses ORDER BY id').fetchall()
-        self.assertEqual(len(replies),2)
-        self.assertIn('改写的证据',replies[0][0])
-        self.assertEqual(json.loads(replies[1][1]),{})
 
-    def test_luna_quota_pauses_without_paid_fallback_or_duplicate_retry(self):
-        from backend.routine_codex import CodexUnavailable
-        run=self.store.create('luna-quota-0001',self.catalog,rr.model_config('codex_luna'),pool.storage_path())
-        calls=[]
-        def denied(s,u,item):calls.append(item['id']);raise CodexUnavailable(429)
-        with patch.object(rc,'make_http_caller',side_effect=AssertionError('禁止付费调用')):
-            result=self.run_fake(run,denied)
-        self.assertEqual(len(calls),1);self.assertEqual(result['calls'],1)
-        self.assertEqual(result['status'],'paused');self.assertIn('不会回退付费',result['reason'])
-        self.assertEqual(result['counts'],{'error':13})
 
 
 if __name__=='__main__':unittest.main()

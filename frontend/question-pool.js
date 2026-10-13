@@ -3,9 +3,9 @@
   'use strict';
   var STORAGE_KEY = 'question_pool_workbench_v1';
   var STATUS = {unreviewed: '未筛选', reviewed: '已筛选', preparing: '准备解析中', ready: '可预览入库', needs_review: '解析待复核', imported: '已入库'};
-  var COMPLETENESS = {complete: '文字完整', needs_review: '待确认', deferred_graphic: '暂缓图形题', failed: '提取失败'};
+  var COMPLETENESS = {complete: '题干完整', needs_review: '待确认', deferred_graphic: '缺少题图', failed: '提取失败'};
   var ROLES = {question: '普通题库题', mother: '母题', variant1: '变式 1', variant2: '变式 2', variant3: '变式 3'};
-  var DEFAULT_FILTERS = {category: '', source_id: '', year: '', question_type: '', keyword: '', completeness: 'text_only', status: ''};
+  var DEFAULT_FILTERS = {category: '', source_id: '', year: '', question_type: '', keyword: '', completeness: '', status: ''};
   var FILTER_IDS = {category: 'poolCategory', source_id: 'poolSource', year: 'poolYear', question_type: 'poolType', keyword: 'poolKeyword', completeness: 'poolCompleteness', status: 'poolStatus'};
 
   function safeUrl(value) {
@@ -24,6 +24,8 @@
     value = value && typeof value === 'object' ? value : {};
     var filters = Object.assign({}, DEFAULT_FILTERS);
     Object.keys(DEFAULT_FILTERS).forEach(function (key) { if (value.filters && typeof value.filters[key] === 'string') filters[key] = value.filters[key]; });
+    // The old default hid every diagram question. Migrate saved workbenches.
+    if (filters.completeness === 'text_only') filters.completeness = '';
     return {filters: filters, page: Math.max(1, Number(value.page) || 1), pageSize: Number(value.pageSize) === 80 ? 80 : 40,
       activeId: Number(value.activeId) || null, selected: Array.from(new Set((Array.isArray(value.selected) ? value.selected : []).map(Number).filter(function (id) { return Number.isInteger(id) && id > 0; }))),
       teacher: ['liangliang', 'xuefeng', 'taotao', 'ji'].includes(value.teacher) ? value.teacher : 'liangliang', pendingJob: value.pendingJob || null, commitIntent: value.commitIntent || null};
@@ -97,7 +99,7 @@
       var stats = state.meta.stats || {}, box = el('poolStats'); box.replaceChildren();
       function stat(label, keys, subtitle) { var n = node('div', undefined, 'pool-stat'), value = 0; for (var key of keys) if (stats[key] !== undefined) { value = Number(stats[key]) || 0; break; } n.append(node('strong', value.toLocaleString()), node('span', label), node('small', subtitle)); box.appendChild(n); }
       stat('原题总量', ['total', 'total_items', 'items'], '去重后 · 保留全部出处');
-      stat('文字完整', ['complete', 'text_complete'], '文字条件足以作答');
+      stat('题干完整', ['complete', 'text_complete'], '文字与题图已确认');
       stat('待复核', ['needs_review', 'review_pending'], '题干或答案需要确认');
       stat('已入库', ['imported'], '已确认并保留独立出处');
     }
@@ -148,6 +150,7 @@
     }
     function updateBusy() {
       ['poolPrepare', 'poolPreview'].forEach(function (id) { el(id).disabled = state.busy || !state.selected.size; });
+      el('poolPrepareCodex').disabled = state.busy || !state.selected.size || !state.localCodex;
       el('poolUploadButton').disabled = state.busy; el('poolRefresh').disabled = state.busy;
       el('poolCollectButton').disabled = state.busy;
       el('poolCommit').disabled = state.busy || !eligiblePreview(state.preview, state.confirmations).length;
@@ -166,6 +169,7 @@
         check.addEventListener('click', function (event) { event.stopPropagation(); }); check.addEventListener('change', function () { toggleSelection(item.id, check.checked); }); card.appendChild(check);
         var head = node('div', undefined, 'pool-card-head'); head.appendChild(node('strong', '#' + item.id));
         (item.categories || []).forEach(function (category) { head.appendChild(badge(category, 'blue')); });
+        if (item.asset_count) head.appendChild(badge('含题图 ' + item.asset_count + ' 张', 'blue'));
         head.appendChild(badge(STATUS[item.status] || item.status, item.status === 'imported' ? 'green' : item.status === 'needs_review' ? 'orange' : ''));
         if (item.completeness !== 'complete') head.appendChild(badge(COMPLETENESS[item.completeness] || item.completeness, 'orange')); card.appendChild(head);
         math(card, item.question, 'pool-card-question');
@@ -188,7 +192,17 @@
         if (state.page > pages) { state.page = pages; return loadItems(); }
         state.items = result.data || []; state.items.forEach(function (item) { state.cache.set(Number(item.id), item); });
         renderList(); renderQueue(); persist();
-        if (state.activeId) await selectItem(state.activeId, false);
+        if (state.activeId) {
+          var restoredId = state.activeId;
+          try { await selectItem(restoredId, false); }
+          catch (error) {
+            if (error.status !== 404) throw error;
+            if (sequence !== state.listSequence || state.activeId !== restoredId || !editorNavigation()) return;
+            state.activeId = null; state.cache.delete(restoredId); persist();
+            if (state.items.length) await selectItem(state.items[0].id, false);
+            else { el('poolDetail').replaceChildren(node('p', '当前筛选没有原题。调整条件或导入题源后继续。', 'pool-empty')); el('poolPreviousItem').disabled = true; el('poolNextItem').disabled = true; }
+          }
+        }
         else if (state.items.length) await selectItem(state.items[0].id, false);
         else { el('poolDetail').replaceChildren(node('p', '当前筛选没有原题。调整条件或导入题源后继续。', 'pool-empty')); el('poolPreviousItem').disabled = true; el('poolNextItem').disabled = true; }
       } catch (error) {
@@ -262,7 +276,7 @@
       form.append(createLabel('所属大板块（可多选）', categoryBox));
       var type = node('select'); setOptions(type, (state.meta.question_types || []).map(function (value) { return [value, value === '未知' ? '未确定题型' : value]; }), item.question_type || '未知'); fields.question_type = type; form.appendChild(createLabel('题型', type));
       var completeness = node('select'); setOptions(completeness, Object.entries(COMPLETENESS), item.completeness); fields.completeness = completeness; form.appendChild(createLabel('题干完整性', completeness));
-      var reason = node('textarea'); reason.value = item.reason || ''; fields.reason = reason; form.appendChild(createLabel('复核说明 / 暂缓原因', reason));
+      var reason = node('textarea'); reason.value = item.reason || ''; fields.reason = reason; form.appendChild(createLabel('复核说明 / 缺图原因', reason));
       var actions = node('div', undefined, 'pool-detail-actions'), save = button('保存修正', function () {}, 'pool-btn primary'); save.type = 'submit';
       actions.append(save, button('取消编辑', function () { state.editorDirty = false; renderDetail(item); notice('已取消未保存的修改。'); })); form.appendChild(actions);
       form.addEventListener('input', markDirty); form.addEventListener('change', markDirty);
@@ -309,14 +323,28 @@
     function renderDetail(item) {
       var box = el('poolDetail'); box.replaceChildren(); var head = node('div', undefined, 'pool-detail-head'); head.append(node('strong', '原题 #' + item.id), badge(COMPLETENESS[item.completeness] || item.completeness, item.completeness === 'complete' ? 'green' : 'orange'), badge(STATUS[item.status] || item.status)); box.appendChild(head);
       math(box, item.question, 'pool-detail-question');
+      var imageHost = node('div', undefined, 'pool-images'); box.appendChild(imageHost);
+      imageHost.appendChild(node('p', '正在加载原题图…', 'pool-muted'));
       var geometryHost = node('div'); box.appendChild(geometryHost);
       if (window.StudyGeometry) {
-        var prepared = item.prepared || {};
-        StudyGeometry.mount(geometryHost, prepared);
-        api('/question-pool/items/' + item.id + '/assets').then(function (data) {
-          if (geometryHost.isConnected) StudyGeometry.mount(geometryHost, Object.assign({}, prepared, {asset_refs: data.asset_refs}));
-        }).catch(function () {});
+        window.StudyGeometry.mount(geometryHost, Object.assign({}, item.prepared || {}, {asset_refs: []}));
       }
+      api('/question-pool/items/' + item.id + '/assets').then(function (data) {
+        if (state.activeId !== item.id || !box.contains(imageHost)) return;
+        imageHost.replaceChildren();
+        var assets = data.assets || (data.asset_refs || []).map(function (ref, i) { return {ref: ref, label: '题图 ' + (i + 1)}; });
+        assets.forEach(function (asset) {
+          if (!/^[a-f0-9]{64}\.png$/.test(asset.ref)) return;
+          var figure = node('figure', undefined, 'pool-image'), link = node('a'), img = node('img');
+          link.href = '/question-assets/' + asset.ref; link.target = '_blank'; link.rel = 'noopener noreferrer';
+          img.src = link.href; img.alt = asset.label || '原题图'; img.loading = 'lazy';
+          img.addEventListener('error', function () { img.hidden = true; link.replaceChildren(node('span', '原图加载失败，点击重试')); });
+          link.appendChild(img); figure.append(link, node('figcaption', (asset.label || '原题图') + ' · 点击查看大图')); imageHost.appendChild(figure);
+        });
+        if ((data.missing || []).length) imageHost.appendChild(node('p', '题图未补齐：' + data.missing.map(function (entry) { return entry.label + '（' + entry.reason + '）'; }).join('；'), 'pool-check conflict'));
+      }).catch(function (error) {
+        if (state.activeId === item.id && box.contains(imageHost)) imageHost.replaceChildren(node('p', '题图加载失败：' + error.message + '。点击刷新重试。', 'pool-check conflict'));
+      });
       if (item.reason) box.appendChild(node('p', item.reason, 'pool-check'));
       if (item.prepare_error) box.appendChild(node('p', '解析失败：' + item.prepare_error + '\n加入选择队列后可单独重试。', 'pool-check conflict'));
       if (item.completeness === 'failed') {
@@ -368,7 +396,7 @@
         var card = node('section', undefined, 'pool-source-card'); card.appendChild(node('h3', source.name));
         var stats = source.stats || {}, parts = [];
         if (source.expected_count !== undefined && source.expected_count !== null) parts.push('应处理 ' + source.expected_count);
-        [['expected', '应处理'], ['expected_count', '应处理'], ['total', '已处理'], ['unique', '独立题'], ['processed', '已处理'], ['collected', '已采集'], ['imported', '已采集'], ['duplicates', '重复'], ['deferred_graphic', '暂缓图形'], ['needs_review', '待修正'], ['failed', '失败']].forEach(function (pair) { if (stats[pair[0]] !== undefined) parts.push(pair[1] + ' ' + stats[pair[0]]); });
+        [['expected', '应处理'], ['expected_count', '应处理'], ['total', '已处理'], ['unique', '独立题'], ['processed', '已处理'], ['collected', '已采集'], ['imported', '已采集'], ['duplicates', '重复'], ['deferred_graphic', '缺少题图'], ['needs_review', '待修正'], ['failed', '失败']].forEach(function (pair) { if (stats[pair[0]] !== undefined) parts.push(pair[1] + ' ' + stats[pair[0]]); });
         card.appendChild(node('p', parts.join(' · ') || '尚未处理', 'pool-source-stats'));
         if (source.detail || source.error) card.appendChild(node('p', source.detail || source.error, 'pool-muted'));
         if (source.import_status && source.import_status !== 'ready') card.appendChild(node('p', '导入状态：' + ({queued: '等待处理', running: '处理中', error: '提取失败', interrupted: '提取已中断', done: '完成'}[source.import_status] || source.import_status), 'pool-source-stats'));
@@ -405,11 +433,13 @@
         } else notice(failed ? '本次 ' + (Number(result.ready) || 0) + ' 题已准备，' + failed + ' 题失败。失败项可逐题查看原因并单独重试。' : '后台处理完成。请逐题核对原题与 AI 解析，再预览入库。', !!failed);
       } catch (error) { if (error.job && ['error', 'interrupted'].includes(error.job.status)) { state.pendingJob = null; persist(); } await refresh(); throw error; }
     }
-    async function prepare() {
+    async function prepare(engine) {
+      engine = typeof engine === 'string' ? engine : 'deepseek';
       if (!editorNavigation() || !state.selected.size || state.busy) return;
+      if (engine === 'codex_cli' && !state.localCodex) return notice('Codex CLI 仅限本地使用，云端暂不可用。', true);
       if (state.selected.size > 200) return notice('每批最多处理 200 道题，请缩小本次选择队列。', true);
       state.busy = true; invalidatePreview(); updateBusy();
-      try { var job = await api('/question-pool/prepare', 'POST', {item_ids: Array.from(state.selected), teacher: el('poolTeacher').value}); notice('已提交选中题的解析任务，切换页面后仍会继续。'); await trackJob(job); }
+      try { var job = await api('/question-pool/prepare', 'POST', {item_ids: Array.from(state.selected), teacher: el('poolTeacher').value, engine: engine}); notice('已提交选中题的解析任务，切换页面后仍会继续。'); await trackJob(job); }
       catch (error) { notice(error.message, true); } finally { state.busy = false; updateBusy(); }
     }
     function renderPreview() {
@@ -488,7 +518,7 @@
       listen('poolRefresh', 'click', refresh); listen('poolReset', 'click', resetFilters); listen('poolPreviousItem', 'click', function () { return moveItem(-1); }); listen('poolNextItem', 'click', function () { return moveItem(1); });
       listen('poolSelectPage', 'change', function () { var selected = el('poolSelectPage').checked; state.items.forEach(function (item) { if (item.status !== 'imported') { if (selected) state.selected.add(Number(item.id)); else state.selected.delete(Number(item.id)); } }); invalidatePreview(); renderQueue(); renderSelectionState(); });
       listen('poolClearSelection', 'click', function () { state.selected.clear(); invalidatePreview(); renderQueue(); renderSelectionState(); }); listen('poolTeacher', 'change', persist);
-      listen('poolPrepare', 'click', prepare); listen('poolPreview', 'click', preview); listen('poolCommit', 'click', commit); listen('poolSourcesButton', 'click', async function () { renderSources(); showDialog('poolSourcesDialog'); await loadCollectionReport(); }); listen('poolUploadForm', 'submit', upload);
+      listen('poolPrepare', 'click', prepare); listen('poolPrepareCodex', 'click', function () { return prepare('codex_cli'); }); listen('poolPreview', 'click', preview); listen('poolCommit', 'click', commit); listen('poolSourcesButton', 'click', async function () { renderSources(); showDialog('poolSourcesDialog'); await loadCollectionReport(); }); listen('poolUploadForm', 'submit', upload);
       listen('poolCollectForm', 'submit', collect);
       doc.querySelectorAll('[data-close-dialog]').forEach(function (entry) { entry.addEventListener('click', function () { closeDialog(entry.dataset.closeDialog); }); });
       doc.addEventListener('keydown', function (event) {
@@ -505,7 +535,12 @@
       saved = restoreState(storage);
       var routeJob = window.location && new URLSearchParams(window.location.search || '').get('job');
       Object.assign(state, {filters: saved.filters, page: saved.page, pageSize: saved.pageSize, activeId: saved.activeId, selected: new Set(saved.selected), pendingJob: routeJob || saved.pendingJob, commitIntent: saved.commitIntent});
-      el('poolTeacher').value = saved.teacher; syncFilters(); bind(); el('poolWorkspace').hidden = false; renderQueue();
+      el('poolTeacher').value = saved.teacher; syncFilters(); bind();
+      state.localCodex = false;
+      try { var capabilities = await api('/local-models/status'); state.localCodex = !!(capabilities.codex_cli && capabilities.codex_cli.available); } catch (_) {}
+      el('poolPrepareCodex').textContent = state.localCodex ? '用本地 Codex CLI 准备解析' : 'Codex CLI 准备解析（暂不可用）';
+      el('poolCodexNote').textContent = state.localCodex ? '使用已登录 Codex 账号跑 Solver → Verifier → Formatter，生成后仍需核对再入库。' : 'Codex CLI 仅限本地使用，云端暂不可用。';
+      el('poolWorkspace').hidden = false; renderQueue();
       var collectionYear = new Date().getFullYear(); el('poolCollectYears').value = (collectionYear - 1) + ',' + collectionYear;
       try { await refresh(); if (state.pendingJob) { state.busy = true; updateBusy(); try { await trackJob(await api('/jobs/' + encodeURIComponent(state.pendingJob))); } finally { state.busy = false; updateBusy(); } } }
       catch (error) { if (error.status === 404 && state.pendingJob) { state.pendingJob = null; persist(); } notice(error.message, true); }

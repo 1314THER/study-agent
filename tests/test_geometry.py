@@ -236,3 +236,68 @@ class QuestionAssetTest(unittest.TestCase):
             refs=question_assets.pool_asset_refs({"occurrences":[{"raw":{"original_file":str(safe)}}]})
             self.assertEqual(len(refs),1)
             self.assertEqual(question_assets.pool_asset_refs({"occurrences":[{"raw":{"original_file":str(outside)}}]}),[])
+
+    def test_diagram_options_keep_labels_and_partial_images_cannot_be_solved(self):
+        from backend.question_pool import files_directory
+        with tempfile.TemporaryDirectory() as directory, workspace(directory):
+            root = files_directory().parent
+            root.mkdir(parents=True)
+            (root / "a.png").write_bytes(self.png())
+            item = {"question": "选择正确的图象", "completeness": "deferred_graphic", "occurrences": [{"raw": {
+                "source_root": str(root), "image_refs": [{"path": "a.png", "label": "选项 A"}, {"path": "b.png", "label": "选项 B"}]}}]}
+            data = question_assets.pool_asset_data(item)
+            self.assertEqual(data["assets"][0]["label"], "选项 A")
+            self.assertEqual(data["missing"][0]["label"], "选项 B")
+            with self.assertRaisesRegex(ValueError, "题图缺失"):
+                question_assets.pool_asset_refs(item, require_complete=True)
+            (root / "b.png").write_bytes(self.png())
+            self.assertEqual(len(question_assets.pool_asset_data(item)["assets"]), 2)
+            self.assertEqual(len(question_assets.pool_asset_refs(item, require_complete=True)), 1)
+
+    def test_pdf_page_rendering_is_cached_across_questions(self):
+        from backend.question_pool import files_directory
+        import fitz
+        with tempfile.TemporaryDirectory() as directory, workspace(directory):
+            root = files_directory().parent
+            root.mkdir(parents=True)
+            pdf = root / "paper.pdf"
+            with fitz.open() as doc:
+                doc.new_page()
+                doc.save(pdf)
+            item = {"question": "如图求面积", "occurrences": [{"page_start": 1, "page_end": 1, "raw": {"original_file": str(pdf)}}]}
+            question_assets._retain_source.cache_clear()
+            with patch("fitz.open", wraps=fitz.open) as opener:
+                first = question_assets.pool_asset_refs(item)
+                second = question_assets.pool_asset_refs(item)
+            self.assertEqual(first, second)
+            self.assertEqual(opener.call_count, 1)
+
+    def test_hash_mismatch_and_path_traversal_remain_missing(self):
+        from backend.question_pool import files_directory
+        with tempfile.TemporaryDirectory() as directory, workspace(directory):
+            root = files_directory().parent
+            root.mkdir(parents=True)
+            (root / "figure.png").write_bytes(self.png())
+            outside = Path(directory) / "outside.png"
+            outside.write_bytes(self.png())
+            item = {"occurrences": [{"raw": {"source_root": str(root), "image_refs": [
+                {"path": "figure.png"}, {"path": "../outside.png"}], "image_assets": [{"path": "figure.png", "sha256": "bad-hash"}]}}]}
+            data = question_assets.pool_asset_data(item)
+            self.assertEqual(data["asset_refs"], [])
+            self.assertEqual(len(data["missing"]), 2)
+
+    def test_transparent_diagrams_get_white_background(self):
+        with tempfile.TemporaryDirectory() as directory, workspace(directory):
+            out = BytesIO()
+            Image.new("RGBA", (5, 5), (0, 0, 0, 0)).save(out, format="PNG")
+            ref = question_assets.store_image(out.getvalue())
+            with Image.open(question_assets.resolve_asset(ref)) as image:
+                self.assertEqual(image.getpixel((0, 0)), (255, 255, 255))
+
+    def test_solver_preserves_image_option_mapping_in_input(self):
+        from backend.solver import step_solver_only
+        with tempfile.TemporaryDirectory() as directory, workspace(directory):
+            ref=question_assets.store_image(self.png())
+            with patch('backend.solver.call_deepseek', return_value=('答案 A', {})) as ai:
+                step_solver_only('选择图象', asset_refs=[ref], asset_labels=['选项 A、选项 B'])
+            self.assertIn('第 1 张附图：选项 A、选项 B', ai.call_args.args[1])

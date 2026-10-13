@@ -9,6 +9,7 @@ User=studyagent
 Group=studyagent
 WorkingDirectory=/opt/study-agent
 Environment=PYTHONUNBUFFERED=1
+Environment=STUDY_LOCAL_CODEX=0
 ExecStart=/opt/study-agent/.venv/bin/python -m uvicorn backend.main:app --host 127.0.0.1 --port 8000 --workers 1
 Restart=on-failure
 RestartSec=5

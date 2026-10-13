@@ -30,7 +30,6 @@ _ACTIVE = set()
 _ACTIVE_LOCK = threading.RLock()
 REVIEW_STATES = {'pending', 'confirmed', 'deferred', 'rejected'}
 KINDS = {'new_routine_candidate', 'insufficient_content', 'ambiguous_match', 'matching_incomplete'}
-LUNA_BATCH_PROMPT_VERSION = 'routine-luna-batch-v2'
 
 
 def require_owner():
@@ -40,9 +39,8 @@ def require_owner():
 
 def model_config(engine='deepseek'):
     if engine == 'codex_luna':
-        return {'engine':engine,'model':'gpt-6-luna','reasoning_effort':'low',
-                'prompt_profile':rc.CACHE_PROMPT_VERSION,'warm_prefix':True,'batch_size':20,
-                'batch_prompt_version':LUNA_BATCH_PROMPT_VERSION}
+        from backend.local_models import routine_config
+        return routine_config()
     from backend import settings
     api = settings.get_api().get('deepseek') or {}
     maximum = int(settings.get_limits().get('api_max_tokens', 8192))
@@ -65,16 +63,8 @@ def reference_store():
 
 def ai_caller(config, usage_callback=None):
     if config.get('engine') == 'codex_luna':
-        from backend.routine_codex import make_caller, check_available, CodexUnavailable
-        from backend.jobs import ensure_active, provider_slot
-        try: check_available()
-        except CodexUnavailable:
-            raise HTTPException(503,'请安装 Codex CLI 并使用 ChatGPT 登录；本模式不会回退付费 API。') from None
-        adapter=make_caller(usage_callback=usage_callback, ensure_active=ensure_active)
-        def codex_call(system,user,item):
-            with provider_slot('codex'):
-                return adapter(system,user,item)
-        return codex_call
+        from backend.local_models import provider
+        return provider().routine_caller(config,usage_callback)
     from backend import settings
     from backend.jobs import provider_slot, request_timeout
     key = settings.get_api_key('deepseek')
@@ -176,7 +166,7 @@ class ReviewStore:
                     raw = json.loads(origin['raw_json'] or '{}')
                     record = {k: origin[k] for k in ('source_id','source_key','page_start','page_end','question_no','name','url','filename')}
                     record['has_file'] = bool(origin['file_token'])
-                    record['raw'] = {k: raw[k] for k in ('image_refs','image_assets','original_file','graphic_file','file_sha256','paper') if k in raw}
+                    record['raw'] = {k: raw[k] for k in ('image_refs','image_assets','original_file','source_root','question_assets','graphic_file','file_sha256','paper') if k in raw}
                     provenance.setdefault(origin['item_id'], []).append(record)
                 catalog_hash = rc.digest(catalog)
                 for row in source.execute('SELECT * FROM pool_items ORDER BY id'):
@@ -351,6 +341,12 @@ class ReviewStore:
         with closing(sqlite3.connect(Path(storage_path()).resolve().as_uri()+'?mode=ro',uri=True)) as conn:
             current = conn.execute('SELECT version FROM pool_items WHERE id=?',(item_id,)).fetchone()
         data['source_stale'] = current is None or current[0] != data['item']['version']
+        # Supplement saved classifications with the pool's current attachments.
+        # The frozen question, AI conclusion and human decisions stay intact.
+        from backend.question_pool import get_item
+        from backend.question_assets import pool_asset_data
+        if current is not None:
+            data['source_assets'] = pool_asset_data(get_item(item_id))
         return data
 
     def groups(self, run_id):
@@ -499,6 +495,9 @@ def asset_paths(provenance):
             snapshot=next((p for p in original.parents if p.parent.name=='snapshots'),None)
             if snapshot:
                 candidates.extend(snapshot/a['path'] for a in raw.get('image_assets',[]) if isinstance(a,dict) and a.get('path'))
+        base=Path(raw['source_root']) if raw.get('source_root') else None
+        if base:
+            candidates.extend(base/a['path'] for a in raw.get('image_refs',[]) if isinstance(a,dict) and isinstance(a.get('path'),str))
         for candidate in candidates:
             path=candidate.resolve()
             if path.is_file() and any(path.is_relative_to(root) for root in allowed) and path not in paths:
@@ -510,8 +509,8 @@ def execute_run(store, run_id, caller=None, concurrency=8, progress=None, job_id
     require_owner()
     from backend.jobs import ensure_active, JobStopped
     run=store.run(run_id)
-    if caller is None and run['model_config'].get('engine')=='codex_luna' and run['model_config'].get('batch_prompt_version')!=LUNA_BATCH_PROMPT_VERSION:
-        raise HTTPException(409,'请先重新应用 Codex Luna 设置，更新批量校验提示词。')
+    from backend.local_models import validate_routine_config
+    validate_routine_config(run['model_config'])
     lock_key=(str(store.path.resolve()),run_id)
     with _ACTIVE_LOCK:
         if lock_key in _ACTIVE:
@@ -577,83 +576,13 @@ def execute_run(store, run_id, caller=None, concurrency=8, progress=None, job_id
                     'review':{'kind':'insufficient_content','reasons':['原题格式不完整，暂时无法匹配。']},
                 },'error',calls)
         def classify_batch(batch):
-            """Luna reads the whole directory once for up to twenty independent items."""
-            if fatal.is_set() or store.stopping(run_id): return
-            from backend.routine_matching import question_record
-            catalog=json.loads(batch[0]['catalog_json']) if batch[0]['catalog_json'] else run['catalog']
-            remaining={}
-            for row in batch:
-                item=json.loads(row['item_json'])
-                try: question_record(**item)
-                except ValueError:
-                    store.save_result(run_id,item['id'],{'error':'原题格式不完整，请补齐资料后重试。','review':{'kind':'insufficient_content','reasons':['原题格式不完整']}},'error')
-                    continue
-                remaining[item['id']]=item
-            failures={}
-            for attempt in range(2):
-                if not remaining or fatal.is_set() or store.stopping(run_id): return
-                ensure_active()
-                items=list(remaining.values())
-                system,_,allowed=rc.make_prompt(items[0],catalog,full_catalog=True,cache_friendly=True)
-                system+='\n这是批量全目录审核。只输出 {"results":[{"id":原题编号,"classification":上述完整分类对象}]}。逐题独立判断，覆盖输入中每个id恰好一次，不遗漏、不合并题目。原文证据优先选择不含公式、不跨行的短连续文字；逐字保留空格、换行及反斜杠，不改写、不拼接。若收到 validation_errors，逐题修正对应错误。'
-                data={'stage':'full_catalog_audit','allowed_ids':sorted(allowed),'question_records':items}
-                if failures:
-                    data['validation_errors']=[{'id':iid,'reason':reason} for iid,reason in failures.items()]
-                user=rc_json(data)
-                store.record_request(run_id)
-                failures={item['id']:'响应未返回这道题的分类' for item in items}
-                response_raw=None
-                try:
-                    raw=caller(system,user,items[0])
-                    response_raw=raw
-                    if isinstance(raw,str):
-                        raw=raw.strip()
-                        if raw.startswith('```'):
-                            raw=raw.split('\n',1)[1].rsplit('```',1)[0].strip()
-                        raw=json.loads(raw)
-                    entries=raw.get('results') if isinstance(raw,dict) else None
-                    if not isinstance(entries,list): raise ValueError('批量分类缺少逐题结果')
-                    seen=set()
-                    for entry in entries:
-                        if not isinstance(entry,dict) or type(entry.get('id')) is not int or entry['id'] not in remaining or entry['id'] in seen:
-                            raise ValueError('批量分类编号重复或含未知编号')
-                        seen.add(entry['id'])
-                    # Save each valid result even if another item needs a retry.
-                    for entry in entries:
-                        item=remaining[entry['id']]
-                        try: classification=rc.normalize_result(entry.get('classification'),item,catalog,allowed)
-                        except (ValueError,TypeError) as exc:
-                            failures[item['id']]=str(exc)[:200]
-                            continue
-                        matched={'classification':classification,'catalog_audited':True,'audit_pending':False,
-                                 'retrieved_ids':sorted(allowed),'source':'codex_luna','model_config_snapshot':run['model_config']}
-                        matched['review']=build_review_entry({'status':'classified','item':item,**matched},catalog)
-                        store.save_result(run_id,item['id'],matched,'classified')
-                        del remaining[item['id']]
-                        failures.pop(item['id'],None)
-                except JobStopped: raise
-                except Exception as exc:
-                    failures={item['id']:rc._safe_failure(exc) for item in remaining.values()}
-                    if getattr(exc,'status_code',getattr(exc,'code',None)) in (400,401,402,403,404,429,503):
-                        fatal.set();fatal_reason.append('Codex 登录、模型或账号额度不可用；已暂停，不会回退付费 API。')
-                store.record_batch_response(run_id,[item['id'] for item in items],response_raw,failures)
-                if attempt==1 or fatal.is_set():
-                    for item in remaining.values():
-                        reason=failures.get(item['id'],'逐题分类校验未通过')
-                        store.save_result(run_id,item['id'],{'error':'批量分类未通过校验：'+reason,
-                            'review':{'kind':'matching_incomplete','reasons':[reason]}},'error')
-                    return
+            from backend.local_models import provider
+            return provider().classify_batch(batch,store=store,run=run,caller=caller,fatal=fatal,fatal_reason=fatal_reason)
         workers=max(1,min(8,concurrency))
         batch_mode=run['model_config'].get('engine')=='codex_luna'
-        work=[]
         if batch_mode:
-            batch=[];chars=0;catalog_key=None
-            for row in rows:
-                key=row['catalog_json']
-                if batch and (len(batch)>=20 or chars+len(row['item_json'])>24000 or key!=catalog_key):
-                    work.append(batch);batch=[];chars=0
-                batch.append(row);chars+=len(row['item_json']);catalog_key=key
-            if batch: work.append(batch)
+            from backend.local_models import provider
+            work=provider().matching_batches(rows,run['model_config'])
         else: work=rows
         iterator=iter(work); pending=set(); last_update=0; last_report=0
         warm_completed=0
@@ -731,7 +660,7 @@ class StrictRequest(BaseModel):
 
 class StartRequest(StrictRequest):
     request_id: str=Field(...,min_length=8,max_length=128)
-    engine: Literal['deepseek','codex_luna']='codex_luna'
+    engine: Literal['deepseek','codex_luna']='deepseek'
 
 
 class ControlRequest(StartRequest):
@@ -836,8 +765,9 @@ def control(run_id:str,req:ControlRequest,store=Depends(get_store)):
     if req.action!='pause' and store.run(run_id)['model_config'].get('prompt_profile')!=rc.CACHE_PROMPT_VERSION:
         raise HTTPException(409,'请先应用省费设置或切换 Codex Luna，再继续旧批次。')
     config=store.run(run_id)['model_config']
-    if req.action!='pause' and config.get('engine')=='codex_luna' and config.get('batch_prompt_version')!=LUNA_BATCH_PROMPT_VERSION:
-        raise HTTPException(409,'请先重新应用 Codex Luna 设置，更新批量校验提示词。')
+    if req.action!='pause':
+        from backend.local_models import validate_routine_config
+        validate_routine_config(config)
     run=store.control(run_id,req.action)
     if req.action=='pause': return {'run':run}
     return enqueue_run(store,run_id,req.request_id)

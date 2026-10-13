@@ -5,7 +5,7 @@
   <title>套路审核 · 成为数学高手</title>
   <script src="/auth.js?v=20261009a"></script>
   <script>document.documentElement.classList.add('nav-init')</script>
-  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/routine-review.css?v=20261011-web">
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/routine-review.css?v=20261012images-20261011-forecast2">
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
 </head>
@@ -24,10 +24,19 @@
   </nav></aside>
   <main class="main-content"><div class="review-container" id="reviewApp" hidden>
     <header class="review-header"><div><p class="review-eyebrow">主人工作台 · 全部题目，逐步确认</p><h1>套路审核</h1><p class="review-muted">按方法整理题目，保留全部匹配建议。每个套路可以有任意数量的代表题和变式。</p></div>
-      <div class="review-actions"><label>匹配方式<select id="matchEngine"><option value="codex_luna">Codex Luna · 已登录账号额度</option><option value="deepseek">DeepSeek · 省费模式（API 计费）</option></select></label><button id="applyEngine">应用到剩余题</button><button id="startRun" class="primary" disabled>匹配全部原题</button><button id="pauseRun">暂停</button><button id="resumeRun">继续匹配</button><button id="retryRun">重试失败题</button><a id="exportReport" hidden>导出统计报告</a></div>
+      <div class="review-actions"><label>匹配方式<select id="matchEngine"><option value="codex_luna" disabled>Codex Luna · 本地账号额度（暂不可用）</option><option value="deepseek" selected>DeepSeek · 省费模式（API 计费）</option></select></label><button id="applyEngine">应用到剩余题</button><button id="startRun" class="primary" disabled>匹配全部原题</button><button id="pauseRun">暂停</button><button id="resumeRun">继续匹配</button><button id="retryRun">重试失败题</button><a id="exportReport" hidden>导出统计报告</a></div>
     </header>
     <p id="reviewMessage" role="status" aria-live="polite"></p>
     <section id="runSummary" class="review-summary" aria-label="处理进度"></section>
+    <section id="progressForecast" class="review-panel review-forecast" hidden aria-label="预计匹配进度">
+      <div class="review-forecast-metrics">
+        <div><span>匹配速度</span><strong id="matchSpeed">等待结果</strong></div>
+        <div><span>预计剩余时间</span><strong id="matchEta">等待结果</strong></div>
+        <span id="forecastLabel">预期进度</span>
+      </div>
+      <progress id="forecastProgress" max="1" value="0" aria-label="预期匹配进度"></progress>
+      <p id="forecastNote" class="review-muted"></p>
+    </section>
     <p id="usageSummary" class="review-muted" aria-live="polite"></p>
     <button id="openWebReview">ChatGPT 网页分批审核</button>
     <section id="webReviewPanel" class="review-panel review-web-panel" hidden aria-label="网页分批审核">
@@ -50,7 +59,7 @@
           <input name="keyword" type="search" placeholder="题干关键词" aria-label="题干关键词">
           <select name="review_status" aria-label="审核状态"><option value="">全部审核状态</option><option value="pending">未审核</option><option value="confirmed">已确认</option><option value="deferred">已暂缓</option><option value="rejected">已排除</option></select>
           <select name="confidence" aria-label="建议置信度"><option value="">全部置信度</option><option value="high">高</option><option value="medium">中</option><option value="low">低</option></select>
-          <select name="completeness" aria-label="题干完整性"><option value="">全部完整性</option><option value="complete">文字完整</option><option value="needs_review">待核对</option><option value="deferred_graphic">依赖图形</option><option value="failed">提取失败</option></select>
+          <select name="completeness" aria-label="题干完整性"><option value="">全部完整性</option><option value="complete">题干完整</option><option value="needs_review">待核对</option><option value="deferred_graphic">题图待补</option><option value="failed">提取失败</option></select>
           <button type="submit">筛选</button>
         </form>
         <div class="review-list-heading"><h2 id="resultCount">等待批次</h2><label><input id="selectPage" type="checkbox"> 本页全选</label></div>
@@ -67,5 +76,5 @@
   </div><p id="accessMessage" class="review-container">正在确认主人权限…</p></main>
 </div>
 <script src="/pool-math.js?v=20261010a"></script><script src="/jobs.js?v=20261011-review"></script>
-<script src="/routine-review.js?v=20261011-single-task"></script><script src="/nav.js?v=20261011-review"></script>
+<script src="/routine-review.js?v=20261012images-20261012-local-models"></script><script src="/nav.js?v=20261011-review"></script>
 </body></html>

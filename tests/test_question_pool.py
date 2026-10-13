@@ -89,6 +89,30 @@ class QuestionPoolTests(unittest.TestCase):
         result = self.pool.import_records(self.source(), [first, other, replay], retry_failed=True)
         self.assertEqual(result["added_occurrences"], 0)
 
+    def test_available_graphic_restores_candidate_and_replay_keeps_owner_edits(self):
+        from backend.question_assets import store_image
+        from PIL import Image
+        from io import BytesIO
+        root = self.pool.files_directory().parent
+        root.mkdir(parents=True)
+        image = BytesIO()
+        Image.new("RGB", (30, 20), "white").save(image, format="PNG")
+        (root / "figure.png").write_bytes(image.getvalue())
+        record = self.record(question="如图求面积", completeness="deferred_graphic", raw={"source_root": str(root), "image_refs": [{"path": "figure.png"}]})
+        self.pool.import_records(self.source(), [record])
+        item = self.pool.list_items()["data"][0]
+        self.assertEqual(item["completeness"], "needs_review")
+        self.assertEqual(item["asset_count"], 1)
+        self.assertEqual(self.pool.import_records(self.source(), [record], retry_failed=True)["recovered_occurrences"], 0)
+        self.pool.update_item(item["id"], {"question": "主人修正的题目", "completeness": "complete"})
+        self.pool.import_records(self.source(), [record], retry_failed=True)
+        self.assertEqual(self.pool.get_item(item["id"])["question"], "主人修正的题目")
+
+    def test_complete_label_cannot_bypass_missing_diagram_before_preparation(self):
+        item = self.import_one(self.record(question="如图求面积", raw={"image_refs": [{"path": "missing.png"}]}))
+        with self.assertRaisesRegex(ValueError, "题图缺失"):
+            self.pool.validate_prepare_args({"item_ids": [item["id"]]})
+
     def test_pdf_diagram_identity_survives_edits_and_replay(self):
         first = self.record(raw={"graphic_file": {"sha256": "first-pdf", "page_start": 1, "question_no": "1"}})
         other = self.record(2, question=first["question"], raw={"graphic_file": {"sha256": "second-pdf", "page_start": 1, "question_no": "1"}})
@@ -245,7 +269,8 @@ class QuestionPoolTests(unittest.TestCase):
         source = self.pool.meta()["sources"][0]
         self.assertEqual(source["stats"]["total"], 3)
         self.assertEqual(source["stats"]["failed"], 2)
-        self.assertEqual(self.pool.list_items()["total"], 1)
+        self.assertEqual(self.pool.list_items()["total"], 3)
+        self.assertEqual(self.pool.list_items(completeness="text_only")["total"], 1)
         failed = self.pool.list_items(completeness="failed")["data"]
         self.assertEqual(len(failed), 2)
         self.assertTrue(all(item["occurrences"] and item["reason"] for item in failed))
@@ -254,14 +279,15 @@ class QuestionPoolTests(unittest.TestCase):
         self.pool.import_records(self.source(), [self.record(1), self.record(2)])
         self.assertEqual(self.pool.list_items()["total"], 2)
 
-    def test_deferred_and_failed_items_remain_traceable_outside_text_default(self):
+    def test_default_includes_diagrams_and_text_filter_remains_available(self):
         self.pool.import_records(self.source(), [
             self.record(1),
             self.record(2, completeness="needs_review", reason="选项缺少文字"),
             self.record(3, completeness="deferred_graphic", reason="题干条件依赖所附图"),
             self.record(4, completeness="failed", reason="无法提取题干"),
         ])
-        self.assertEqual(self.pool.list_items()["total"], 2)
+        self.assertEqual(self.pool.list_items()["total"], 4)
+        self.assertEqual(self.pool.list_items(completeness="text_only")["total"], 2)
         all_items = self.pool.list_items(completeness=None)
         self.assertEqual(all_items["total"], 4)
         deferred = next(i for i in all_items["data"] if i["completeness"] == "deferred_graphic")
