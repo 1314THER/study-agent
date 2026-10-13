@@ -54,7 +54,8 @@ class ShowcaseTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(path=path):
                 self.assertEqual((await self.client.get(path)).status_code, 200)
         for path in ("/settings.json", "/.env", "/study_agent.db", "/backend/settings.json", "/vendor/geometry-manifest.json",
-                     "/nav.js", "/demo-session.js", "/showcase/unreviewed.js", "/docs", "/openapi.json"):
+                     "/nav.js", "/demo-session.js", "/showcase/unreviewed.js", "/showcase/assets",
+                     "/showcase/assets/unreviewed.pdf", "/showcase/assets/unreviewed.svg", "/docs", "/openapi.json"):
             with self.subTest(path=path):
                 self.assertEqual((await self.client.get(path)).status_code, 404)
 
@@ -71,9 +72,13 @@ class ShowcaseTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(self.private.read_bytes(), b"owner database sentinel")
 
     async def test_legacy_pages_redirect_to_relevant_sections_without_query_echo(self):
-        for path, anchor in (("/teach.html", "examples"), ("/multimodal.html", "examples"),
-                             ("/routine-graph.html", "examples"), ("/settings.html", "roadmap"),
-                             ("/loop.html", "research"), ("/login.html", "project")):
+        for path, anchor in (("/teach.html", "teaching"), ("/multimodal.html", "solution"),
+                             ("/grade.html", "diagnosis"), ("/routine-graph.html", "graph"),
+                             ("/routine-review.html", "pool"), ("/question-pool.html", "pool"),
+                             ("/settings.html", "research"), ("/loop.html", "research"),
+                             ("/board.html", "research"), ("/history.html", "library"),
+                             ("/exam.html", "library"), ("/calendar.html", "library"),
+                             ("/login.html", "overview")):
             response = await self.client.get(path + "?private=discarded")
             self.assertEqual(response.status_code, 307)
             self.assertEqual(response.headers["location"], "/#" + anchor)
@@ -121,6 +126,11 @@ class ShowcaseTests(unittest.IsolatedAsyncioTestCase):
         asset.unlink()
         asset.symlink_to(self.private)
         self.assertEqual((await self.client.get("/showcase/app.js")).status_code, 404)
+        fonts = self.frontend / "vendor/katex/fonts"
+        saved = self.root / "fonts"
+        fonts.rename(saved)
+        fonts.symlink_to(saved, target_is_directory=True)
+        self.assertEqual((await self.client.get("/vendor/katex/fonts/KaTeX_Main-Regular.woff2")).status_code, 404)
         self.assertEqual(self.private.read_bytes(), b"owner database sentinel")
 
     async def test_live_response_is_counted_until_its_body_completes(self):

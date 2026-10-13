@@ -1,0 +1,17 @@
+{
+  "skills": [
+    {
+      "name": "frontend-design",
+      "source": "https://github.com/anthropics/skills/tree/main/skills/frontend-design",
+      "retrieved_on": "2026-10-14",
+      "sha256": "d91970639e9f5c37682ac7ab60094d35f1c7c1f38d731bd56396563aee10c1d3"
+    },
+    {
+      "name": "web-design-guidelines",
+      "source": "https://github.com/vercel-labs/agent-skills/tree/main/skills/web-design-guidelines",
+      "retrieved_on": "2026-10-14",
+      "sha256": "f4647ca866a3accf763777f83e7682954f0187cd6bea7eea0399796652414e8f"
+    }
+  ],
+  "direction": "继承原站UI、内容和动效；公开预制流程；真实浏览器视觉验收"
+}

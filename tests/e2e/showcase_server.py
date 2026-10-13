@@ -19,7 +19,9 @@ with tempfile.TemporaryDirectory(prefix="study-showcase-browser-") as directory:
     from backend.showcase import app
     import uvicorn
 
-    assert not {"backend.main", "backend.demo", "backend.database", "backend.solver", "backend.teach"}.intersection(sys.modules), (
+    assert not {"backend.main", "backend.demo", "backend.database", "backend.solver", "backend.teach",
+                "backend.settings", "backend.jobs", "backend.routine_review", "backend.question_pool",
+                "backend.account_app"}.intersection(sys.modules), (
         "The public showcase must not initialize owner, teaching or AI modules."
     )
     sock = socket.socket()
@@ -30,7 +32,7 @@ with tempfile.TemporaryDirectory(prefix="study-showcase-browser-") as directory:
     forbidden = [
         path for path in Path(directory).rglob("*")
         if path.suffix in {".db", ".sqlite", ".sqlite3"}
-        or path.name in {".accounts", "question-pool", "sessions"}
+        or path.name in {".accounts", "question-pool", "sessions", ".demo-sessions", "settings.json", ".env"}
     ]
     if forbidden:
         raise AssertionError("Showcase created owner or visitor data: " + str(forbidden))

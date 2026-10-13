@@ -19,18 +19,22 @@ from starlette.responses import FileResponse, JSONResponse, RedirectResponse
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
 HOME_PATHS = {"/", "/home.html", "/demo-home.html", "/showcase/index.html"}
 LEGACY_ANCHORS = {
-    "/index.html": "examples", "/multimodal.html": "examples",
-    "/teach.html": "examples", "/grade.html": "examples",
-    "/routine-graph.html": "examples", "/routine-review.html": "examples",
-    "/question-pool.html": "examples", "/mother.html": "examples",
+    "/index.html": "solution", "/multimodal.html": "solution",
+    "/teach.html": "teaching", "/grade.html": "diagnosis",
+    "/routine-graph.html": "graph", "/routine-review.html": "pool",
+    "/question-pool.html": "pool", "/mother.html": "research",
     "/loop.html": "research", "/level-editor.html": "research",
-    "/history.html": "examples", "/exam.html": "examples",
-    "/calendar.html": "examples", "/board.html": "examples",
-    "/settings.html": "roadmap", "/deepseek-guide.html": "roadmap",
-    "/login.html": "project",
+    "/history.html": "library", "/exam.html": "library",
+    "/calendar.html": "library", "/board.html": "research",
+    "/settings.html": "research", "/deepseek-guide.html": "research",
+    "/login.html": "overview",
 }
 ASSET_PATHS = {
     "/showcase/style.css", "/showcase/app.js", "/showcase/data.json",
+    "/showcase/assets/ellipse-question.svg", "/showcase/assets/ellipse-page.svg",
+    "/showcase/assets/pyramid-question.svg", "/showcase/assets/pyramid-page.svg",
+    "/showcase/assets/student-paper.pdf", "/showcase/assets/teacher-paper.pdf",
+    "/style.css", "/routine-graph.css", "/dimchart.js", "/radar.js", "/launch-lettering.svg",
     "/geometry.js", "/geometry.css",
     "/vendor/katex/katex.min.js", "/vendor/katex/katex.min.css",
     "/vendor/three-0.180.0/build/three.module.min.js",

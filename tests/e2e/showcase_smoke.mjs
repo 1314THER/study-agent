@@ -1,352 +1,388 @@
-// Real browser coverage for the public, fully offline project showcase.
+// Real-browser acceptance of the read-only project showcase and prepared UI.
 import assert from 'node:assert/strict';
 import {spawn} from 'node:child_process';
 import {createRequire} from 'node:module';
-import {mkdir} from 'node:fs/promises';
+import {mkdir, readFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 
 const require = createRequire(import.meta.url);
 const {chromium} = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const server = spawn(process.env.SHOWCASE_PYTHON || 'python3', ['tests/e2e/showcase_server.py'], {
-  cwd: new URL('../../', import.meta.url),
-  env: {...process.env, PYTHONDONTWRITEBYTECODE: '1'},
+  cwd: new URL('../../', import.meta.url), env: {...process.env, PYTHONDONTWRITEBYTECODE: '1'},
   stdio: ['ignore', 'pipe', 'pipe'],
 });
 let serverOutput = '', browser;
 server.stderr.on('data', chunk => { serverOutput += chunk.toString(); });
 const port = await new Promise((resolve, reject) => {
   let stdout = '';
-  const deadline = setTimeout(() => {
-    server.kill('SIGTERM');
-    reject(new Error('Showcase server timed out\n' + serverOutput));
-  }, 20000);
+  const deadline = setTimeout(() => { server.kill('SIGTERM'); reject(new Error('Showcase server timeout\n' + serverOutput)); }, 20000);
   deadline.unref();
   server.stdout.on('data', chunk => {
-    stdout += chunk.toString();
-    const match = stdout.match(/SHOWCASE_PORT=(\d+)/);
+    stdout += chunk.toString(); const match = stdout.match(/SHOWCASE_PORT=(\d+)/);
     if (match) { clearTimeout(deadline); resolve(Number(match[1])); }
   });
-  server.on('exit', code => {
-    clearTimeout(deadline);
-    reject(new Error('Showcase server exited ' + code + '\n' + serverOutput));
-  });
+  server.on('exit', code => { clearTimeout(deadline); reject(new Error('Showcase server exited ' + code + '\n' + serverOutput)); });
 });
 const base = 'http://127.0.0.1:' + port;
 const shots = process.env.SHOWCASE_SHOTS || tmpdir() + '/showcase-shots';
+const views = ['overview', 'solution', 'diagnosis', 'teaching', 'geometry', 'pool', 'graph', 'library', 'progress', 'research'];
 await mkdir(shots, {recursive: true});
 
-async function settle(page) {
-  await page.waitForTimeout(100);
-  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), true,
-    'The page must fit the viewport without horizontal document overflow.');
-}
-async function awaitReady(page) {
+async function ready(page) {
   await page.waitForFunction(() => window.Showcase?.ready);
   const result = await page.evaluate(async () => {
     const data = await window.Showcase.ready;
-    return {ready: data?.schema_version === 1, error: window.Showcase.state.loadError};
+    return {ok: data?.schema_version === 2, error: window.Showcase.state.loadError};
   });
-  assert(result.ready, 'Showcase initialization failed: ' + (result.error || 'no prepared examples'));
+  assert(result.ok, 'Prepared showcase data failed to initialize: ' + (result.error || 'unknown error'));
 }
-async function chooseTab(page, name) {
-  const tab = page.locator('[data-demo-tab="' + name + '"]');
-  await tab.click();
-  await page.waitForFunction(name => {
-    const tab = document.querySelector('[data-demo-tab="' + name + '"]');
-    const panel = document.querySelector('[data-demo-panel="' + name + '"]');
-    return tab?.getAttribute('aria-selected') === 'true' && panel && !panel.hidden;
-  }, name);
-  assert(await page.locator('[data-demo-panel="' + name + '"]').isVisible(), 'Selected demo panel must be visible.');
-  for (const other of ['solution', 'diagnosis', 'geometry', 'graph'].filter(value => value !== name)) {
-    assert.equal(await page.locator('[data-demo-panel="' + other + '"]').isVisible(), false,
-      'Inactive demo panels must stay hidden.');
-  }
+async function fit(page) {
+  await page.waitForTimeout(120);
+  const metrics = await page.evaluate(() => ({viewport: innerWidth, width: document.documentElement.scrollWidth}));
+  assert(metrics.width <= metrics.viewport + 1, 'Horizontal overflow: ' + JSON.stringify(metrics));
 }
-async function assertReadableGraph(page, mobile = false) {
-  const metrics = await page.locator('#graph-canvas .graph-node').first().evaluate(node => {
-    const title = node.querySelector('.graph-title'), matrix = title.getScreenCTM();
-    const scale = Math.hypot(matrix.a, matrix.b);
-    return {font: parseFloat(getComputedStyle(title).fontSize) * scale,
-      width: node.querySelector('rect').getBoundingClientRect().width};
+async function choose(page, view) {
+  const control = page.locator('[data-view="' + view + '"]').first();
+  const controlBox = await control.boundingBox(), viewport = page.viewportSize();
+  if ((!controlBox || controlBox.x < 0 || controlBox.x + controlBox.width > viewport.width) && await page.locator('#menu-toggle').isVisible())
+    await page.locator('#menu-toggle').click();
+  await control.click();
+  await page.waitForFunction(view => {
+    const panel = document.querySelector('[data-panel="' + view + '"]');
+    return location.hash === '#' + view && panel && !panel.hidden;
+  }, view);
+  assert(await page.locator('[data-panel="' + view + '"]').isVisible(), 'Active view is not visible: ' + view);
+  for (const other of views.filter(item => item !== view))
+    assert.equal(await page.locator('[data-panel="' + other + '"]').isVisible(), false, 'Inactive view leaked: ' + other);
+  await fit(page);
+}
+async function capture(page, view, name) {
+  const panel = page.locator('[data-panel="' + view + '"]');
+  await panel.screenshot({path: shots + '/' + name + '.png', animations: 'disabled'});
+  await fit(page);
+}
+
+function auditPage(page) {
+  const audit = {errors: [], console: [], requests: [], failures: []};
+  page.on('pageerror', error => audit.errors.push(error.message));
+  page.on('console', message => { if (message.type() === 'error') audit.console.push(message.text()); });
+  page.on('request', request => audit.requests.push({url: request.url(), method: request.method()}));
+  page.on('requestfailed', request => {
+    // Navigating a fixed PDF into the download manager may be reported aborted.
+    if (!(request.url().endsWith('-paper.pdf') && request.failure()?.errorText === 'net::ERR_ABORTED'))
+      audit.failures.push(request.url() + ': ' + request.failure()?.errorText);
   });
-  assert(metrics.font >= 10, 'Graph text is too small to read: ' + metrics.font + ' rendered pixels.');
-  assert(metrics.width >= 180, 'Graph cards must retain a readable screen width.');
-  if (mobile) {
-    const columns = await page.locator('#graph-canvas .graph-node').evaluateAll(nodes =>
-      nodes.slice(0, 2).map(node => node.transform.baseVal.consolidate().matrix.e));
-    assert.equal(columns[0], columns[1], 'Narrow mobile graphs must use one readable column.');
-  }
+  return audit;
 }
-async function assertOffscreenFocus(page) {
-  const graph = page.locator('#graph-canvas'), last = graph.locator('.graph-node').last();
-  await last.focus();
-  await page.keyboard.press('Enter');
-  const viewport = await graph.boundingBox(), node = await last.boundingBox();
-  assert(node.x >= viewport.x - 2 && node.x + node.width <= viewport.x + viewport.width + 2
-    && node.y >= viewport.y - 2 && node.y + node.height <= viewport.y + viewport.height + 2,
-    'Focusing a lower graph node must bring the whole node into the visible canvas.');
+async function verifyAudit(context, audit) {
+  assert.deepEqual(audit.errors, [], 'Uncaught browser errors');
+  assert.deepEqual(audit.console, [], 'Browser console errors');
+  assert.deepEqual(audit.failures, [], 'Failed static resources');
+  for (const request of audit.requests) {
+    if (/^(blob:|data:)/.test(request.url)) continue;
+    assert.equal(new URL(request.url).origin, base, 'Automatic external request: ' + request.url);
+    assert.equal(request.method, 'GET', 'Showcase invoked a write endpoint: ' + JSON.stringify(request));
+    assert(!/\/(?:solve|teach|questions|question-pool|jobs|auth|patterns|generate)(?:\/|\?|$)/.test(new URL(request.url).pathname),
+      'Showcase invoked a business API: ' + request.url);
+  }
+  assert.deepEqual(await context.cookies(), [], 'Showcase must not create an account or visitor cookie.');
+}
+async function checkGraphKeyboard(page) {
+  const last = page.locator('#graph-canvas .graph-node').last();
+  await last.focus(); await page.keyboard.press('Enter');
   assert.equal(await last.getAttribute('aria-pressed'), 'true');
-  await page.locator('#graph-reset').click();
-  await graph.locator('.graph-node').first().focus();
-  await page.keyboard.press('Enter');
-}
-async function assertInitialGeometryFits(page) {
-  const result = await page.evaluate(() => {
-    const player = window.Showcase.state.player, stage = player.stage;
-    const bounds = stage.getBoundingClientRect();
-    const scene = player.data.geometry.scenes.find(scene => scene.id === player.sceneId);
-    const basePoints = scene.objects.filter(object => object.base && object.kind === 'point');
-    return basePoints.map(point => {
-      const label = [...stage.querySelectorAll('.geometry-label')].find(label => label.textContent === point.label);
-      if (!label || label.hidden) return {id: point.id, label: false, vertex: false};
-      const rectangle = label.getBoundingClientRect();
-      const x = parseFloat(label.style.left) - 5, y = parseFloat(label.style.top) + 18;
-      return {id: point.id,
-        vertex: x >= 0 && x <= stage.clientWidth && y >= 0 && y <= stage.clientHeight,
-        label: rectangle.x >= bounds.x - 2 && rectangle.right <= bounds.right + 2
-          && rectangle.y >= bounds.y - 2 && rectangle.bottom <= bounds.bottom + 2};
-    });
-  });
-  assert.equal(result.length, 8, 'The showcase cube must have its eight original vertices.');
-  assert(result.every(point => point.vertex && point.label),
-    'Initial cube vertices and labels must fit the canvas: ' + JSON.stringify(result));
+  assert((await page.locator('#graph-detail').innerText()).trim().length > 30);
+  const box = await page.locator('#graph-canvas').boundingBox(), card = await last.boundingBox();
+  assert(card.x >= box.x - 2 && card.x + card.width <= box.x + box.width + 2
+    && card.y >= box.y - 2 && card.y + card.height <= box.y + box.height + 2,
+    'Keyboard focus did not reveal the complete graph node.');
 }
 
 try {
-  let ready = false;
+  let live = false;
   for (let i = 0; i < 60; i++) {
-    try { if ((await fetch(base + '/health')).ok) { ready = true; break; } } catch {}
+    try { if ((await fetch(base + '/health')).ok) { live = true; break; } } catch {}
     await new Promise(resolve => setTimeout(resolve, 100));
   }
-  assert(ready, 'Showcase health endpoint never became ready: ' + serverOutput);
-  const health = await (await fetch(base + '/health')).json();
-  assert.match(JSON.stringify(health), /showcase|展示/);
-  for (const path of ['/solve', '/teach/session/start', '/questions/upload', '/question-pool/import', '/generate', '/tasks', '/auth/login']) {
-    const result = await fetch(base + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
-    assert([404, 405].includes(result.status), 'Write endpoint remained exposed: ' + path + ' -> ' + result.status);
+  assert(live, 'Isolated showcase did not start: ' + serverOutput);
+  assert.deepEqual(await (await fetch(base + '/health')).json(),
+    {ok: true, mode: 'demo', demo_mode: 'showcase', ai_enabled: false});
+  for (const path of ['/solve', '/teach/session/start', '/questions/upload', '/question-pool/import', '/jobs', '/auth/login']) {
+    const response = await fetch(base + path, {method: 'POST', headers: {'Content-Type': 'application/json'}, body: '{}'});
+    assert([404, 405].includes(response.status), 'Business endpoint remained exposed: ' + path);
   }
-  browser = await chromium.launch({
-    headless: true,
+  browser = await chromium.launch({headless: true,
     executablePath: process.env.CHROME_PATH || chromium.executablePath(),
-    args: ['--enable-webgl', '--use-angle=swiftshader', '--enable-unsafe-swiftshader'],
-  });
-  const context = await browser.newContext({viewport: {width: 1440, height: 950}});
-  const page = await context.newPage(), errors = [], consoleErrors = [], requests = [], failures = [];
-  page.on('pageerror', error => errors.push(error.message));
-  page.on('console', message => { if (message.type() === 'error') consoleErrors.push(message.text()); });
-  page.on('request', request => requests.push({url: request.url(), method: request.method()}));
-  page.on('requestfailed', request => failures.push(request.url() + ': ' + request.failure()?.errorText));
-  await page.goto(base + '/', {waitUntil: 'networkidle'});
-  await awaitReady(page);
-  await page.waitForSelector('#example-select');
-  await page.waitForFunction(() => document.querySelector('#example-select').options.length >= 3);
-  assert.match(await page.locator('h1').innerText(), /步骤|诊断|迁移/);
-  assert.equal(await page.locator('[data-demo-tab]').count(), 4);
-  await settle(page);
-  await page.screenshot({path: shots + '/desktop-overview.png', fullPage: true});
+    args: ['--enable-webgl', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']});
+  const context = await browser.newContext({viewport: {width: 1440, height: 950}, acceptDownloads: true});
+  const page = await context.newPage(), audit = auditPage(page);
+  await page.goto(base + '/', {waitUntil: 'networkidle'}); await ready(page);
+  assert(await page.locator('#opening-dialog').isVisible(), 'A normal-motion entrance must play the fullscreen opening.');
+  await page.locator('#opening-skip').click();
+  assert.equal(await page.locator('#opening-dialog').isVisible(), false, 'The opening must be immediately skippable.');
+  await fit(page);
+  assert.equal(await page.locator('[data-panel]').count(), 10, 'All ten prepared panels must exist.');
+  await choose(page, 'overview');
+  assert.equal(await page.locator('[data-panel="overview"] .project-lettering').count(), 0, 'Opening lettering must not duplicate the overview headline.');
+  await capture(page, 'overview', 'desktop-overview');
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.screenshot({path: shots + '/desktop-frame.png'});
+  assert.equal(await page.locator('#main-nav [data-view] .nav-label').count(), 10);
+  for (const label of await page.locator('#main-nav [data-view] .nav-label').all()) assert(await label.isVisible(), 'Sidebar labels must stay visible.');
+  await choose(page, 'solution');
+  const teachers = page.locator('[data-teacher]');
+  assert.equal(await teachers.count(), 4, 'All four teacher themes must be available.');
+  for (let i = 0; i < 4; i++) {
+    await teachers.nth(i).click();
+    assert.equal(await teachers.nth(i).getAttribute('aria-pressed'), 'true');
+    assert.equal(await page.locator('[data-teacher][aria-pressed="true"]').count(), 1);
+    const theme = await teachers.nth(i).getAttribute('data-teacher');
+    assert(await page.evaluate(theme => document.body.classList.contains('theme-' + theme), theme));
+    await capture(page, 'solution', 'teacher-' + (i + 1));
+  }
 
-  const examples = await page.locator('#example-select option').evaluateAll(options => options.map(o => o.value));
-  assert.equal(examples.length, 3, 'Showcase must retain all three curated examination examples.');
-  for (let index = 0; index < examples.length; index++) {
-    await page.locator('#example-select').selectOption(examples[index]);
+  await choose(page, 'solution');
+  const examples = await page.locator('#example-select option').evaluateAll(options => options.map(option => option.value));
+  assert.equal(examples.length, 3);
+  for (let i = 0; i < examples.length; i++) {
+    await page.locator('#example-select').selectOption(examples[i]);
     await page.waitForFunction(() => document.querySelector('#solution-content .katex'));
-    assert(await page.locator('#solution-content').innerText().then(text => text.trim().length > 100));
     const detail = page.locator('#solution-content details').first();
-    assert(await detail.count(), 'A solution must offer an expandable detailed step.');
+    assert(await detail.count(), 'Solutions must have detailed steps.');
     if ((await detail.getAttribute('open')) === null) await detail.locator('summary').click();
-    assert(await detail.innerText().then(text => text.length > 20), 'Expanding a step must reveal detailed reasoning.');
-    assert(await page.locator('#solution-content .step-detail .katex').count() > 0,
-      'Mathematical expressions in detailed steps must render with the local library.');
-    await settle(page);
-    await page.locator('[data-demo-panel="solution"]').screenshot({path: shots + '/solution-' + (index + 1) + '.png'});
+    await page.waitForFunction(() => {const d=document.querySelector('#solution-content details');return d?.open && getComputedStyle(d.querySelector('.detail-content')).display !== 'none';});
+    assert((await detail.innerText()).length > 30);
+    assert.equal(await page.locator('#solution-content .katex-error').count(), 0);
+    if (examples[i] === 'national-2023-q17') assert.match(await page.locator('#solution-content').innerText(), /π/);
+    await capture(page, 'solution', 'solution-' + (i + 1));
   }
 
-  const firstTab = page.locator('[data-demo-tab="solution"]');
-  await firstTab.focus();
-  await page.keyboard.press('ArrowRight');
-  assert.equal(await page.locator('[data-demo-tab="diagnosis"]').getAttribute('aria-selected'), 'true');
-  await page.keyboard.press('Home');
-  assert.equal(await firstTab.getAttribute('aria-selected'), 'true');
-  await page.keyboard.press('End');
-  assert.equal(await page.locator('[data-demo-tab="graph"]').getAttribute('aria-selected'), 'true');
-
-  await chooseTab(page, 'diagnosis');
-  const diagnosisPanel = page.locator('[data-demo-panel="diagnosis"]');
-  assert.match(await diagnosisPanel.innerText(), /预制|演示数据|示例/);
-  const beforeDiagnosis = await diagnosisPanel.innerText();
+  await choose(page, 'diagnosis');
+  const before = await page.locator('#diagnosis-content').innerText();
   await page.locator('#diagnosis-reveal').click();
-  assert.notEqual(await diagnosisPanel.innerText(), beforeDiagnosis, 'Revealing diagnosis must expose its evidence and feedback.');
-  assert.match(await diagnosisPanel.innerText(), /错误|条件|依据/);
-  await diagnosisPanel.screenshot({path: shots + '/diagnosis.png'});
+  assert.notEqual(await page.locator('#diagnosis-content').innerText(), before);
+  assert.match(await page.locator('#diagnosis-content').innerText(), /错误|条件|依据/);
+  await capture(page, 'diagnosis', 'diagnosis-evidence');
+  await page.locator('#diagnosis-corrected').click();
+  assert(await page.locator('#diagnosis-content .is-correct').count() > 0);
+  await capture(page, 'diagnosis', 'diagnosis-corrected');
   await page.locator('#diagnosis-reset').click();
-  assert.equal(await diagnosisPanel.innerText(), beforeDiagnosis);
+  assert.equal(await page.locator('#diagnosis-content').innerText(), before);
 
-  await chooseTab(page, 'geometry');
-  await page.waitForSelector('#geometry-host .geometry-stage canvas');
-  await page.waitForTimeout(2500);
-  assert.equal(await page.locator('#geometry-host .geometry-note').innerText().then(t => t.includes('不可用')), false);
-  const canvas = page.locator('#geometry-host .geometry-stage canvas');
-  await canvas.scrollIntoViewIfNeeded();
-  await assertInitialGeometryFits(page);
-  await page.locator('[data-demo-panel="geometry"]').screenshot({path: shots + '/geometry-initial-desktop.png'});
-  const firstCamera = await page.evaluate(() => window.Showcase.state.player.renderer.snapshot().position);
-  const canvasBox = await canvas.boundingBox();
-  await page.mouse.move(canvasBox.x + canvasBox.width * .4, canvasBox.y + canvasBox.height * .5);
-  await page.mouse.down();
-  await page.mouse.move(canvasBox.x + canvasBox.width * .65, canvasBox.y + canvasBox.height * .6, {steps: 8});
-  await page.mouse.up();
-  await page.waitForTimeout(100);
-  assert.notDeepEqual(await page.evaluate(() => window.Showcase.state.player.renderer.snapshot().position), firstCamera,
-    'Dragging the 3D scene must rotate its view.');
-  const slider = page.locator('#geometry-host .geometry-parameter input[type="range"]');
-  const sliderMaximum = Number(await slider.getAttribute('max'));
-  assert(sliderMaximum > 1, 'The section must have multiple validated parameter frames.');
-  const keyboardSliderValue = Number(await slider.inputValue());
-  await slider.focus();
-  await page.keyboard.press('ArrowRight');
-  assert.equal(Number(await slider.inputValue()), keyboardSliderValue + 1,
-    'The section parameter must support native keyboard adjustment.');
-  await slider.fill(String(Math.floor(sliderMaximum / 2)));
-  await page.waitForTimeout(150);
-  assert.equal(await slider.inputValue(), String(Math.floor(sliderMaximum / 2)));
-  const play = page.locator('#geometry-host .geometry-parameter button');
-  const pausedValue = await slider.inputValue();
-  await play.click();
-  await page.waitForTimeout(350);
-  assert.notEqual(await slider.inputValue(), pausedValue, 'Parameter playback must advance the scene.');
-  await play.click();
-  const geometrySteps = page.locator('#geometry-host .geometry-toolbar select');
-  if (await geometrySteps.count()) {
-    const values = await geometrySteps.locator('option').evaluateAll(options => options.map(o => o.value));
-    await geometrySteps.selectOption(values.at(-1));
+  await choose(page, 'teaching');
+  await page.locator('#teaching-hint').click();
+  assert.match(await page.locator('#teaching-chat').innerText(), /提示|条件|思考/);
+  await page.locator('#teaching-wrong').click();
+  assert.match(await page.locator('#teaching-chat').innerText(), /错误|真数|条件|遗漏/);
+  await capture(page, 'teaching', 'teaching-hint-wrong');
+  await page.locator('#teaching-right').click();
+  assert(await page.evaluate(() => window.Showcase.state.teaching.complete.includes(0)));
+  assert.equal(await page.locator('#teaching-next').isDisabled(), false);
+  await page.locator('#teaching-next').click();
+  await page.locator('#teaching-variant').click();
+  assert.match(await page.locator('#teaching-chat').innerText(), /变式|仿练|换/);
+  await capture(page, 'teaching', 'teaching-variant');
+  await page.locator('#teaching-reset').click();
+
+  await choose(page, 'geometry');
+  const scenes = await page.locator('#geometry-select option').evaluateAll(options => options.map(option => option.value));
+  assert(scenes.length >= 3, 'At least three 2D/3D geometry examples are required.');
+  for (let i = 0; i < scenes.length; i++) {
+    await page.locator('#geometry-select').selectOption(scenes[i]);
+    await page.waitForFunction(() => window.Showcase.state.player?.stage?.querySelector('canvas,svg'));
+    const step = page.locator('#geometry-steps .geometry-step');
+    assert(await step.count() > 1, 'Geometry must offer a step-linked construction.');
+    await step.first().click();
+    assert.equal(await page.evaluate(() => window.Showcase.state.player.index), -1, 'The original scene must be available before auxiliary constructions.');
+    await step.last().click();
+    assert.match(await step.last().getAttribute('class'), /active/);
+    assert.equal(await page.evaluate(() => window.Showcase.state.player.index), await step.count() - 2);
+    await page.waitForTimeout(2600);
+    const parameter = page.locator('#geometry-host input[type="range"]');
+    if (await parameter.count()) {
+      const maximum = await parameter.first().getAttribute('max');
+      await parameter.first().fill(maximum);
+      await page.waitForTimeout(300);
+      assert.equal(await parameter.first().inputValue(), maximum);
+    }
+    const stage = page.locator('#geometry-host .geometry-stage');
+    const bounds = await stage.boundingBox();
+    await page.mouse.move(bounds.x + bounds.width / 2, bounds.y + bounds.height / 2);
+    await page.mouse.down(); await page.mouse.move(bounds.x + bounds.width / 2 + 35, bounds.y + bounds.height / 2 + 10, {steps: 8});
+    await page.mouse.up();
+    await capture(page, 'geometry', 'geometry-' + scenes[i]);
   }
-  await page.waitForTimeout(2500);
-  await settle(page);
-  await page.locator('[data-demo-panel="geometry"]').screenshot({path: shots + '/geometry.png'});
 
-  await chooseTab(page, 'graph');
-  const graph = page.locator('#graph-canvas');
-  const nodes = graph.locator('[data-routine-id], [data-id], [role="button"]');
-  assert(await nodes.count() > 10, 'The graph must contain curated existing routine nodes.');
-  await nodes.first().click();
-  assert(await page.locator('#graph-detail').innerText().then(text => text.trim().length > 20));
-  const graphBeforeZoom = await graph.getAttribute('viewBox');
-  await page.locator('#graph-zoom-in').click();
-  assert.notEqual(await graph.getAttribute('viewBox'), graphBeforeZoom);
-  await page.locator('#graph-zoom-out').click();
-  await page.locator('#graph-reset').click();
-  await graph.focus();
-  await page.keyboard.press('ArrowRight');
-  assert.notEqual(await graph.getAttribute('viewBox'), graphBeforeZoom, 'The graph must support keyboard panning.');
-  await page.locator('#graph-reset').click();
-  const categories = await page.locator('#graph-category option').evaluateAll(options => options.map(o => o.value));
-  assert(categories.length > 2);
-  await page.locator('#graph-category').selectOption(categories[1]);
-  const filteredCount = await nodes.count();
-  assert(filteredCount > 0);
-  await page.locator('#graph-search').fill('___no_matching_routine___');
-  await page.waitForTimeout(100);
-  assert.equal(await nodes.count(), 0, 'No-result filtering must not retain stale graph nodes.');
-  assert.match(await page.locator('#graph-count').innerText(), /当前\s*0/);
+  await choose(page, 'pool');
+  assert(await page.locator('#pool-list').getByRole('button').count() >= 3);
+  for (const filter of ['matched', 'incomplete', 'all']) {
+    await page.locator('#pool-filter').selectOption(filter);
+    assert((await page.locator('#pool-list').innerText()).trim().length > 0);
+  }
+  await page.locator('#pool-search').fill('椭圆');
+  assert.match(await page.locator('#pool-list').innerText(), /椭圆/);
+  await page.locator('#pool-list').getByRole('button').first().click();
+  assert(await page.locator('#pool-detail img').count() >= 1);
+  const evidence = page.locator('#pool-detail a');
+  assert(await evidence.count() >= 1, 'Pool sample must expose its document/source evidence.');
+  const originalPage = page.locator('#pool-detail a[href^="/showcase/assets/"]').first();
+  assert(await originalPage.count(), 'The self-authored sample must expose its complete demonstration page.');
+  const popupPromise = page.waitForEvent('popup'); await originalPage.click();
+  const popup = await popupPromise; await popup.waitForLoadState('networkidle');
+  assert.equal(new URL(popup.url()).origin, base);
+  assert(await popup.locator('svg').count() > 0); await popup.close();
+  await capture(page, 'pool', 'pool-evidence');
+  await page.locator('#pool-search').fill('');
+
+  await choose(page, 'graph');
+  assert.equal(await page.locator('#graph-category option').count(), 13, 'Graph must cover twelve categories plus all.');
+  assert.match(await page.locator('#graph-count').innerText(), /288/);
+  assert.equal(await page.locator('#graph-library .graph-category').count(), 12);
+  await page.locator('#graph-category').selectOption('');
+  const firstPage = await page.locator('#graph-page-label').innerText();
+  await page.locator('#graph-page-next').click();
+  assert.notEqual(await page.locator('#graph-page-label').innerText(), firstPage);
+  await page.locator('#graph-page-prev').click();
+  assert.equal(await page.locator('#graph-page-label').innerText(), firstPage);
+  await page.locator('#graph-search').fill('三角');
+  assert(await page.locator('#graph-canvas .graph-node').count() > 0);
+  assert.match(await page.locator('#graph-canvas').textContent(), /三角/);
+  const linkedId = await page.evaluate(() => window.Showcase.state.data.pool_examples.find(example => example.routine_id)?.routine_id);
+  assert(linkedId, 'A public sample must link a routine to a review example.');
+  await page.locator('#graph-search').fill(linkedId);
+  await page.locator('#graph-canvas .graph-node').first().click();
+  assert(await page.locator('#graph-detail .detail-review').count() > 0);
+  await page.locator('#graph-detail .detail-review').first().click();
+  await page.waitForFunction(() => location.hash === '#pool');
+  assert(await page.locator('#pool-detail .pool-evidence').isVisible());
+  await capture(page, 'pool', 'graph-linked-review');
+  await choose(page, 'graph');
   await page.locator('#graph-search').fill('');
-  await page.locator('#graph-category').selectOption(categories[0]);
-  await page.waitForTimeout(100);
-  assert(await nodes.count() > filteredCount);
-  await assertReadableGraph(page);
-  await assertOffscreenFocus(page);
-  const keyboardNode = nodes.first();
-  await keyboardNode.focus();
-  await page.keyboard.press('Enter');
-  assert(await page.locator('#graph-detail').innerText().then(text => text.trim().length > 20));
-  await settle(page);
-  await page.locator('[data-demo-panel="graph"]').screenshot({path: shots + '/graph.png'});
+  await checkGraphKeyboard(page);
+  await page.locator('#graph-reset').click();
+  await page.locator('#graph-canvas .graph-node').first().focus();
+  const node = page.locator('#graph-canvas .graph-node').first(), transform = await node.getAttribute('transform');
+  const bounds = await node.boundingBox();
+  await page.mouse.move(bounds.x + 40, bounds.y + 25); await page.mouse.down();
+  await page.mouse.move(bounds.x + 105, bounds.y + 50, {steps: 8}); await page.mouse.up();
+  assert.notEqual(await node.getAttribute('transform'), transform, 'Dragging a node must change its local layout.');
+  assert.match(await page.locator('#graph-save-status').innerText(), /保存|本机|本地/);
+  const movedId = await node.getAttribute('data-routine-id');
+  const movedTransform = await node.getAttribute('transform');
+  assert.deepEqual(await page.evaluate(() => Object.keys(localStorage)), ['study-showcase-layout-v2']);
+  await page.reload({waitUntil: 'networkidle'}); await ready(page); await choose(page, 'graph');
+  await page.locator('#graph-category').selectOption('');
+  assert.equal(await page.locator('#graph-canvas [data-routine-id="' + movedId + '"]').getAttribute('transform'), movedTransform);
+  await page.locator('#graph-add').click();
+  await page.locator('#add-name').fill('浏览器验收自拟套路');
+  await page.locator('#add-category').selectOption({index: 1});
+  await page.locator('#add-signals').fill('自拟演示特征'); await page.locator('#add-steps').fill('自拟演示步骤');
+  await page.locator('#add-submit').click();
+  await page.locator('#graph-search').fill('浏览器验收自拟套路');
+  assert.match(await page.locator('#graph-canvas').textContent(), /浏览器验收自拟套路/);
+  assert.equal(await page.locator('#graph-canvas .confusable').count(), 0, 'A local new routine must not acquire invented links.');
+  await capture(page, 'graph', 'graph-local-routine');
+  await page.locator('#tour-reset').click(); await choose(page, 'graph');
+  await page.locator('#graph-search').fill('浏览器验收自拟套路');
+  assert.equal(await page.locator('#graph-canvas .graph-node').count(), 0, 'Demo reset must remove temporary local routines.');
+  await page.locator('#graph-reset').click();
+  await page.locator('#graph-search').fill('');
+  await capture(page, 'graph', 'graph-three-column');
 
+  await choose(page, 'library');
+  assert.equal(await page.locator('#library-list input[type="checkbox"]').count(), 6);
+  await page.locator('[data-library-tab="exam"]').click();
+  await page.locator('#exam-student').click();
+  assert.match(await page.locator('#exam-preview').innerText(), /学生|试卷/);
+  for (const mode of ['student', 'teacher']) {
+    await page.locator('#exam-' + mode).click();
+    const downloadEvent = page.waitForEvent('download'); await page.locator('#exam-download').click();
+    const download = await downloadEvent;
+    assert.equal(await download.failure(), null);
+    const path = await download.path(); assert((await readFile(path)).subarray(0, 5).toString() === '%PDF-', 'Prepared paper download must be a PDF.');
+  }
+  await capture(page, 'library', 'library-paper');
+  await page.locator('[data-library-tab="calendar"]').click();
+  assert((await page.locator('#calendar-content').innerText()).trim().length > 30);
+  await capture(page, 'library', 'library-calendar');
+  const calendarDestination = await page.evaluate(() => window.Showcase.state.data.library.calendar[0].view);
+  await page.locator('#calendar-content button').first().click();
+  await page.waitForFunction(view => location.hash === '#' + view, calendarDestination);
+
+  await choose(page, 'progress');
+  assert.match(await page.locator('[data-panel="progress"]').innerText(), /快照|研发|原型|进展/);
+  await capture(page, 'progress', 'development-snapshots');
+  await choose(page, 'research');
+  assert.match(await page.locator('[data-panel="research"]').innerText(), /研究目标|目标|Benchmark|评测/);
+  assert.match(await page.locator('[data-panel="research"]').innerText(), /95|90|300/);
+  await capture(page, 'research', 'research-goals');
+
+  await page.locator('#tour-play').click(); await page.locator('#tour-pause').click();
+  assert.equal(await page.evaluate(() => window.Showcase.state.tour.playing), false);
+  assert.equal(await page.evaluate(() => window.Showcase.state.tour.timer), null);
+  await page.locator('#tour-next').click(); await page.locator('#tour-reset').click();
+  assert.equal(await page.evaluate(() => window.Showcase.state.tour.index), -1);
+  await choose(page, 'solution'); await page.locator('#tour-play').click();
+  await choose(page, 'pool');
+  assert.equal(await page.evaluate(() => window.Showcase.state.tour.playing), false);
+
+  await page.setViewportSize({width: 1440, height: 520}); await choose(page, 'research');
+  const lastNavigation = page.locator('[data-view="research"]').first();
+  await lastNavigation.focus();
+  assert(await lastNavigation.isVisible(), 'Low-height sidebar must retain the final navigation item.');
+  const navigationBox = await lastNavigation.boundingBox();
+  assert(navigationBox.y >= 0 && navigationBox.y + navigationBox.height <= 520, 'The last sidebar entry must scroll into the short viewport.');
+  await page.evaluate(() => scrollTo(0, 0));
+  await page.screenshot({path: shots + '/low-height-sidebar.png'});
+  await verifyAudit(context, audit); await context.close();
+
+  const mobileContext = await browser.newContext({viewport: {width: 390, height: 844}, reducedMotion: 'reduce'});
+  const mobile = await mobileContext.newPage(), mobileAudit = auditPage(mobile);
+  await mobile.goto(base + '/', {waitUntil: 'networkidle'}); await ready(mobile);
+  assert.equal(await mobile.locator('#opening-dialog').isVisible(), false, 'Reduced-motion entrance must not force an animation.');
   for (const width of [390, 360]) {
-    await page.setViewportSize({width, height: 844});
-    await page.goto(base + '/', {waitUntil: 'networkidle'});
-    await awaitReady(page);
-    await page.waitForSelector('#example-select');
-    await settle(page);
-    await page.screenshot({path: shots + '/mobile-' + width + '.png', fullPage: true});
-    await page.locator('#menu-toggle').click();
-    assert.equal(await page.locator('#menu-toggle').getAttribute('aria-expanded'), 'true');
-    assert(await page.locator('#main-nav').isVisible());
-    await page.screenshot({path: shots + '/mobile-nav-' + width + '.png'});
-    await page.locator('#menu-toggle').click();
-    for (const name of ['solution', 'diagnosis', 'geometry', 'graph']) {
-      await chooseTab(page, name);
-      if (name === 'diagnosis' && await page.locator('#diagnosis-reveal').isVisible()) {
-        await page.locator('#diagnosis-reveal').click();
-      }
-      if (name === 'geometry') {
-        await page.waitForSelector('#geometry-host .geometry-stage canvas');
-        await page.waitForTimeout(2500);
-        await assertInitialGeometryFits(page);
-      }
-      if (name === 'graph') {
-        await assertReadableGraph(page, true);
-        await assertOffscreenFocus(page);
-      }
-      await settle(page);
-      await page.locator('[data-demo-panel="' + name + '"]').screenshot({path: shots + '/mobile-' + width + '-' + name + '.png'});
+    await mobile.setViewportSize({width, height: 844});
+    for (const view of views) {
+      await choose(mobile, view);
+      if (['overview', 'teaching', 'geometry', 'pool', 'graph'].includes(view)) await capture(mobile, view, 'mobile-' + width + '-' + view);
     }
   }
-  for (const path of ['/teach.html', '/routine-graph.html', '/question-pool.html', '/calendar.html']) {
-    await page.goto(base + path, {waitUntil: 'networkidle'});
-    await awaitReady(page);
-    assert(await page.locator('#example-select').count(), 'Legacy link did not resolve to showcase: ' + path);
-    assert.equal(new URL(page.url()).pathname, '/');
-  }
-  assert.deepEqual(await context.cookies(), [], 'The public showcase must not create account or visitor cookies.');
-  assert.deepEqual(await page.evaluate(() => ({local: Object.keys(localStorage), session: Object.keys(sessionStorage)})),
-    {local: [], session: []}, 'The public showcase must not persist visitor sessions or owner data in browser storage.');
-  assert.deepEqual(errors, []);
-  assert.deepEqual(consoleErrors, []);
-  assert.deepEqual(failures, []);
-  assert(requests.every(request => request.method === 'GET'), 'Showcase interactions must use static GET requests only.');
-  assert(requests.every(request => {
-    const url = new URL(request.url);
-    return url.origin === base || url.protocol === 'data:';
-  }), 'The showcase must use only local or inline assets.');
-  assert(!requests.some(request => /\/(auth|teach\/session|solve|tasks|question-pool)\b/.test(new URL(request.url).pathname)
-    && !new URL(request.url).pathname.endsWith('.html')), 'The showcase must not call teaching, account, task or owner APIs.');
+  await choose(mobile, 'solution');
+  const keyboardControl = mobile.locator('[data-view="diagnosis"]').first();
+  if (await mobile.locator('#menu-toggle').getAttribute('aria-expanded') !== 'true') await mobile.locator('#menu-toggle').click();
+  await keyboardControl.focus(); await mobile.keyboard.press('Enter');
+  await mobile.waitForFunction(() => location.hash === '#diagnosis');
+  await fit(mobile);
+  await verifyAudit(mobileContext, mobileAudit); await mobileContext.close();
+
+  const openingContext = await browser.newContext({viewport: {width: 1440, height: 950}});
+  const opening = await openingContext.newPage();
+  await opening.goto(base + '/', {waitUntil: 'networkidle'}); await ready(opening);
+  assert(await opening.locator('#opening-dialog').isVisible());
+  await opening.screenshot({path: shots + '/fullscreen-opening.png'});
+  await opening.waitForFunction(() => !document.querySelector('#opening-dialog').open, null, {timeout: 6000});
+  await openingContext.close();
 
   const fallbackContext = await browser.newContext({viewport: {width: 390, height: 844}});
   await fallbackContext.addInitScript(() => {
-    const original = HTMLCanvasElement.prototype.getContext;
-    HTMLCanvasElement.prototype.getContext = function (kind, ...args) {
-      if (/webgl/i.test(kind)) return null;
-      return original.call(this, kind, ...args);
+    const native = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function(type, ...args) {
+      return /^webgl/.test(String(type)) ? null : native.call(this, type, ...args);
     };
   });
-  const fallbackPage = await fallbackContext.newPage(), fallbackErrors = [];
-  fallbackPage.on('pageerror', error => fallbackErrors.push(error.message));
-  await fallbackPage.goto(base + '/');
-  await awaitReady(fallbackPage);
-  await fallbackPage.waitForSelector('#example-select');
-  await chooseTab(fallbackPage, 'geometry');
-  await fallbackPage.waitForFunction(() => document.querySelector('#geometry-host .geometry-note')?.textContent.includes('不可用'));
-  assert.match(await fallbackPage.locator('[data-demo-panel="geometry"]').innerText(), /截面|正方体/);
-  const fallbackSlider = fallbackPage.locator('#geometry-host .geometry-parameter input[type="range"]');
-  assert(!(await fallbackSlider.isVisible()) || !(await fallbackSlider.isEnabled()),
-    'Unavailable geometry must hide or disable parameter controls.');
-  const fallbackNext = fallbackPage.locator('#geometry-host .geometry-toolbar button').filter({hasText: '下一步'});
-  if (await fallbackNext.isVisible() && await fallbackNext.isEnabled()) {
-    await fallbackNext.click();
-    await fallbackPage.waitForTimeout(200);
-  }
-  assert.deepEqual(fallbackErrors, []);
-  await settle(fallbackPage);
-  await fallbackPage.locator('[data-demo-panel="geometry"]').screenshot({path: shots + '/geometry-no-webgl.png'});
+  const fallback = await fallbackContext.newPage();
+  await fallback.goto(base + '/#geometry', {waitUntil: 'networkidle'}); await ready(fallback);
+  assert.match(await fallback.locator('#geometry-host').innerText(), /文字|WebGL|不支持|不可用/);
+  await capture(fallback, 'geometry', 'geometry-no-webgl');
   await fallbackContext.close();
-  await context.close();
-  console.log('Showcase browser checks passed: three local solutions, diagnosis, keyboard tabs, rotating/playable geometry, graph controls, mobile layout, redirects, offline assets and no visitor state. Screenshots: ' + shots);
+  console.log(JSON.stringify({ok: true, views: views.length, screenshot_directory: shots}));
 } finally {
-  if (browser) await browser.close();
-  server.kill('SIGTERM');
-  const exitCode = await new Promise(resolve => {
-    if (server.exitCode != null) resolve(server.exitCode);
-    else server.once('exit', resolve);
+  await browser?.close();
+  const exit = new Promise(resolve => {
+    if (server.exitCode !== null) return resolve(server.exitCode);
+    server.once('exit', code => resolve(code));
   });
-  if (exitCode !== 0 && exitCode !== null) throw new Error('Showcase server failed during shutdown: ' + serverOutput);
+  server.kill('SIGTERM');
+  const code = await exit;
+  assert.equal(code, 0, 'The isolated server failed its no-owner-data boundary: ' + serverOutput);
 }

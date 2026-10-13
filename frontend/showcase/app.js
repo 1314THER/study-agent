@@ -1,216 +1,87 @@
-/* Fixed project examples. No learning sessions, model calls or write requests. */
+/* Public product walkthrough. Fixed examples and local presentation state only. */
 (function () {
   'use strict';
-  const $ = id => document.getElementById(id);
-  const svgNS = 'http://www.w3.org/2000/svg';
-  const state = {data:null, tab:'solution', stage:'verifier', selected:null, graphView:null, player:null};
-  const api = {ready:null, state};
-  window.Showcase = api;
-  function el(tag, cls, text) {
-    const node=document.createElement(tag); if(cls)node.className=cls; if(text!=null)node.textContent=text; return node;
+  const $=id=>document.getElementById(id), NS='http://www.w3.org/2000/svg';
+  const STORAGE='study-showcase-layout-v2';
+  const state={data:null,view:'overview',teacher:'liangliang',player:null,geometryId:null,teaching:{index:0,hints:0,complete:[],messages:[]},graph:{page:1,selected:null,positions:{},local:[],view:null,rows:[]},tour:{index:-1,timer:null,playing:false},poolId:null};
+  const api=window.Showcase={state,ready:null};
+  const titles={overview:['项目演示工作台','从一道题开始，看看步骤、反馈和方法怎样连接。'],solution:['分步解析','沿用原站的分问、步骤卡片与五维难度图表。'],diagnosis:['作答诊断','定位首次错误，解释遗漏条件，再对照修正后的作答。'],teaching:['提示与方法迁移','播放准备好的对话分支，观察逐步提示与同方法变式。'],geometry:['几何动画','点击数学步骤，与辅助构造、旋转和参数动画同步回看。'],pool:['原题与审核','查看题面、出处、原图和归类依据，了解人工审核流程。'],graph:['套路图谱','目录、方法与审核样例在同一个工作区中查看。'],library:['题库、组卷与巩固','从预置题目到试卷预览，再到延迟复查。'],progress:['最新研发进展','2026 年 10 月 13 日本机采集与自动匹配快照。'],research:['研究方案与团队','步骤级诊断与方法迁移：申请书的研究目标和验证路线。']};
+  function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=String(text);return n;}
+  function svg(tag,attrs,text){const n=document.createElementNS(NS,tag);Object.entries(attrs||{}).forEach(([k,v])=>n.setAttribute(k,String(v)));if(text!=null)n.textContent=text;return n;}
+  function math(node,text){const source=String(text||''),pattern=/\$\$[\s\S]+?\$\$|\$[^$\n]+?\$|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\]/g;let end=0;
+    for(const m of source.matchAll(pattern)){node.append(document.createTextNode(source.slice(end,m.index)));const block=m[0].startsWith('$$')||m[0].startsWith('\\['),size=m[0].startsWith('$')&&!block?1:2,span=el('span',block?'math-display':'math-inline');node.append(span);if(window.katex)katex.render(m[0].slice(size,-size).replace(/\\\\(?=[a-zA-Z])/g,'\\'),span,{displayMode:block,throwOnError:false,trust:false,strict:'ignore'});else span.textContent=m[0];end=m.index+m[0].length;}node.append(document.createTextNode(source.slice(end)));return node;}
+  const p=(text,cls)=>math(el('p',cls),text);
+  function button(text,fn,cls){const n=el('button',cls,text);n.type='button';n.onclick=fn;return n;}
+  function bind(id,fn){const n=$(id);if(n)n.onclick=fn;}
+  function sourceLink(source){const n=el('a','source-link','查看原题出处');n.href=source.url;n.target='_blank';n.rel='noopener noreferrer';return n;}
+  function pauseGeometry(){if(!state.player)return;clearInterval(state.player.parameterTimer);state.player.parameterTimer=null;const b=state.player.parameter.querySelector('button');if(b)b.textContent='播放';}
+  function selectView(name,options){options=options||{};if(!titles[name])name='overview';if(!options.tour)pauseTour();if(state.view==='geometry'&&name!=='geometry')pauseGeometry();state.view=name;
+    document.querySelectorAll('[data-panel]').forEach(n=>n.hidden=n.dataset.panel!==name);
+    document.querySelectorAll('[data-view]').forEach(n=>{const active=n.dataset.view===name;n.classList.toggle('active',active);if(n.closest('#main-nav'))active?n.setAttribute('aria-current','page'):n.removeAttribute('aria-current');});
+    if($('view-title'))$('view-title').textContent=titles[name][0];if($('view-description'))$('view-description').textContent=titles[name][1];
+    if(!options.hash)history.replaceState(null,'','#'+name);closeMenu();
+    if(name==='geometry')mountGeometry();if(name==='graph')renderGraph();
+    if(options.focus&&$('view-title'))$('view-title').focus();
   }
-  function svg(tag, attributes, text) {
-    const node=document.createElementNS(svgNS,tag);
-    Object.entries(attributes||{}).forEach(([key,value])=>node.setAttribute(key,String(value)));
-    if(text!=null)node.textContent=text;return node;
+  function closeMenu(){if($('menu-toggle'))$('menu-toggle').setAttribute('aria-expanded','false');if($('main-nav'))$('main-nav').classList.remove('is-open');document.body.classList.remove('nav-open');}
+  function chooseTeacher(name){state.teacher=name;document.body.className=document.body.className.replace(/theme-(liangliang|taotao|xuefeng|ji)/g,'').trim()+' theme-'+name;document.querySelectorAll('[data-teacher]').forEach(n=>{const active=n.dataset.teacher===name;n.classList.toggle('active',active);n.setAttribute('aria-pressed',String(active));});if(state.data?.teaching)renderTeaching();}
+  function renderSolution(){const root=$('solution-content'),ex=state.data.examples.find(e=>e.id===$('example-select').value)||state.data.examples[0];root.replaceChildren();
+    const header=el('div','sample-heading');header.append(el('span','badge','预制高考题解析'),sourceLink(ex.source));root.append(header,p(ex.question,'sample-question'));
+    const result=ex.answer_json;result.chunk_results.forEach(chunk=>{const card=el('section','chunk-card'),head=el('div','chunk-header');head.append(el('span','chunk-label','第 '+chunk.chunk_id+' 问'),el('span','chunk-type',chunk.chunk_type||'分步解析'));card.append(head);const steps=el('div','chunk-steps');chunk.steps.forEach(step=>{const item=el('article','step');item.dataset.stepNumber=step.step_number;item.dataset.chunkId=chunk.chunk_id;const h=el('div','step-header');h.append(el('h3','step-number','步骤 '+step.step_number+'：'+step.title));if(step.step_difficulty)h.append(el('span','step-diff-tag',step.step_difficulty.level+' · '+step.step_difficulty.score+' 分'));item.append(h,p(step.standard_writing,'step-content'));const detail=el('details','step-detail');detail.append(el('summary','detail-toggle','展开详细过程'),p(step.detailed_writing,'detail-content'));item.append(detail);
+      if(step.step_difficulty){const d=el('details','step-detail difficulty-detail');d.append(el('summary','','查看本步五维难度'));const bars=el('div');if(window.renderDimBarsHtml)bars.innerHTML=renderDimBarsHtml(step.step_difficulty.dimensions);d.append(bars);item.append(d);}if(step.knowledge_point)item.append(el('p','step-kp',step.knowledge_point));item.onclick=e=>{if(e.target.closest('summary,button,a'))return;root.querySelectorAll('.step').forEach(n=>n.classList.remove('is-active'));item.classList.add('is-active');};steps.append(item);});card.append(steps,p(chunk.final_answer,'sample-answer'));root.append(card);});
+    renderPipeline();if($('solution-radar')&&window.renderDifficultyRadar){const dims=window.getDifficultyDims?getDifficultyDims(result):result.overall_difficulty?.dimensions;renderDifficultyRadar($('solution-radar'),dims);}
   }
-  function math(node, text) {
-    const source=String(text||''), pattern=/\$\$[\s\S]+?\$\$|\$[^$\n]+?\$|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\]/g;
-    let end=0;
-    for(const match of source.matchAll(pattern)) {
-      node.append(document.createTextNode(source.slice(end,match.index)));
-      const block=match[0].startsWith('$$')||match[0].startsWith('\\['), size=match[0].startsWith('$')&&!block?1:2;
-      const span=el('span',block?'math-display':'math-inline');node.append(span);
-      if(window.katex)window.katex.render(match[0].slice(size,-size),span,{displayMode:block,throwOnError:false,trust:false,strict:'ignore'});
-      else span.textContent=match[0];
-      end=match.index+match[0].length;
-    }
-    node.append(document.createTextNode(source.slice(end)));return node;
+  function renderPipeline(stage){state.pipeline=stage||state.pipeline||'verifier';const result=(state.data.examples.find(e=>e.id===$('example-select').value)||state.data.examples[0]).answer_json,count=result.chunk_results.reduce((sum,c)=>sum+c.steps.length,0);const copy={solver:['解答','从题目条件形成解法。演示使用已准备的解析，不发起模型请求。',result.final_answer],verifier:['验证','检查推理、条件与分问结构。当前例题保留标准过程和详细解释。','本例共 '+count+' 个关键步骤。'],formatter:['结构化表达','将步骤、知识点与五维难度整理成可供解析、反馈和复查使用的内容。','同一份步骤数据可在解析页、教学回放与画板中呈现。']};const root=$('pipeline-stage');if(root){const selected=copy[state.pipeline];root.replaceChildren(el('h3','',selected[0]),p(selected[1]),p(selected[2]));}document.querySelectorAll('[data-pipeline]').forEach(n=>n.setAttribute('aria-pressed',String(n.dataset.pipeline===state.pipeline)));}
+  function renderDiagnosis(revealed,corrected){state.diagnosisRevealed=!!revealed;state.diagnosisCorrected=!!corrected;const root=$('diagnosis-content'),d=state.data.diagnosis;root.replaceChildren(p(d.question,'sample-question'),el('p','sample-caption','人工预制学生作答与反馈，非真实学生测评。'));
+    const lines=corrected?d.corrected_steps.map(s=>({title:s.title,writing:s.standard_writing})):d.lines;lines.forEach((line,i)=>{const row=el('article','diagnosis-line'+(corrected?' is-correct':revealed&&i===d.first_error?' is-error':''));row.append(el('span','step-number',String(i+1).padStart(2,'0')));const writing=el('div','diagnosis-writing');writing.append(el('h3','',line.title),p(line.writing));if(revealed&&!corrected&&i===d.first_error)writing.append(el('span','badge warning','首次错误：遗漏定义域条件'));row.append(writing);root.append(row);});
+    if(revealed){const feedback=el('div','diagnosis-feedback');feedback.setAttribute('role','status');feedback.append(el('span','badge','预制诊断说明'),el('h3','',corrected?'修正后的推理链':d.error_type),p(corrected?'先检查真数条件，再利用单调性比较，最后取交集。':d.explanation),p(d.evidence,'correction'),p(d.feedback));root.append(feedback);}if($('diagnosis-reveal'))$('diagnosis-reveal').hidden=revealed;if($('diagnosis-reset'))$('diagnosis-reset').hidden=!revealed;if($('diagnosis-corrected')){$('diagnosis-corrected').disabled=!revealed;$('diagnosis-corrected').textContent=corrected?'返回原作答':'对照修正后的作答';}
   }
-  function paragraph(text,cls) {return math(el('p',cls),text);}
-  function sourceLink(source) {
-    const link=el('a','source-link','查看原题出处 ↗');link.href=source.url;link.target='_blank';link.rel='noopener noreferrer';return link;
+  function teaching(){return state.data.teaching;}
+  function chat(text,role){state.teaching.messages.push({text,role:role||'teacher'});renderTeaching();}
+  function resetTeaching(){state.teaching={index:0,hints:0,complete:[],messages:[{role:'teacher',text:'我们先找出题目给了什么条件。每次只看当前一步，也可以播放不同作答分支。'}]};renderTeaching();}
+  function renderTeaching(){const d=teaching(),s=state.teaching,root=$('teaching-steps');if(!d||!root)return;root.replaceChildren(p(d.question,'teach-question'));d.steps.forEach((step,i)=>{const done=s.complete.includes(i),active=i===s.index,card=el('article','teach-step-card'+(active?' active':done?' completed':' locked'));card.append(el('span','step-number',done?'✓':'步骤 '+(i+1)),el('h3','',step.title));if(done)card.append(p(step.standard_writing));else if(active)card.append(p(step.prompt||'先检查当前步骤需要的条件。'));else card.append(el('p','sample-caption','后续步骤，完成当前步骤后查看。'));root.append(card);});const log=$('teaching-chat');log.replaceChildren();s.messages.forEach(m=>{const row=el('div','chat-message '+m.role),bubble=el('div','chat-bubble');bubble.append(p(m.text));row.append(el('span','chat-avatar',m.role==='student'?'我':({liangliang:'梁',taotao:'韬',xuefeng:'雪',ji:'鸡'}[state.teacher])),bubble);log.append(row);});if(s.variant){const v=d.variant,card=el('section','variant-card');card.append(el('span','badge','项目自拟同方法变式'),p(v.question),p(v.method,'step-kp'));const answer=el('details','step-detail');answer.append(el('summary','','对照变式解法'),p(v.solution));card.append(answer);log.append(card);}const last=log.lastElementChild;if(last)last.scrollIntoView({block:'nearest',behavior:'instant'});if($('teaching-next'))$('teaching-next').disabled=!s.complete.includes(s.index)||s.index>=d.steps.length-1;
   }
-  function dimensions(values) {
-    const bars=el('div','difficulty-bars');bars.setAttribute('aria-label','预制步骤难度标注，单项0至3');
-    Object.entries(values||{}).forEach(([name,value])=>{
-      const row=el('div','difficulty-row');row.append(el('span','difficulty-label',name));
-      const track=el('span','difficulty-track'),bar=el('span','bar');bar.style.width=(Math.max(0,Math.min(3,Number(value)))/3*100)+'%';track.append(bar);
-      row.append(track,el('span','difficulty-value',value+' / 3'));bars.append(row);
-    });return bars;
+  function teachingAction(kind){const d=teaching(),s=state.teaching,step=d.steps[s.index];if(kind==='hint'){const hints=step.hints||[];chat('提示：'+(hints[Math.min(s.hints++,hints.length-1)]||'先检查本步需要满足的条件。'));}else if(kind==='wrong'){chat(step.wrong_answer||'我还没有完整检查这一步的条件。','student');chat(step.wrong_feedback);}else if(kind==='right'){chat(step.standard_writing,'student');if(!s.complete.includes(s.index))s.complete.push(s.index);chat(step.right_feedback);}else if(kind==='next'&&s.complete.includes(s.index)&&s.index<d.steps.length-1){s.index++;s.hints=0;chat('现在进入：'+d.steps[s.index].title);}else if(kind==='variant'){s.variant=true;renderTeaching();}}
+  function mountGeometry(){const all=state.data.geometry_examples||[{id:'cube-section',label:'正方体截面',...state.data.geometry}],id=$('geometry-select').value||all[0].id,ex=all.find(e=>e.id===id)||all[0];if(state.geometryId===ex.id&&state.player){requestAnimationFrame(()=>state.player.renderer?.resize());return;}pauseGeometry();if(state.player)state.player.dispose();state.player=null;state.geometryId=ex.id;const root=$('geometry-host');root.replaceChildren();state.player=window.StudyGeometry?.mount(root,ex.answer_json,{teaching:false});if(state.player){state.player.go(-1);state.player.panel.open=true;const input=state.player.parameter.querySelector('input');if(input)input.setAttribute('aria-label','几何参数');}
+    const steps=$('geometry-steps');steps.replaceChildren(p(ex.question,'sample-question'),button('只看题设图',()=>{state.player?.go(-1);steps.querySelectorAll('button').forEach(n=>n.classList.remove('active'));},'geometry-step'));if(ex.image_url){const d=el('details','step-detail');d.append(el('summary','','对照自拟题面与原图'));const img=el('img');img.src=ex.image_url;img.alt='项目自拟题的题设图';img.width=600;img.height=360;d.append(img);steps.append(d);}ex.answer_json.chunk_results.forEach(chunk=>chunk.steps.forEach((step,i)=>{const card=button('',()=>{if(state.player)state.player.go(i);steps.querySelectorAll('button').forEach(n=>n.classList.remove('active'));card.classList.add('active');},'geometry-step');card.append(el('span','step-number','步骤 '+step.step_number),el('strong','',step.title),p(step.standard_writing));steps.append(card);}));if($('geometry-note'))$('geometry-note').textContent=ex.source;
   }
-  function renderSolution() {
-    const root=$('solution-content'), example=state.data.examples.find(item=>item.id===$('example-select').value)||state.data.examples[0];
-    root.replaceChildren();
-    const heading=el('div','sample-heading');heading.append(el('span','badge','预制解析示例'),sourceLink(example.source));root.append(heading);
-    root.append(paragraph(example.question,'sample-question'));
-    example.answer_json.chunk_results.forEach(chunk=>{
-      const section=el('section','solution-chunk');section.append(el('h3','','第 '+chunk.chunk_id+' 问 · '+chunk.chunk_type));
-      chunk.steps.forEach(step=>{
-        const card=el('article','step-card');card.dataset.step=step.step_number;
-        const title=el('div','step-heading');title.append(el('span','step-number',String(step.step_number).padStart(2,'0')),el('h4','',step.title));card.append(title);
-        card.append(paragraph(step.standard_writing,'standard-writing'));
-        const detail=el('details','step-detail');detail.append(el('summary','','展开详细推理'),paragraph(step.detailed_writing));card.append(detail);
-        const difficulty=el('details','step-detail difficulty-detail');difficulty.append(el('summary','','查看本步难度维度'),dimensions(step.step_difficulty.dimensions));card.append(difficulty);
-        section.append(card);
-      });
-      section.append(paragraph(chunk.final_answer,'sample-answer'));root.append(section);
-    });
-    renderPipeline(example);
+  function poolExamples(){return state.data.pool_examples||[];}
+  function renderPool(){const query=$('pool-search').value.trim().toLowerCase(),filter=$('pool-filter').value,rows=poolExamples().filter(e=>(!query||(e.label+' '+e.question).toLowerCase().includes(query))&&(filter!=='matched'||e.routine_id)&&(filter!=='incomplete'||e.match?.status==='needs_content'));const root=$('pool-list');root.replaceChildren();rows.forEach(ex=>{const b=button('',()=>showPool(ex.id),'pool-item'+(state.poolId===ex.id?' is-selected':''));b.append(el('strong','',ex.label),el('span','sample-caption',ex.review_status||'预制审核样例'));root.append(b);});if(!rows.length){root.append(el('p','','没有匹配的样例，换一个关键词或筛选。'));$('pool-detail').replaceChildren();return;}showPool((rows.find(e=>e.id===state.poolId)||rows[0]).id);}
+  function showPool(id){const ex=poolExamples().find(e=>e.id===id);if(!ex)return;state.poolId=id;const root=$('pool-detail');root.replaceChildren(el('span','badge','固定公开样例 · 人工编排审核建议'),el('h2','',ex.label),p(ex.question,'pool-question'));const media=el('div','pool-media');if(ex.image_url){const img=el('img');img.src=ex.image_url;img.alt=ex.label+' 项目自制题图';img.width=600;img.height=360;img.loading='lazy';media.append(img);}if(ex.original_page_url){const a=el('a','source-link','查看自制整页题面');a.href=ex.original_page_url;a.target='_blank';a.rel='noopener noreferrer';media.append(a);}if(media.childNodes.length)root.append(media);if(ex.options){const options=el('div','pool-options');ex.options.forEach((option,i)=>options.append(p(String.fromCharCode(65+i)+'. '+option)));root.append(options);}const source=el('p','sample-caption',ex.source?.publication_label||'样例来源已标注');if(ex.source?.url)source.append(sourceLink(ex.source));root.append(source);const answer=el('details','step-detail');answer.append(el('summary','','查看原答案与解析'),p(ex.answer),p(ex.solution));root.append(answer);
+    const evidence=el('section','pool-evidence');evidence.append(el('h3','','归类建议与依据'),el('p','sample-caption','此处为人工预制审核样例，不是本机批次的真实分类结果。'));if(ex.match){evidence.append(p('主套路：'+(ex.match.primary||ex.routine_id||'待核对')),p(ex.match.reason),p(ex.match.auxiliary?.length?'辅助套路：'+ex.match.auxiliary.join('、'):''),p(Array.isArray(ex.match.evidence)?ex.match.evidence.join('；'):ex.match.evidence,'correction'));}if(ex.routine_id)evidence.append(button('在图谱中查看这个套路',()=>{selectView('graph');focusRoutine(ex.routine_id);},'button-secondary'));evidence.append(button('播放人工确认示例',()=>{const status=evidence.querySelector('.review-demo-status');status.textContent='演示：已核对原文证据，确认归类建议。正式题库与真实审核状态保持独立。';},'button-primary'),el('p','review-demo-status','演示状态：待核对。'));root.append(evidence);$('pool-list').querySelectorAll('.pool-item').forEach(n=>n.classList.toggle('is-selected',n.textContent.includes(ex.label)));
   }
-  function renderPipeline(example) {
-    let root=$('pipeline-stage');
-    if(!root){root=el('div','pipeline-description');root.id='pipeline-stage';$('solution-content').prepend(root);}
-    const result=example.answer_json, count=result.chunk_results.reduce((sum,c)=>sum+c.steps.length,0);
-    const descriptions={solver:['求解','从题目条件出发形成解法。当前展示的是已准备的数学解析。',result.final_answer],
-      verifier:['校验与结构化','整理关键步骤、知识点与条件，供讲解、回看和错因定位使用。',`本例共 ${count} 个步骤，涉及 ${result.knowledge_points.join('、')}。`],
-      formatter:['整理输出','将解析整理为一致的字段，让步骤、答案与难度标注能够在同一界面回看。','预制数据包含题干、分问解析、标准过程、详细过程与五维难度。']};
-    const chosen=descriptions[state.stage];root.replaceChildren(el('strong','',chosen[0]),paragraph(chosen[1]),paragraph(chosen[2],'pipeline-result'));
-    document.querySelectorAll('[data-pipeline]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.pipeline===state.stage)));
+  function routines(){return state.data.catalog.routines.concat(state.graph.local);}
+  function categories(){return [...new Set(state.data.catalog.routines.map(r=>r.category))];}
+  function loadGraphState(){try{const value=JSON.parse(localStorage.getItem(STORAGE)||'{}');if(value&&value.positions)Object.entries(value.positions).slice(0,400).forEach(([id,p])=>{if(p&&Number.isFinite(p.x)&&Number.isFinite(p.y)&&Math.abs(p.x)<10000&&Math.abs(p.y)<10000)state.graph.positions[id]={x:p.x,y:p.y};});}catch(ignore){}}
+  function saveGraph(){try{localStorage.setItem(STORAGE,JSON.stringify({positions:state.graph.positions}));$('graph-save-status').textContent='布局保存在此浏览器';}catch(ignore){$('graph-save-status').textContent='浏览器无法保存，当前调整仍可查看';}}
+  function filteredRoutines(){const cat=$('graph-category').value,q=$('graph-search').value.trim().toLowerCase();return routines().filter(r=>(!cat||r.category===cat)&&(!q||[r.id,r.name,...r.retrieval_terms,...r.key_steps,...r.aliases].join(' ').toLowerCase().includes(q)));}
+  function focusRoutine(id){const row=routines().find(r=>r.id===id);if(!row)return;$('graph-category').value=row.category;$('graph-search').value='';const rows=filteredRoutines();state.graph.page=Math.floor(rows.findIndex(r=>r.id===id)/12)+1;state.graph.selected=id;renderGraph();showRoutine(id,true);}
+  function showRoutine(id,focus){const row=routines().find(r=>r.id===id);if(!row)return;state.graph.selected=id;const root=$('graph-detail');root.replaceChildren(el('span','detail-tag',row.category),el('h2','',row.name),el('p','sample-caption',row.id+(row.local?' · 本次临时演示':' · 参考目录')));[['识别特征',row.retrieval_terms],['关键步骤',row.key_steps],['适用边界',row.exclusions]].forEach(([title,values])=>{root.append(el('h3','',title));const list=el('ul');values.forEach(v=>list.append(el('li','',v)));root.append(list);});root.append(el('h3','','目录已有的易混淆关系'));if(!row.confusable_ids.length)root.append(el('p','','该条目没有记录易混淆关系。'));row.confusable_ids.forEach(other=>{const target=routines().find(r=>r.id===other);if(target)root.append(button(target.name,()=>focusRoutine(other),'related-node'));});root.append(el('h3','','对应审核样例'));const examples=poolExamples().filter(e=>e.routine_id===id);if(!examples.length)root.append(el('p','sample-caption','这套公开演示未准备该套路的题目；原站可以按审核批次查看实际题目。'));examples.forEach(ex=>{const card=el('article','graph-question-card');card.append(el('small','',ex.review_status),p(ex.question),button('打开这道题审核样例',()=>{selectView('pool');showPool(ex.id);},'detail-review'));root.append(card);});$('graph-canvas').querySelectorAll('[data-routine-id]').forEach(n=>{const active=n.dataset.routineId===id;n.classList.toggle('is-selected',active);n.setAttribute('aria-pressed',String(active));});if(focus)$('graph-canvas').querySelector('[data-routine-id="'+id+'"]')?.focus();}
+  function applyGraphView(){const v=state.graph.view;if(v)$('graph-canvas').setAttribute('viewBox',[v.x,v.y,v.w,v.h].join(' '));}
+  function zoomGraph(factor){const v=state.graph.view;if(!v)return;const w=Math.max(230,Math.min(state.graph.base.w*2,v.w*factor)),h=w*v.h/v.w;state.graph.view={x:v.x+(v.w-w)/2,y:v.y+(v.h-h)/2,w,h};applyGraphView();}
+  function drawGraphEdges(){const layer=$('graph-canvas').querySelector('.graph-edges');if(!layer)return;layer.replaceChildren();const g=state.graph,positions=g.current,seen=new Set(),center=g.base.w/2;g.rows.forEach(row=>{const a=positions[row.id];layer.append(svg('path',{d:'M'+center+' 64 C'+center+' 82 '+(a.x+106)+' 82 '+(a.x+106)+' '+a.y,class:'graph-edge contains'}));row.confusable_ids.forEach(id=>{const b=positions[id],key=[row.id,id].sort().join(':');if(!b||seen.has(key))return;seen.add(key);layer.append(svg('path',{d:'M'+(a.x+106)+' '+(a.y+32)+' Q'+((a.x+b.x)/2+106)+' '+(Math.min(a.y,b.y)-28)+' '+(b.x+106)+' '+(b.y+32),class:'graph-edge confusable'}));});});}
+  function renderGraph(){if(!state.data||state.view!=='graph')return;const g=state.graph,all=filteredRoutines(),pages=Math.max(1,Math.ceil(all.length/12));g.page=Math.max(1,Math.min(g.page,pages));g.rows=all.slice((g.page-1)*12,g.page*12);const canvas=$('graph-canvas'),box=canvas.getBoundingClientRect(),cols=Math.max(1,Math.min(3,Math.floor((box.width||800)/234))),width=Math.max(280,cols*234+64),height=Math.max(320,Math.round(width*(box.height||500)/(box.width||800)));g.base={x:0,y:0,w:width,h:height};g.view={...g.base};g.current={};canvas.replaceChildren();applyGraphView();
+    $('graph-count').textContent=all.length+' 个匹配套路 · 当前最多展示 12 个 · 全目录 '+state.data.catalog.routines.length+' 项';$('graph-page-label').textContent=g.page+' / '+pages;$('graph-page-prev').disabled=g.page<=1;$('graph-page-next').disabled=g.page>=pages;const lib=$('graph-library');lib.replaceChildren();categories().forEach(cat=>{const b=button(cat+'（'+routines().filter(r=>r.category===cat).length+'）',()=>{$('graph-category').value=cat;g.page=1;renderGraph();},'graph-category'+($('graph-category').value===cat?' active':''));lib.append(b);});
+    const header=svg('g',{class:'graph-category-node'}),hw=Math.min(320,width-32);header.append(svg('rect',{x:width/2-hw/2,y:18,width:hw,height:46,rx:12}),svg('text',{x:width/2,y:47,'text-anchor':'middle'},$('graph-category').value||'现有套路目录'));canvas.append(header,svg('g',{class:'graph-edges','aria-hidden':'true'}));if(!g.rows.length){canvas.append(svg('text',{x:width/2,y:180,'text-anchor':'middle'},'没有匹配的套路'));$('graph-detail').replaceChildren(el('p','','换一个关键词或知识板块试试。'));return;}
+    g.rows.forEach((row,i)=>{const point=g.positions[row.id]||{x:32+(i%cols)*234,y:112+Math.floor(i/cols)*94};g.current[row.id]={...point};const n=svg('g',{transform:'translate('+point.x+','+point.y+')',class:'graph-node',tabindex:0,role:'button','aria-label':row.name+'，方向键调整位置','aria-pressed':'false','data-routine-id':row.id});n.append(svg('rect',{width:212,height:66,rx:10}),svg('text',{x:12,y:18,class:'graph-id'},row.id));const t=svg('text',{class:'graph-title'}),words=Array.from(row.name);t.append(svg('tspan',{x:12,y:39},words.slice(0,14).join('')));if(words.length>14)t.append(svg('tspan',{x:12,y:56},words.slice(14,29).join('')+(words.length>29?'…':'')));n.append(t,svg('title',{},row.name));n.onclick=()=>{if(!n._moved)showRoutine(row.id);};n.onfocus=()=>{const p=g.current[row.id],v=g.view;if(p.x<v.x||p.x+212>v.x+v.w||p.y<v.y||p.y+66>v.y+v.h){v.x=p.x+106-v.w/2;v.y=p.y+33-v.h/2;applyGraphView();}};n.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();showRoutine(row.id);}else if(e.key.startsWith('Arrow')){e.preventDefault();const p=g.current[row.id];p.x+=e.key==='ArrowLeft'?-16:e.key==='ArrowRight'?16:0;p.y+=e.key==='ArrowUp'?-16:e.key==='ArrowDown'?16:0;g.positions[row.id]={...p};n.setAttribute('transform','translate('+p.x+','+p.y+')');drawGraphEdges();saveGraph();}};n.onpointerdown=e=>{if(e.button!==0)return;e.stopPropagation();n._moved=false;g.drag={id:row.id,node:n,pointer:e.pointerId,x:e.clientX,y:e.clientY,point:{...g.current[row.id]}};n.setPointerCapture(e.pointerId);};canvas.append(n);});drawGraphEdges();showRoutine((g.rows.find(r=>r.id===g.selected)||g.rows[0]).id);
   }
-  function renderDiagnosis(revealed) {
-    const root=$('diagnosis-content'),data=state.data.diagnosis;root.replaceChildren();
-    root.append(paragraph(data.question,'sample-question'),el('p','sample-caption',data.student_label));
-    data.lines.forEach((line,index)=>{
-      const row=el('article','diagnosis-line'+(revealed&&index===data.first_error?' is-error':''));
-      row.append(el('span','step-number',String(index+1).padStart(2,'0')),el('div','diagnosis-writing'));
-      row.lastChild.append(el('h4','',line.title),paragraph(line.writing));
-      if(revealed&&index===data.first_error)row.lastChild.append(el('span','badge warning','需要先确认定义域'));root.append(row);
-    });
-    if(revealed){
-      const feedback=el('div','diagnosis-feedback');feedback.setAttribute('role','status');
-      feedback.append(el('span','badge','预制反馈 · 单题批改原型'),el('h3','',data.error_type),paragraph(data.explanation),paragraph(data.evidence,'correction'),paragraph(data.feedback));
-      data.corrected_steps.forEach(step=>{const detail=el('details','step-detail');detail.append(el('summary','',step.title),paragraph(step.standard_writing),paragraph(step.detailed_writing));feedback.append(detail);});
-      feedback.append(sourceLink(data.source));root.append(feedback);
-    }
-    $('diagnosis-reveal').hidden=revealed;$('diagnosis-reset').hidden=!revealed;
+  function wireGraph(){loadGraphState();categories().forEach(c=>$('graph-category').append(new Option(c,c)));$('graph-category').value=categories()[0];$('graph-category').onchange=()=>{state.graph.page=1;renderGraph();};$('graph-search').oninput=()=>{state.graph.page=1;renderGraph();};bind('graph-zoom-in',()=>zoomGraph(.8));bind('graph-zoom-out',()=>zoomGraph(1.25));bind('graph-reset',()=>{state.graph.view={...state.graph.base};applyGraphView();});bind('graph-arrange',()=>{state.graph.rows.forEach(r=>delete state.graph.positions[r.id]);saveGraph();renderGraph();});bind('graph-page-prev',()=>{state.graph.page--;renderGraph();});bind('graph-page-next',()=>{state.graph.page++;renderGraph();});const canvas=$('graph-canvas');canvas.onpointerdown=e=>{if(e.button!==0||e.target.closest('[data-routine-id]'))return;state.graph.drag={pointer:e.pointerId,x:e.clientX,y:e.clientY,view:{...state.graph.view}};canvas.setPointerCapture(e.pointerId);};canvas.onpointermove=e=>{const g=state.graph,d=g.drag;if(!d||d.pointer!==e.pointerId)return;const box=canvas.getBoundingClientRect(),dx=(e.clientX-d.x)*g.view.w/box.width,dy=(e.clientY-d.y)*g.view.h/box.height;if(d.id){if(Math.abs(dx)+Math.abs(dy)<4&&!d.node._moved)return;d.node._moved=true;g.current[d.id]={x:d.point.x+dx,y:d.point.y+dy};d.node.setAttribute('transform','translate('+g.current[d.id].x+','+g.current[d.id].y+')');drawGraphEdges();}else{g.view={...d.view,x:d.view.x-dx,y:d.view.y-dy};applyGraphView();}};const end=()=>{const g=state.graph,d=g.drag;if(d?.id&&d.node._moved){g.positions[d.id]={...g.current[d.id]};saveGraph();setTimeout(()=>d.node._moved=false,0);}g.drag=null;};canvas.onpointerup=end;canvas.onpointercancel=end;canvas.addEventListener('wheel',e=>{e.preventDefault();zoomGraph(Math.exp(Math.max(-100,Math.min(100,e.deltaY))*.0025));},{passive:false});canvas.onkeydown=e=>{if(e.target!==canvas||!e.key.startsWith('Arrow'))return;e.preventDefault();const v=state.graph.view;v.x+=(e.key==='ArrowLeft'?-1:e.key==='ArrowRight'?1:0)*v.w*.08;v.y+=(e.key==='ArrowUp'?-1:e.key==='ArrowDown'?1:0)*v.h*.08;applyGraphView();};window.addEventListener('resize',()=>{if(state.view==='graph')renderGraph();});
+    const dialog=$('graph-dialog');categories().forEach(c=>$('add-category').append(new Option(c,c)));bind('graph-add',()=>{dialog.querySelector('form')?.reset();$('add-category').value=$('graph-category').value||categories()[0];dialog.showModal();});bind('add-cancel',()=>dialog.close());const form=dialog.querySelector('form');if(form)form.onsubmit=e=>{e.preventDefault();const name=$('add-name').value.trim(),signals=$('add-signals').value.trim(),steps=$('add-steps').value.trim();if(!name||!signals||!steps)return;if(routines().some(r=>r.name===name)){alert('目录中已有同名套路，请换一个名称。');return;}const row={id:'DEMO-'+(state.graph.local.length+1),name,category:$('add-category').value,key_steps:steps.split('\n').filter(Boolean),retrieval_terms:signals.split('\n').filter(Boolean),exclusions:[],confusable_ids:[],aliases:[],local:true};state.graph.local.push(row);dialog.close();focusRoutine(row.id);$('graph-save-status').textContent='临时条目仅在当前演示中，无新增方法联系';};
   }
-  function mountGeometry() {
-    if(state.player||!state.data)return;
-    const root=$('geometry-host');root.replaceChildren();
-    root.append(paragraph(state.data.geometry.question,'sample-question'),el('p','sample-caption',state.data.geometry.source));
-    if(!window.StudyGeometry){root.append(el('p','demo-error','几何画板未加载，请刷新。上述几何关系仍可阅读。'));return;}
-    state.player=window.StudyGeometry.mount(root,state.data.geometry.answer_json);
-    if(state.player){state.player.go(0);state.player.panel.open=true;
-      const range=state.player.parameter.querySelector('input');if(range)range.setAttribute('aria-label','截面高度参数 t');
-      root.append(paragraph('四个截面顶点位于同一高度，连接后得到边长为 2 的正方形。移动截面不改变其面积 4。','geometry-explanation'));
-    }
+  function libraryItems(){return state.data.library?.items||state.data.examples.map(e=>({...e,answer:e.answer_json.final_answer}));}
+  function renderLibrary(){const root=$('library-list');root.replaceChildren();libraryItems().forEach((ex,i)=>{const row=el('label','library-question'),input=el('input');input.type='checkbox';input.checked=i!==1;input.onchange=renderExam;row.append(input,el('span','',ex.label));root.append(row);});renderExam(false);const calendar=$('calendar-content');calendar.replaceChildren();const entries=state.data.library?.calendar||[{date:'2026-10-14',title:'回看定义域与单调性',method:'对数不等式',view:'teaching',note:'演示复习安排，不代表真实学习记录'},{date:'2026-10-17',title:'无提示重做同方法变式',method:'条件检查与取交集',view:'teaching',note:'演示安排'}];entries.forEach(entry=>{const card=el('article','calendar-day');card.append(el('time','',entry.date),el('h3','',entry.title),el('p','',entry.method),el('p','sample-caption',entry.note),button('查看对应演示',()=>selectView(entry.view||'teaching'),'button-secondary'));calendar.append(card);});}
+  function renderExam(teacher){if(typeof teacher==='boolean')state.examTeacher=teacher;const mode=state.examTeacher,root=$('exam-preview');if(!root)return;root.replaceChildren(el('span','badge','预制试卷预览'),el('h2','',mode?'教师版 · 参考解析':'学生版 · 练习题面'));root.append(el('p','sample-caption','下载文件是核验过的固定对数方法练习卷；这里切换预置题目展示组卷界面。'));const rows=libraryItems().filter((e,i)=>$('library-list').querySelectorAll('input')[i]?.checked);if(!rows.length)root.append(el('p','','先从左侧选择一道题。'));rows.forEach((ex,i)=>{const item=el('article','exam-paper');item.append(el('h3','','第 '+(i+1)+' 题'),p(ex.question));if(mode)item.append(p(ex.answer||ex.answer_json?.final_answer,'sample-answer'));else item.append(el('div','answer-space','作答区'));root.append(item);});const a=$('exam-download');a.href=mode?'/showcase/assets/teacher-paper.pdf':'/showcase/assets/student-paper.pdf';a.download=mode?'方法练习-教师版.pdf':'方法练习-学生版.pdf';a.textContent=mode?'下载预制教师卷':'下载预制学生卷';$('exam-student').setAttribute('aria-pressed',String(!mode));$('exam-teacher').setAttribute('aria-pressed',String(!!mode));}
+  function libraryTab(name){document.querySelectorAll('[data-library-panel]').forEach(n=>n.hidden=n.dataset.libraryPanel!==name);document.querySelectorAll('[data-library-tab]').forEach(n=>{const active=n.dataset.libraryTab===name;n.setAttribute('aria-selected',String(active));n.tabIndex=active?0:-1;});}
+  const tourSteps=[['solution','先选择一份已准备好的高考题解析。',()=>{$('example-select').value=state.data.examples[0].id;renderSolution();}],['solution','每道题分成分问与关键步骤。',()=>{}],['solution','展开详细过程，查看推理依据。',()=>{$('solution-content').querySelector('details').open=true;}],['solution','每一步都有五维难度标注。',()=>{$('solution-content').querySelector('.difficulty-detail').open=true;}],['diagnosis','同样的步骤结构，可以用来对照学生作答。',()=>renderDiagnosis(false,false)],['diagnosis','首次错误发生在遗漏定义域条件的位置。',()=>renderDiagnosis(true,false)],['diagnosis','对照修正后的完整推理。',()=>renderDiagnosis(true,true)],['teaching','提示与练习围绕当前步骤组织。',()=>resetTeaching()],['teaching','一次提示只释放当前需要的条件。',()=>teachingAction('hint')],['geometry','图形与数学步骤在同一个工作区回看。',()=>mountGeometry()],['pool','原图、出处与归类依据支持人工审核。',()=>renderPool()],['graph','方法目录可以直接连接到审核样例。',()=>{const row=poolExamples().find(e=>e.routine_id);if(row)focusRoutine(row.routine_id);}],['library','题目还能组织成试卷与复习安排。',()=>{libraryTab('exam');renderExam(false);}],['progress','最后查看实际研发进展及研究边界。',()=>{}]];
+  function pauseTour(){clearTimeout(state.tour.timer);state.tour.timer=null;state.tour.playing=false;if($('tour-play'))$('tour-play').textContent=state.tour.index<0?'播放演示路线':'继续播放';if($('tour-pause'))$('tour-pause').disabled=true;if(state.tour.index>=0&&$('tour-status'))$('tour-status').textContent=(state.tour.index+1)+' / '+tourSteps.length+' · 已暂停，可继续播放或自由查看。';}
+  function tourStep(index){state.tour.index=Math.max(0,Math.min(index,tourSteps.length-1));const [view,text,action]=tourSteps[state.tour.index];selectView(view,{tour:true});action();$('tour-status').textContent=(state.tour.index+1)+' / '+tourSteps.length+' · '+text;if(state.tour.playing){if(state.tour.index===tourSteps.length-1){pauseTour();$('tour-status').textContent+=' 演示结束，可自由查看。';}else state.tour.timer=setTimeout(()=>tourStep(state.tour.index+1),14000);}}
+  function playTour(){if(!state.data)return;clearTimeout(state.tour.timer);state.tour.playing=true;$('tour-pause').disabled=false;$('tour-play').textContent='正在播放';tourStep(state.tour.index<0?0:state.tour.index);}
+  function resetTour(){pauseTour();state.tour.index=-1;renderDiagnosis(false,false);resetTeaching();state.graph.local=[];state.graph.page=1;state.graph.positions={};state.graph.selected=null;saveGraph();$('graph-category').value=categories()[0];$('graph-search').value='';pauseGeometry();if(state.player)state.player.dispose();state.player=null;state.geometryId=null;$('geometry-select').value=state.data.geometry_examples[0].id;$('pool-search').value='';$('pool-filter').value='all';state.poolId=null;renderPool();$('example-select').value=state.data.examples[0].id;renderSolution();renderLibrary();libraryTab('library');chooseTeacher('liangliang');selectView('overview',{tour:true});$('tour-status').textContent='按操作顺序浏览，也可以直接选择左侧功能。';}
+  function wire(){document.addEventListener('click',e=>{const n=e.target.closest('[data-view]');if(n){if(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey)return;e.preventDefault();selectView(n.dataset.view,{focus:n.closest('#main-nav')!=null});}else if(document.body.classList.contains('nav-open')&&!e.target.closest('#main-nav,#menu-toggle'))closeMenu();});window.addEventListener('hashchange',()=>selectView(location.hash.slice(1),{hash:true}));bind('menu-toggle',()=>{const open=$('menu-toggle').getAttribute('aria-expanded')!=='true';$('menu-toggle').setAttribute('aria-expanded',String(open));$('main-nav').classList.toggle('is-open',open);document.body.classList.toggle('nav-open',open);});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeMenu();});document.querySelectorAll('[data-teacher]').forEach(n=>n.onclick=()=>chooseTeacher(n.dataset.teacher));
+    document.querySelectorAll('[data-pipeline]').forEach(n=>n.onclick=()=>renderPipeline(n.dataset.pipeline));$('example-select').onchange=renderSolution;bind('diagnosis-reveal',()=>renderDiagnosis(true,false));bind('diagnosis-reset',()=>renderDiagnosis(false,false));bind('diagnosis-corrected',()=>renderDiagnosis(true,!state.diagnosisCorrected));['hint','wrong','right','next','variant'].forEach(k=>bind('teaching-'+k,()=>teachingAction(k)));bind('teaching-reset',resetTeaching);$('geometry-select').onchange=mountGeometry;$('pool-search').oninput=renderPool;$('pool-filter').onchange=renderPool;bind('exam-print',()=>window.print());bind('exam-student',()=>renderExam(false));bind('exam-teacher',()=>renderExam(true));const tabs=[...document.querySelectorAll('[data-library-tab]')];tabs.forEach((n,i)=>{n.onclick=()=>libraryTab(n.dataset.libraryTab);n.onkeydown=e=>{const keys={ArrowRight:(i+1)%tabs.length,ArrowLeft:(i+tabs.length-1)%tabs.length,Home:0,End:tabs.length-1};if(e.key in keys){e.preventDefault();const next=tabs[keys[e.key]];libraryTab(next.dataset.libraryTab);next.focus();}};});bind('tour-play',playTour);bind('tour-pause',pauseTour);bind('tour-next',()=>{pauseTour();tourStep(state.tour.index+1);});bind('tour-reset',resetTour);document.addEventListener('visibilitychange',()=>{if(document.hidden){pauseTour();pauseGeometry();}});
   }
-  function selectTab(name,focus) {
-    const tabs=[...document.querySelectorAll('[data-demo-tab]')];
-    if(!tabs.some(tab=>tab.dataset.demoTab===name))return;
-    state.tab=name;
-    tabs.forEach(tab=>{const active=tab.dataset.demoTab===name;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;if(active&&focus)tab.focus();});
-    document.querySelectorAll('[data-demo-panel]').forEach(panel=>{panel.hidden=panel.dataset.demoPanel!==name;});
-    if(state.player&&name!=='geometry'){
-      clearInterval(state.player.parameterTimer);state.player.parameterTimer=null;
-      const play=state.player.parameter.querySelector('button');if(play)play.textContent='播放';
-    }
-    if(name==='geometry'){mountGeometry();if(state.player&&state.player.renderer)requestAnimationFrame(()=>state.player.renderer.resize());}
-    if(name==='graph')renderGraph();
-  }
-  function showRoutine(id,focus) {
-    const routine=state.data.catalog.routines.find(r=>r.id===id);if(!routine)return;state.selected=id;
-    const root=$('graph-detail');root.replaceChildren();
-    root.append(el('span','badge',routine.category),el('h3','',routine.name),el('p','sample-caption','参考目录 '+routine.id+' · '+state.data.catalog.version));
-    const list=el('ol','routine-steps');routine.key_steps.forEach(step=>list.append(el('li','',step)));root.append(list);
-    root.append(el('h4','','适用信号'),el('p','',routine.retrieval_terms.join('、')));
-    if(routine.exclusions.length){root.append(el('h4','','边界与排除条件'));routine.exclusions.forEach(text=>root.append(el('p','',text)));}
-    root.append(el('h4','','目录已有的易混淆关系'));
-    const related=el('div','related-routines');
-    routine.confusable_ids.forEach(other=>{const target=state.data.catalog.routines.find(r=>r.id===other);if(!target)return;
-      const button=el('button','related-routine',target.name);button.type='button';button.onclick=()=>{
-        $('graph-category').value=target.category;$('graph-search').value='';state.selected=other;renderGraph();showRoutine(other,true);
-      };related.append(button);});root.append(related);
-    root.append(el('p','sample-caption','此处展示固定参考目录。正式母题归属和教学内容仍需审核。'));
-    $('graph-canvas').querySelectorAll('[data-routine-id]').forEach(node=>{const selected=node.dataset.routineId===id;node.classList.toggle('is-selected',selected);node.setAttribute('aria-pressed',String(selected));});
-    if(focus){const node=$('graph-canvas').querySelector('[data-routine-id="'+id+'"]');if(node)node.focus();}
-  }
-  function renderGraph() {
-    const canvas=$('graph-canvas');if(!canvas||!state.data)return;
-    const category=$('graph-category').value,query=$('graph-search').value.trim().toLowerCase();
-    const rows=state.data.catalog.routines.filter(r=>(!category||r.category===category)&&(!query||[r.name,r.id,...r.retrieval_terms,...r.aliases,...r.key_steps].join(' ').toLowerCase().includes(query)));
-    canvas.replaceChildren();const box=canvas.getBoundingClientRect(),cellWidth=234,cellHeight=94;
-    const columns=Math.max(1,Math.min(4,Math.floor((box.width||1000)/cellWidth)));
-    const width=Math.max(280,columns*cellWidth+64);
-    // Keep each node readable. A large directory extends beyond the viewport
-    // and is explored by panning/filtering rather than shrinking every label.
-    const height=Math.max(300,Math.round(width*(box.height||480)/(box.width||1000)));
-    state.graphBase={x:0,y:0,w:width,h:height};state.graphView={...state.graphBase};applyGraphView();
-    const count=$('graph-count');if(count)count.textContent=`当前 ${rows.length} 个节点 · 全目录 ${state.data.catalog.routines.length} 个参考套路 · 拖动空白处或用方向键平移`;
-    const headerWidth=Math.min(320,width-32),center=width/2;
-    const top=svg('g',{class:'graph-category-node'});top.append(svg('rect',{x:center-headerWidth/2,y:18,width:headerWidth,height:46,rx:16}),svg('text',{x:center,y:47,'text-anchor':'middle'},category||'12 个知识板块 · 参考目录'));canvas.append(top);
-    if(!rows.length){canvas.append(svg('text',{x:center,y:180,'text-anchor':'middle',class:'graph-empty'},'没有匹配的套路'));$('graph-detail').replaceChildren(el('p','','没有找到对应节点，换一个关键词试试。'));return;}
-    const positions=new Map(rows.map((row,i)=>[row.id,{x:32+(i%columns)*cellWidth,y:112+Math.floor(i/columns)*cellHeight}]));
-    const edges=svg('g',{class:'graph-edges','aria-hidden':'true'}),seen=new Set();
-    rows.forEach(row=>{
-      const p=positions.get(row.id);edges.append(svg('path',{d:`M${center} 64 C${center} 82 ${p.x+106} 82 ${p.x+106} ${p.y}`,class:'graph-edge contains'}));
-      row.confusable_ids.forEach(id=>{if(!positions.has(id))return;const key=[row.id,id].sort().join(':');if(seen.has(key))return;seen.add(key);
-        const other=positions.get(id);edges.append(svg('path',{d:`M${p.x+106} ${p.y+30} Q${(p.x+other.x)/2+106} ${Math.min(p.y,other.y)-28} ${other.x+106} ${other.y+30}`,class:'graph-edge confusable'}));});
-    });canvas.append(edges);
-    rows.forEach(row=>{
-      const p=positions.get(row.id),group=svg('g',{transform:`translate(${p.x},${p.y})`,class:'graph-node',tabindex:0,role:'button','aria-label':row.name,'aria-pressed':'false','data-routine-id':row.id});
-      group.append(svg('rect',{width:212,height:64,rx:13}),svg('text',{x:12,y:18,class:'graph-id'},row.id));
-      const title=svg('text',{x:12,y:38,class:'graph-title'});
-      const words=Array.from(row.name),line=words.slice(0,14).join('');title.append(svg('tspan',{x:12,y:38},line));
-      if(words.length>14)title.append(svg('tspan',{x:12,y:54},words.slice(14,29).join('')+(words.length>29?'…':'')));
-      group.append(title,svg('title',{},row.name));group.addEventListener('click',()=>showRoutine(row.id));
-      group.addEventListener('focus',()=>{
-        const view=state.graphView;
-        if(p.x<view.x||p.x+212>view.x+view.w||p.y<view.y||p.y+64>view.y+view.h){
-          view.x=p.x+106-view.w/2;view.y=p.y+32-view.h/2;applyGraphView();
-        }
-      });
-      group.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();showRoutine(row.id);}});canvas.append(group);
-    });
-    const first=rows.find(r=>r.id===state.selected)||rows[0];showRoutine(first.id);
-  }
-  function applyGraphView() {const view=state.graphView;if(view)$('graph-canvas').setAttribute('viewBox',[view.x,view.y,view.w,view.h].join(' '));}
-  function zoomGraph(factor) {
-    const old=state.graphView;if(!old)return;const w=Math.max(240,Math.min(state.graphBase.w*2,old.w*factor)),h=w*old.h/old.w;
-    state.graphView={x:old.x+(old.w-w)/2,y:old.y+(old.h-h)/2,w,h};applyGraphView();
-  }
-  function wireGraph() {
-    const select=$('graph-category');state.data.catalog.routines.map(r=>r.category).filter((c,i,a)=>a.indexOf(c)===i).forEach(c=>select.append(new Option(c,c)));
-    select.value=state.data.catalog.routines[0].category;
-    select.onchange=renderGraph;$('graph-search').oninput=renderGraph;
-    $('graph-zoom-in').onclick=()=>zoomGraph(.8);$('graph-zoom-out').onclick=()=>zoomGraph(1.25);$('graph-reset').onclick=()=>{state.graphView={...state.graphBase};applyGraphView();};
-    const canvas=$('graph-canvas');let drag=null;
-    canvas.addEventListener('pointerdown',event=>{if(event.target.closest('[data-routine-id]'))return;drag={x:event.clientX,y:event.clientY,view:{...state.graphView}};canvas.setPointerCapture(event.pointerId);});
-    canvas.addEventListener('pointermove',event=>{if(!drag)return;const box=canvas.getBoundingClientRect();
-      state.graphView={...drag.view,x:drag.view.x-(event.clientX-drag.x)*drag.view.w/box.width,y:drag.view.y-(event.clientY-drag.y)*drag.view.h/box.height};applyGraphView();});
-    const end=()=>{drag=null;};canvas.addEventListener('pointerup',end);canvas.addEventListener('pointercancel',end);
-    canvas.addEventListener('keydown',event=>{
-      if(event.target!==canvas)return;const offsets={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]};
-      if(offsets[event.key]){event.preventDefault();state.graphView.x+=offsets[event.key][0]*state.graphView.w*.08;state.graphView.y+=offsets[event.key][1]*state.graphView.h*.08;applyGraphView();}
-      else if(event.key==='+'||event.key==='='){event.preventDefault();zoomGraph(.8);}else if(event.key==='-'){event.preventDefault();zoomGraph(1.25);}
-    });window.addEventListener('resize',()=>{if(state.tab==='graph')renderGraph();});renderGraph();
-  }
-  function wireNavigation() {
-    const toggle=$('menu-toggle'),nav=$('main-nav');
-    const close=()=>{if(toggle)toggle.setAttribute('aria-expanded','false');if(nav)nav.classList.remove('is-open');};
-    if(toggle&&nav){toggle.onclick=()=>{const open=toggle.getAttribute('aria-expanded')!=='true';toggle.setAttribute('aria-expanded',String(open));nav.classList.toggle('is-open',open);};
-      nav.querySelectorAll('a').forEach(link=>link.addEventListener('click',close));document.addEventListener('keydown',event=>{if(event.key==='Escape')close();});}
-    const tabs=[...document.querySelectorAll('[data-demo-tab]')];tabs.forEach(tab=>{
-      tab.onclick=()=>selectTab(tab.dataset.demoTab);
-      tab.addEventListener('keydown',event=>{let index=tabs.indexOf(tab);if(event.key==='ArrowRight')index=(index+1)%tabs.length;else if(event.key==='ArrowLeft')index=(index-1+tabs.length)%tabs.length;else if(event.key==='Home')index=0;else if(event.key==='End')index=tabs.length-1;else return;event.preventDefault();selectTab(tabs[index].dataset.demoTab,true);});
-    });
-    document.querySelectorAll('[data-show-demo]').forEach(link=>link.addEventListener('click',()=>{if(state.data)selectTab(link.dataset.showDemo);}));
-  }
-  async function start() {
-    wireNavigation();
-    const response=await fetch('/showcase/data.json',{credentials:'omit'});if(!response.ok)throw new Error('展示样例加载失败');
-    const data=await response.json();if(data.schema_version!==1||!data.examples.length)throw new Error('展示样例版本不匹配');state.data=data;
-    const select=$('example-select');select.replaceChildren();data.examples.forEach(example=>select.append(new Option(example.label,example.id)));select.onchange=renderSolution;
-    document.querySelectorAll('[data-pipeline]').forEach(button=>button.onclick=()=>{state.stage=button.dataset.pipeline;renderSolution();});
-    $('diagnosis-reveal').onclick=()=>renderDiagnosis(true);$('diagnosis-reset').onclick=()=>renderDiagnosis(false);
-    renderSolution();renderDiagnosis(false);wireGraph();selectTab('solution');
-    const status=$('demo-status');if(status)status.textContent='预制样例已就绪。点击下方标签，自由查看。';
-    document.documentElement.classList.add('showcase-ready');return data;
-  }
-  api.selectTab=selectTab;api.zoomGraph=zoomGraph;
-  api.ready=start().catch(error=>{
-    const target=$('demo-status')||$('examples');if(target){target.textContent='展示样例暂未加载，请刷新页面重试。项目介绍和研究规划仍可阅读。';target.setAttribute('role','alert');}
-    state.loadError=error.message;return null;
-  });
+  function showOpening(){const dialog=$('opening-dialog');if(!dialog||matchMedia('(prefers-reduced-motion: reduce)').matches||location.hash&&location.hash!=='#overview')return;const close=()=>{clearTimeout(state.openingTimer);if(dialog.open)dialog.close();};bind('opening-skip',close);dialog.addEventListener('close',()=>clearTimeout(state.openingTimer),{once:true});dialog.querySelector('img').src='/launch-lettering.svg?entry=1';dialog.showModal();state.openingTimer=setTimeout(close,2600);}
+  async function start(){showOpening();const response=await fetch('/showcase/data.json',{credentials:'omit'});if(!response.ok)throw new Error('Prepared examples could not be loaded');state.data=await response.json();const examples=$('example-select');examples.replaceChildren();state.data.examples.forEach(e=>examples.append(new Option(e.label,e.id)));const geometries=$('geometry-select');geometries.replaceChildren();(state.data.geometry_examples||[]).forEach(e=>geometries.append(new Option(e.label,e.id)));wire();chooseTeacher('liangliang');renderSolution();renderDiagnosis(false,false);resetTeaching();renderPool();renderLibrary();libraryTab('library');wireGraph();selectView(location.hash.slice(1)||'overview',{hash:true});$('demo-status').textContent='固定样例已就绪 · 演示操作不会提交到主人题库';return state.data;}
+  api.selectView=selectView;api.selectTab=selectView;api.zoomGraph=zoomGraph;api.focusRoutine=focusRoutine;api.tourStep=tourStep;
+  api.ready=start().catch(error=>{state.loadError=error.message;const n=$('demo-status');if(n){n.textContent='样例加载失败，请刷新重试。项目介绍仍可阅读。';n.setAttribute('role','alert');}return null;});
 })();

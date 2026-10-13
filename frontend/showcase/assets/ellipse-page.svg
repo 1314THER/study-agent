@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 960" role="img" aria-label="自制完整演示题页，非高考原卷扫描件"><style>text{font-family:Arial,"PingFang SC","Microsoft YaHei",sans-serif;fill:#253448} .question{font-size:18px} .label{font-family:Georgia,serif;font-size:19px;font-style:italic} .small{font-size:13px;fill:#69778a} .edge{fill:none;stroke:#54728b;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}</style>
+<rect width="720" height="960" fill="#f1f3f6"/><rect x="24" y="24" width="672" height="912" rx="12" fill="#fff"/>
+<text x="60" y="76" font-size="25" font-weight="700">成为数学高手 · 项目演示题页</text>
+<text x="60" y="108" class="small">自制公开演示材料 / 非高考原卷扫描件 / 不含学生记录</text>
+<path d="M60 130H660" stroke="#d5dce5"/><text x="60" y="163" font-size="18">第 1 题 · 选择题</text>
+<g transform="translate(60 180)"><rect width="600" height="360" rx="16" fill="#fff"/>
+<text x="28" y="32" class="small">项目自拟教学样例 · 原始题设图</text>
+<text x="28" y="64" class="question">椭圆 C：x²/5 + y² = 1，焦点为 F₁、F₂。</text>
+<text x="28" y="93" class="question">P 在椭圆上，PF₁ ⊥ PF₂。求 |PF₁| · |PF₂|。</text>
+<ellipse cx="300" cy="214" rx="178.885438" ry="80" fill="#f1f5f9" stroke="#54728b" stroke-width="2.2"/>
+<path d="M100 214H505" stroke="#c2cfda" stroke-width="1.4"/>
+<circle cx="140" cy="214" r="4" fill="#446681"/><circle cx="460" cy="214" r="4" fill="#446681"/>
+<circle cx="454.919334" cy="174" r="4.5" fill="#bd874f"/>
+<text x="144" y="239" class="label">F₁</text><text x="443" y="239" class="label">F₂</text>
+<text x="455" y="157" class="label">P</text>
+<text x="28" y="331" class="small">题设图不含解题辅助线；画板将按推理步骤逐条显示。</text></g>
+<text x="88" y="590" class="question">A．1　　　　　B．2　　　　　C．4　　　　　D．2√5</text>
+<text x="60" y="641" class="small">推理与作答区（演示材料，不用于正式评分）</text>
+<path d="M60 678H660 M60 734H660 M60 790H660 M60 846H660" stroke="#e0e5eb"/>
+<text x="60" y="899" class="small">题面、原始题设图及选择项均为项目自拟；解析与方法匹配另行展示。</text>
+</svg>
