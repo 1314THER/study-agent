@@ -116,10 +116,12 @@ try {
     args: ['--enable-webgl', '--use-angle=swiftshader', '--enable-unsafe-swiftshader']});
   const context = await browser.newContext({viewport: {width: 1440, height: 950}, acceptDownloads: true});
   const page = await context.newPage(), audit = auditPage(page);
-  await page.goto(base + '/', {waitUntil: 'networkidle'}); await ready(page);
+  await page.goto(base + '/', {waitUntil: 'domcontentloaded'});
+  await page.locator('#opening-dialog').waitFor({state:'visible'});
   assert(await page.locator('#opening-dialog').isVisible(), 'A normal-motion entrance must play the fullscreen opening.');
   await page.locator('#opening-skip').click();
   assert.equal(await page.locator('#opening-dialog').isVisible(), false, 'The opening must be immediately skippable.');
+  await ready(page);
   await fit(page);
   assert.equal(await page.locator('[data-panel]').count(), 10, 'All ten prepared panels must exist.');
   await choose(page, 'overview');
@@ -130,12 +132,12 @@ try {
   assert.equal(await page.locator('#main-nav [data-view] .nav-label').count(), 10);
   for (const label of await page.locator('#main-nav [data-view] .nav-label').all()) assert(await label.isVisible(), 'Sidebar labels must stay visible.');
   await choose(page, 'solution');
-  const teachers = page.locator('[data-teacher]');
+  const teachers = page.locator('#panel-solution [data-teacher]');
   assert.equal(await teachers.count(), 4, 'All four teacher themes must be available.');
   for (let i = 0; i < 4; i++) {
     await teachers.nth(i).click();
     assert.equal(await teachers.nth(i).getAttribute('aria-pressed'), 'true');
-    assert.equal(await page.locator('[data-teacher][aria-pressed="true"]').count(), 1);
+    assert.equal(await page.locator('#panel-solution [data-teacher][aria-pressed="true"]').count(), 1);
     const theme = await teachers.nth(i).getAttribute('data-teacher');
     assert(await page.evaluate(theme => document.body.classList.contains('theme-' + theme), theme));
     await capture(page, 'solution', 'teacher-' + (i + 1));
@@ -171,18 +173,18 @@ try {
 
   await choose(page, 'teaching');
   await page.locator('#teaching-hint').click();
-  assert.match(await page.locator('#teaching-chat').innerText(), /提示|条件|思考/);
+  assert(await page.locator('#teaching-chat .chat-message.student').count() > 0);
   await page.locator('#teaching-wrong').click();
-  assert.match(await page.locator('#teaching-chat').innerText(), /错误|真数|条件|遗漏/);
+  assert(await page.locator('#teaching-chat .chat-message.teacher').count() > 2);
   await capture(page, 'teaching', 'teaching-hint-wrong');
   await page.locator('#teaching-right').click();
   assert(await page.evaluate(() => window.Showcase.state.teaching.complete.includes(0)));
   assert.equal(await page.locator('#teaching-next').isDisabled(), false);
   await page.locator('#teaching-next').click();
   await page.locator('#teaching-variant').click();
-  assert.match(await page.locator('#teaching-chat').innerText(), /变式|仿练|换/);
+  assert.match(await page.locator('#teaching-chat').innerText(), /3x|换/);
   await capture(page, 'teaching', 'teaching-variant');
-  await page.locator('#teaching-reset').click();
+  await page.locator('#teaching-reset-chat').click();
 
   await choose(page, 'geometry');
   const scenes = await page.locator('#geometry-select option').evaluateAll(options => options.map(option => option.value));
@@ -269,7 +271,7 @@ try {
   assert.match(await page.locator('#graph-save-status').innerText(), /保存|本机|本地/);
   const movedId = await node.getAttribute('data-routine-id');
   const movedTransform = await node.getAttribute('transform');
-  assert.deepEqual(await page.evaluate(() => Object.keys(localStorage)), ['study-showcase-layout-v2']);
+  assert.deepEqual(await page.evaluate(() => Object.keys(localStorage).sort()), ['study-showcase-chat-v1', 'study-showcase-layout-v2']);
   await page.reload({waitUntil: 'networkidle'}); await ready(page); await choose(page, 'graph');
   await page.locator('#graph-category').selectOption('');
   assert.equal(await page.locator('#graph-canvas [data-routine-id="' + movedId + '"]').getAttribute('transform'), movedTransform);
@@ -282,7 +284,7 @@ try {
   assert.match(await page.locator('#graph-canvas').textContent(), /浏览器验收自拟套路/);
   assert.equal(await page.locator('#graph-canvas .confusable').count(), 0, 'A local new routine must not acquire invented links.');
   await capture(page, 'graph', 'graph-local-routine');
-  await page.locator('#tour-reset').click(); await choose(page, 'graph');
+  await page.reload({waitUntil:'networkidle'}); await ready(page); await choose(page,'graph');
   await page.locator('#graph-search').fill('浏览器验收自拟套路');
   assert.equal(await page.locator('#graph-canvas .graph-node').count(), 0, 'Demo reset must remove temporary local routines.');
   await page.locator('#graph-reset').click();
@@ -290,7 +292,9 @@ try {
   await capture(page, 'graph', 'graph-three-column');
 
   await choose(page, 'library');
-  assert.equal(await page.locator('#library-list input[type="checkbox"]').count(), 6);
+  await page.waitForFunction(()=>window.Showcase.state.bank.index?.length===33);
+  assert.equal(await page.locator('#library-list input[type="checkbox"]').count(), 20);
+  await page.locator('#library-list input[type=checkbox]').first().check();
   await page.locator('[data-library-tab="exam"]').click();
   await page.locator('#exam-student').click();
   assert.match(await page.locator('#exam-preview').innerText(), /学生|试卷/);
@@ -317,14 +321,17 @@ try {
   assert.match(await page.locator('[data-panel="research"]').innerText(), /95|90|300/);
   await capture(page, 'research', 'research-goals');
 
-  await page.locator('#tour-play').click(); await page.locator('#tour-pause').click();
-  assert.equal(await page.evaluate(() => window.Showcase.state.tour.playing), false);
-  assert.equal(await page.evaluate(() => window.Showcase.state.tour.timer), null);
-  await page.locator('#tour-next').click(); await page.locator('#tour-reset').click();
-  assert.equal(await page.evaluate(() => window.Showcase.state.tour.index), -1);
-  await choose(page, 'solution'); await page.locator('#tour-play').click();
-  await choose(page, 'pool');
-  assert.equal(await page.evaluate(() => window.Showcase.state.tour.playing), false);
+  assert.equal(await page.locator('#tour-play, #demo-tour-panel, .demo-guide').count(),0);
+  await choose(page,'teaching'); await page.locator('#teaching-reset-chat').click();
+  await page.locator('.chat-teachers [data-teacher="taotao"]').click();
+  await page.locator('#teaching-reset-chat').click();
+  await page.locator('#teaching-hint').click();
+  const savedChat=await page.locator('#teaching-chat').innerText();
+  await page.reload({waitUntil:'networkidle'}); await ready(page);
+  assert.equal(await page.evaluate(()=>window.Showcase.state.teacher),'taotao');
+  assert.equal(await page.locator('#teaching-chat').innerText(),savedChat);
+  await page.locator('#teaching-reset-chat').click();
+  assert.equal(await page.locator('#teaching-chat .chat-message').count(),1);
 
   await page.setViewportSize({width: 1440, height: 520}); await choose(page, 'research');
   const lastNavigation = page.locator('[data-view="research"]').first();
@@ -357,7 +364,7 @@ try {
 
   const openingContext = await browser.newContext({viewport: {width: 1440, height: 950}});
   const opening = await openingContext.newPage();
-  await opening.goto(base + '/', {waitUntil: 'networkidle'}); await ready(opening);
+  await opening.goto(base + '/', {waitUntil: 'domcontentloaded'}); await opening.locator('#opening-dialog').waitFor({state:'visible'});
   assert(await opening.locator('#opening-dialog').isVisible());
   await opening.screenshot({path: shots + '/fullscreen-opening.png'});
   await opening.waitForFunction(() => !document.querySelector('#opening-dialog').open, null, {timeout: 6000});

@@ -181,6 +181,25 @@ class WellFormedTest(unittest.TestCase):
         steps = [{"title": "任意步骤", "step_level1": None}]
         self.assertEqual(_validate_step_names("未知板块", steps), steps)
 
+    def test_step_classification_does_not_erase_a_readable_title(self):
+        steps = [{"step_number": 1, "title": "两边同时乘以 n(n+1)", "step_level1": None}]
+        result = _validate_step_names('数列', steps)
+        self.assertEqual(result[0]['title'], '两边同时乘以 n(n+1)')
+
+    def test_recognized_child_resolves_its_parent_without_an_empty_title(self):
+        steps = [{"step_number": 1, "title": "把 S 与 -2S 相减", "step_level1": "错位相减法（数列求和）"}]
+        result = _validate_step_names('数列', steps)
+        self.assertEqual(result[0]['title'], '数列求和')
+
+    def test_repeated_notes_do_not_become_extra_question_parts(self):
+        text = ('[确认：可解]\n### 块1\n块类型：子问\n'
+                '步骤1：计算\n标准过程：1+1=2\n详细过程：两数相加得到2\n知识点：集合\n'
+                '### 块1\n补充说明\n（无）')
+        with patch.object(solver_mod, 'call_deepseek', return_value=(text, {'total_tokens': 10})):
+            result = solver_mod.step_verify_all('1+1=2', '1+1=?', category='未知板块')
+        self.assertEqual(len(result['chunk_results']), 1)
+        self.assertEqual(result['chunk_results'][0]['steps'][0]['title'], '计算')
+
 
 class ApiCallTest(unittest.TestCase):
     def test_get_api_key(self):

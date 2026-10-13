@@ -64,6 +64,40 @@
         }
     });
 
+    if (config.read_only) {
+        var readonlyFetch = window.fetch.bind(window);
+        window.fetch = function (input, init) {
+            var url = new URL(input instanceof Request ? input.url : input, location.href);
+            var method = String(init && init.method || (input instanceof Request ? input.method : 'GET')).toUpperCase();
+            if (url.origin === location.origin && method !== 'GET' && method !== 'HEAD' && url.pathname !== '/auth/logout') {
+                return Promise.resolve(new Response(JSON.stringify({error:'demo_read_only',detail:'游客仅可浏览。'}), {status:403,headers:{'Content-Type':'application/json'}}));
+            }
+            return readonlyFetch(input, init);
+        };
+        function lockControls() {
+            document.querySelectorAll('input[type="file"], textarea, [contenteditable="true"]').forEach(function (node) {
+                if ('disabled' in node) node.disabled = true;
+                else node.setAttribute('contenteditable', 'false');
+            });
+            document.querySelectorAll('button, input[type="submit"], a').forEach(function (node) {
+                var text = (node.textContent || node.value || node.title || '').trim();
+                if (/^(?:删除|编辑|修改|添加|保存|上传|生成|开始解题|开始教学|提交|批改|应用规划|录入|标记错|重置题库)/.test(text) && !/组卷|试卷/.test(text)) {
+                    if ('disabled' in node) node.disabled = true;
+                    node.setAttribute('aria-disabled','true');
+                    node.addEventListener('click', function (event) { event.preventDefault(); event.stopImmediatePropagation(); }, {capture:true,once:true});
+                }
+            });
+        }
+        function readonlyReady() {
+            lockControls();
+            var observer = new MutationObserver(function (changes) { if (changes.some(function (change) { return change.addedNodes.length; })) lockControls(); });
+            observer.observe(document.body,{childList:true,subtree:true});
+        }
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',readonlyReady,{once:true});
+        else readonlyReady();
+        return;
+    }
+
     var nativeFetch = window.fetch.bind(window);
     var pendingNotice = null;
     var toastTimer = null;

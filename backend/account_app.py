@@ -80,5 +80,6 @@ def build_account_app(application, *, store=None, guest_store=None, local_previe
     guest_store = guest_store or SessionStore(Path(os.environ.get("STUDY_DEMO_ROOT", str(store.root / "guests"))), account_mode=True)
     guest_store.account_mode = True
     core = CatalogApplication(application, store)
-    guest = DemoGateway(core, guest_store, ai_enabled=os.environ.get("STUDY_DEMO_AI_ENABLED", "1") == "1", local_preview=local_preview, account_mode=True, catalog_path=store.root / "catalog.db")
+    guest = DemoGateway(core, guest_store, ai_enabled=False, local_preview=local_preview, account_mode=True,
+                        catalog_path=store.root / "catalog.db", read_only=True)
     return AccountGateway(core, store, guest_application=guest, secure_cookie=not local_preview, origin=os.environ.get("STUDY_AUTH_ORIGIN") or None)

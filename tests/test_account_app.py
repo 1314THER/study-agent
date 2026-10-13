@@ -39,7 +39,7 @@ class AccountAppTests(unittest.TestCase):
         self.shared_config.write_text(json.dumps({"api": {"deepseek": {"api_key": "sk-shared-example-key"}}}))
         self.env = patch.dict(os.environ, {
             "STUDY_AUTH_ENABLED": "0", "STUDY_AUTH_COOKIE_SECURE": "0", "STUDY_AUTH_ORIGIN": self.ORIGIN,
-            "STUDY_AGENT_DATA_DIR": "", "STUDY_DEMO_AI_ENABLED": "0", "DEEPSEEK_API_KEY": "sk-owner-env-example-key",
+            "STUDY_AGENT_DATA_DIR": "", "STUDY_DEMO_AI_ENABLED": "1", "DEEPSEEK_API_KEY": "sk-owner-env-example-key",
             "STUDY_AGENT_LOG_DIR": str(self.root / "logs"), "STUDY_AGENT_JOB_DIR": str(self.root / "owner-jobs"),
             "STUDY_DEMO_AI_CONFIG": str(self.shared_config),
         })
@@ -142,7 +142,7 @@ class AccountAppTests(unittest.TestCase):
     def test_startup_and_three_choices_do_not_create_guest(self):
         page = self.client.get("/")
         self.assertEqual(page.status_code, 200)
-        for choice in ("游客登录", "创建账号", "账号登录"):
+        for choice in ("游客登录", "开发者登录"):
             self.assertIn(choice, page.text)
         self.assertFalse(self.guest_store.sessions)
         self.assertFalse(self.client.get("/auth/me").json()["authenticated"])
@@ -280,13 +280,34 @@ class AccountAppTests(unittest.TestCase):
         self.assertEqual(guest.status_code, 200, guest.text)
         self.assertIsNone(self.store.resolve_session(account_token))
         self.assertEqual(self.client.get("/auth/me").json()["user"]["role"], "guest")
-        self.save_private(self.client, "游客临时私有题")
+        blocked = self.client.post('/questions/save', json={'question':'游客临时私有题','answer_json':seed_answer()}, headers=self.headers)
+        self.assertEqual(blocked.status_code, 403)
         bob = self.register("bob", "bob@example.com", key="sk-account-bob-example")
         self.assertEqual(self.client.get("/auth/me").json()["user"]["id"], bob["id"])
         questions = self.client.get("/questions")
         self.assertNotIn("原账号私有题", questions.text)
         self.assertNotIn("游客临时私有题", questions.text)
         self.assertEqual(len(questions.json()), 1)
+
+    def test_guests_cannot_edit_upload_or_consume_any_provider_key(self):
+        self.assertEqual(self.client.post('/auth/guest', json={}, headers=self.headers).status_code, 200)
+        token = self.client.cookies.get('study_demo_local')
+        directory = self.guest_store.sessions[token].directory
+        with patch('backend.solver.call_deepseek', side_effect=AssertionError('Guest called AI')):
+            for method, path in [('POST','/questions/save'),('POST','/jobs'),('POST','/jobs/uploads'),
+                                 ('POST','/solve/step1'),('POST','/teach/session/start'),('POST','/grade/text'),
+                                 ('POST','/questions/2/generate'),('POST','/exam/ai-assemble'),('PUT','/questions/2/source-type'),
+                                 ('DELETE','/questions/2'),('POST','/demo/reset'),('POST','/patterns/calendar')]:
+                with self.subTest(method=method,path=path):
+                    response=self.client.request(method,path,json={},headers=self.headers)
+                    self.assertEqual(response.status_code,403,response.text)
+                    self.assertEqual(response.json()['error'],'demo_read_only')
+        self.assertEqual(self.client.get('/settings').status_code,403)
+        page=self.client.get('/home.html')
+        self.assertIn('"read_only": true',page.text)
+        self.assertIn('"ai_enabled": false',page.text)
+        self.assertNotIn('sk-owner',page.text)
+        self.assertTrue(directory.is_dir())
 
     def test_origin_and_loopback_internal_deployment_guards(self):
         self.assertEqual(self.client.post("/auth/guest", json={}).status_code, 403)

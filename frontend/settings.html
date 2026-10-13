@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-<script src="/auth.js?v=20261009a"></script>
+<script src="/auth.js?v=20261014"></script>
 <script src="/jobs.js?v=20261009a"></script>
 <script src="/job-pages.js?v=20261009a"></script>
 <script>document.documentElement.classList.add("nav-init")</script>
@@ -618,7 +618,7 @@
             var user = state.user || {};
             document.getElementById('accountSummary').textContent = user.role === 'guest' ?
                 '游客体验中的题库与进度临时保存。创建账号后可配置个人密钥并长期保存学习记录。' :
-                (user.username || 'studyadmin') + (user.email ? ' · ' + user.email : '') + ' · ' + (user.role === 'owner' ? '主人账号' : '个人学习空间');
+                (user.username || 'studyadmin') + (user.email ? ' · ' + user.email : '') + ' · ' + (user.role === 'owner' ? '开发者账号' : '个人学习空间');
             document.getElementById('accountKeyStatus').textContent = user.api_key_configured ? '已配置。保存新密钥将替换旧密钥，留空无需保存。' : '尚未配置。AI 功能需要你自己的 DeepSeek 密钥。';
             if (!state.enabled || user.role === 'guest') {
                 document.getElementById('accountKeyForm').hidden = true;

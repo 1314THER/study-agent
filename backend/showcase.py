@@ -30,7 +30,8 @@ LEGACY_ANCHORS = {
     "/login.html": "overview",
 }
 ASSET_PATHS = {
-    "/showcase/style.css", "/showcase/app.js", "/showcase/data.json",
+    "/showcase/style.css", "/showcase/app.js", "/showcase/bank.js", "/showcase/data.json", "/showcase/pipeline.json",
+    "/showcase/question-bank/manifest.json", "/showcase/question-bank/index.json",
     "/showcase/assets/ellipse-question.svg", "/showcase/assets/ellipse-page.svg",
     "/showcase/assets/pyramid-question.svg", "/showcase/assets/pyramid-page.svg",
     "/showcase/assets/student-paper.pdf", "/showcase/assets/teacher-paper.pdf",
@@ -95,9 +96,11 @@ class ShowcaseBoundary:
                     self.state.active_requests -= 1
 
 
-def create_app(frontend: Path = FRONTEND, *, draining: bool | None = None) -> FastAPI:
+def create_app(frontend: Path = FRONTEND, *, draining: bool | None = None, bank_root: Path | None = None) -> FastAPI:
     app = FastAPI(title="登辉项目展示", docs_url=None, redoc_url=None, openapi_url=None)
     root = Path(frontend).resolve()
+    bank = Path(bank_root or os.environ.get('STUDY_SHOWCASE_BANK_ROOT') or root / 'showcase/question-bank').resolve()
+    bank_manifest = None
     lock = threading.Lock()
     app.state.active_requests = 0
     app.state.draining = os.environ.get("STUDY_DEPLOY_DRAIN", "0") == "1" if draining is None else draining
@@ -135,9 +138,28 @@ def create_app(frontend: Path = FRONTEND, *, draining: bool | None = None) -> Fa
 
     @app.api_route("/{path:path}", methods=["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "TRACE", "CONNECT"])
     async def public(request: Request, path: str):
+        nonlocal bank_manifest
         if request.method not in ("GET", "HEAD"):
             return JSONResponse({"detail": "This showcase has no teaching or write API"}, status_code=404)
         url_path = "/" + path
+        if url_path.startswith('/showcase/question-bank/'):
+            from backend.showcase_bank import manifest
+            name = url_path[len('/showcase/question-bank/'):]
+            try:
+                if bank_manifest is None:
+                    bank_manifest = manifest(bank)
+                if name != 'manifest.json' and name not in bank_manifest['files']:
+                    return JSONResponse({'detail': 'Not found'}, status_code=404)
+                relative = Path(name)
+                target = bank / relative
+                if any((bank / Path(*relative.parts[:i])).is_symlink() for i in range(1, len(relative.parts) + 1)):
+                    return JSONResponse({'detail': 'Not found'}, status_code=404)
+                target.resolve().relative_to(bank)
+                if not target.is_file():
+                    raise ValueError('Missing public asset')
+                return FileResponse(target, method=request.method)
+            except (OSError, ValueError, KeyError):
+                return JSONResponse({'detail': 'Not found'}, status_code=404)
         if url_path in LEGACY_ANCHORS:
             return RedirectResponse("/#" + LEGACY_ANCHORS[url_path], status_code=307)
         if url_path in HOME_PATHS:

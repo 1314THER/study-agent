@@ -7,24 +7,25 @@
     <title>欢迎回来 · 学习教练台</title>
     <link rel="stylesheet" href="/style.css?v=20260809home">
     <link rel="stylesheet" href="/auth.css?v=20261009a">
-    <script src="/auth.js?v=20261009a"></script>
-    <script src="/login.js?v=20261009a" defer></script>
+    <script src="/auth.js?v=20261014"></script>
+    <script src="/login.js?v=20261014" defer></script>
+    <style>.login-choice[hidden]{display:none!important}.login-options{grid-template-columns:repeat(2,minmax(0,1fr))}@media(max-width:650px){.login-options{grid-template-columns:1fr}}</style>
 </head>
 <body class="login-body">
     <main class="login-shell">
         <div class="login-brand"><span class="login-mark" aria-hidden="true">∑</span>学习教练台</div>
         <div class="login-heading" id="welcome-heading">
-            <h1>每一步，都算进步。</h1>
-            <p>从一道题开始，建立属于你的学习空间。</p>
+            <h1>成为数学高手</h1>
+
         </div>
         <section class="login-options" id="login-options" aria-label="选择登录方式">
             <article class="login-choice">
                 <div class="choice-icon" aria-hidden="true">◷</div>
                 <h2>游客登录</h2>
-                <p>先试试解题、教学与组卷。<br>2 小时体验，学习记录临时保存。</p>
-                <button class="auth-button" type="button" id="guest-login">开始体验 →</button>
+                <p>浏览题库、已有解析与组卷。</p>
+                <button class="auth-button" type="button" id="guest-login">游客登录</button>
             </article>
-            <article class="login-choice featured">
+            <article class="login-choice featured" hidden>
                 <div class="choice-icon" aria-hidden="true">＋</div>
                 <h2>创建账号</h2>
                 <p>邮箱验证，保存个人题库与进度。<br>使用你自己的 DeepSeek API Key。</p>
@@ -32,7 +33,7 @@
             </article>
             <article class="login-choice">
                 <div class="choice-icon" aria-hidden="true">↗</div>
-                <h2>账号登录</h2>
+                <h2>开发者登录</h2>
                 <p>继续上一次的学习。<br>题目、错因和复习安排都在这里。</p>
                 <button class="auth-button" type="button" id="open-login">登录账号 →</button>
             </article>
@@ -64,7 +65,7 @@
             </form>
         </section>
         <div class="login-helper" id="login-message" role="status" aria-live="polite" hidden></div>
-        <p class="login-helper" id="login-helper">还没有 DeepSeek 密钥？<a href="/deepseek-guide.html" target="_blank" rel="noopener">查看注册与 API Key 教程 ↗</a><br>共享母题由 studyadmin 维护，个人题库与学习记录按账号保存。</p>
+
         <footer class="login-footer"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">渝ICP备2026024246号-1</a></footer>
     </main>
 </body>

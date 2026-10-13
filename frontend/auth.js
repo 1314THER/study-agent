@@ -146,15 +146,15 @@
         toggle.addEventListener('click', function () { var open = menu.classList.toggle('auth-menu-open'); toggle.setAttribute('aria-expanded', String(open)); });
         document.addEventListener('click', function (event) { if (!menu.contains(event.target)) { menu.classList.remove('auth-menu-open'); toggle.setAttribute('aria-expanded', 'false'); } });
         var name = document.createElement('strong'); name.textContent = state.user ? state.user.username : '未登录';
-        var role = document.createElement('span'); role.textContent = isOwner() ? '主人账号' : (state.user && state.user.role === 'guest' ? '游客体验 · 2 小时' : '个人学习空间');
+        var role = document.createElement('span'); role.textContent = isOwner() ? '开发者账号' : (state.user && state.user.role === 'guest' ? '游客' : '个人学习空间');
         var settings = document.createElement('a'); settings.href = '/settings.html'; settings.textContent = '账号与 API Key';
-        var logout = document.createElement('button'); logout.type = 'button'; logout.textContent = state.user && state.user.role === 'guest' ? '登录 / 创建账号' : '退出 / 切换账号';
+        var logout = document.createElement('button'); logout.type = 'button'; logout.textContent = state.user && state.user.role === 'guest' ? '退出游客' : '退出 / 切换账号';
         logout.addEventListener('click', async function () {
             logout.disabled = true;
             try { await request('/auth/logout', 'POST', {}); location.replace('/login.html'); }
             catch (error) { toast(error.message); logout.disabled = false; }
         });
-        details.append(name, role, settings, logout); menu.append(toggle, details); sidebar.appendChild(menu);
+        details.append(name, role);if(!state.user||state.user.role!=='guest')details.append(settings);details.append(logout); menu.append(toggle, details); sidebar.appendChild(menu);
     }
     if (!publicPage) {
         var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = '/auth.css?v=20261009a'; document.head.appendChild(css);

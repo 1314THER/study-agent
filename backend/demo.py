@@ -312,10 +312,11 @@ class SessionStore:
 
 
 class DemoGateway:
-    def __init__(self, application, store, *, ai_enabled=False, local_preview=False, account_mode=False, catalog_path=None):
+    def __init__(self, application, store, *, ai_enabled=False, local_preview=False, account_mode=False, catalog_path=None, read_only=False):
         self.application = application
         self.store = store
-        self.ai_enabled = ai_enabled
+        self.read_only = read_only
+        self.ai_enabled = bool(ai_enabled and not read_only)
         self.local_preview = local_preview
         self.account_mode = account_mode
         self.catalog_path = catalog_path
@@ -365,6 +366,15 @@ class DemoGateway:
             return
         request = Request(scope, receive)
         path = scope["path"]
+        if self.read_only and not path.startswith('/_internal/') and not (
+            (path == '/auth/guest' and request.method == 'POST') or
+            request.method in ('GET', 'HEAD')
+        ):
+            await self.error('demo_read_only', '游客仅可浏览。', 403)(scope, receive, send)
+            return
+        if self.read_only and path.startswith('/settings'):
+            await self.error('demo_read_only', '游客仅可浏览。', 403)(scope, receive, send)
+            return
         if self.account_mode and path in ("/auth/me", "/auth/guest"):
             cookie_name, cookie_secure = self.cookie_options(request)
             client = request.headers.get("x-study-demo-client") or (request.client.host if request.client else "local")
@@ -515,8 +525,8 @@ class DemoGateway:
                 chunks.append(message.get("body", b""))
                 if not message.get("more_body", False):
                     data = b"".join(chunks)
-                    boot = ('<script>window.STUDY_DEMO=' + json.dumps(session.public(self.ai_enabled), ensure_ascii=True) +
-                            ';</script><script src="/demo-session.js?v=20261009a"></script>').encode()
+                    boot = ('<script>window.STUDY_DEMO=' + json.dumps({**session.public(self.ai_enabled), 'read_only': self.read_only}, ensure_ascii=True) +
+                            ';</script><script src="/demo-session.js?v=20261014"></script>').encode()
                     data = re.sub(br"(<head\b[^>]*>)", lambda match: match.group(1) + boot, data, count=1, flags=re.I)
                     start["headers"] = [(k, v) for k, v in start["headers"] if k != b"content-length"]
                     start["headers"].append((b"content-length", str(len(data)).encode()))

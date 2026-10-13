@@ -27,6 +27,13 @@ class ShowcaseTests(unittest.IsolatedAsyncioTestCase):
             target = self.frontend / url.lstrip("/")
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text("<!doctype html><h1>项目展示</h1>" if url.endswith(".html") else "public sample")
+        import hashlib
+        bank = self.frontend / 'showcase/question-bank'
+        (bank / 'index.json').write_text('[{"id":7}]')
+        (bank / 'part-0000.json').write_text('{"7":{"question":"公开题目"}}')
+        entries = {name:{'sha256':hashlib.sha256((bank/name).read_bytes()).hexdigest(),'size':(bank/name).stat().st_size}
+                   for name in ('index.json','part-0000.json')}
+        (bank / 'manifest.json').write_text(json.dumps({'version':1,'count':1,'parts':{'7':'part-0000.json'},'files':entries}))
         self.private = self.root / "owner.sqlite3"
         self.private.write_bytes(b"owner database sentinel")
         (self.frontend / "settings.json").write_text('{"api_key":"private"}')

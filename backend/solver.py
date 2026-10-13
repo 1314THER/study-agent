@@ -741,9 +741,9 @@ def _validate_step_names(verifier_cat: str, steps: list) -> list:
        新版 Verifier prompt 格式：
          步骤N：<一级步骤名>    → title = 一级步骤名（对应 steps.yaml keys）
          二级步骤：<二级步骤名> → step_level1 = 二级步骤名（对应 steps.yaml values，带括号后缀）
-       非法步骤名将被重置并记录警告。"""
+       用已识别的具体步骤归一化分类；保留未归类步骤的可读标题。"""
     try:
-        from backend.steps import get_all_level1_names, get_all_level2_names
+        from backend.steps import get_all_level1_names, get_all_level2_names, get_step_structure
     except ImportError:
         return steps
     prompt_file = _CATEGORY_TO_PROMPT_FILE.get(verifier_cat) or verifier_cat
@@ -754,13 +754,16 @@ def _validate_step_names(verifier_cat: str, steps: list) -> list:
     for step in steps:
         title = step.get("title", "")
         step_level1 = step.get("step_level1")
-        # title（一级步骤名）校验：对 steps.yaml keys
+        cleaned = re.sub(r'\s*[（(][^）)]*[）)]\s*$', '', str(step_level1 or '')).strip()
+        # A descriptive title is necessary for the formatter. Resolve the
+        # known parent from a recognized child instead of erasing the title.
         if title and valid_l1 and title not in valid_l1:
-            logger.warning("步骤 %s: 一级步骤名 '%s' 不在预定义列表中，已重置", step.get("step_number"), title)
-            step["title"] = ""
+            parent = next((name for name, children in get_step_structure(prompt_file).items()
+                           if cleaned in children), None)
+            if parent:
+                step["title"] = parent
         # step_level1（二级步骤名）校验：去掉括号后缀后对 steps.yaml values
         if step_level1 and valid_l2:
-            cleaned = re.sub(r'\s*[（(][^）)]*[）)]\s*$', '', step_level1).strip()
             if cleaned not in valid_l2:
                 logger.warning("步骤 %s: 二级步骤名 '%s'（清理后 '%s'）不在预定义列表中，已重置", step.get("step_number"), step_level1, cleaned)
                 step["step_level1"] = None
@@ -798,6 +801,10 @@ def step_verify_all(content: str, question: str, category: str = None, question_
     for pc in raw_chunks:
         meta = _parse_chunk_meta(pc["content"])
         steps = _parse_steps(pc["content"], allow_option_steps=(verifier_cat == "多选题"))
+        # Some responses repeat the block headings in a trailing notes
+        # section. Those notes are not additional question parts.
+        if not steps and any(chunk['chunk_id'] == pc['id'] for chunk in chunk_results):
+            continue
         if not steps:
             logger.warning("%s 未解析到步骤，输出片段: %s", verifier_cat, pc["content"][:300])
             steps = [{

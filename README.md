@@ -507,3 +507,5 @@ BASE_URL=http://127.0.0.1:8000 node tests/e2e/agent_flow.mjs
 | 2026—2027 研发计划 | 母题内容、统一标注、单题与整卷评价、Benchmark、手写笔客户端、API/MCP、专用 Agent、RAG 与试用 | 📋 见 [ROADMAP.md](ROADMAP.md) |
 | V2.0 | 教师端与学校端：母题作业、学情调整、AI 出卷、开放配置 | 📋 后续扩展 |
 | V3.0 | 教研端：母题/YAML 治理、教学效果与教师 KPI、高考教材变更响应 | 📋 探讨中 |
+
+本轮展示站修改与交付项：[2026-10-14交付清单](docs/showcase-delivery-20261014.md)。

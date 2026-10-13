@@ -262,6 +262,8 @@ PY
 if [[ -f $STAGING/code/backend/showcase.py ]]; then
     (cd "$STAGING/code" && "$STAGING/.venv/bin/python" - <<'PY'
 from backend.showcase import ASSET_PATHS, FRONTEND
+from backend.showcase_bank import verify
+verify(FRONTEND / 'showcase/question-bank')
 missing = [path for path in ASSET_PATHS | {"/showcase/index.html"} if not (FRONTEND / path.lstrip("/")).is_file()]
 if missing:
     raise SystemExit("候选展示资源缺失：" + ", ".join(sorted(missing)))
