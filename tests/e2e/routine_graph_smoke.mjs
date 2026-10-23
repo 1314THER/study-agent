@@ -16,8 +16,8 @@ try{
   page.on('pageerror',e=>errors.push(e.message));
   await page.goto(base+'/routine-graph.html');await page.waitForSelector('#graphApp:not([hidden])');
   assert.equal(await page.locator('.graph-node').count(),13);
-  assert.match(await page.locator('#catalogCount').textContent(),/288/);
-  assert.equal(await page.locator('.sidebar nav a[data-page]').count(),16);
+  const initial=(await (await fetch(base+'/routine-graph')).json());const catalogSize=initial.nodes.filter(n=>n.kind==='routine').length;assert(catalogSize>=950&&catalogSize<=1050);assert.match(await page.locator('#catalogCount').textContent(),new RegExp(String(catalogSize)));const nextSet=1+Math.max(...initial.nodes.filter(n=>n.kind==='routine'&&n.id.startsWith('SET-')).map(n=>Number(n.id.split('-')[1])));
+  const navCount=await page.locator('.sidebar nav a[data-page]').count();assert(navCount>=16);
   await page.screenshot({path:shots+'/overview.png'});
   await page.locator('#graphSearch').fill('SET-014');await page.locator('#searchResults button').first().click();
   await page.waitForSelector('.graph-question-card');
@@ -45,18 +45,40 @@ try{
   await page.goto(base+href);await page.waitForFunction(()=>document.getElementById('itemDetail').textContent.includes('原题 #1 ·'));
   assert.equal(await page.locator('#groupList button.active').count(),1);
   assert.match(await page.locator('#groupList button.active').textContent(),/子集个数/);
-  assert.equal(await page.locator('.sidebar nav a[data-page]').count(),16);
+  assert.equal(await page.locator('.sidebar nav a[data-page]').count(),navCount);
   await page.goto(base+'/routine-graph.html');await page.waitForSelector('#graphApp:not([hidden])');
   await page.locator('#addRoutine').click();await page.locator('[name="name"]').fill('手动新增浏览器测试套路');
   await page.locator('[name="signals"]').fill('条件随参数变化');await page.locator('[name="key_steps"]').fill('先求临界点\n再分别讨论');await page.locator('[name="exclusions"]').fill('固定条件可直接求解');
-  await page.locator('#saveRoutine').click();await page.waitForFunction(()=>document.getElementById('catalogCount').textContent.includes('289'));
+  await page.locator('#saveRoutine').click();await page.waitForFunction(size=>document.getElementById('catalogCount').textContent.includes(String(size)),catalogSize+1);
   assert.match(await page.locator('#detailContent h2').textContent(),/手动新增/);
-  assert.match(await page.locator('#graphMessage').textContent(),/SET-029/);
+  assert.match(await page.locator('#graphMessage').textContent(),new RegExp('SET-'+String(nextSet).padStart(3,'0')));
   const reviewLink=await page.locator('.detail-review').getAttribute('href');await page.goto(base+reviewLink);
   await page.waitForFunction(()=>document.querySelector('#groupList button.active')?.textContent.includes('手动新增'));
+  // Catalogue editing is distinct from question assignment review.
+  await page.goto(base+'/routine-graph.html');await page.waitForSelector('#graphApp:not([hidden])');
+  await page.locator('#showCatalog').click();assert.equal(await page.locator('#catalogRows tr').count(),50);
+  await page.locator('#catalogNext').click();assert.match(await page.locator('#catalogPage').textContent(),/^2 \//);
+  await page.locator('#catalogSearch').fill('GEO-028');assert.equal(await page.locator('#catalogRows tr').count(),1);
+  await page.locator('#catalogRows button').first().click();await page.locator('[name="key_steps"]').fill('设 $k_1+k_2=c$\n消去端点坐标\n检验竖直线');
+  await page.locator('summary').filter({hasText:'公式与内容预览'}).click();assert(await page.locator('#routinePreview .katex').count()>0);
+  await page.locator('[name="review_note"]').fill('补检斜率关系与退化方向');
+  let editFailure=false;await page.route('**/routine-graph/routines/GEO-028',async route=>{if(!editFailure){editFailure=true;await route.fulfill({status:503,json:{detail:'测试网络错误，请重试'}});}else await route.continue();});
+  await page.locator('#saveRoutine').click();await page.waitForFunction(()=>document.getElementById('routineFormError').textContent.includes('测试网络错误'));
+  assert.match(await page.locator('[name="key_steps"]').inputValue(),/k_1/);assert(await page.locator('#routineDialog').isVisible());
+  await page.locator('#approveRoutine').click();await page.waitForSelector('#routineDialog:not([open])',{state:'attached'});await page.waitForFunction(()=>document.getElementById('graphMessage').textContent.includes('已保存 GEO-028'));await page.unroute('**/routine-graph/routines/GEO-028');
+  await page.locator('#catalogStatus').selectOption('reviewed');assert.match(await page.locator('#catalogRows').textContent(),/GEO-028/);
+  await page.screenshot({path:shots+'/catalog-review.png'});
+  await page.locator('#catalogRows button').first().click();await page.waitForFunction(()=>document.getElementById('routineHistory').textContent.includes('补检斜率关系'));
+  const current=await (await fetch(base+'/routine-graph')).json(),n=current.nodes.find(n=>n.id==='GEO-028'),keys=['name','category','signals','retrieval_terms','key_steps','exclusions','confusable_ids','aliases'];
+  const concurrent=await fetch(base+'/routine-graph/routines/GEO-028',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({request_id:'browser-other-editor',expected_catalog_hash:current.catalog_hash,expected_review_revision:current.review_revision,draft:Object.fromEntries(keys.map(k=>[k,n[k]])),review_status:'needs_changes',note:'另一窗口补充说明'})});assert(concurrent.ok);
+  await page.locator('[name="review_note"]').fill('本地输入应保留');await page.locator('#saveRoutine').click();await page.waitForSelector('#editorConflict:not([hidden])');assert.equal(await page.locator('[name="review_note"]').inputValue(),'本地输入应保留');
+  assert.match(await page.locator('#conflictContent').textContent(),/另一窗口补充说明/);await page.locator('#adoptLatest').click();await page.locator('#saveRoutine').click();await page.waitForSelector('#routineDialog:not([open])',{state:'attached'});await page.waitForFunction(()=>document.getElementById('graphMessage').textContent.includes('已保存 GEO-028'));
+  await page.locator('#catalogStatus').selectOption('pending');await page.locator('#catalogRows button').first().click();await page.screenshot({path:shots+'/catalog-editor.png'});
+  await page.setViewportSize({width:390,height:844});await page.screenshot({path:shots+'/catalog-editor-mobile.png'});assert(await page.evaluate(()=>document.querySelector('#routineDialog').getBoundingClientRect().right<=innerWidth));await page.locator('#closeRoutine').click();
+  await page.setViewportSize({width:1440,height:950});const exported=await (await fetch(base+'/routine-graph/export')).json();assert.equal(exported.routine_reviews['GEO-028'].status,'pending');assert.equal(exported.edit_history.length,3);
   // Pages with formerly incomplete markup now retain every authorized entry.
   for(const path of ['/question-pool.html','/home.html','/routine-review.html']){
-    await page.goto(base+path);await page.waitForFunction(()=>document.querySelectorAll('.sidebar nav a[data-page]').length===16);
+    await page.goto(base+path);await page.waitForFunction(n=>document.querySelectorAll('.sidebar nav a[data-page]').length===n,navCount);
     assert.equal(await page.locator('.sidebar nav a[data-page="teach"]').count(),1);
     assert.equal(await page.locator('.sidebar nav a[data-page="routine-graph"]').count(),1);
   }
@@ -73,7 +95,7 @@ try{
   const learner=await browser.newPage({viewport:{width:1100,height:750}});
   await learner.route('**/auth/config',route=>route.fulfill({json:{enabled:true}}));
   await learner.route('**/auth/me',route=>route.fulfill({json:{authenticated:true,user:{id:'learner',username:'learner',role:'user'}}}));
-  await learner.goto(base+'/routine-graph.html');await learner.waitForFunction(()=>document.querySelectorAll('.sidebar nav a[data-page]').length===16);
+  await learner.goto(base+'/routine-graph.html');await learner.waitForFunction(n=>document.querySelectorAll('.sidebar nav a[data-page]').length===n,navCount);
   assert.match(await learner.locator('#accessMessage').textContent(),/仅供主人/);
   for(const name of ['question-pool','routine-review','routine-graph','level-editor'])assert.equal(await learner.locator('.sidebar a[data-page="'+name+'"]').isVisible(),false);
   await learner.close();

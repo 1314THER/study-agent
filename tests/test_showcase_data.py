@@ -154,7 +154,7 @@ class ShowcaseDataTests(unittest.TestCase):
         original=json.loads((ROOT/'backend/routine_catalog.json').read_text())
         self.assertEqual(self.data['catalog'],original)
         known={r['id'] for r in original['routines']}
-        self.assertEqual(len(known),288)
+        self.assertEqual(len(known),len(original["routines"]))
         for routine in original['routines']:
             self.assertTrue(set(routine['confusable_ids'])<=known)
 

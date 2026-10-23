@@ -21,9 +21,9 @@ DEFAULT_CATALOG = ROOT / "backend" / "routine_catalog.json"
 PROMPT_VERSION = "routine-classifier-v2-novelty"
 CACHE_PROMPT_VERSION = "routine-cache-prefix-v1"
 CATEGORY_COUNTS = {
-    "集合与逻辑用语": 28, "不等式": 16, "一元二次式": 16, "函数与导数": 38,
-    "指对幂耐克函数": 16, "三角函数": 26, "平面向量": 17, "复数": 9,
-    "立体几何": 26, "数列": 24, "解析几何": 36, "概率统计": 36,
+    "集合与逻辑用语": 50, "不等式": 56, "一元二次式": 46, "函数与导数": 167,
+    "指对幂耐克函数": 58, "三角函数": 86, "平面向量": 59, "复数": 26,
+    "立体几何": 103, "数列": 103, "解析几何": 186, "概率统计": 79,
 }
 REPORT_FILES = ("assignments.jsonl", "groups.json", "review.md", "manifest.json",
                 "unmatched.json", "unmatched.md")

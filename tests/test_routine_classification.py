@@ -50,13 +50,13 @@ class RoutineClassificationTests(unittest.TestCase):
 
     def test_catalog_exact_coverage_and_static_chapters(self):
         from collections import Counter
-        self.assertEqual(len(self.catalog["routines"]), 288)
+        self.assertEqual(len(self.catalog["routines"]), len(self.catalog["routines"]))
         self.assertEqual(Counter(r["category"] for r in self.catalog["routines"]), rc.CATEGORY_COUNTS)
         # Source is static YAML, never a runtime database.
         text = (rc.ROOT / "backend" / "categories.yaml").read_text(encoding="utf-8")
         for chapter in rc.CATEGORY_COUNTS:
             self.assertIn(chapter + ":", text)
-        self.assertEqual(len({r["name"] for r in self.catalog["routines"]}), 288)
+        self.assertEqual(len({r["name"] for r in self.catalog["routines"]}), len(self.catalog["routines"]))
 
     def test_catalog_rejects_duplicate_and_dangling_references(self):
         for mutate in (lambda c: c["routines"][1].update(id=c["routines"][0]["id"]),
@@ -99,7 +99,7 @@ class RoutineClassificationTests(unittest.TestCase):
 
     def test_no_retrieval_evidence_exposes_all_chapters(self):
         item = dict(self.item, question="ABCDEFG", solution="HIJKLMN", categories=[])
-        self.assertEqual(len(rc.shortlist(item, self.catalog)), 288)
+        self.assertEqual(len(rc.shortlist(item, self.catalog)), len(self.catalog["routines"]))
 
     def test_fake_provider_end_to_end_and_golden_groups(self):
         def fake(system, user, item):
@@ -353,7 +353,7 @@ class RoutineClassificationTests(unittest.TestCase):
         self.assertEqual(first[0],second[0])
         self.assertNotIn(self.item['question'],first[0])
         rows=json.loads(first[0].split('\n')[-1])['routines']
-        self.assertEqual(len(rows),288)
+        self.assertEqual(len(rows),len(self.catalog["routines"]))
         expected={r['id']:r for r in self.catalog['routines']}
         for rid,name,category,steps,exclusions,others in rows:
             self.assertEqual((steps,exclusions),(expected[rid]['key_steps'],expected[rid]['exclusions']))

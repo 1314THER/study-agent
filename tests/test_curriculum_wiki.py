@@ -42,7 +42,8 @@ class CurriculumTests(unittest.TestCase):
     def test_all_books_content_and_verified_directory_are_accounted_for(self):
         d=self.client.get("/curriculum-wiki/overview").json()
         self.assertEqual(len(d["books"]),5);self.assertGreater(d["counts"]["lessons"],300)
-        self.assertEqual(d["counts"]["routines"],288)
+        from backend.routine_classification import load_catalog
+        self.assertEqual(d["counts"]["routines"],len(load_catalog()["routines"]))
         self.assertEqual(d["coverage"]["textbook"]["covered"],d["coverage"]["textbook"]["total"])
         self.assertEqual(d["coverage"]["textbook"]["verified"],d["coverage"]["textbook"]["total"])
         self.assertEqual(d["coverage"]["human"]["confirmed"],0)

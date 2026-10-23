@@ -238,7 +238,7 @@ try {
 
   await choose(page, 'graph');
   assert.equal(await page.locator('#graph-category option').count(), 13, 'Graph must cover twelve categories plus all.');
-  assert.match(await page.locator('#graph-count').innerText(), /288/);
+  assert.match(await page.locator('#graph-count').innerText(),new RegExp(String(await page.evaluate(async()=>(await window.Showcase.ready).catalog.routines.length))));
   assert.equal(await page.locator('#graph-library .graph-category').count(), 12);
   await page.locator('#graph-category').selectOption('');
   const firstPage = await page.locator('#graph-page-label').innerText();

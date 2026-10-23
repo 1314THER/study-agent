@@ -1,11 +1,13 @@
 """Owner's editable method map, sharing the reference catalogue and review ledger."""
 from copy import deepcopy
+from datetime import datetime, timezone
+import json
 import math
 import re
-from typing import Dict, List
+from typing import Dict, List, Literal
 
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from pydantic import BaseModel, Field, StrictStr
 
 from backend import routine_classification as rc, routine_review as rr
@@ -78,6 +80,24 @@ class CreateRequest(BaseModel):
         extra = 'forbid'
 
 
+class EditRequest(CreateRequest):
+    review_status: Literal['pending', 'reviewed', 'needs_changes'] = 'pending'
+    note: StrictStr = Field('', max_length=5000)
+    expected_review_revision: int = Field(..., ge=0)
+
+
+def routine_review(state, routine):
+    saved = state.get('routine_reviews', {}).get(routine['id'], {})
+    if saved.get('content_hash') != rc.digest(routine):
+        return {'status': 'pending', 'note': '', 'updated_at': None}
+    return {k: saved.get(k) for k in ('status', 'note', 'updated_at')}
+
+
+def next_version(version):
+    match = re.fullmatch(r'(.*)\.r(\d+)', version)
+    return match[1] + f'.r{int(match[2])+1}' if match else version + '.r1'
+
+
 @page_router.get('/routine-graph.html',include_in_schema=False)
 def graph_page():
     return FileResponse(rc.ROOT/'frontend/routine-graph.html')
@@ -91,11 +111,88 @@ def get_graph(run_id:str='',store=Depends(rr.get_store),reference=Depends(rr.ref
         with store.connection() as conn:
             pending = dict(conn.execute("SELECT primary_id,count(*) FROM review_items WHERE run_id=? AND review_status='pending' GROUP BY primary_id",(run['run_id'],)).fetchall())
         grouped = [{**g,'pending':pending.get(g['id'],0)} for g in grouped]
-    catalog = reference.read()['catalog']
+    state = reference.read()
+    catalog = state['catalog']
     nodes,edges = build_graph(catalog,grouped)
+    by_id = {r['id']: r for r in catalog['routines']}
+    for node in nodes:
+        if node['kind'] == 'routine':
+            node['catalog_review'] = routine_review(state, by_id[node['id']])
     return {'nodes':nodes,'edges':edges,'layout':read_layout(reference),'catalog_hash':rc.digest(catalog),
+            'review_revision': state.get('routine_review_revision', 0),
+            'catalog_version': catalog['version'],
+            'run_catalog_stale': bool(run and rc.digest(run['catalog']) != rc.digest(catalog)),
             'run':{k:run[k] for k in ('run_id','status','total','revision')} if run else None,
             'categories':list(CATEGORY_PREFIXES)}
+
+
+@router.get('/export')
+def export_catalog(reference=Depends(rr.reference_store)):
+    state = reference.read()
+    payload = {**state['catalog'], 'routine_reviews': state.get('routine_reviews', {}),
+               'routine_review_revision': state.get('routine_review_revision', 0),
+               'edit_history': [h for h in state['history'] if h.get('action') == 'manual_update']}
+    return Response(json.dumps(payload, ensure_ascii=False, indent=2), media_type='application/json',
+                    headers={'Content-Disposition': 'attachment; filename="routine-catalog-reviewed.json"'})
+
+
+@router.get('/routines/{routine_id}/history')
+def routine_history(routine_id: str, reference=Depends(rr.reference_store)):
+    state = reference.read()
+    if not any(r['id'] == routine_id for r in state['catalog']['routines']):
+        raise HTTPException(404, '套路不存在。')
+    return {'history': [h for h in state['history']
+                        if h.get('routine_id') == routine_id and h.get('action') == 'manual_update']}
+
+
+@router.put('/routines/{routine_id}')
+def edit_routine(routine_id: str, req: EditRequest, reference=Depends(rr.reference_store)):
+    with reference.locked():
+        state = reference.read()
+        draft = _dump(req.draft)
+        intent_hash = rc.digest({'routine_id': routine_id, 'draft': draft,
+                                 'review_status': req.review_status, 'note': req.note})
+        previous = next((h for h in state['history'] if h.get('graph_request_id') == req.request_id), None)
+        if previous:
+            if previous.get('intent_hash') != intent_hash:
+                raise HTTPException(409, '请求编号已用于其他修改。')
+            return previous['response']
+        catalog = state['catalog']
+        if req.expected_catalog_hash != rc.digest(catalog) or req.expected_review_revision != state.get('routine_review_revision', 0):
+            raise HTTPException(409, '目录或审核记录已在其他页面修改。输入已保留，请重新核对最新内容。')
+        old = next((r for r in catalog['routines'] if r['id'] == routine_id), None)
+        if old is None:
+            raise HTTPException(404, '套路不存在。')
+        old_review = routine_review(state, old)
+        if any(r['id'] != routine_id and _name_key(r['name']) == _name_key(draft['name']) for r in catalog['routines']):
+            raise HTTPException(409, '已有同名套路，请核对名称。')
+        updated = deepcopy(catalog)
+        new = {'id': routine_id, **draft}
+        changed = old != new
+        if changed:
+            updated['routines'] = [new if r['id'] == routine_id else r for r in updated['routines']]
+            updated['version'] = next_version(catalog['version'])
+        try:
+            rc.validate_catalog(updated)
+        except ValueError as exc:
+            raise HTTPException(422, str(exc)) from None
+        now = datetime.now(timezone.utc).isoformat()
+        review = {'content_hash': rc.digest(new), 'status': req.review_status,
+                  'note': req.note, 'updated_at': now}
+        revision = state.get('routine_review_revision', 0) + 1
+        response = {'routine_id': routine_id, 'catalog_hash': rc.digest(updated),
+                    'review_revision': revision, 'catalog_review': review, 'content_changed': changed}
+        state.setdefault('routine_reviews', {})[routine_id] = review
+        state['routine_review_revision'] = revision
+        state['catalog'] = updated
+        state['history'].append({'action': 'manual_update', 'graph_request_id': req.request_id,
+                                 'intent_hash': intent_hash, 'routine_id': routine_id,
+                                 'before': old, 'after': new, 'review_before': old_review,
+                                 'review_after': review, 'note': req.note, 'updated_at': now,
+                                 'catalog_before': rc.digest(catalog), 'catalog_after': rc.digest(updated),
+                                 'response': response})
+        rc.write_json(reference.path, state)
+        return response
 
 
 @router.put('/layout')
@@ -124,7 +221,7 @@ def add_routine(req:CreateRequest,reference=Depends(rr.reference_store)):
         # A lost response can safely be retried without creating a second node.
         previous = next((h for h in state['history'] if h.get('graph_request_id')==req.request_id),None)
         if previous:
-            if previous['draft_hash']!=rc.digest(draft):
+            if previous.get('draft_hash')!=rc.digest(draft):
                 raise HTTPException(409,'请求编号已用于另一个套路。')
             return {'routine_id':previous['routine_id'],'catalog_hash':rc.digest(state['catalog'])}
         catalog = state['catalog']
@@ -139,8 +236,7 @@ def add_routine(req:CreateRequest,reference=Depends(rr.reference_store)):
         rid = f'{prefix}-{number:03d}'
         updated = deepcopy(catalog)
         updated['routines'].append({'id':rid,**draft})
-        version = re.fullmatch(r'(.*)\.r(\d+)',catalog['version'])
-        updated['version'] = version[1]+f'.r{int(version[2])+1}' if version else catalog['version']+'.r1'
+        updated['version'] = next_version(catalog['version'])
         try:
             rc.validate_catalog(updated)
         except ValueError as exc:

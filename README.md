@@ -364,7 +364,7 @@ study-agent/
 
 `/routine-matching` 提供目录检索、AI 匹配、未匹配审核和人工确认新套路。匹配引擎、系统 API、前端客户端和离线脚本共用同一套规则，可供导入、错题整理等功能调用；检索器可替换为向量 RAG。全部结果属于独立参考目录，不自动建立正式题目或母题关联。
 
-接入说明见 [套路匹配 API](docs/routine-matching-api.md)，批量分类和人工审核见 [离线工作流](docs/routine-classification.md)。基础目录覆盖 12 个板块、288 个套路；全量审核工作台已支持真实原题批次，数学判断仍需人工核对。
+接入说明见 [套路匹配 API](docs/routine-matching-api.md)，批量分类和人工审核见 [离线工作流](docs/routine-classification.md)。基础目录覆盖 12 个板块、1,019 个套路；全量审核工作台已支持真实原题批次，数学判断仍需人工核对。
 
 ## 数据结构
 

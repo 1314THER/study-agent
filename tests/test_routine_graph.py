@@ -38,7 +38,7 @@ class RoutineGraphTests(unittest.TestCase):
     def test_existing_relationships_only_and_catalog_coverage(self):
         d=self.client.get('/routine-graph').json()
         self.assertIsNone(d['run'])
-        self.assertEqual(len([n for n in d['nodes'] if n['kind']=='routine']),288)
+        self.assertEqual(len([n for n in d['nodes'] if n['kind']=='routine']),len(self.catalog["routines"]))
         self.assertEqual(len([n for n in d['nodes'] if n['kind']=='category']),12)
         self.assertEqual({e['kind'] for e in d['edges']},{'contains','confusable'})
         existing={tuple(sorted((r['id'],other))) for r in self.catalog['routines'] for other in r['confusable_ids']}
@@ -68,13 +68,13 @@ class RoutineGraphTests(unittest.TestCase):
         body={'request_id':'manual-create-test','expected_catalog_hash':d['catalog_hash'],'draft':self.draft()}
         response=self.client.post('/routine-graph/routines',json=body)
         self.assertEqual(response.status_code,201,response.text);rid=response.json()['routine_id']
-        self.assertEqual(rid,'SET-029')
+        self.assertEqual(rid,'SET-'+f'{rc.CATEGORY_COUNTS["集合与逻辑用语"]+1:03d}')
         self.assertEqual(self.client.post('/routine-graph/routines',json=body).json()['routine_id'],rid)
-        self.assertEqual(len(rr.reference_store().read()['catalog']['routines']),289)
+        self.assertEqual(len(rr.reference_store().read()['catalog']['routines']),len(self.catalog["routines"])+1)
         self.assertIn(rid,{g['id'] for g in self.store.groups(run['run_id'])['groups']})
         self.store.decide(run['run_id'],rr.DecisionRequest(action='assign',item_ids=[1],expected_revision=0,primary_id=rid))
         self.assertEqual(self.store.item(run['run_id'],1)['primary_id'],rid)
-        self.assertEqual(len(self.client.get('/routine-graph').json()['nodes']),302)
+        self.assertEqual(len(self.client.get('/routine-graph').json()['nodes']),len(self.catalog['routines'])+14)
 
     def test_manual_creation_rejects_stale_duplicate_or_invalid_drafts(self):
         d=self.client.get('/routine-graph').json();body={'request_id':'bad-draft-test','expected_catalog_hash':d['catalog_hash'],'draft':self.draft()}
@@ -84,7 +84,7 @@ class RoutineGraphTests(unittest.TestCase):
         self.assertEqual(self.client.post('/routine-graph/routines',json=body).status_code,409)
         body['draft']=self.draft();body['draft']['confusable_ids']=['UNKNOWN-001']
         self.assertEqual(self.client.post('/routine-graph/routines',json=body).status_code,422)
-        self.assertEqual(len(rr.reference_store().read()['catalog']['routines']),288)
+        self.assertEqual(len(rr.reference_store().read()['catalog']['routines']),len(self.catalog["routines"]))
 
     def test_guest_cannot_read_or_edit_graph(self):
         with identity_context({'id':'guest','username':'guest','role':'guest'}):

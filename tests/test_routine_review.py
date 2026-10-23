@@ -279,9 +279,9 @@ class RoutineReviewTests(unittest.TestCase):
         response=self.client.post(path,json={'expected_revision':0,'decision':decision})
         self.assertEqual(response.status_code,200,response.text)
         self.assertFalse(response.json()['formal_pattern_created'])
-        self.assertEqual(len(rr.reference_store().read()['catalog']['routines']),289)
+        self.assertEqual(len(rr.reference_store().read()['catalog']['routines']),len(self.catalog["routines"])+1)
         self.assertEqual(self.store.item(run['run_id'],1)['review_status'],'confirmed')
-        self.assertEqual(len(rc.load_catalog()['routines']),288)
+        self.assertEqual(len(rc.load_catalog()['routines']),len(self.catalog["routines"]))
 
     def test_assets_cannot_escape_private_question_directory(self):
         root=Path(self.tmp.name);inside=root/'question-pool'/'original.pdf';inside.parent.mkdir();inside.write_bytes(b'%PDF')

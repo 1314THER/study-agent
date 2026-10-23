@@ -77,7 +77,7 @@ class RoutineMatchingTests(unittest.TestCase):
         with patch.object(rc, "shortlist", return_value=[self.catalog["routines"][0]]):
             matched = rm.match_question(self.item, self.catalog, fake)
         self.assertEqual(len(calls), 2)
-        self.assertEqual(len(calls[1]["catalog"]), 288)
+        self.assertEqual(len(calls[1]["catalog"]), len(self.catalog["routines"]))
         self.assertEqual(matched["classification"]["primary_routine_id"], "SEQ-022")
         self.assertTrue(matched["catalog_audited"])
         self.assertIsNone(rm.build_review_entry({"status": "classified", "item": self.item, **matched}, self.catalog))
@@ -204,8 +204,8 @@ class RoutineMatchingTests(unittest.TestCase):
         self.store.enqueue(entry)
         record = self.store.decide(entry["review_id"], self.decision())
         state = self.store.read()
-        self.assertEqual(record["routine_id"], "SEQ-025")
-        self.assertEqual(len(state["catalog"]["routines"]), 289)
+        self.assertEqual(record["routine_id"], f"SEQ-{rc.CATEGORY_COUNTS['数列']+1:03d}")
+        self.assertEqual(len(state["catalog"]["routines"]), len(self.catalog["routines"])+1)
         self.assertEqual(state["reviews"][entry["review_id"]]["status"], "create")
         self.assertEqual(state["decisions"][entry["review_id"]]["override"]["content_hash"], rc.digest(self.item))
         self.assertEqual(baseline, rc.DEFAULT_CATALOG.read_bytes())
@@ -242,7 +242,7 @@ class RoutineMatchingTests(unittest.TestCase):
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.json()["review"]["review_id"], entry["review_id"])
         record = self.store.decide(entry["review_id"], self.decision())
-        self.assertEqual(record["routine_id"], "SEQ-025")
+        self.assertEqual(record["routine_id"], f"SEQ-{rc.CATEGORY_COUNTS['数列']+1:03d}")
         self.assertEqual([d["action"] for d in self.store.read()["history"]], ["defer", "create"])
 
     def test_human_can_edit_draft_and_matching_uses_the_extended_catalog(self):
@@ -251,10 +251,10 @@ class RoutineMatchingTests(unittest.TestCase):
         draft["name"] = "耦合递推求通项：矩阵分解并核对初值"
         updated, _, _ = rm.apply_review_decision(self.catalog, entry, self.decision(draft=draft))
         def fake(system, user, item):
-            self.assertIn("SEQ-025", {r["id"] for r in json.loads(user)["catalog"]})
-            return result(item, rid="SEQ-025")
+            self.assertIn(f"SEQ-{rc.CATEGORY_COUNTS['数列']+1:03d}", {r["id"] for r in json.loads(user)["catalog"]})
+            return result(item, rid=f"SEQ-{rc.CATEGORY_COUNTS['数列']+1:03d}")
         matched = rm.match_question(dict(self.item, id=999), updated, fake)
-        self.assertEqual(matched["classification"]["primary_routine_id"], "SEQ-025")
+        self.assertEqual(matched["classification"]["primary_routine_id"], f"SEQ-{rc.CATEGORY_COUNTS['数列']+1:03d}")
 
     def test_duplicate_draft_and_old_catalog_cannot_be_created(self):
         entry = self.entry()
@@ -272,17 +272,17 @@ class RoutineMatchingTests(unittest.TestCase):
         with ThreadPoolExecutor(max_workers=2) as executor:
             results = list(executor.map(lambda _: self.store.decide(entry["review_id"], self.decision()), range(2)))
         self.assertEqual(results[0], results[1])
-        self.assertEqual(len(self.store.read()["catalog"]["routines"]), 289)
+        self.assertEqual(len(self.store.read()["catalog"]["routines"]), len(self.catalog["routines"])+1)
         with self.assertRaises(ValueError):
             self.store.decide(entry["review_id"], self.decision(action="reject"))
 
     def test_extended_catalog_may_grow_past_300(self):
         catalog = deepcopy(self.catalog)
-        for i in range(25, 40):
+        for i in range(rc.CATEGORY_COUNTS["数列"]+1, rc.CATEGORY_COUNTS["数列"]+16):
             draft = deepcopy(novel(self.item)["suggested_routine"])
             draft.update(id=f"SEQ-{i:03d}", name=draft["name"] + str(i))
             catalog["routines"].append(draft)
-        self.assertEqual(len(rc.validate_catalog(catalog)["routines"]), 303)
+        self.assertEqual(len(rc.validate_catalog(catalog)["routines"]), len(self.catalog["routines"])+15)
 
     def test_unmatched_report_separates_novelty_information_and_ambiguity(self):
         items = [self.item, dict(self.item, id=902, solution=""), dict(self.item, id=903)]
@@ -312,7 +312,7 @@ class RoutineMatchingTests(unittest.TestCase):
         catalog = rc.load_catalog(output / "catalog.json")
         overrides = rc.load_overrides(output / "overrides.json", catalog)
         self.assertEqual(set(overrides), {123, 901})
-        self.assertEqual(overrides[901]["primary_routine_id"], "SEQ-025")
+        self.assertEqual(overrides[901]["primary_routine_id"], f"SEQ-{rc.CATEGORY_COUNTS['数列']+1:03d}")
         with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit):
             review_main(args + ["--apply"])
 
@@ -339,12 +339,12 @@ class RoutineMatchingTests(unittest.TestCase):
             self.assertEqual(confirmed.status_code, 200, confirmed.text)
             self.assertFalse(confirmed.json()["formal_pattern_created"])
             self.assertEqual(client.get("/routine-matching/reviews").json()["total"], 0)
-            self.assertEqual(len(client.get("/routine-matching/catalog").json()["catalog"]["routines"]), 289)
+            self.assertEqual(len(client.get("/routine-matching/catalog").json()["catalog"]["routines"]), len(self.catalog["routines"])+1)
             with patch.object(api, "get_ai_caller", side_effect=AssertionError("人工确认后无需 AI")):
                 again = client.post("/routine-matching/match", json=self.item)
             self.assertEqual(again.status_code, 200, again.text)
             self.assertTrue(again.json()["human_decision_applied"])
-            self.assertEqual(again.json()["classification"]["primary_routine_id"], "SEQ-025")
+            self.assertEqual(again.json()["classification"]["primary_routine_id"], f"SEQ-{rc.CATEGORY_COUNTS['数列']+1:03d}")
 
     def test_api_pure_match_without_queue_writes_and_sanitized_failure(self):
         with self.client() as client, patch.object(api, "get_ai_caller", return_value=self.fake_novel):
