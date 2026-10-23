@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="/auth.css?v=20261009a">
     <script src="/auth.js?v=20261014"></script>
     <script src="/login.js?v=20261014" defer></script>
-    <style>.login-choice[hidden]{display:none!important}.login-options{grid-template-columns:repeat(2,minmax(0,1fr))}@media(max-width:650px){.login-options{grid-template-columns:1fr}}</style>
+    <style>.login-choice[hidden]{display:none!important}.login-options{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}@media(max-width:650px){.login-options{grid-template-columns:1fr}}</style>
 </head>
 <body class="login-body">
     <main class="login-shell">
@@ -25,7 +25,7 @@
                 <p>浏览题库、已有解析与组卷。</p>
                 <button class="auth-button" type="button" id="guest-login">游客登录</button>
             </article>
-            <article class="login-choice featured" hidden>
+            <article class="login-choice featured">
                 <div class="choice-icon" aria-hidden="true">＋</div>
                 <h2>创建账号</h2>
                 <p>邮箱验证，保存个人题库与进度。<br>使用你自己的 DeepSeek API Key。</p>
@@ -33,7 +33,7 @@
             </article>
             <article class="login-choice">
                 <div class="choice-icon" aria-hidden="true">↗</div>
-                <h2>开发者登录</h2>
+                <h2>账号登录</h2>
                 <p>继续上一次的学习。<br>题目、错因和复习安排都在这里。</p>
                 <button class="auth-button" type="button" id="open-login">登录账号 →</button>
             </article>

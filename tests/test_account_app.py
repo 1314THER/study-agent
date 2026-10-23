@@ -142,7 +142,7 @@ class AccountAppTests(unittest.TestCase):
     def test_startup_and_three_choices_do_not_create_guest(self):
         page = self.client.get("/")
         self.assertEqual(page.status_code, 200)
-        for choice in ("游客登录", "开发者登录"):
+        for choice in ("游客登录", "创建账号", "账号登录"):
             self.assertIn(choice, page.text)
         self.assertFalse(self.guest_store.sessions)
         self.assertFalse(self.client.get("/auth/me").json()["authenticated"])

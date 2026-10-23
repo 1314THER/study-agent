@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="zh-CN" style="height:100%">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>学生分析 - 数学最强大脑</title>
+  <link rel="stylesheet" href="/style.css?v=20260731l">
+  <link rel="stylesheet" href="/student-analysis.css?v=20261015a">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="/auth.js?v=20261014"></script>
+  <script src="/jobs.js?v=20261015a"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+</head>
+<body class="theme-liangliang student-analysis-page">
+  <div class="app-layout">
+    <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
+    <aside class="sidebar"><button class="nav-expand-toggle" onclick="toggleNavExpand()" title="展开导航" aria-label="展开导航">☰</button><nav></nav></aside>
+    <main class="main-content">
+      <div class="container sa-shell">
+        <header class="sa-heading">
+          <div>
+            <div class="sa-kicker">跨卷证据 · 学习建议</div>
+            <h1>学生分析</h1>
+            <p class="subtitle">从已核对的试卷和学生作答出发。每条结论都能回到原题、作答和评分依据。</p>
+          </div>
+          <a class="sa-button sa-button-secondary" href="/exam-analysis.html">整卷分析</a>
+        </header>
+
+        <section class="sa-intake" aria-labelledby="intakeTitle">
+          <div class="sa-section-head"><span class="sa-index">01</span><div><h2 id="intakeTitle">记录一次考试</h2><p>先选择已完成核对的试卷，再上传整份答卷；也可以先建档后逐题补录。</p></div></div>
+          <div class="sa-form-grid">
+            <label class="sa-span-two">已核对试卷<select id="examSelect"><option value="">读取试卷中…</option></select></label>
+            <label>考试日期<input id="examDate" type="date"></label>
+            <label>考试限时（分钟）<input id="timeLimit" type="number" min="1" max="1000" placeholder="可不填"></label>
+            <label>作答类型<select id="attemptType"><option value="first">首次独立作答</option><option value="retake">重做／复测</option></select></label>
+            <label class="sa-check-field"><input id="viewedAnswer" type="checkbox"><span>作答前看过答案</span></label>
+            <label class="sa-span-two">记录名称<input id="attemptTitle" maxlength="150" placeholder="默认使用试卷名称"></label>
+          </div>
+          <label class="sa-file-picker"><span class="sa-file-symbol" aria-hidden="true">＋</span><span><strong>添加答卷 PDF 或页面图片</strong><small>PDF 或 JPG / PNG；多张图片按页面顺序选择，最多 30 个文件。</small></span><input id="answerFiles" type="file" accept=".pdf,.jpg,.jpeg,.png" multiple></label>
+          <div id="selectedFiles" class="sa-selected-files" aria-live="polite">尚未选择答卷文件，可创建记录后手动录入。</div>
+          <div class="sa-actions"><span id="intakeStatus" class="sa-status-text" role="status">首版仅使用当前工作区的学生记录。</span><button id="createAttempt" class="sa-button sa-button-primary" type="button">建立考试记录</button></div>
+        </section>
+
+        <section class="sa-workspace" aria-label="考试记录与作答审核">
+          <aside class="sa-rail">
+            <section class="sa-rail-section">
+              <div class="sa-rail-head"><span class="sa-index">02</span><div><h2>考试记录</h2><span id="attemptCount" class="sa-muted">最近考试</span></div></div>
+              <div id="attemptList" class="sa-list"><p class="sa-muted">正在读取记录…</p></div>
+            </section>
+            <section class="sa-rail-section sa-report-history">
+              <div class="sa-rail-head"><span class="sa-index">03</span><div><h2>报告版本</h2><span class="sa-muted">输入修订后旧报告标记过期</span></div></div>
+              <div id="reportList" class="sa-list"><p class="sa-muted">暂无报告。</p></div>
+            </section>
+          </aside>
+          <section id="attemptPanel" class="sa-main-panel" aria-live="polite">
+            <div class="sa-empty"><span>Q / EVIDENCE</span><h2>从一份已核对的试卷开始</h2><p>识别内容会先作为草稿保存。只有你确认题号、原文和空白状态后，才会进入批改。</p></div>
+          </section>
+        </section>
+
+        <section class="sa-report-wrap">
+          <div class="sa-report-toolbar"><div><div class="sa-kicker">MULTI-EXAM REPORT</div><h2>跨卷学情报告</h2><p>默认比较最近五次已确认考试，也可在左侧勾选其他范围。</p></div><div class="sa-report-controls"><label for="reportLimit">最近</label><select id="reportLimit"><option value="3">3 次</option><option value="5" selected>5 次</option><option value="10">10 次</option><option value="20">20 次</option></select><button id="createReport" class="sa-button sa-button-primary" type="button">生成报告</button></div></div>
+          <div id="reportPanel" class="sa-report-panel"><div class="sa-empty sa-empty-compact"><h3>尚无跨卷报告</h3><p>完成至少一份考试记录后，可以生成当前学生的单卷与跨卷证据报告。</p></div></div>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script src="/nav.js?v=20261015a"></script>
+  <script src="/student-analysis.js?v=20261015a"></script>
+</body>
+</html>

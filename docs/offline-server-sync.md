@@ -26,7 +26,7 @@
 ## 1. 在 Mac 终端定位新版包
 
 ```bash
-open -R /Users/sqz/Desktop/git/.runtime/server-sync/study-agent-c9a8d37-py314-offline.tar.gz
+open -R /Users/sqz/Desktop/study-agent/.runtime/server-sync/study-agent-c9a8d37-py314-offline.tar.gz
 ```
 
 ## 2. 用 Workbench 上传

@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="zh-CN" style="height:100%;">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+  <title>整卷分析 - 数学最强大脑</title>
+  <link rel="stylesheet" href="/style.css?v=20260731l">
+  <link rel="stylesheet" href="/exam-analysis.css?v=20261015a">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+  <script src="/auth.js?v=20261014"></script>
+  <script src="/jobs.js?v=20261015a"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"></script>
+  <script>document.documentElement.classList.add('nav-init');</script>
+</head>
+<body class="theme-liangliang exam-analysis-page">
+  <div class="app-layout">
+    <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
+    <aside class="sidebar"><button class="nav-expand-toggle" onclick="toggleNavExpand()" title="展开导航" aria-label="展开导航">☰</button><nav></nav></aside>
+    <main class="main-content">
+      <div class="container ea-shell">
+        <header class="ea-heading">
+          <div>
+            <div class="ea-kicker">整卷蓝图 · 题位分析</div>
+            <h1>整卷分析</h1>
+            <p class="subtitle">逐题核对原题与页码，再按解答难度和知识／套路属性覆盖生成报告。</p>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+            <a class="ea-button ea-button-secondary" href="/student-analysis.html">查看学生表现</a>
+            <button class="ea-button ea-button-secondary" id="newAnalysisButton" type="button">＋ 新分析</button>
+          </div>
+        </header>
+
+        <section class="ea-upload-panel" id="uploadPanel" aria-labelledby="uploadTitle">
+          <div class="ea-section-heading"><div><span class="ea-index">01</span><h2 id="uploadTitle">建立一份分析</h2></div><span class="ea-small-note">上传后先识别题号与跨页关系，确认后才开始解题。</span></div>
+          <div class="ea-config-row">
+            <label>分析模板<select id="templateSelect"></select></label>
+            <label>解答老师<select id="teacherSelect"></select></label>
+            <label class="ea-title-field">试卷名称<input id="analysisTitle" maxlength="150" placeholder="例如：2026 年校内模拟卷"></label>
+          </div>
+          <div class="ea-knowledge-select" id="knowledgeSelect" hidden>
+            <div class="ea-knowledge-head"><strong>本课知识点</strong><span>新课模板需要至少选择一个二级知识点</span></div>
+            <div class="ea-knowledge-options" id="knowledgeOptions"></div>
+          </div>
+          <div class="ea-dropzone" id="dropzone" tabindex="0" role="button" aria-label="选择试卷 PDF 或图片">
+            <div class="ea-paper-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+            <strong>拖入一份 PDF，或按顺序选择多张页面图片</strong>
+            <span>PDF 或 JPG / PNG；图片顺序可在下方调整</span>
+            <button type="button" class="ea-button" id="chooseFilesButton">选择文件</button>
+            <input id="fileInput" type="file" accept=".pdf,.jpg,.jpeg,.png" multiple hidden>
+          </div>
+          <ol class="ea-file-list" id="fileList" aria-label="上传文件顺序"></ol>
+          <div class="ea-upload-actions">
+            <span id="uploadHint" class="ea-small-note" role="status">选一份 PDF 或按页面顺序选择图片。</span>
+            <button class="ea-button ea-button-primary" id="uploadButton" type="button" disabled>上传并识别</button>
+          </div>
+          <details class="ea-template-editor" id="templateEditor" hidden>
+            <summary>管理员：编辑并发布模板版本</summary>
+            <p>保存会产生新版本；既有报告保留创建时的模板快照。</p>
+            <textarea id="templateJson" spellcheck="false" aria-label="模板 JSON"></textarea>
+            <button class="ea-button ea-button-secondary" id="saveTemplateButton" type="button">保存模板版本</button>
+            <span id="templateSaveStatus" role="status"></span>
+          </details>
+        </section>
+
+        <section class="ea-workspace" aria-label="分析记录和报告">
+          <aside class="ea-history-panel">
+            <div class="ea-history-title"><span class="ea-index">02</span><h2>分析记录</h2></div>
+            <div id="historyList" class="ea-history-list"><p class="ea-muted">正在读取记录…</p></div>
+          </aside>
+          <section class="ea-report-panel" id="reportPanel" aria-live="polite">
+            <div class="ea-empty-report"><span class="ea-empty-glyph">01—19</span><h2>逐题看清这张卷子</h2><p>选择历史记录，或从上方上传试卷开始。</p></div>
+          </section>
+        </section>
+      </div>
+    </main>
+  </div>
+  <script src="/nav.js?v=20261015a"></script>
+  <script src="/exam-analysis.js?v=20261015a"></script>
+</body>
+</html>

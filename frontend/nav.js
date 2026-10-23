@@ -35,11 +35,14 @@
         ['multimodal','multimodal.html','多模态解答','📎'],
         ['teach','teach.html','老师手把手教你做题','📖'],
         ['exam','exam.html','组卷','📝'],
+        ['exam-analysis','exam-analysis.html','整卷分析','📊'],
+        ['student-analysis','student-analysis.html','学生分析','📈'],
         ['history','history.html','个人题库','📋'],
         ['mother','mother.html','母题看板','🧠'],
         ['question-pool','question-pool.html','原题池','🗂️',true],
         ['routine-review','routine-review.html','套路审核','📝',true],
         ['routine-graph','routine-graph.html','套路图谱','🕸️',true],
+        ['curriculum-wiki','curriculum-wiki.html','数学课时库','📚',true],
         ['loop','loop.html','套路循环','🔄'],
         ['calendar','calendar.html','巩固日历','📅'],
         ['board','board.html','闯关','🗺️'],
@@ -84,6 +87,7 @@
     }
 
     function loadAgent() {
+        if (window.STUDY_DISABLE_AGENT) return;
         if (window.AgentGlobal || document.getElementById('agentScript')) return;
         var s = document.createElement('script');
         s.id = 'agentScript';

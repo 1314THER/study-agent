@@ -4,12 +4,13 @@
   if (window.StudyJobs) return;
   var nativeFetch = window.fetch.bind(window), jobs = new Map(), waiters = new Map();
   var timer, polling = false, uploads = 0, pendingNavigation = null;
-  var titles = {solve:'题目解答',teach_start:'教学准备',teach_chat:'教学对话',teach_check:'步骤检查',teach_ack:'教学进度',teach_finish:'教学记录',generate:'仿题生成',grade:'AI 批改',parse_file:'文件识别',ocr_file:'手写识别',batch_solve:'批量解题',agent:'AI 教练',pattern_check:'套路检查',pattern_variants:'变式生成',provider_test:'连接测试',pool_prepare:'原题解析准备',pool_import:'原题来源采集',pool_collect:'在线找题',routine_match:'全量套路匹配'};
+  var titles = {solve:'题目解答',teach_start:'教学准备',teach_chat:'教学对话',teach_check:'步骤检查',teach_ack:'教学进度',teach_finish:'教学记录',generate:'仿题生成',grade:'AI 批改',parse_file:'文件识别',ocr_file:'手写识别',batch_solve:'批量解题',agent:'AI 教练',pattern_check:'套路检查',pattern_variants:'变式生成',provider_test:'连接测试',pool_prepare:'原题解析准备',pool_import:'原题来源采集',pool_collect:'在线找题',routine_match:'全量套路匹配',exam_extract:'整卷切题识别',exam_solve:'整卷逐题解答'};
+  titles.curriculum_research='课时资料整理';
   function uuid() { return window.crypto && crypto.randomUUID ? crypto.randomUUID() : Date.now().toString(36)+'-'+Math.random().toString(36).slice(2); }
   function read(key) { try{return JSON.parse(localStorage.getItem('study_job_'+key)||'null');}catch(e){return null;} }
   function write(key,value) { try{localStorage.setItem('study_job_'+key,JSON.stringify(value));}catch(e){} }
   function emit(name,j) { document.dispatchEvent(new CustomEvent(name,{detail:j}));document.dispatchEvent(new CustomEvent('study:job-update',{detail:{job:j,type:j.kind,id:j.job_id}})); }
-  function terminal(j) { return ['done','error','interrupted'].includes(j.status); }
+  function terminal(j) { return ['done','error','interrupted','cancelled'].includes(j.status); }
   function errorFor(j) { var e=new Error(typeof j.error==='string'?j.error:(j.error&&j.error.detail)||j.detail||'任务未完成');e.job=j;return e; }
   async function api(url,options) { var r=await nativeFetch(url,options);var d=await r.json();if(!r.ok){throw new Error(d.detail||d.error||('HTTP '+r.status));}return d; }
   function publish(j) {
@@ -85,7 +86,7 @@
     if(!values.length)list.appendChild(node('p','暂时没有任务。启动 AI 操作后，可以在任何页面查看进度。'));
     values.slice(0,60).forEach(function(j){
       var row=node('article',undefined,'study-job-row');row.appendChild(node('strong',titles[j.kind]||j.kind));
-      var status={queued:'等待执行',running:'进行中',done:'完成',error:'失败',interrupted:'服务重启，任务已中断'}[j.status]||j.status;
+      var status={queued:'等待执行',running:'进行中',done:'完成',error:'失败',interrupted:'服务重启，任务已中断',cancelled:'已停止'}[j.status]||j.status;
       row.appendChild(node('span',status,'study-job-state '+j.status));
       row.appendChild(node('p',j.detail||j.stage||''));
       if(j.args&&j.args.question)row.appendChild(node('p',j.args.question.slice(0,120),'study-job-question'));
@@ -125,8 +126,13 @@
         reviewLink.href='routine-review.html?run='+encodeURIComponent(j.args&&j.args.run_id||j.result&&j.result.run_id||'');
         target.appendChild(reviewLink);
       }
-      if(j.status==='done'&&['solve','teach_start','teach_chat','teach_ack','grade','parse_file','ocr_file','batch_solve','pool_prepare','pool_import'].includes(j.kind)){
-        var page={solve:'index.html',teach_start:'teach.html',teach_chat:'teach.html',teach_ack:'teach.html',grade:'grade.html',parse_file:'multimodal.html',ocr_file:'teach.html',batch_solve:'multimodal.html',pool_prepare:'question-pool.html',pool_import:'question-pool.html'}[j.kind];
+      if(j.kind==='curriculum_research'){
+        var curriculumLink=node('a','打开课时整理建议');
+        curriculumLink.href='curriculum-wiki.html?panel=tasks';
+        target.appendChild(curriculumLink);
+      }
+      if(j.status==='done'&&['solve','teach_start','teach_chat','teach_ack','grade','parse_file','ocr_file','batch_solve','pool_prepare','pool_import','exam_extract','exam_solve'].includes(j.kind)){
+        var page={solve:'index.html',teach_start:'teach.html',teach_chat:'teach.html',teach_ack:'teach.html',grade:'grade.html',parse_file:'multimodal.html',ocr_file:'teach.html',batch_solve:'multimodal.html',pool_prepare:'question-pool.html',pool_import:'question-pool.html',exam_extract:'exam-analysis.html',exam_solve:'exam-analysis.html'}[j.kind];
         if(j.kind==='solve'&&(window.STUDY_DEMO||j.args&&j.args.client_page==='multimodal'))page='multimodal.html';
         if(j.kind==='grade'&&j.args&&j.args.loop)page='loop.html?pattern_id='+encodeURIComponent(j.args.loop.pattern_id);
         if(j.kind==='ocr_file'){var route=read('route:'+j.job_id);if(route&&['grade.html','teach.html'].includes(route.page))page=route.page;}

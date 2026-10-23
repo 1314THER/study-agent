@@ -34,7 +34,7 @@
 在 Mac 查看本轮变更并提交、推送后，运行以下命令取得新的完整 SHA：
 
 ```bash
-cd /Users/sqz/Desktop/git
+cd /Users/sqz/Desktop/study-agent
 git status --short
 git diff --stat
 git rev-parse HEAD

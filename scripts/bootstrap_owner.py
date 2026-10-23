@@ -29,7 +29,13 @@ def main():
     api_key = getpass("DeepSeek API Key：") if args.set_api_key else None
     from backend.auth import AccountStore, AuthError
     try:
-        store = AccountStore(args.root, args.owner_directory)
+        if os.environ.get("STUDY_DATABASE_URL"):
+            from backend.storage.database import Database
+            from backend.storage.accounts import CloudAccountStore
+            cloud_root = Path(os.environ.get("STUDY_CLOUD_ROOT") or ROOT / ".cloud")
+            store = CloudAccountStore(Database(), cloud_root)
+        else:
+            store = AccountStore(args.root, args.owner_directory)
         store.bootstrap_owner(password, email=args.email, api_key=api_key, replace_password=args.reset_password)
     except (AuthError, RuntimeError) as exc:
         print(str(exc), file=sys.stderr)

@@ -71,11 +71,12 @@
     auth.ready.then(function (state) {
         var config = state.config || {};
         registrationEnabled = !!config.registration_enabled;
+        if (config.guest_enabled === false) document.getElementById('guest-login').closest('.login-choice').hidden = true;
         var registerForm = document.getElementById('register-form');
         registerForm.querySelectorAll('button').forEach(function (button) { button.disabled = !registrationEnabled; });
         if (!registrationEnabled) {
             var note = document.getElementById('registration-note'); note.hidden = false;
-            note.textContent = '管理员尚未启用邮箱验证码服务。现在可以使用游客体验；已注册的账号可以正常登录。';
+            note.textContent = config.guest_enabled === false ? '管理员尚未启用邮箱验证码服务，请使用已有账号登录。' : '管理员尚未启用邮箱验证码服务。现在可以使用游客体验；已注册的账号可以正常登录。';
         }
         if (state.error && state.error.status !== 404) showMessage('暂时无法连接账号服务，请稍后重试。', true);
         if (state.authenticated && state.enabled && state.user && state.user.role !== 'guest') {

@@ -108,6 +108,23 @@ class JobsTest(unittest.TestCase):
             time.sleep(0.005)
         self.assertFalse(self.manager.runtimes)
 
+    def test_active_job_can_be_cancelled_without_late_result_overwrite(self):
+        started, release = threading.Event(), threading.Event()
+        def run(args, ctx):
+            started.set()
+            release.wait(2)
+            return {"should_not_publish": True}
+        self.manager.runners = {"solve": run}
+        submitted = self.manager.submit("solve", {"question": "1+1?"}, "cancel-job-0001")
+        self.assertTrue(started.wait(2))
+        self.assertTrue(self.manager.cancel(submitted["job_id"]))
+        self.assertEqual(self.manager.get(submitted["job_id"])["status"], "cancelled")
+        release.set()
+        self.drain()
+        result = self.manager.get(submitted["job_id"])
+        self.assertEqual(result["status"], "cancelled")
+        self.assertIsNone(result["result"])
+
     def test_navigation_resume_context_lease_and_workspace_access(self):
         started, finish, released = threading.Event(), threading.Event(), threading.Event()
         count = []

@@ -43,6 +43,32 @@ def store_image(data):
         image.convert("RGB").save(output, format="PNG")
     content = output.getvalue()
     name = sha256(content).hexdigest() + ".png"
+    from backend.storage.database import current_repository
+    repo = current_repository()
+    if repo is not None:
+        from backend.identity import current_user_id
+        from backend.storage import models as m
+        from sqlalchemy import select
+        import time
+        with repo.db.transaction() as conn:
+            existing = conn.execute(select(m.assets.c.id).where(repo.visible(m.assets), m.assets.c.sha256 == sha256(content).hexdigest())).scalar()
+        if existing:
+            return existing
+        asset_id = str(uuid.uuid4())
+        key = current_user_id() + "/" + asset_id + ".png"
+        target = repo.asset_root / key
+        target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+        with target.open("xb") as stream:
+            target.chmod(0o600)
+            stream.write(content)
+        try:
+            repo.save_asset(id=asset_id, owner_user_id=current_user_id(), storage_key=key,
+                sha256=sha256(content).hexdigest(), filename=name, media_type="image/png", size=len(content), created_at=time.time())
+            repo.alias("assets", name, asset_id)
+        except Exception:
+            target.unlink(missing_ok=True)
+            raise
+        return asset_id
     root = asset_root()
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
     target = root / name
@@ -63,6 +89,17 @@ def store_image(data):
 
 
 def resolve_asset(name):
+    from backend.storage.database import current_repository
+    repo = current_repository()
+    if repo is not None:
+        try:
+            asset = repo.legacy_asset(name) if isinstance(name, str) and _ID.fullmatch(name) else repo.asset(str(uuid.UUID(name)))
+            target = (repo.asset_root / asset["storage_key"]).resolve()
+            if not target.is_relative_to(repo.asset_root.resolve()) or not target.is_file():
+                raise ValueError("题图不存在")
+            return target
+        except (HTTPException, ValueError, TypeError, AttributeError):
+            raise ValueError("题图不存在或无权访问")
     if not isinstance(name, str) or not _ID.fullmatch(name):
         raise ValueError("题图编号无效")
     target = asset_root() / name

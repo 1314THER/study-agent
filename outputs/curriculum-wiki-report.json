@@ -1,0 +1,4091 @@
+{
+  "overview": {
+    "revision": 520,
+    "seed_version": "rja2019-20261024-v1",
+    "books": [
+      {
+        "id": "b1",
+        "kind": "book",
+        "title": "必修第一册",
+        "book_id": "",
+        "section_id": "",
+        "category": "",
+        "position": 1.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "course": "必修",
+          "edition": "人教A版2019教材体系",
+          "source_id": "source:b1"
+        }
+      },
+      {
+        "id": "b2",
+        "kind": "book",
+        "title": "必修第二册",
+        "book_id": "",
+        "section_id": "",
+        "category": "",
+        "position": 2.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "course": "必修",
+          "edition": "人教A版2019教材体系",
+          "source_id": "source:b2"
+        }
+      },
+      {
+        "id": "s1",
+        "kind": "book",
+        "title": "选择性必修第一册",
+        "book_id": "",
+        "section_id": "",
+        "category": "",
+        "position": 3.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "course": "选择性必修",
+          "edition": "人教A版2019教材体系",
+          "source_id": "source:s1"
+        }
+      },
+      {
+        "id": "s2",
+        "kind": "book",
+        "title": "选择性必修第二册",
+        "book_id": "",
+        "section_id": "",
+        "category": "",
+        "position": 4.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "course": "选择性必修",
+          "edition": "人教A版2019教材体系",
+          "source_id": "source:s2"
+        }
+      },
+      {
+        "id": "s3",
+        "kind": "book",
+        "title": "选择性必修第三册",
+        "book_id": "",
+        "section_id": "",
+        "category": "",
+        "position": 5.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "course": "选择性必修",
+          "edition": "人教A版2019教材体系",
+          "source_id": "source:s3"
+        }
+      }
+    ],
+    "chapters": [
+      {
+        "id": "b1:ch:1",
+        "kind": "chapter",
+        "title": "集合与常用逻辑用语",
+        "book_id": "b1",
+        "section_id": "",
+        "category": "",
+        "position": 1.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "1"
+        }
+      },
+      {
+        "id": "b1:ch:2",
+        "kind": "chapter",
+        "title": "一元二次函数、方程和不等式",
+        "book_id": "b1",
+        "section_id": "",
+        "category": "",
+        "position": 2.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "2"
+        }
+      },
+      {
+        "id": "b1:ch:3",
+        "kind": "chapter",
+        "title": "函数的概念与性质",
+        "book_id": "b1",
+        "section_id": "",
+        "category": "",
+        "position": 3.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "3"
+        }
+      },
+      {
+        "id": "b1:ch:4",
+        "kind": "chapter",
+        "title": "指数函数与对数函数",
+        "book_id": "b1",
+        "section_id": "",
+        "category": "",
+        "position": 4.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "4"
+        }
+      },
+      {
+        "id": "b1:ch:5",
+        "kind": "chapter",
+        "title": "三角函数",
+        "book_id": "b1",
+        "section_id": "",
+        "category": "",
+        "position": 5.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "5"
+        }
+      },
+      {
+        "id": "b2:ch:10",
+        "kind": "chapter",
+        "title": "概率",
+        "book_id": "b2",
+        "section_id": "",
+        "category": "",
+        "position": 10.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "10"
+        }
+      },
+      {
+        "id": "b2:ch:6",
+        "kind": "chapter",
+        "title": "平面向量及其应用",
+        "book_id": "b2",
+        "section_id": "",
+        "category": "",
+        "position": 6.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "6"
+        }
+      },
+      {
+        "id": "b2:ch:7",
+        "kind": "chapter",
+        "title": "复数",
+        "book_id": "b2",
+        "section_id": "",
+        "category": "",
+        "position": 7.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "7"
+        }
+      },
+      {
+        "id": "b2:ch:8",
+        "kind": "chapter",
+        "title": "立体几何初步",
+        "book_id": "b2",
+        "section_id": "",
+        "category": "",
+        "position": 8.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "8"
+        }
+      },
+      {
+        "id": "b2:ch:9",
+        "kind": "chapter",
+        "title": "统计",
+        "book_id": "b2",
+        "section_id": "",
+        "category": "",
+        "position": 9.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "9"
+        }
+      },
+      {
+        "id": "s1:ch:1",
+        "kind": "chapter",
+        "title": "空间向量与立体几何",
+        "book_id": "s1",
+        "section_id": "",
+        "category": "",
+        "position": 1.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "1"
+        }
+      },
+      {
+        "id": "s1:ch:2",
+        "kind": "chapter",
+        "title": "直线和圆的方程",
+        "book_id": "s1",
+        "section_id": "",
+        "category": "",
+        "position": 2.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "2"
+        }
+      },
+      {
+        "id": "s1:ch:3",
+        "kind": "chapter",
+        "title": "圆锥曲线的方程",
+        "book_id": "s1",
+        "section_id": "",
+        "category": "",
+        "position": 3.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "3"
+        }
+      },
+      {
+        "id": "s2:ch:4",
+        "kind": "chapter",
+        "title": "数列",
+        "book_id": "s2",
+        "section_id": "",
+        "category": "",
+        "position": 4.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "4"
+        }
+      },
+      {
+        "id": "s2:ch:5",
+        "kind": "chapter",
+        "title": "一元函数的导数及其应用",
+        "book_id": "s2",
+        "section_id": "",
+        "category": "",
+        "position": 5.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "5"
+        }
+      },
+      {
+        "id": "s3:ch:6",
+        "kind": "chapter",
+        "title": "计数原理",
+        "book_id": "s3",
+        "section_id": "",
+        "category": "",
+        "position": 6.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "6"
+        }
+      },
+      {
+        "id": "s3:ch:7",
+        "kind": "chapter",
+        "title": "随机变量及其分布",
+        "book_id": "s3",
+        "section_id": "",
+        "category": "",
+        "position": 7.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "7"
+        }
+      },
+      {
+        "id": "s3:ch:8",
+        "kind": "chapter",
+        "title": "成对数据的统计分析",
+        "book_id": "s3",
+        "section_id": "",
+        "category": "",
+        "position": 8.0,
+        "status": "draft",
+        "active": true,
+        "revision": 0,
+        "data": {
+          "code": "8"
+        }
+      }
+    ],
+    "counts": {
+      "lessons": 329,
+      "knowledge": 174,
+      "solutions": 234,
+      "routines": 288
+    },
+    "coverage": {
+      "textbook": {
+        "covered": 163,
+        "total": 163,
+        "label": "目录节点已安排课时；不代表已人工审核",
+        "verified": 163
+      },
+      "workbooks": [
+        {
+          "id": "source:53",
+          "title": "五年高考三年模拟",
+          "applicable_textbook": "人教A版2019；具体版本待核",
+          "edition": null,
+          "gap": "具体册次、版次、ISBN、目录及题目页码需从原书或试读核实。",
+          "isbn": null,
+          "read_units": 0,
+          "reading_status": "entry_only",
+          "role": "高考复习",
+          "scope": "仅取得官方入口或系列介绍，未计为逐题读取",
+          "source_type": "workbook",
+          "total_units": null,
+          "url": "https://mobile.quyixian.com/ProductManual/"
+        },
+        {
+          "id": "source:jcb",
+          "title": "教材帮",
+          "applicable_textbook": "人教A版2019；具体版本待核",
+          "edition": null,
+          "gap": "具体册次、版次、ISBN、目录及题目页码需从原书或试读核实。",
+          "isbn": null,
+          "read_units": 0,
+          "reading_status": "entry_only",
+          "role": "同步讲解",
+          "scope": "仅取得官方入口或系列介绍，未计为逐题读取",
+          "source_type": "workbook",
+          "total_units": null,
+          "url": "https://www.tesoon.com/customize/ebook"
+        },
+        {
+          "id": "source:jtjx",
+          "title": "解题觉醒",
+          "applicable_textbook": "人教A版2019；具体版本待核",
+          "edition": null,
+          "gap": "具体册次、版次、ISBN、目录及题目页码需从原书或试读核实。",
+          "isbn": null,
+          "read_units": 0,
+          "reading_status": "entry_only",
+          "role": "方法专题",
+          "scope": "仅取得官方入口或系列介绍，未计为逐题读取",
+          "source_type": "workbook",
+          "total_units": null,
+          "url": "https://www.tesoon.com/articles/detail?id=180886"
+        },
+        {
+          "id": "source:ybg",
+          "title": "一遍过·数学必修第一册RJA（26版官方40页试读）",
+          "applicable_textbook": "人教A版2019；具体版本待核",
+          "edition": "26版（2025—2026学年）",
+          "excerpts": [
+            {
+              "locator": "试读第9页，印刷第1页",
+              "text": "第一节 集合的概念；知识点1 集合的概念与元素的特性；知识点2 元素与集合的关系；知识点3 集合的表示方法。",
+              "verification": "visually_checked"
+            }
+          ],
+          "gap": "其余试读题页、答案册及全书正文尚未逐题核查，ISBN未取得。",
+          "isbn": null,
+          "pool_source_id": 62,
+          "publisher": "南京师范大学出版社",
+          "read_units": 5,
+          "reading_status": "partial",
+          "role": "同步训练",
+          "scope": "官方40页试读包，已目视核对封面、若干目录页及印刷第1页（试读第9页）；录入6题。分母不是全书页数。",
+          "source_type": "workbook",
+          "total_units": 40,
+          "url": "https://book.yunzhan365.com/pqks/jrhh/mobile/index.html"
+        }
+      ],
+      "matching": {
+        "mapped": 233,
+        "total": 234,
+        "label": "仅统计已关联题目解法，不代表原题池或教辅全量"
+      },
+      "human": {
+        "confirmed": 0,
+        "total": 563
+      }
+    },
+    "routine_gaps": [
+      {
+        "id": "routine:EXP-015",
+        "title": "耐克函数最值：均值取等",
+        "reason": "尚无足够课程关联证据，等待人工指定。"
+      },
+      {
+        "id": "routine:FUNC-014",
+        "title": "抽象函数周期：关系迭代",
+        "reason": "尚无足够课程关联证据，等待人工指定。"
+      },
+      {
+        "id": "routine:FUNC-031",
+        "title": "不等式证明：切线界放缩",
+        "reason": "尚无足够课程关联证据，等待人工指定。"
+      },
+      {
+        "id": "routine:GEO-036",
+        "title": "四点共圆：角度与圆幂条件",
+        "reason": "尚无足够课程关联证据，等待人工指定。"
+      },
+      {
+        "id": "routine:INEQ-008",
+        "title": "齐次不等式：比例换元降维",
+        "reason": "尚无足够课程关联证据，等待人工指定。"
+      },
+      {
+        "id": "routine:INEQ-010",
+        "title": "对称不等式：和积换元",
+        "reason": "尚无足够课程关联证据，等待人工指定。"
+      },
+      {
+        "id": "routine:INEQ-013",
+        "title": "高次分式不等式：穿根法判号",
+        "reason": "尚无足够课程关联证据，等待人工指定。"
+      },
+      {
+        "id": "routine:INEQ-016",
+        "title": "含参恒成立：分离参数求界",
+        "reason": "尚无足够课程关联证据，等待人工指定。"
+      },
+      {
+        "id": "routine:QUAD-011",
+        "title": "韦达求值：根的对称式化简",
+        "reason": "尚无足够课程关联证据，等待人工指定。"
+      },
+      {
+        "id": "routine:SET-022",
+        "title": "余数描述集合：整除与包含判定",
+        "reason": "尚无足够课程关联证据，等待人工指定。"
+      },
+      {
+        "id": "routine:TRIG-020",
+        "title": "解三角形两解：SSA高度检验",
+        "reason": "尚无足够课程关联证据，等待人工指定。"
+      },
+      {
+        "id": "routine:TRIG-022",
+        "title": "中线条件：平行四边形恒等式",
+        "reason": "尚无足够课程关联证据，等待人工指定。"
+      },
+      {
+        "id": "routine:TRIG-023",
+        "title": "角平分线条件：分边比例",
+        "reason": "尚无足够课程关联证据，等待人工指定。"
+      },
+      {
+        "id": "routine:TRIG-025",
+        "title": "三角形形状：边角恒等关系",
+        "reason": "尚无足够课程关联证据，等待人工指定。"
+      }
+    ]
+  },
+  "checks": {
+    "revision": 520,
+    "dag_valid": true,
+    "warnings": [
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.3:practice",
+        "solution_id": "solution:e35a8772f45b2bd87b103b9f",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.2:l1",
+        "solution_id": "solution:2ade5d1bad305bbe2d35c409",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:7.2:l1",
+        "solution_id": "solution:2f92e844c6e4b97e4d239383",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.3:practice",
+        "solution_id": "solution:9a1a12d14767e226164ece4e",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:2.3:practice",
+        "solution_id": "solution:1d9af1f8b6f5514f69ad3971",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.2:l1",
+        "solution_id": "solution:b43e4203ff53c8876c4e5320",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.2:l1",
+        "solution_id": "solution:51bf8b9a663cd5f6f18d08c2",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:2.1:l1",
+        "solution_id": "solution:d6fec52ae0cf88fdfa7c0f7f",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:2.4:practice",
+        "solution_id": "solution:32b96573f7ddcdc319f90451",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:2.4:practice",
+        "solution_id": "solution:65efee86828c88b4f2a31560",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.3:practice",
+        "solution_id": "solution:90f62e4fa6d6b72c96d0f0f9",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.3:l3",
+        "solution_id": "solution:5a56d8f41ef76c84add64aa2",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:6.1:l1",
+        "solution_id": "solution:f5c552ada1ca4932d139b421",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.3:practice",
+        "solution_id": "solution:87ecc58f5e71b46f436511c1",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.1:l1",
+        "solution_id": "solution:492bce56fe3b92c61ef0a62f",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:6.3:l1",
+        "solution_id": "solution:ac4eacac61f39e13a38c2e83",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:2.1:l1",
+        "solution_id": "solution:5cad4fdfd9e842e0c937b941",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:6.3:l1",
+        "solution_id": "solution:4f244849b41dcd2e7d909ba0",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.4:l1",
+        "solution_id": "solution:1d5a4a8cbcc755656047c47b",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:7.4:practice",
+        "solution_id": "solution:7fb1d140792f94b31d8dba8e",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.1:l2",
+        "solution_id": "solution:49d6dd2a0b49e811238c8ee8",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:6.3:l1",
+        "solution_id": "solution:7445af2dda2fa663a86970e1",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:2.1:l1",
+        "solution_id": "solution:425a75ec46f26135db17d86c",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.4:l1",
+        "solution_id": "solution:2ff483101ceca0e0d8325720",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:9.2:l2",
+        "solution_id": "solution:7d70a780d7785eba2c6dc28d",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.1:l2",
+        "solution_id": "solution:69f06e4a4465581bee8ac007",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.2:l1",
+        "solution_id": "solution:8d35710b505e8f84dd1e67de",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:2.3:practice",
+        "solution_id": "solution:5a4332285573b2c2748d5971",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.2:l1",
+        "solution_id": "solution:f18e38d405b087ba313e90a8",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "advanced_solution",
+        "lesson_id": "b1:1.1:practice",
+        "solution_id": "solution:262b6011447484568290975d",
+        "missing_knowledge": [
+          "kp:b1:1.2:l1"
+        ],
+        "message": "此解法需要尚未学到或尚无引入课时的知识。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:9.2:l1",
+        "solution_id": "solution:575117a83179409386b7c61f",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:2.3:practice",
+        "solution_id": "solution:ef39dd610e9abbdd6e1ba53b",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.3:practice",
+        "solution_id": "solution:66710201f86d21630a2a7159",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:6.2:l2",
+        "solution_id": "solution:e04b2d7ed4d5c5c05ef36225",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.1:practice",
+        "solution_id": "solution:e7e339a1f66d8592c97fb1f1",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.4:practice",
+        "solution_id": "solution:52b69d60a545985fea11a652",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.2:practice",
+        "solution_id": "solution:e254b682a8af73315ef4596d",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.3:l1",
+        "solution_id": "solution:a3d23dbac2adffc014f00518",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:6.1:l2",
+        "solution_id": "solution:f6a565b946a81ed67f4bc358",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.5:practice",
+        "solution_id": "solution:71ae610ed3dff9140f322090",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:8.3:practice",
+        "solution_id": "solution:6ede58b4131a7c3011546794",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.3:l3",
+        "solution_id": "solution:91dac13b50ecc2ac643e6535",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:7.5:l1",
+        "solution_id": "solution:f0a1969d0f300b3d3a68f119",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.5:practice",
+        "solution_id": "solution:58ad4ea87a1c6bff5e2c26df",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:6.3:practice",
+        "solution_id": "solution:f963f96aa6bb63b9525774b4",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.1:practice",
+        "solution_id": "solution:4476e58b83349825ceb6e310",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.2:l1",
+        "solution_id": "solution:5d9c087bb7de703afce09894",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:8.2:l1",
+        "solution_id": "solution:cff2d456b20778ae05c39f2a",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:8.1:practice",
+        "solution_id": "solution:de02dc9b5735b3a751adb66d",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:7.1:l2",
+        "solution_id": "solution:bb9cb75531c7da7127f404d4",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.2:practice",
+        "solution_id": "solution:3c830205cc1d8ed2f3ec697b",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.2:l2",
+        "solution_id": "solution:b162f36dbc98c750b44ed965",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.3:l1",
+        "solution_id": "solution:cc6a901d448824cacedea2db",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.3:l1",
+        "solution_id": "solution:48f51e64fc22e92e8bfd4e85",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "advanced_solution",
+        "lesson_id": "b1:1.1:practice",
+        "solution_id": "solution:ec277dd002b9c67b15b4df47",
+        "missing_knowledge": [
+          "kp:s1:2.3:l2",
+          "kp:s1:2.5:l1",
+          "kp:b1:1.3:l1"
+        ],
+        "message": "此解法需要尚未学到或尚无引入课时的知识。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.1:l2",
+        "solution_id": "solution:638dde70b0556d50a265ccc2",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:6.2:practice",
+        "solution_id": "solution:ffb89b7cf798af332108397e",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.3:l3",
+        "solution_id": "solution:f362e1abdbbd4d3bc874bca5",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:5.1:practice",
+        "solution_id": "solution:bfa1c8e8742cffad011a4136",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.3:l3",
+        "solution_id": "solution:a1d2ae4d8b92846f62905e8b",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:10.1:l1",
+        "solution_id": "solution:527c7eefda5fc910193795e4",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:1.1:practice",
+        "solution_id": "solution:3d3082d99c412f1ec95e164d",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:2.1:l1",
+        "solution_id": "solution:402ba2b794ebc9e5a57224d5",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.4:practice",
+        "solution_id": "solution:e8d1ff577b0b06d501b7ecd4",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.2:practice",
+        "solution_id": "solution:9b4df26ab300082a9227f8a3",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:4.3:l1",
+        "solution_id": "solution:affa2256f3158a80435117ad",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:7.1:l1",
+        "solution_id": "solution:b8bbb1ac6e9687caee3a63e3",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.2:l1",
+        "solution_id": "solution:3c65fd0a55b12274a8a81921",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.3:l3",
+        "solution_id": "solution:47a241a42c09951cab04264e",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:5.3:l2",
+        "solution_id": "solution:bfc923718fd29ee7c27e02d2",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.1:practice",
+        "solution_id": "solution:a2a9a9e8ad9e6b34654500f4",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.1:practice",
+        "solution_id": "solution:02f785e6da9c7c3b2183e110",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:2.3:practice",
+        "solution_id": "solution:3343a831efc05c161b6a59c0",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:5.1:l1",
+        "solution_id": "solution:d73d6a6dd85969408a60baec",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.1:practice",
+        "solution_id": "solution:bda9238126a4b472a3aade98",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:5.2:l1",
+        "solution_id": "solution:99e5ad67b51f777831f571be",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.2:l2",
+        "solution_id": "solution:e2c7b67d76c10bcac95fb142",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:8.3:practice",
+        "solution_id": "solution:a63b9e887c53c0eeb824e0a8",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:9.1:l1",
+        "solution_id": "solution:4c4725c6770af0af7a695304",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:4.4:practice",
+        "solution_id": "solution:85eea144e76e3a53932feac3",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:6.1:l1",
+        "solution_id": "solution:0fabd3700d92c029a4e82abb",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:7.1:practice",
+        "solution_id": "solution:d768388879840708a6356a55",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.1:l1",
+        "solution_id": "solution:326b0bc4cc793b1bfeb4d14b",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.2:l1",
+        "solution_id": "solution:0c4e3b13b121d92022ebb2b2",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:8.5:practice",
+        "solution_id": "solution:37417cd8863c3246d5d1d74f",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:2.3:practice",
+        "solution_id": "solution:d7fef2d84941311fca4fc169",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:6.4:practice",
+        "solution_id": "solution:97a1ec6fd218d139ac9b33c0",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:4.3:l1",
+        "solution_id": "solution:a037aa53ec6f696841d53fee",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:6.1:practice",
+        "solution_id": "solution:3d7d344d4a920e1d4a51650b",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:8.3:practice",
+        "solution_id": "solution:89e7a3dd96adc61b1ded9ac3",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:2.1:l2",
+        "solution_id": "solution:1e01c80878a487f177a7a13c",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:6.2:l1",
+        "solution_id": "solution:ce96a02789c58ce9b5869f82",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.1:practice",
+        "solution_id": "solution:b51aeb0bf31c96f6a54e7538",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.1:l2",
+        "solution_id": "solution:acbf77f5804e560119897b98",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.2:l2",
+        "solution_id": "solution:d14f55a8e4be5a409b238326",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:2.3:practice",
+        "solution_id": "solution:1e3730481d2e21b8fbbdba35",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:2.3:practice",
+        "solution_id": "solution:b4e0173c5676faf0fac8bcc2",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:4.4:practice",
+        "solution_id": "solution:9bc69619537033cc7f024d93",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:8.6:l1",
+        "solution_id": "solution:59b0e65a27ab7252c163ff8e",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.1:practice",
+        "solution_id": "solution:07d7bb1d59708f75e5b1d27a",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.1:l2",
+        "solution_id": "solution:0f291d6ee55aa3d1e05e2317",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.1:l2",
+        "solution_id": "solution:c9a87ba22b4ad3f60dc49b53",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:8.6:l1",
+        "solution_id": "solution:0a267d61bceb871f18d3d7ec",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.1:l1",
+        "solution_id": "solution:af06752f2d35ba3889646efa",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.2:l1",
+        "solution_id": "solution:f832cfdf07f6d207940df0a4",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:2.2:l2",
+        "solution_id": "solution:cdfbfae6fa17c14fa3118106",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.4:practice",
+        "solution_id": "solution:f78871d7bc7871b285f6dde1",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.3:l3",
+        "solution_id": "solution:25476dade065ed1a0293f1fe",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.6:practice",
+        "solution_id": "solution:63bfb6fa2f9daf7383f75dd0",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:6.2:l2",
+        "solution_id": "solution:665a027555f4b883fcb65c54",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.2:l1",
+        "solution_id": "solution:9b5d39f332df34c19b87e866",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:4.5:l1",
+        "solution_id": "solution:e48533968f51afd585120a22",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:4.4:practice",
+        "solution_id": "solution:2f909e6bf724f25c980246f1",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:8.3:l1",
+        "solution_id": "solution:88cc716ebf4828fdc0b19a52",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "advanced_solution",
+        "lesson_id": "b1:1.2:practice",
+        "solution_id": "solution:2b2dce34822c8081cd93a674",
+        "missing_knowledge": [
+          "kp:s1:2.2:l2"
+        ],
+        "message": "此解法需要尚未学到或尚无引入课时的知识。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.1:practice",
+        "solution_id": "solution:20b34b5202e0ebf90fbd5347",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.3:l3",
+        "solution_id": "solution:49b5bdde32420a53cfb6f87e",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.3:l3",
+        "solution_id": "solution:b1271125634c5eea50467a62",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:8.1:l1",
+        "solution_id": "solution:ad2c230ceb2d53bd2e963c6e",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:2.3:practice",
+        "solution_id": "solution:2ee1349fd61bf1214ad88e25",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.1:practice",
+        "solution_id": "solution:0935d6b0370e69089f117854",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:1.4:l1",
+        "solution_id": "solution:7b9676ec75996b4afc90fdd4",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:8.2:l1",
+        "solution_id": "solution:46801451f1cdddc002aa3050",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.2:l2",
+        "solution_id": "solution:24ee692e993e000300189242",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:9.1:practice",
+        "solution_id": "solution:b73a96f77af204c9af3a4762",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:10.2:practice",
+        "solution_id": "solution:3a8bf70cafcf18100a812789",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:2.1:practice",
+        "solution_id": "solution:8c765d3df03303ea5da28dc8",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.4:l1",
+        "solution_id": "solution:af237a45b1849fee181d126d",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:10.2:l1",
+        "solution_id": "solution:ebb4334451299728bf4ebfb9",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:2.5:practice",
+        "solution_id": "solution:6164d30413400fbf1a419ec1",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:7.1:practice",
+        "solution_id": "solution:9d990a3747470d5608b4d188",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:2.5:practice",
+        "solution_id": "solution:1bc094d61df15ff93a539c3a",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.3:l1",
+        "solution_id": "solution:e2b45cf7a4d7209b47fb8b86",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:2.2:l1",
+        "solution_id": "solution:92a343aed829461ddb0aedc3",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.1:l2",
+        "solution_id": "solution:7e57dfb69d1eeb61f0da5478",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.1:l1",
+        "solution_id": "solution:c58cd45dcd5284549b5d5679",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.3:practice",
+        "solution_id": "solution:c0a240bc92361a13532d8616",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:6.2:practice",
+        "solution_id": "solution:3b2efc0e241579fa126ad9ec",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:7.2:practice",
+        "solution_id": "solution:efa66bed86bc6a8afab3131c",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:7.3:practice",
+        "solution_id": "solution:c754aa9c89a4cfa707799f97",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.1:practice",
+        "solution_id": "solution:6e72b7e71994137c01163b3e",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.3:l3",
+        "solution_id": "solution:d6c758f02d1aa15d54e8edcd",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.3:l1",
+        "solution_id": "solution:eb68d02096c47e3619a7be71",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:4.1:l1",
+        "solution_id": "solution:1810beceee88a4d369ef57fb",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:7.1:practice",
+        "solution_id": "solution:d0108c64ae62e4ddec5d7503",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.1:l3",
+        "solution_id": "solution:93dce82142a78cf54b467897",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.3:l1",
+        "solution_id": "solution:70fdde7c58880ddcb1f62009",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.4:practice",
+        "solution_id": "solution:01dfef4531206b28657aeda4",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:9.1:l1",
+        "solution_id": "solution:e23a980f54dfb779881e86d0",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.2:practice",
+        "solution_id": "solution:a2650e31b1efdfae00b98f8e",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:4.4:l1",
+        "solution_id": "solution:f28edfa62be9744ef5f01ba5",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:7.1:l2",
+        "solution_id": "solution:0748fe18188e16e0e74f7355",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:6.2:practice",
+        "solution_id": "solution:76c22c444d6fc7a9a83f7ba2",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.4:l2",
+        "solution_id": "solution:4ef12d5fe3dad0b21e13c6ae",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:7.1:l1",
+        "solution_id": "solution:85387542b6128a3c49de12a2",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.2:l1",
+        "solution_id": "solution:af2f9ed606f4fc263285582f",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.1:practice",
+        "solution_id": "solution:c80c11f00fbfedc19656b155",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:1.4:l1",
+        "solution_id": "solution:5691c1f8f1d8d018d2265d6d",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.2:l1",
+        "solution_id": "solution:6a5bba7197e48bf4cbbe02e1",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:7.1:l1",
+        "solution_id": "solution:96e01145bbbec52828532648",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.5:l1",
+        "solution_id": "solution:aa587aeb04648ee2dcf10ac6",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.3:l2",
+        "solution_id": "solution:6e5a140bf2f9b143440864c0",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.2:l1",
+        "solution_id": "solution:25f5f770238a5733ab07e199",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:7.4:l1",
+        "solution_id": "solution:d25ea48f8ec7b86fd5b4e570",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.2:l2",
+        "solution_id": "solution:b97e0cc3bff3a24fa0b9940a",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:2.2:l1",
+        "solution_id": "solution:51665a67fc488a78fd364712",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.1:practice",
+        "solution_id": "solution:6515f2975b565252e82e0f1c",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:2.5:practice",
+        "solution_id": "solution:6f251e7bd6f0ac1c9761cd9a",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:6.2:practice",
+        "solution_id": "solution:9c088eb99ad1d3aeec0448b9",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.4:practice",
+        "solution_id": "solution:4e1aea75c12f471cd093a39a",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:8.5:l2",
+        "solution_id": "solution:cb108d6c298cceb516b17ff1",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:8.3:practice",
+        "solution_id": "solution:3d12465b13d4b9988a2cca26",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:6.3:l1",
+        "solution_id": "solution:fbe24bc36f426ae8ba6cf632",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.1:practice",
+        "solution_id": "solution:1ba5e5977e68cd4cf062233d",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.1:practice",
+        "solution_id": "solution:bb4c55a76c741d19ae47257f",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:6.2:l1",
+        "solution_id": "solution:04943ca812e953d6eaf45477",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.1:l2",
+        "solution_id": "solution:84a83ccb01f064c04f734551",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:4.5:practice",
+        "solution_id": "solution:9abe979533bffae866998e26",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.1:l1",
+        "solution_id": "solution:3b4a95e0ee70917aa15bda92",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.2:l1",
+        "solution_id": "solution:9bcac84db09a8459640c89c5",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.2:l3",
+        "solution_id": "solution:b09f7318b564cd58efa7a235",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.4:l1",
+        "solution_id": "solution:6f676323eb2b5c0f2eaf692a",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.4:practice",
+        "solution_id": "solution:8870c178fec6dafb8258b208",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:2.5:l1",
+        "solution_id": "solution:e2e6550562930f369c95b8d1",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:1.4:practice",
+        "solution_id": "solution:102bf5fc42a4f5bc26d5eb2a",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.2:l1",
+        "solution_id": "solution:2d8f3656910dbb67e572874f",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:7.1:practice",
+        "solution_id": "solution:1eab04b037216f3854b8e481",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.2:l2",
+        "solution_id": "solution:6dae458ea014c7c144e4d2a7",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.3:l1",
+        "solution_id": "solution:b087a04031324074ab22cf69",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.1:practice",
+        "solution_id": "solution:85a2142a5a8d9580a0eddfa4",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.2:l3",
+        "solution_id": "solution:c970f1af18e30b58eac5e2ee",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.2:l1",
+        "solution_id": "solution:aa2552ed330e66a8850f7642",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.1:l2",
+        "solution_id": "solution:f445f9eb784d321ca69cf06e",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.2:l1",
+        "solution_id": "solution:29f411559b1039a678f61721",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.3:l3",
+        "solution_id": "solution:d13ceffda99b101c6004b6ee",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.4:practice",
+        "solution_id": "solution:f9034597792fb3e42d8ad72d",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.1:practice",
+        "solution_id": "solution:83c800e47ed03bc52e67ef56",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:8.2:l1",
+        "solution_id": "solution:e23a20b7f609a88d841d74bc",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:6.3:practice",
+        "solution_id": "solution:728dce8c3090b904eff4011b",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:3.1:practice",
+        "solution_id": "solution:5e2f082741c3f66f9e72e441",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:6.2:l2",
+        "solution_id": "solution:f2418ce01ead0db0e502b7a2",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.1:practice",
+        "solution_id": "solution:d12f0960d4c495c8cb6f5b60",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:6.2:l1",
+        "solution_id": "solution:7b65cb0655107b0e1299fc45",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.2:practice",
+        "solution_id": "solution:eaa69fd41f1da4946fe8d4f3",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:5.3:l3",
+        "solution_id": "solution:cd30937928f1c88099e74f87",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.2:practice",
+        "solution_id": "solution:53763b50b8fe1e62a4b61187",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:10.1:l2",
+        "solution_id": "solution:f5274af5636a283d73e3ae95",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:7.2:l1",
+        "solution_id": "solution:f571a0d25c3be0a319c758ef",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s1:3.1:l1",
+        "solution_id": "solution:e5b2d40c22bdc67a1a7bb173",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.1:practice",
+        "solution_id": "solution:2603b965e6b262a6d36ab4b8",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:9.2:l1",
+        "solution_id": "solution:a234ba02565dbda5cc51a8e6",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:2.3:l2",
+        "solution_id": "solution:1a4d04fc5b7b7a4cf9c28276",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:2.1:l1",
+        "solution_id": "solution:a1b5d4e9e95da9a0b3083cb7",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:6.1:practice",
+        "solution_id": "solution:7b9d6d4f8dd0cc2ea791564f",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:1.2:practice",
+        "solution_id": "solution:4ebea4c84568b84c7ed3ef37",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:8.3:practice",
+        "solution_id": "solution:2ed713881b41cd75e03e575f",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:5.6:l1",
+        "solution_id": "solution:fcafdf44eece7589638358e6",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:6.1:l1",
+        "solution_id": "solution:cb2d2ac5d63bccc19f234902",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b2:7.1:practice",
+        "solution_id": "solution:ac431a8b32fa1e9ef5bd6465",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s3:7.3:practice",
+        "solution_id": "solution:d559a37d6218833885495e97",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "b1:4.4:practice",
+        "solution_id": "solution:ce79ea74289ff3fcd42d4cfd",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      },
+      {
+        "type": "unknown_requirements",
+        "lesson_id": "s2:4.3:practice",
+        "solution_id": "solution:0d2bc05ce681dc45cabae572",
+        "message": "解法前置知识尚未核实，不能判为适合本课。"
+      }
+    ],
+    "teaching_locations": {
+      "kp:b1:3.2:l3": [
+        "b1:3.2:l3"
+      ],
+      "kp:s1:1.1:l2": [
+        "s1:1.1:l2"
+      ],
+      "kp:b1:4.3:l1": [
+        "b1:4.3:l1"
+      ],
+      "kp:s1:2.4:l2": [
+        "s1:2.4:l2"
+      ],
+      "kp:b1:4.4:l1": [
+        "b1:4.4:l1"
+      ],
+      "kp:b1:4.5:l1": [
+        "b1:4.5:l1"
+      ],
+      "kp:b2:10.1:l3": [
+        "b2:10.1:l3"
+      ],
+      "kp:b1:5.3:l2": [
+        "b1:5.3:l2"
+      ],
+      "kp:b1:4.4:l2": [
+        "b1:4.4:l2"
+      ],
+      "kp:b2:8.3:l2": [
+        "b2:8.3:l2"
+      ],
+      "kp:b2:6.2:l3": [
+        "b2:6.2:l3"
+      ],
+      "kp:b1:3.4:l2": [
+        "b1:3.4:l2"
+      ],
+      "kp:b2:6.2:l2": [
+        "b2:6.2:l2"
+      ],
+      "kp:s1:3.2:l2": [
+        "s1:3.2:l2"
+      ],
+      "kp:b2:10.3:l1": [
+        "b2:10.3:l1"
+      ],
+      "kp:b1:4.5:l2": [
+        "b1:4.5:l2"
+      ],
+      "kp:b2:7.1:l1": [
+        "b2:7.1:l1"
+      ],
+      "kp:b1:1.5:l1": [
+        "b1:1.5:l1"
+      ],
+      "kp:s3:6.3:l2": [
+        "s3:6.3:l2"
+      ],
+      "kp:s3:8.2:l2": [
+        "s3:8.2:l2"
+      ],
+      "kp:b2:6.1:l1": [
+        "b2:6.1:l1"
+      ],
+      "kp:b2:6.4:l1": [
+        "b2:6.4:l1"
+      ],
+      "kp:s2:5.1:l1": [
+        "s2:5.1:l1"
+      ],
+      "kp:s2:4.4:l1": [
+        "s2:4.4:l1"
+      ],
+      "kp:b2:10.2:l1": [
+        "b2:10.2:l1"
+      ],
+      "kp:b2:8.5:l2": [
+        "b2:8.5:l2"
+      ],
+      "kp:s1:1.1:l1": [
+        "s1:1.1:l1"
+      ],
+      "kp:s2:4.4:l2": [
+        "s2:4.4:l2"
+      ],
+      "kp:b2:8.5:l1": [
+        "b2:8.5:l1"
+      ],
+      "kp:s3:7.3:l2": [
+        "s3:7.3:l2"
+      ],
+      "kp:s1:3.1:l2": [
+        "s1:3.1:l2"
+      ],
+      "kp:s2:4.2:l2": [
+        "s2:4.2:l2"
+      ],
+      "kp:s1:1.4:l2": [
+        "s1:1.4:l2"
+      ],
+      "kp:b2:6.3:l1": [
+        "b2:6.3:l1"
+      ],
+      "kp:b1:5.4:l2": [
+        "b1:5.4:l2"
+      ],
+      "kp:b1:3.1:l2": [
+        "b1:3.1:l2"
+      ],
+      "kp:b1:5.7:l1": [
+        "b1:5.7:l1"
+      ],
+      "kp:s1:2.5:l2": [
+        "s1:2.5:l2"
+      ],
+      "kp:b1:3.4:l1": [
+        "b1:3.4:l1"
+      ],
+      "kp:s2:4.2:l3": [
+        "s2:4.2:l3"
+      ],
+      "kp:s3:8.1:l1": [
+        "s3:8.1:l1"
+      ],
+      "kp:b2:7.1:l2": [
+        "b2:7.1:l2"
+      ],
+      "kp:b1:3.3:l2": [
+        "b1:3.3:l2"
+      ],
+      "kp:s1:2.1:l2": [
+        "s1:2.1:l2"
+      ],
+      "kp:s1:2.2:l1": [
+        "s1:2.2:l1"
+      ],
+      "kp:b2:8.2:l1": [
+        "b2:8.2:l1"
+      ],
+      "kp:s3:6.3:l3": [
+        "s3:6.3:l3"
+      ],
+      "kp:b2:8.1:l2": [
+        "b2:8.1:l2"
+      ],
+      "kp:b1:5.4:l3": [
+        "b1:5.4:l3"
+      ],
+      "kp:b2:6.3:l2": [
+        "b2:6.3:l2"
+      ],
+      "kp:b1:5.6:l1": [
+        "b1:5.6:l1"
+      ],
+      "kp:s3:6.1:l3": [
+        "s3:6.1:l3"
+      ],
+      "kp:s1:1.4:l3": [
+        "s1:1.4:l3"
+      ],
+      "kp:b1:4.5:l3": [
+        "b1:4.5:l3"
+      ],
+      "kp:s3:8.2:l1": [
+        "s3:8.2:l1"
+      ],
+      "kp:s3:6.1:l2": [
+        "s3:6.1:l2"
+      ],
+      "kp:b1:5.4:l1": [
+        "b1:5.4:l1"
+      ],
+      "kp:b1:5.2:l2": [
+        "b1:5.2:l2"
+      ],
+      "kp:b1:4.2:l2": [
+        "b1:4.2:l2"
+      ],
+      "kp:b1:5.6:l3": [
+        "b1:5.6:l3"
+      ],
+      "kp:b2:9.2:l3": [
+        "b2:9.2:l3"
+      ],
+      "kp:s3:7.1:l2": [
+        "s3:7.1:l2"
+      ],
+      "kp:s2:5.2:l3": [
+        "s2:5.2:l3"
+      ],
+      "kp:b1:1.3:l2": [
+        "b1:1.3:l2"
+      ],
+      "kp:s2:5.2:l1": [
+        "s2:5.2:l1"
+      ],
+      "kp:s3:7.2:l1": [
+        "s3:7.2:l1"
+      ],
+      "kp:b1:4.1:l2": [
+        "b1:4.1:l2"
+      ],
+      "kp:s3:7.5:l1": [
+        "s3:7.5:l1"
+      ],
+      "kp:b1:2.1:l2": [
+        "b1:2.1:l2"
+      ],
+      "kp:b2:6.2:l1": [
+        "b2:6.2:l1"
+      ],
+      "kp:b2:8.1:l1": [
+        "b2:8.1:l1"
+      ],
+      "kp:b2:10.2:l2": [
+        "b2:10.2:l2"
+      ],
+      "kp:b2:9.1:l2": [
+        "b2:9.1:l2"
+      ],
+      "kp:s1:3.2:l3": [
+        "s1:3.2:l3"
+      ],
+      "kp:s1:3.3:l2": [
+        "s1:3.3:l2"
+      ],
+      "kp:s1:2.5:l3": [
+        "s1:2.5:l3"
+      ],
+      "kp:b1:2.2:l1": [
+        "b1:2.2:l1"
+      ],
+      "kp:b2:10.1:l1": [
+        "b2:10.1:l1"
+      ],
+      "kp:s3:7.3:l1": [
+        "s3:7.3:l1"
+      ],
+      "kp:s3:8.1:l2": [
+        "s3:8.1:l2"
+      ],
+      "kp:s3:8.2:l3": [
+        "s3:8.2:l3"
+      ],
+      "kp:s3:8.3:l2": [
+        "s3:8.3:l2"
+      ],
+      "kp:b2:6.1:l2": [
+        "b2:6.1:l2"
+      ],
+      "kp:b1:5.6:l2": [
+        "b1:5.6:l2"
+      ],
+      "kp:b1:2.2:l2": [
+        "b1:2.2:l2"
+      ],
+      "kp:b1:3.1:l1": [
+        "b1:3.1:l1"
+      ],
+      "kp:s1:3.1:l1": [
+        "s1:3.1:l1"
+      ],
+      "kp:s1:2.3:l2": [
+        "s1:2.3:l2"
+      ],
+      "kp:b2:9.2:l2": [
+        "b2:9.2:l2"
+      ],
+      "kp:s3:7.4:l1": [
+        "s3:7.4:l1"
+      ],
+      "kp:s3:7.4:l3": [
+        "s3:7.4:l3"
+      ],
+      "kp:s1:3.1:l3": [
+        "s1:3.1:l3"
+      ],
+      "kp:b2:8.2:l2": [
+        "b2:8.2:l2"
+      ],
+      "kp:s3:7.5:l2": [
+        "s3:7.5:l2"
+      ],
+      "kp:s1:1.2:l1": [
+        "s1:1.2:l1"
+      ],
+      "kp:b1:2.3:l2": [
+        "b1:2.3:l2"
+      ],
+      "kp:b2:8.5:l3": [
+        "b2:8.5:l3"
+      ],
+      "kp:s2:5.3:l1": [
+        "s2:5.3:l1"
+      ],
+      "kp:b2:9.2:l1": [
+        "b2:9.2:l1"
+      ],
+      "kp:s1:3.2:l1": [
+        "s1:3.2:l1"
+      ],
+      "kp:b2:10.3:l2": [
+        "b2:10.3:l2"
+      ],
+      "kp:b1:5.1:l1": [
+        "b1:5.1:l1"
+      ],
+      "kp:s3:8.3:l1": [
+        "s3:8.3:l1"
+      ],
+      "kp:s2:5.2:l2": [
+        "s2:5.2:l2"
+      ],
+      "kp:b1:1.2:l2": [
+        "b1:1.2:l2"
+      ],
+      "kp:b1:4.3:l2": [
+        "b1:4.3:l2"
+      ],
+      "kp:s1:2.5:l1": [
+        "s1:2.5:l1"
+      ],
+      "kp:b1:2.1:l1": [
+        "b1:2.1:l1"
+      ],
+      "kp:s1:1.4:l1": [
+        "s1:1.4:l1"
+      ],
+      "kp:s3:7.2:l2": [
+        "s3:7.2:l2"
+      ],
+      "kp:s2:5.3:l3": [
+        "s2:5.3:l3"
+      ],
+      "kp:s3:7.4:l2": [
+        "s3:7.4:l2"
+      ],
+      "kp:b2:9.3:l2": [
+        "b2:9.3:l2"
+      ],
+      "kp:b1:1.2:l1": [
+        "b1:1.2:l1"
+      ],
+      "kp:s1:1.3:l2": [
+        "s1:1.3:l2"
+      ],
+      "kp:b1:5.5:l1": [
+        "b1:5.5:l1"
+      ],
+      "kp:b2:8.3:l1": [
+        "b2:8.3:l1"
+      ],
+      "kp:s1:1.3:l1": [
+        "s1:1.3:l1"
+      ],
+      "kp:b2:10.1:l2": [
+        "b2:10.1:l2"
+      ],
+      "kp:b2:9.3:l1": [
+        "b2:9.3:l1"
+      ],
+      "kp:s2:4.3:l1": [
+        "s2:4.3:l1"
+      ],
+      "kp:b1:1.3:l1": [
+        "b1:1.3:l1"
+      ],
+      "kp:s2:4.1:l1": [
+        "s2:4.1:l1"
+      ],
+      "kp:b2:6.4:l3": [
+        "b2:6.4:l3"
+      ],
+      "kp:s1:2.1:l1": [
+        "s1:2.1:l1"
+      ],
+      "kp:b1:2.3:l1": [
+        "b1:2.3:l1"
+      ],
+      "kp:s3:6.1:l1": [
+        "s3:6.1:l1"
+      ],
+      "kp:s1:2.2:l2": [
+        "s1:2.2:l2"
+      ],
+      "kp:s3:6.2:l1": [
+        "s3:6.2:l1"
+      ],
+      "kp:s2:4.3:l2": [
+        "s2:4.3:l2"
+      ],
+      "kp:b1:3.1:l3": [
+        "b1:3.1:l3"
+      ],
+      "kp:s2:5.1:l2": [
+        "s2:5.1:l2"
+      ],
+      "kp:b2:8.4:l2": [
+        "b2:8.4:l2"
+      ],
+      "kp:b2:7.3:l1": [
+        "b2:7.3:l1"
+      ],
+      "kp:s3:7.1:l1": [
+        "s3:7.1:l1"
+      ],
+      "kp:s2:5.3:l4": [
+        "s2:5.3:l4"
+      ],
+      "kp:s2:4.3:l3": [
+        "s2:4.3:l3"
+      ],
+      "kp:b2:7.3:l2": [
+        "b2:7.3:l2"
+      ],
+      "kp:b2:7.2:l1": [
+        "b2:7.2:l1"
+      ],
+      "kp:b1:1.5:l2": [
+        "b1:1.5:l2"
+      ],
+      "kp:s1:2.3:l1": [
+        "s1:2.3:l1"
+      ],
+      "kp:b2:7.2:l2": [
+        "b2:7.2:l2"
+      ],
+      "kp:b2:6.3:l3": [
+        "b2:6.3:l3"
+      ],
+      "kp:s1:2.4:l1": [
+        "s1:2.4:l1"
+      ],
+      "kp:b1:1.4:l1": [
+        "b1:1.4:l1"
+      ],
+      "kp:s2:5.3:l2": [
+        "s2:5.3:l2"
+      ],
+      "kp:b1:2.3:l3": [
+        "b1:2.3:l3"
+      ],
+      "kp:b1:5.5:l2": [
+        "b1:5.5:l2"
+      ],
+      "kp:b2:8.4:l1": [
+        "b2:8.4:l1"
+      ],
+      "kp:b1:1.1:l1": [
+        "b1:1.1:l1"
+      ],
+      "kp:s3:6.2:l3": [
+        "s3:6.2:l3"
+      ],
+      "kp:s2:4.1:l2": [
+        "s2:4.1:l2"
+      ],
+      "kp:b2:8.6:l2": [
+        "b2:8.6:l2"
+      ],
+      "kp:b1:5.5:l3": [
+        "b1:5.5:l3"
+      ],
+      "kp:s3:6.3:l1": [
+        "s3:6.3:l1"
+      ],
+      "kp:b1:4.2:l1": [
+        "b1:4.2:l1"
+      ],
+      "kp:b2:8.6:l3": [
+        "b2:8.6:l3"
+      ],
+      "kp:b2:8.6:l1": [
+        "b2:8.6:l1"
+      ],
+      "kp:b1:4.1:l1": [
+        "b1:4.1:l1"
+      ],
+      "kp:b1:3.2:l2": [
+        "b1:3.2:l2"
+      ],
+      "kp:b1:5.2:l1": [
+        "b1:5.2:l1"
+      ],
+      "kp:b1:5.3:l1": [
+        "b1:5.3:l1"
+      ],
+      "kp:b1:1.4:l2": [
+        "b1:1.4:l2"
+      ],
+      "kp:b2:6.4:l2": [
+        "b2:6.4:l2"
+      ],
+      "kp:b1:3.3:l1": [
+        "b1:3.3:l1"
+      ],
+      "kp:s2:4.2:l1": [
+        "s2:4.2:l1"
+      ],
+      "kp:b1:5.7:l2": [
+        "b1:5.7:l2"
+      ],
+      "kp:b1:1.1:l2": [
+        "b1:1.1:l2"
+      ],
+      "kp:b2:9.1:l1": [
+        "b2:9.1:l1"
+      ],
+      "kp:s1:3.3:l3": [
+        "s1:3.3:l3"
+      ],
+      "kp:s1:3.3:l1": [
+        "s1:3.3:l1"
+      ],
+      "kp:b1:3.2:l1": [
+        "b1:3.2:l1"
+      ],
+      "kp:s3:6.2:l2": [
+        "s3:6.2:l2"
+      ],
+      "kp:b1:5.1:l2": [
+        "b1:5.1:l2"
+      ]
+    },
+    "solution_stages": {
+      "solution:01dfef4531206b28657aeda4": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:02f785e6da9c7c3b2183e110": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:04943ca812e953d6eaf45477": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:0748fe18188e16e0e74f7355": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:07d7bb1d59708f75e5b1d27a": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:0935d6b0370e69089f117854": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:0a267d61bceb871f18d3d7ec": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:0c4e3b13b121d92022ebb2b2": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:0d2bc05ce681dc45cabae572": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:0f291d6ee55aa3d1e05e2317": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:0fabd3700d92c029a4e82abb": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:102bf5fc42a4f5bc26d5eb2a": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:14a31dd3bd38a3e2ef57b40d": {
+        "earliest_lesson_id": "b1:2.2:l2",
+        "requirements": [
+          "kp:b1:2.2:l1",
+          "kp:b1:2.2:l2",
+          "kp:b1:2.1:l1"
+        ],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "declared"
+      },
+      "solution:165138b4d6b52791bf797a1c": {
+        "earliest_lesson_id": "b1:3.2:l3",
+        "requirements": [
+          "kp:b1:3.2:l1",
+          "kp:b1:1.4:l2",
+          "kp:b1:3.2:l3"
+        ],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "declared"
+      },
+      "solution:1810beceee88a4d369ef57fb": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:1a4d04fc5b7b7a4cf9c28276": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:1ba5e5977e68cd4cf062233d": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:1bc094d61df15ff93a539c3a": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:1d5a4a8cbcc755656047c47b": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:1d9af1f8b6f5514f69ad3971": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:1e01c80878a487f177a7a13c": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:1e3730481d2e21b8fbbdba35": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:1eab04b037216f3854b8e481": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:1f09ab85c4c9c1a52345a589": {
+        "earliest_lesson_id": "b1:1.1:l1",
+        "requirements": [
+          "kp:b1:1.1:l1"
+        ],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "declared"
+      },
+      "solution:20b34b5202e0ebf90fbd5347": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:24ee692e993e000300189242": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:25476dade065ed1a0293f1fe": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:25f5f770238a5733ab07e199": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:2603b965e6b262a6d36ab4b8": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:262b6011447484568290975d": {
+        "earliest_lesson_id": "b1:1.2:l1",
+        "requirements": [
+          "kp:b1:1.1:l1",
+          "kp:b1:1.2:l1"
+        ],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "declared"
+      },
+      "solution:29f411559b1039a678f61721": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:2ade5d1bad305bbe2d35c409": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:2b2dce34822c8081cd93a674": {
+        "earliest_lesson_id": "s1:2.2:l2",
+        "requirements": [
+          "kp:s1:2.2:l2"
+        ],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "declared"
+      },
+      "solution:2d8f3656910dbb67e572874f": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:2ed713881b41cd75e03e575f": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:2ee1349fd61bf1214ad88e25": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:2f909e6bf724f25c980246f1": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:2f92e844c6e4b97e4d239383": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:2ff483101ceca0e0d8325720": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:30fdb249e9034e292869e8e8": {
+        "earliest_lesson_id": "s2:5.3:l3",
+        "requirements": [
+          "kp:s2:5.3:l3",
+          "kp:s2:5.3:l1",
+          "kp:s2:5.2:l2",
+          "kp:s2:5.2:l3",
+          "kp:b1:4.2:l1"
+        ],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "declared"
+      },
+      "solution:326b0bc4cc793b1bfeb4d14b": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:32b96573f7ddcdc319f90451": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:3343a831efc05c161b6a59c0": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:37417cd8863c3246d5d1d74f": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:3a8bf70cafcf18100a812789": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:3b2efc0e241579fa126ad9ec": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:3b4a95e0ee70917aa15bda92": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:3c65fd0a55b12274a8a81921": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:3c830205cc1d8ed2f3ec697b": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:3d12465b13d4b9988a2cca26": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:3d3082d99c412f1ec95e164d": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:3d7d344d4a920e1d4a51650b": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:402ba2b794ebc9e5a57224d5": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:425a75ec46f26135db17d86c": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:4476e58b83349825ceb6e310": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:46801451f1cdddc002aa3050": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:47a241a42c09951cab04264e": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:48f51e64fc22e92e8bfd4e85": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:492bce56fe3b92c61ef0a62f": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:49b5bdde32420a53cfb6f87e": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:49d6dd2a0b49e811238c8ee8": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:4c4725c6770af0af7a695304": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:4e1aea75c12f471cd093a39a": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:4ebea4c84568b84c7ed3ef37": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:4ef12d5fe3dad0b21e13c6ae": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:4f244849b41dcd2e7d909ba0": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:51665a67fc488a78fd364712": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:51bf8b9a663cd5f6f18d08c2": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:527c7eefda5fc910193795e4": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:52b69d60a545985fea11a652": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:53763b50b8fe1e62a4b61187": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:5528601f13fa47efeae30056": {
+        "earliest_lesson_id": "b1:3.2:l3",
+        "requirements": [
+          "kp:b1:3.2:l3",
+          "kp:b1:3.1:l2"
+        ],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "declared"
+      },
+      "solution:5691c1f8f1d8d018d2265d6d": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:575117a83179409386b7c61f": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:58ad4ea87a1c6bff5e2c26df": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:59b0e65a27ab7252c163ff8e": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:5a4332285573b2c2748d5971": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:5a56d8f41ef76c84add64aa2": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:5cad4fdfd9e842e0c937b941": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:5d9c087bb7de703afce09894": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:5e2f082741c3f66f9e72e441": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:6164d30413400fbf1a419ec1": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:638dde70b0556d50a265ccc2": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:63bfb6fa2f9daf7383f75dd0": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:6515f2975b565252e82e0f1c": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:65efee86828c88b4f2a31560": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:665a027555f4b883fcb65c54": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:66710201f86d21630a2a7159": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:69f06e4a4465581bee8ac007": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:6a5bba7197e48bf4cbbe02e1": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:6dae458ea014c7c144e4d2a7": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:6e5a140bf2f9b143440864c0": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:6e72b7e71994137c01163b3e": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:6ede58b4131a7c3011546794": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:6f251e7bd6f0ac1c9761cd9a": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:6f676323eb2b5c0f2eaf692a": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:70fdde7c58880ddcb1f62009": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:71ae610ed3dff9140f322090": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:728dce8c3090b904eff4011b": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:735887cf719d3c5926208160": {
+        "earliest_lesson_id": "b1:1.3:l1",
+        "requirements": [
+          "kp:b1:1.1:l2",
+          "kp:b1:1.3:l1"
+        ],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "declared"
+      },
+      "solution:7445af2dda2fa663a86970e1": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:76c22c444d6fc7a9a83f7ba2": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:7b65cb0655107b0e1299fc45": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:7b9676ec75996b4afc90fdd4": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:7b9d6d4f8dd0cc2ea791564f": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:7d70a780d7785eba2c6dc28d": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:7db12f447c731b528284e8c6": {
+        "earliest_lesson_id": "b1:1.1:l2",
+        "requirements": [
+          "kp:b1:1.1:l1",
+          "kp:b1:1.1:l2"
+        ],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "declared"
+      },
+      "solution:7e57dfb69d1eeb61f0da5478": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:7fb1d140792f94b31d8dba8e": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:83c800e47ed03bc52e67ef56": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:84a83ccb01f064c04f734551": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:85387542b6128a3c49de12a2": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:85a2142a5a8d9580a0eddfa4": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:85eea144e76e3a53932feac3": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:87ecc58f5e71b46f436511c1": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:8870c178fec6dafb8258b208": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:88cc716ebf4828fdc0b19a52": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:89e7a3dd96adc61b1ded9ac3": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:8c765d3df03303ea5da28dc8": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:8d35710b505e8f84dd1e67de": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:90f62e4fa6d6b72c96d0f0f9": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:91dac13b50ecc2ac643e6535": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:92a343aed829461ddb0aedc3": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:93dce82142a78cf54b467897": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:96e01145bbbec52828532648": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:97a1ec6fd218d139ac9b33c0": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:99e5ad67b51f777831f571be": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:9a1a12d14767e226164ece4e": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:9abe979533bffae866998e26": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:9b4df26ab300082a9227f8a3": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:9b5d39f332df34c19b87e866": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:9bc69619537033cc7f024d93": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:9bcac84db09a8459640c89c5": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:9c088eb99ad1d3aeec0448b9": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:9d990a3747470d5608b4d188": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:a037aa53ec6f696841d53fee": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:a1b5d4e9e95da9a0b3083cb7": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:a1d2ae4d8b92846f62905e8b": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:a234ba02565dbda5cc51a8e6": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:a2650e31b1efdfae00b98f8e": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:a2a9a9e8ad9e6b34654500f4": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:a3d23dbac2adffc014f00518": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:a5e04f26a7ff1802d4ad47b7": {
+        "earliest_lesson_id": "b1:1.1:l1",
+        "requirements": [
+          "kp:b1:1.1:l1"
+        ],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "declared"
+      },
+      "solution:a63b9e887c53c0eeb824e0a8": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:aa2552ed330e66a8850f7642": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:aa587aeb04648ee2dcf10ac6": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:ac431a8b32fa1e9ef5bd6465": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:ac4eacac61f39e13a38c2e83": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:acbf77f5804e560119897b98": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:ad2c230ceb2d53bd2e963c6e": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:af06752f2d35ba3889646efa": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:af237a45b1849fee181d126d": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:af2f9ed606f4fc263285582f": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:affa2256f3158a80435117ad": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:b087a04031324074ab22cf69": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:b09f7318b564cd58efa7a235": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:b1271125634c5eea50467a62": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:b162f36dbc98c750b44ed965": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:b43e4203ff53c8876c4e5320": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:b4e0173c5676faf0fac8bcc2": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:b51aeb0bf31c96f6a54e7538": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:b73a96f77af204c9af3a4762": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:b8bbb1ac6e9687caee3a63e3": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:b97e0cc3bff3a24fa0b9940a": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:bb4c55a76c741d19ae47257f": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:bb9cb75531c7da7127f404d4": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:bda9238126a4b472a3aade98": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:bfa1c8e8742cffad011a4136": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:bfc923718fd29ee7c27e02d2": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:c0a240bc92361a13532d8616": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:c0f989f6a651107bb76729e9": {
+        "earliest_lesson_id": "b1:1.1:l2",
+        "requirements": [
+          "kp:b1:1.1:l2"
+        ],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "declared"
+      },
+      "solution:c58cd45dcd5284549b5d5679": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:c754aa9c89a4cfa707799f97": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:c80c11f00fbfedc19656b155": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:c970f1af18e30b58eac5e2ee": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:c9a87ba22b4ad3f60dc49b53": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:cb108d6c298cceb516b17ff1": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:cb2d2ac5d63bccc19f234902": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:cc6a901d448824cacedea2db": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:cd30937928f1c88099e74f87": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:cdfbfae6fa17c14fa3118106": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:ce79ea74289ff3fcd42d4cfd": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:ce96a02789c58ce9b5869f82": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:cff2d456b20778ae05c39f2a": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:d0108c64ae62e4ddec5d7503": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:d12f0960d4c495c8cb6f5b60": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:d13ceffda99b101c6004b6ee": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:d14f55a8e4be5a409b238326": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:d25ea48f8ec7b86fd5b4e570": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:d559a37d6218833885495e97": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:d6c758f02d1aa15d54e8edcd": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:d6fec52ae0cf88fdfa7c0f7f": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:d73d6a6dd85969408a60baec": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:d768388879840708a6356a55": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:d7fef2d84941311fca4fc169": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:de02dc9b5735b3a751adb66d": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:e04b2d7ed4d5c5c05ef36225": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:e23a20b7f609a88d841d74bc": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:e23a980f54dfb779881e86d0": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:e254b682a8af73315ef4596d": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:e2b45cf7a4d7209b47fb8b86": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:e2c7b67d76c10bcac95fb142": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:e2e6550562930f369c95b8d1": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:e35a8772f45b2bd87b103b9f": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:e3d8c67969bb84223915d4c6": {
+        "earliest_lesson_id": "b1:1.1:l2",
+        "requirements": [
+          "kp:b1:1.1:l2"
+        ],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "declared"
+      },
+      "solution:e48533968f51afd585120a22": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:e5b2d40c22bdc67a1a7bb173": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:e7e339a1f66d8592c97fb1f1": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:e8d1ff577b0b06d501b7ecd4": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:eaa69fd41f1da4946fe8d4f3": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:eb68d02096c47e3619a7be71": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:ebb4334451299728bf4ebfb9": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:ec277dd002b9c67b15b4df47": {
+        "earliest_lesson_id": "s1:2.5:l1",
+        "requirements": [
+          "kp:s1:2.3:l2",
+          "kp:s1:2.5:l1",
+          "kp:b1:1.1:l2",
+          "kp:b1:1.3:l1"
+        ],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "declared"
+      },
+      "solution:ed4a2113c89013abfacc00b8": {
+        "earliest_lesson_id": "b1:1.1:l2",
+        "requirements": [
+          "kp:b1:1.1:l2",
+          "kp:b1:1.1:l1"
+        ],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "declared"
+      },
+      "solution:ef39dd610e9abbdd6e1ba53b": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:efa66bed86bc6a8afab3131c": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:f0a1969d0f300b3d3a68f119": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:f18e38d405b087ba313e90a8": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:f2418ce01ead0db0e502b7a2": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:f28edfa62be9744ef5f01ba5": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:f362e1abdbbd4d3bc874bca5": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:f445f9eb784d321ca69cf06e": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:f5274af5636a283d73e3ae95": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:f571a0d25c3be0a319c758ef": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:f5c552ada1ca4932d139b421": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:f6a565b946a81ed67f4bc358": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:f6df740cf3c1974b279e1ca7": {
+        "earliest_lesson_id": "b1:1.1:l2",
+        "requirements": [
+          "kp:b1:1.1:l1",
+          "kp:b1:1.1:l2"
+        ],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "declared"
+      },
+      "solution:f78871d7bc7871b285f6dde1": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:f832cfdf07f6d207940df0a4": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:f9034597792fb3e42d8ad72d": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:f963f96aa6bb63b9525774b4": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:fbe24bc36f426ae8ba6cf632": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:fcafdf44eece7589638358e6": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      },
+      "solution:ffb89b7cf798af332108397e": {
+        "earliest_lesson_id": null,
+        "requirements": [],
+        "unintroduced": [],
+        "scope": "仅按已声明前置计算，完整性仍需人工核查",
+        "requirements_status": "unknown"
+      }
+    }
+  }
+}

@@ -906,6 +906,8 @@ class GradeRequest(BaseModel):
     duration_seconds: Optional[int] = Field(None, ge=0, description="作答用时（秒）")
     viewed_answer: bool = Field(False, description="是否看过答案")
     skipped: bool = Field(False, description="是否跳过")
+    scoring_rubric: Optional[List[dict]] = Field(None, description="可选的人工确认评分点")
+    objective_rule: Optional[dict] = Field(None, description="多选题计分规则")
 
 
 @app.post("/exam/ai-assemble")
@@ -1139,6 +1141,8 @@ def api_grade(req: GradeRequest):
         viewed_answer=req.viewed_answer,
         skipped=req.skipped,
         input_type=req.input_type,
+        scoring_rubric=req.scoring_rubric,
+        objective_rule=req.objective_rule,
     )
 
 
@@ -1443,6 +1447,14 @@ app.include_router(routine_graph_router)
 app.include_router(routine_graph_page_router)
 from backend.question_assets import router as question_assets_router
 app.include_router(question_assets_router)
+from backend.exam_analysis import router as exam_analysis_router
+app.include_router(exam_analysis_router)
+from backend.student_analysis import router as student_analysis_router
+app.include_router(student_analysis_router)
+from backend.curriculum_wiki import router as curriculum_wiki_router, page_router as curriculum_wiki_page_router
+import backend.curriculum_tasks  # registers owner-only draft/task endpoints
+app.include_router(curriculum_wiki_router)
+app.include_router(curriculum_wiki_page_router)
 
 @app.get("/demo/presets")
 def demo_presets():
@@ -1455,6 +1467,9 @@ if os.path.isdir(_frontend_path):
 
 # Keep the private legacy app available to the isolated demo and account factory.
 core_app = app
-if os.environ.get("STUDY_AUTH_ENABLED", "0") == "1":
+if os.environ.get("STUDY_DATABASE_URL"):
+    from backend.cloud_app import build_cloud_app
+    app = build_cloud_app()
+elif os.environ.get("STUDY_AUTH_ENABLED", "0") == "1":
     from backend.account_app import build_account_app
     app = build_account_app(core_app)

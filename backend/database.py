@@ -1741,3 +1741,8 @@ def _require_question_edit(question_id):
     question = get_question_by_id(question_id)
     if question and (question.get("catalog_id") is not None or question.get("source_type") == "精选母题"):
         require_catalog_editor()
+
+
+# Cloud requests share the learning engine but never open legacy SQLite files.
+from backend.storage.legacy import install as _install_cloud_adapters
+_install_cloud_adapters(globals())

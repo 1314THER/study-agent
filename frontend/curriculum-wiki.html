@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>数学课时库 · 主人研究工作台</title>
+  <script>window.STUDY_DISABLE_AGENT = true;</script>
+  <script src="/auth.js?v=20261024"></script>
+  <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/curriculum-wiki.css">
+  <link rel="stylesheet" href="/vendor/katex/katex.min.css">
+  <script defer src="/vendor/katex/katex.min.js"></script>
+</head>
+<body>
+<div class="app-layout">
+  <button class="mobile-nav-toggle" onclick="toggleMobileNav()" aria-label="打开导航">☰</button>
+  <aside class="sidebar"><button class="nav-expand-toggle" onclick="toggleNavExpand()" aria-label="展开导航">☰</button><nav></nav></aside>
+  <main class="main-content cw-main">
+    <p id="accessMessage" role="status">正在加载数学课时库…</p>
+    <div id="wikiApp" hidden>
+      <header class="cw-header">
+        <div><p class="cw-context">人教 A 版 · 新高考全国一卷 · 主人研究工作台</p><h1>数学课时库</h1><p>从这一课出发，看清知识、方法与题目的先后联系。</p></div>
+        <div class="cw-header-actions"><button id="openSources">资料与覆盖</button><button id="openTasks">整理任务</button><button id="openHistory">修订历史</button><a href="/curriculum-wiki/export">导出数据</a></div>
+      </header>
+      <div id="coverageStrip" class="cw-coverage" aria-label="资料覆盖情况"></div>
+      <p id="wikiMessage" class="cw-message" role="status" aria-live="polite"></p>
+      <section id="utilityPanel" class="cw-utility" hidden><div class="cw-panel-head"><h2 id="utilityTitle"></h2><button id="closeUtility">收起</button></div><div id="utilityBody"></div></section>
+      <div class="cw-mobile-tabs" role="group" aria-label="切换工作区"><button data-pane="directory">课程目录</button><button data-pane="lesson">课时内容</button><button data-pane="evidence">证据与校正</button></div>
+      <div class="cw-workspace" data-pane="lesson">
+        <aside id="directoryPane" class="cw-directory" aria-label="课程目录">
+          <label for="wikiSearch">检索课时、知识点或方法</label><input id="wikiSearch" type="search" placeholder="例如：单调性、SET-010" autocomplete="off">
+          <div class="cw-filters"><label>课程<select id="bookFilter"><option value="">全部教材与复习</option></select></label><label>审核<select id="statusFilter"><option value="">全部状态</option><option value="draft">待审核</option><option value="confirmed">已确认</option><option value="deferred">暂缓</option><option value="rejected">已排除</option></select></label></div>
+          <label>教辅或资料<select id="sourceFilter"><option value="">全部资料</option></select></label>
+          <label class="cw-checkbox"><input id="gapsOnly" type="checkbox">只看尚未关联题目的课时</label>
+          <p id="lessonCount" class="cw-muted"></p><div id="lessonList"></div>
+        </aside>
+        <article id="lessonPane" class="cw-lesson" aria-label="课时内容"><p class="cw-empty">选择左侧课时开始研究。</p></article>
+        <aside id="evidencePane" class="cw-evidence" aria-label="来源证据与人工校正"></aside>
+      </div>
+    </div>
+  </main>
+</div>
+<dialog id="editDialog" class="cw-dialog">
+  <form id="editForm">
+    <div class="cw-panel-head"><h2 id="editHeading">校正内容</h2><button type="button" data-close>关闭</button></div>
+    <label>标题<input name="title" required maxlength="300"></label>
+    <div id="editorFields"></div>
+    <label>审核状态<select name="status"><option value="draft">待审核</option><option value="confirmed">已确认</option><option value="deferred">暂缓</option><option value="rejected">已排除</option></select></label>
+    <label>修改或审核理由<textarea name="reason" required rows="2" placeholder="说明依据、修正内容与仍有疑问之处"></textarea></label>
+    <p class="cw-error" id="editError" role="alert"></p><button type="submit" class="cw-primary">保存校正</button>
+  </form>
+</dialog>
+<dialog id="actionDialog" class="cw-dialog cw-wide">
+  <form id="actionForm"><div class="cw-panel-head"><h2 id="actionHeading"></h2><button type="button" data-close>关闭</button></div><div id="actionFields"></div><p class="cw-error" id="actionError" role="alert"></p><button id="actionSubmit" type="submit" class="cw-primary">保存</button></form>
+</dialog>
+<script src="/pool-math.js?v=20261024"></script><script src="/question-provenance.js"></script>
+<script src="/curriculum-wiki.js"></script><script src="/nav.js?v=20261024-curriculum"></script>
+</body>
+</html>

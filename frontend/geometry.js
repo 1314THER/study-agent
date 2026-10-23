@@ -4,7 +4,7 @@
   const mounted = new WeakMap(), live = new Set();
   let jsxPromise, threePromise, counter = 0;
   const keyOf = s => String(s.chunk_id == null ? 1 : s.chunk_id) + '-' + String(s.step_number == null ? 0 : s.step_number);
-  const assetUrl = id => typeof id === 'string' && /^[a-f0-9]{64}\.png$/.test(id) ? '/question-assets/' + id : null;
+  const assetUrl = id => typeof id !== 'string' ? null : /^[a-f0-9]{64}\.png$/.test(id) ? '/question-assets/' + id : /^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/.test(id) ? '/api/v1/assets/' + id : null;
   function viewFor(geometry, state, activeKey, index, teaching) {
     const steps = geometry.steps || [];
     const current = teaching ? steps.find(s => s.step_key === activeKey) : steps[index];

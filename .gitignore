@@ -12,6 +12,10 @@ logs/
 .demo-sessions/
 .accounts/
 .runtime/
+.cloud/
+apple/StudyCoach/.build/
+apple/StudyCoach/.swiftpm/
+apple/StudyCoach/StudyCoach.xcodeproj/xcuserdata/
 
 # Local Python and JavaScript environments
 .venv/

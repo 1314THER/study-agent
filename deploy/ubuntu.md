@@ -68,8 +68,8 @@ caddy hash-password
 
 ```bash
 scp -i "$HOME/.ssh/study-agent-ecs" -o IdentitiesOnly=yes -o ConnectTimeout=10 \
-  /Users/sqz/Desktop/git/deploy/public/index.html \
-  /Users/sqz/Desktop/git/deploy/Caddyfile.example \
+  /Users/sqz/Desktop/study-agent/deploy/public/index.html \
+  /Users/sqz/Desktop/study-agent/deploy/Caddyfile.example \
   studyviewer@47.117.107.156:/home/studyviewer/
 ```
 
@@ -130,7 +130,7 @@ curl -I https://150.chat/home.html
 在 **Mac 终端**运行。先查看改动，确认本次功能文件已包括；不要添加 `.env`、运行时配置或数据库：
 
 ```bash
-cd /Users/sqz/Desktop/git
+cd /Users/sqz/Desktop/study-agent
 git status --short
 git add .gitignore README.md requirements.txt backend/*.py frontend/ deploy/ docs/ scripts/run_demo.py tests/
 git diff --cached --stat

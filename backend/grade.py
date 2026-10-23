@@ -5,6 +5,7 @@
 """
 
 import json
+import math
 import os
 import re
 from fractions import Fraction
@@ -88,6 +89,8 @@ def _collect_steps(answer_json: dict) -> list:
                 "standard_writing": s.get("standard_writing")
                 or s.get("detailed_writing")
                 or "",
+                "knowledge_point": s.get("knowledge_point") or "",
+                "depends_on": s.get("depends_on") or [],
             })
         fa = cr.get("final_answer")
         if fa and str(fa).strip():
@@ -119,7 +122,6 @@ def _normalize_fill(text) -> str:
     text = text.replace("\\mid", "|")
     text = text.replace("\\{", "{")
     text = text.replace("\\}", "}")
-    text = re.sub(r"^[\[{](.*)[\]}]$", r"\1", text)
     text = re.sub(r"\\[d]?frac\s*\{(.+?)\}\s*\{(.+?)\}", r"\1/\2", text)
     return re.sub(r"\s+", "", text)
 
@@ -137,19 +139,37 @@ def _to_number(text) -> Fraction:
 
 
 def _fill_equivalent(expected, student) -> bool:
+    return _fill_relation(expected, student) is True
+
+
+def _fill_relation(expected, student):
     e = _normalize_fill(expected)
     s = _normalize_fill(student)
     if e == s:
         return True
     en = _to_number(e)
     sn = _to_number(s)
-    return en is not None and sn is not None and en == sn
+    if en is not None and sn is not None:
+        return en == sn
+    structured = re.compile(r"(?:\\in|\\notin|[\[\]{}|∪∩∞≤≥<>])")
+    if structured.search(e) or structured.search(s):
+        return None
+    return False
+
+
+def _choice_set(value):
+    text = str(value or "").strip().upper()
+    text = re.sub(r"^(?:最终答案|正确答案|答案|答)\s*[:：]\s*", "", text)
+    text = re.sub(r"[（）()]", "", text)
+    if not re.fullmatch(r"[A-H](?:\s*[,，、/\s]*\s*[A-H])*", text):
+        return None
+    return sorted(set(re.findall(r"[A-H]", text)))
 
 
 def _compare_choice(expected, student) -> bool:
-    exp = sorted(set(re.findall(r"[A-H]", str(expected).upper())))
-    stu = sorted(set(re.findall(r"[A-H]", str(student).upper())))
-    if exp and stu:
+    exp = _choice_set(expected)
+    stu = _choice_set(student)
+    if exp is not None and stu is not None:
         return exp == stu
     return _normalize_fill(expected) == _normalize_fill(student)
 
@@ -160,7 +180,7 @@ def _as_bool(value) -> bool:
     return str(value or "").strip().lower() in ("true", "1", "yes", "对", "正确")
 
 
-def _sanitize_ai_grade(data: dict, steps: list, full_score) -> dict:
+def _sanitize_ai_grade(data: dict, steps: list, full_score, scoring_rubric=None) -> dict:
     valid_ids = {s["id"] for s in steps}
     valid_statuses = {"correct", "partial", "missing", "not_applicable"}
     by_id = {
@@ -168,6 +188,9 @@ def _sanitize_ai_grade(data: dict, steps: list, full_score) -> dict:
         for s in data.get("steps") or []
         if isinstance(s, dict)
     }
+    rubric = {str(row["step_id"]): max(0.0, float(row["max_points"]))
+              for row in scoring_rubric or []}
+    rubric_missing = False
 
     step_results = []
     for std in steps:
@@ -178,11 +201,20 @@ def _sanitize_ai_grade(data: dict, steps: list, full_score) -> dict:
         error_types = [
             t for t in (match.get("error_types") or []) if t in MISTAKE_TYPES
         ][:3]
-        if status == "missing" and not error_types:
-            error_types = ["思路错误"]
-        elif status == "partial" and not error_types:
-            error_types = ["其他"]
+        # A missing step is an observation, not proof of a particular cause.
+        # Keep unknown causes empty so aggregate diagnostics cannot mistake it
+        # for a knowledge or reasoning error.
         error_detail = str(match.get("error_detail") or "")
+        answer_evidence = str(match.get("answer_evidence") or "")
+        score = None
+        max_points = rubric.get(std["id"])
+        if max_points is not None:
+            try:
+                candidate_score = match.get("earned_points")
+                score = max(0.0, min(max_points, float(candidate_score))) if candidate_score is not None else None
+            except (TypeError, ValueError):
+                score = None
+            rubric_missing = rubric_missing or score is None
         step_results.append({
             "id": std["id"],
             "chunk_id": std["chunk_id"],
@@ -193,6 +225,13 @@ def _sanitize_ai_grade(data: dict, steps: list, full_score) -> dict:
             "comment": str(match.get("comment") or ""),
             "error_types": error_types,
             "error_detail": error_detail,
+            "answer_evidence": answer_evidence,
+            "cause_confidence": match.get("cause_confidence")
+            if match.get("cause_confidence") in ("low", "medium", "high") else "unknown",
+            "review_required": bool(match.get("review_required")) or
+            (status == "missing" and not error_types),
+            "earned_points": score,
+            "max_points": max_points,
         })
 
     def _ids(key: str) -> list:
@@ -208,13 +247,19 @@ def _sanitize_ai_grade(data: dict, steps: list, full_score) -> dict:
         approach = "same"
     overall = data.get("overall") or {}
     is_correct = _as_bool(overall.get("is_correct"))
+    if approach == "same" and any(step["status"] == "missing" for step in step_results):
+        is_correct = False
     earned_score = None
-    if full_score is not None:
+    if rubric and not rubric_missing:
+        earned_score = round(sum(float(step["earned_points"] or 0) for step in step_results), 2)
+    elif full_score is not None and not rubric:
         try:
-            earned_score = float(overall.get("earned_score") or 0)
+            value = overall.get("earned_score")
+            earned_score = float(value) if value is not None else None
         except (TypeError, ValueError):
-            earned_score = 0.0
-        earned_score = max(0.0, min(float(full_score), earned_score))
+            earned_score = None
+        if earned_score is not None:
+            earned_score = max(0.0, min(float(full_score), earned_score))
     feedback = str(overall.get("feedback") or "")
     suggested = str(data.get("suggested_approach") or "").strip()
     if approach == "different" and suggested:
@@ -232,6 +277,8 @@ def _sanitize_ai_grade(data: dict, steps: list, full_score) -> dict:
                 "title": sr["title"],
                 "mistake_type": et,
                 "mistake_detail": sr["error_detail"],
+                "answer_evidence": sr["answer_evidence"],
+                "cause_confidence": sr["cause_confidence"],
             })
 
     return {
@@ -245,17 +292,22 @@ def _sanitize_ai_grade(data: dict, steps: list, full_score) -> dict:
         "earned_score": earned_score,
         "feedback": feedback,
         "suggested_approach": suggested,
+        "grading_confidence": data.get("grading_confidence")
+        if data.get("grading_confidence") in ("low", "medium", "high") else "unknown",
+        "rubric_incomplete": rubric_missing,
     }
 
 
 def _ai_grade_essay(question: str, student_answer: str, steps: list,
-                    final_answer: str, full_score, teacher=None) -> dict:
+                    final_answer: str, full_score, teacher=None,
+                    scoring_rubric=None) -> dict:
     payload = {
         "question": question,
         "student_answer": student_answer,
         "standard_steps": steps,
         "standard_final_answer": final_answer,
         "full_score": full_score,
+        "scoring_rubric": scoring_rubric or [],
     }
     cfg = runtime_settings.get_teacher_config(teacher)
     grade_cfg = cfg.get("grade") or {}
@@ -269,14 +321,120 @@ def _ai_grade_essay(question: str, student_answer: str, steps: list,
         reasoning_effort=grade_effort,
     )
     data = json.loads(_extract_json(content))
-    return _sanitize_ai_grade(data, steps, full_score)
+    return _sanitize_ai_grade(data, steps, full_score, scoring_rubric)
+
+
+def grade_prepared(question: str, answer_json: dict, student_answer: str, *,
+                   question_type=None, full_score=None, teacher=None,
+                   scoring_rubric=None, objective_rule=None, input_type="text") -> dict:
+    """Grade supplied assessment material without looking up or writing to the bank.
+
+    Exam attempts call this same pure grading path as the legacy single-question
+    route, then persist their own provenance and edits in their attempt record.
+    """
+    if input_type not in ("text", "ocr"):
+        return {"error": "unsupported_input_type", "detail": "作答输入类型不支持。"}
+    student_answer = str(student_answer or "").strip()
+    if not student_answer:
+        return {"error": "empty_answer", "detail": "学生作答为空，请确认是否确实未作答。"}
+    answer_json = answer_json if isinstance(answer_json, dict) else {}
+    question = str(question or "").strip()
+    resolved_type = _resolve_question_type(answer_json, question_type)
+    reference = _final_answer(answer_json)
+    if not reference:
+        return {"error": "no_answer", "detail": "此题没有可用的参考答案。"}
+    standard_steps = _collect_steps(answer_json)
+    if resolved_type in ("选择题", "多选题", "填空题"):
+        if resolved_type == "填空题":
+            relation = _fill_relation(reference, student_answer)
+            correct = relation if relation is not None else None
+        else:
+            expected_options, student_options = _choice_set(reference), _choice_set(student_answer)
+            if expected_options is None or student_options is None:
+                correct = _compare_choice(reference, student_answer)
+                expected_options = student_options = None
+            else:
+                correct = expected_options == student_options
+        earned_score, score_basis = None, "unscored"
+        if full_score is not None and correct is not None:
+            if resolved_type == "多选题" and objective_rule and objective_rule.get("mode") == "per_option":
+                if not expected_options or student_options is None:
+                    correct = None
+                else:
+                    try:
+                        penalty = float(objective_rule.get("wrong_option_penalty", 0))
+                    except (TypeError, ValueError):
+                        return {"error": "invalid_objective_rule", "detail": "多选题扣分规则无效。"}
+                    if not math.isfinite(penalty) or penalty < 0 or penalty > float(full_score):
+                        return {"error": "invalid_objective_rule", "detail": "多选题扣分规则无效。"}
+                    point_per_correct = float(full_score) / len(expected_options)
+                    earned_score = max(0.0, min(float(full_score),
+                        len(set(expected_options) & set(student_options)) * point_per_correct -
+                        len(set(student_options) - set(expected_options)) * penalty))
+                    score_basis = "confirmed_multi_select_rule"
+            if earned_score is None and correct is not None:
+                earned_score = float(full_score) if correct else 0.0
+                score_basis = "exact_answer"
+        return {
+            "mode": "answer_match", "question_id": None,
+            "question_type": resolved_type, "input_type": input_type,
+            "is_correct": correct, "result_matched": correct,
+            "expected_answer": reference, "student_answer": student_answer,
+            "earned_score": earned_score, "full_score": full_score,
+            "score_basis": score_basis,
+            "step_results": [], "missing_steps": [], "not_rigorous_steps": [],
+            "error_suggestions": [], "standard_steps": standard_steps,
+            "feedback": "等价关系无法自动确认，请人工复核。" if correct is None else
+            "回答正确。" if correct else "答案未匹配，请核对题目和评分标准。",
+            "suggested_approach": "", "review_required": correct is None,
+        }
+    if not standard_steps:
+        return {"error": "no_steps", "detail": "题目没有可用的参考解答，无法自动批改。"}
+    if scoring_rubric:
+        valid_ids = {step["id"] for step in standard_steps}
+        rubric_ids = [row.get("step_id") for row in scoring_rubric if isinstance(row, dict)]
+        try:
+            total = sum(float(row["max_points"]) for row in scoring_rubric)
+        except (KeyError, TypeError, ValueError):
+            return {"error": "invalid_rubric", "detail": "评分点格式无效，请核对评分标准。"}
+        if (not scoring_rubric or len(rubric_ids) != len(scoring_rubric) or
+                len(set(rubric_ids)) != len(rubric_ids) or not set(rubric_ids) <= valid_ids or
+                any(not math.isfinite(float(row["max_points"])) or float(row["max_points"]) < 0
+                    for row in scoring_rubric) or full_score is None or
+                abs(total - float(full_score)) > 0.01):
+            return {"error": "invalid_rubric", "detail": "评分点分值须有效且总和等于题目满分。"}
+    try:
+        ai = _ai_grade_essay(question, student_answer, standard_steps, reference,
+                             full_score, teacher, scoring_rubric)
+    except Exception as exc:
+        return {"error": "ai_failed", "detail": str(exc)[:200]}
+    needs_review = any(step["review_required"] for step in ai["steps"]) or ai["rubric_incomplete"]
+    needs_review = needs_review or ai["grading_confidence"] != "high"
+    return {
+        "mode": "step_ai", "question_id": None, "question_type": resolved_type,
+        "input_type": input_type, "is_correct": ai["is_correct"],
+        "result_matched": ai["result_matched"], "expected_answer": reference,
+        "student_answer": student_answer, "earned_score": ai["earned_score"],
+        "full_score": full_score, "step_results": ai["steps"],
+        "missing_steps": ai["missing_steps"],
+        "not_rigorous_steps": ai["not_rigorous_steps"],
+        "error_suggestions": ai["error_suggestions"],
+        "standard_steps": standard_steps,
+        "feedback": ai["feedback"] or "批改完成。",
+        "suggested_approach": ai["suggested_approach"],
+        "review_required": needs_review,
+        "grading_confidence": ai["grading_confidence"],
+        "scoring_rubric": scoring_rubric or [],
+        "score_basis": "confirmed_rubric" if scoring_rubric and not ai["rubric_incomplete"] else
+        "provisional_ai" if full_score is not None and ai["earned_score"] is not None else "unscored",
+    }
 
 
 def grade_text(question_id=None, question=None, student_answer="",
                question_type=None, full_score=None, teacher=None,
                source=None, duration_seconds=None,
                viewed_answer=False, skipped=False,
-               input_type="text") -> dict:
+               input_type="text", scoring_rubric=None, objective_rule=None) -> dict:
     if input_type != "text":
         return {
             "error": "unsupported_input_type",
@@ -324,76 +482,20 @@ def grade_text(question_id=None, question=None, student_answer="",
     else:
         return {"error": "missing_question", "detail": "需要提供 question_id 或 question"}
 
-    resolved_type = _resolve_question_type(answer_json, question_type)
-    reference = _final_answer(answer_json)
-    if not reference:
-        return {"error": "no_answer", "detail": "题目暂无参考答案，请先解题入库再批改"}
-
     anti_cheat = {
         "viewed_answer": bool(viewed_answer),
         "skipped": bool(skipped),
         "duration_seconds": duration_seconds,
     }
-    standard_steps = _collect_steps(answer_json)
-
-    if resolved_type in ("选择题", "多选题", "填空题"):
-        if resolved_type == "填空题":
-            correct = _fill_equivalent(reference, student_answer)
-        else:
-            correct = _compare_choice(reference, student_answer)
-        earned_score = None
-        if full_score is not None:
-            earned_score = float(full_score) if correct else 0.0
-        result = {
-            "mode": "answer_match",
-            "question_id": qid,
-            "question_type": resolved_type,
-            "input_type": input_type,
-            "is_correct": correct,
-            "result_matched": correct,
-            "expected_answer": reference,
-            "student_answer": student_answer,
-            "earned_score": earned_score,
-            "full_score": full_score,
-            "step_results": [],
-            "missing_steps": [],
-            "not_rigorous_steps": [],
-            "error_suggestions": [],
-            "standard_steps": standard_steps,
-            "feedback": "回答正确。" if correct else "回答错误，请核对答案。",
-            "suggested_approach": "",
-            "anti_cheat": anti_cheat,
-        }
-    else:
-        steps = standard_steps
-        if not steps:
-            return {"error": "no_steps", "detail": "题目没有标准步骤，无法按步骤批改"}
-        try:
-            ai = _ai_grade_essay(
-                question_text, student_answer, steps, reference, full_score, teacher
-            )
-        except Exception as e:
-            return {"error": "ai_failed", "detail": str(e)[:200]}
-        result = {
-            "mode": "step_ai",
-            "question_id": qid,
-            "question_type": resolved_type,
-            "input_type": input_type,
-            "is_correct": ai["is_correct"],
-            "result_matched": ai["result_matched"],
-            "expected_answer": reference,
-            "student_answer": student_answer,
-            "earned_score": ai["earned_score"],
-            "full_score": full_score,
-            "step_results": ai["steps"],
-            "missing_steps": ai["missing_steps"],
-            "not_rigorous_steps": ai["not_rigorous_steps"],
-            "error_suggestions": ai["error_suggestions"],
-            "standard_steps": steps,
-            "feedback": ai["feedback"] or "批改完成。",
-            "suggested_approach": ai["suggested_approach"],
-            "anti_cheat": anti_cheat,
-        }
+    result = grade_prepared(
+        question_text, answer_json, student_answer,
+        question_type=question_type, full_score=full_score, teacher=teacher,
+        scoring_rubric=scoring_rubric, objective_rule=objective_rule, input_type=input_type,
+    )
+    if result.get("error"):
+        return result
+    result["question_id"] = qid
+    result["anti_cheat"] = anti_cheat
 
     if qid is not None:
         try:

@@ -15,17 +15,22 @@ class RuntimeSnapshotTests(unittest.TestCase):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.root=Path(self.tmp.name);self.source=self.root/'owner';self.source.mkdir()
         self.backup=self.root/'backup';self.target=self.root/'restored';self.target.mkdir()
-        for name in ('study_agent.db','mastery.db','.runtime/question_pool.db','.runtime/routine-review.sqlite3'):
+        for name in ('study_agent.db','mastery.db','.runtime/question_pool.db','.runtime/routine-review.sqlite3',
+                     '.runtime/exam-analyses.sqlite3','.runtime/student-analysis.sqlite3'):
             file=self.source/name;file.parent.mkdir(parents=True,exist_ok=True)
             with closing(sqlite3.connect(file)) as db:
                 db.execute('CREATE TABLE rows(value TEXT)');db.execute('INSERT INTO rows VALUES (?)',(name,));db.commit()
         for name in ('.runtime/question-pool/snapshots/source/figure.png','.runtime/question-assets/asset.png',
-                     '.runtime/routine-matching/graph.json','.runtime/routine-matching/state.json','.env'):
+                     '.runtime/routine-matching/graph.json','.runtime/routine-matching/state.json',
+                     '.runtime/exam-uploads/analysis/source-page.png',
+                     '.runtime/student-analysis-uploads/attempt/page-001.png','.env'):
             file=self.source/name;file.parent.mkdir(parents=True,exist_ok=True);file.write_text('private test fixture')
 
     def test_complete_roundtrip_and_absent_paths_do_not_leave_upgrade_data(self):
         m=snapshot.backup(self.source,self.backup)
         self.assertIn('.runtime/routine-matching/graph.json',m['files'])
+        self.assertIn('.runtime/exam-analyses.sqlite3',m['files'])
+        self.assertIn('.runtime/exam-uploads/analysis/source-page.png',m['files'])
         unexpected=self.target/'.runtime/jobs.sqlite3';unexpected.parent.mkdir();unexpected.write_text('later data')
         snapshot.restore(self.backup,self.target)
         self.assertFalse(unexpected.exists())

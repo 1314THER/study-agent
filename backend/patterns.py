@@ -50,6 +50,9 @@ _YAML_HEADER = """# 母题库：一级标题与 backend/categories.yaml 保持�
 
 
 def _get_conn():
+    from backend.storage.database import current_repository
+    if current_repository() is not None:
+        raise RuntimeError("云端套路请通过共享数据服务访问")
     conn = sqlite3.connect(data_path("mastery.db", MASTERY_DB))
     conn.row_factory = sqlite3.Row
     return conn

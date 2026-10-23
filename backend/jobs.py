@@ -17,6 +17,7 @@ import math
 import os
 from pathlib import Path
 import queue
+import re
 import shutil
 import sqlite3
 import threading
@@ -33,8 +34,9 @@ logger = logging.getLogger(__name__)
 ROOT = Path(__file__).resolve().parent.parent
 KINDS = {"solve", "teach_start", "teach_legacy_start", "teach_chat", "teach_check", "teach_ack", "teach_finish",
          "generate", "grade", "parse_file", "ocr_file", "batch_solve", "agent",
-         "pattern_check", "pattern_variants", "provider_test", "pool_prepare", "pool_import", "pool_collect", "routine_match"}
-TERMINAL = {"done", "error", "interrupted"}
+         "pattern_check", "pattern_variants", "provider_test", "pool_prepare", "pool_import", "pool_collect", "routine_match",
+         "exam_extract", "exam_solve", "student_extract", "student_grade", "curriculum_research"}
+TERMINAL = {"done", "error", "interrupted", "cancelled"}
 PRESET_TIMEOUT_SECONDS = 300
 _CURRENT = ContextVar("study_background_job", default=None)
 PROVIDER_CONCURRENCY = 20
@@ -483,11 +485,26 @@ class JobManager:
         path = storage_path()
         ttl = _history_ttl()
         with self.lock, self._connection(path) as conn:
-            conn.execute("DELETE FROM jobs WHERE status IN ('done','error','interrupted') AND updated_at<?",
+            conn.execute("DELETE FROM jobs WHERE status IN ('done','error','interrupted','cancelled') AND updated_at<?",
                          (time.time() - ttl,))
             rows = conn.execute("SELECT * FROM jobs ORDER BY CASE WHEN status IN ('queued','running') THEN 0 ELSE 1 END, "
                                 "created_at DESC LIMIT ?", (max(1, min(100, int(limit))),)).fetchall()
             return {"jobs": [_public(row, full=False) for row in rows], "total": len(rows)}
+
+    def cancel(self, job_id):
+        """Stop an active task at the next safe boundary and preserve its result."""
+        with self.lock, self._connection(storage_path()) as conn:
+            row = conn.execute("SELECT * FROM jobs WHERE job_id=?", (job_id,)).fetchone()
+            if not row or row["status"] in TERMINAL:
+                return False
+            runtime = self.runtimes.get(job_id)
+            if runtime is None:
+                return False
+            runtime.finished.set()
+            conn.execute("UPDATE jobs SET status='cancelled',stage='cancelled',detail=?,updated_at=?,error_json=? "
+                         "WHERE job_id=? AND status NOT IN ('done','error','interrupted','cancelled')",
+                         ("任务已由用户停止。", time.time(), _dump({"code": "cancelled", "detail": "用户停止任务"}), job_id))
+            return True
 
 
 def _text(args, key, required=True):
@@ -500,6 +517,9 @@ def _text(args, key, required=True):
 
 
 def validate_args(kind, args):
+    if kind == "curriculum_research":
+        from backend.curriculum_tasks import validate_job_args
+        return validate_job_args(args)
     if kind == "routine_match":
         from backend.routine_review import validate_job_args
         return validate_job_args(args)
@@ -579,6 +599,16 @@ def validate_args(kind, args):
         raise ValueError("未知 provider")
     if kind in ("parse_file", "ocr_file") and not args.get("_upload_path"):
         raise ValueError("请通过文件上传接口提交此任务")
+    if kind in ("exam_extract", "exam_solve"):
+        analysis_id = args.get("analysis_id")
+        if not isinstance(analysis_id, str) or not re.fullmatch(r"[a-f0-9]{32}", analysis_id):
+            raise ValueError("analysis_id 无效")
+    if kind in ("student_extract", "student_grade"):
+        attempt_id, revision = args.get("attempt_id"), args.get("revision")
+        if not isinstance(attempt_id, str) or not re.fullmatch(r"[a-f0-9]{32}", attempt_id):
+            raise ValueError("attempt_id 无效")
+        if type(revision) is not int or revision < 1:
+            raise ValueError("revision 无效")
     if kind == "batch_solve":
         questions = args.get("questions")
         if not isinstance(questions, list) or not 1 <= len(questions) <= 20:
@@ -900,12 +930,40 @@ def _routine_match(args, ctx):
     return run_job(args, ctx)
 
 
+def _exam_extract(args, ctx):
+    from backend.exam_analysis import run_extract_job
+    return run_extract_job(args, ctx)
+
+
+def _exam_solve(args, ctx):
+    from backend.exam_analysis import run_solve_job
+    return run_solve_job(args, ctx)
+
+
+def _student_extract(args, ctx):
+    from backend.student_analysis import run_extract_job
+    return run_extract_job(args, ctx)
+
+
+def _student_grade(args, ctx):
+    from backend.student_analysis import run_grade_job
+    return run_grade_job(args, ctx)
+
+
+def _curriculum_research(args, ctx):
+    from backend.curriculum_tasks import run_job
+    return run_job(args, ctx)
+
+
 RUNNERS = {"solve": _solve, "teach_start": _teach_start, "teach_legacy_start": _teach_legacy_start,
            "teach_chat": _teach_chat, "teach_ack": _teach_ack,
            "teach_finish": _teach_finish, "teach_check": _teach_check, "generate": _generate, "grade": _grade,
            "parse_file": _parse_file, "ocr_file": _ocr_file, "batch_solve": _batch_solve, "agent": _agent,
            "pattern_check": _pattern_check, "pattern_variants": _pattern_variants, "provider_test": _provider_test,
-           "pool_prepare": _pool_prepare, "pool_import": _pool_import, "pool_collect": _pool_collect, "routine_match": _routine_match}
+           "pool_prepare": _pool_prepare, "pool_import": _pool_import, "pool_collect": _pool_collect, "routine_match": _routine_match,
+           "exam_extract": _exam_extract, "exam_solve": _exam_solve,
+           "student_extract": _student_extract, "student_grade": _student_grade,
+           "curriculum_research": _curriculum_research}
 _manager = JobManager()
 
 
@@ -915,6 +973,10 @@ def submit_job(kind, args, request_id):
 
 def get_job(job_id):
     return _manager.get(job_id)
+
+
+def cancel_job(job_id):
+    return _manager.cancel(job_id)
 
 
 def active_count(workspace=None):

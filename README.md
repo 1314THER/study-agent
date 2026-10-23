@@ -2,9 +2,13 @@
 
 > 持续开发中；具体版本以仓库最新提交为准。
 
+新增 [数学课时库](http://127.0.0.1:8000/curriculum-wiki.html)：覆盖人教A版五册教材的329个建议课时，按知识与解法前置组织资料，支持主人校正、拆合、重排、版本恢复及有据LLM草稿。真实教辅题与原题池草稿分开记录，未核实内容保留缺口；来源、数据字典与验证见 [维护说明](docs/curriculum-wiki.md)。
+
 面向高中生的 AI 数学学习系统。基于 DeepSeek V4 多老师路由与 Solver → Verifier → Formatter 三段流水线，同时提供首页教练台、全局智能体、手写作答识别、一键规划、多模态切题、手把手教学、AI 仿题、个人题库、题单、错题与组卷系统。完整开发路线见 [ROADMAP.md](ROADMAP.md)。
 
 账号版提供游客登录、邮箱验证注册和账号登录三入口，个人学习数据按用户隔离，公共母题仅主人 `studyadmin` 维护。启用配置、主人迁移及个人 ICP 下验证码服务的门槛见 [账号与验证码方案](docs/accounts-and-verification.md)。生产启用 `STUDY_AUTH_ENABLED=1` 后，现有 `backend.main:app` 自动切换为账号版；本地预览使用 `python3 scripts/run_accounts.py`。
+
+新增 [Apple 客户端与云端数据服务](docs/apple-cloud.md)：SwiftUI 覆盖 iPhone、iPad、Mac，本机 SQLite 缓存与草稿，共用 PostgreSQL 云端 API；包含 Xcode 工程、开发启动、迁移演练和回滚前导出说明。原有本地 SQLite 模式继续保留。
 
 主人可从导航或母题看板进入 [原题池](http://127.0.0.1:8000/question-pool.html)：先筛选、确定套路与角色，再为选中题准备 AI 解析，对照原答案后批量确认入库。候选、原文件和出处独立保存；图形题加载原题图或原卷页，来源许可未确认时不自动公开。使用方法见 [原题池工作流](docs/question-pool.md)，固定题源和采集数量见 [来源与导入](docs/question-pool-sources.md)。
 

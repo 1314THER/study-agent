@@ -253,6 +253,11 @@ class TeachSessionManager:
         self._turn_locks = {}
 
     def _persist(self, session):
+        from backend.storage.database import current_repository
+        repo = current_repository()
+        if repo is not None:
+            repo.persist_teaching(session)
+            return
         from backend.jobs import storage_connection
         now = time.time()
         session.setdefault("revision", 0)
@@ -265,6 +270,9 @@ class TeachSessionManager:
 
     def _store(self, session):
         self._persist(session)
+        from backend.storage.database import current_repository
+        if current_repository() is not None:
+            return
         self._sessions[session["session_id"]] = session
         self._session_owners[session["session_id"]] = workspace_directory()
 
@@ -457,8 +465,9 @@ class TeachSessionManager:
         with self._lock:
             self._store(session)
             owner = workspace_directory()
-            self._session_owners[session_id] = owner
-            if owner is not None:
+            from backend.storage.database import current_repository
+            if owner is not None and current_repository() is None:
+                self._session_owners[session_id] = owner
                 # Keep repeated starts on an existing question from growing demo
                 # memory indefinitely. The regular owner's sessions stay intact.
                 own_sessions = [sid for sid, directory in self._session_owners.items() if directory == owner]
@@ -474,6 +483,16 @@ class TeachSessionManager:
         transaction = _TURN_SNAPSHOT.get()
         if transaction and transaction[:2] == (self, session_id):
             return transaction[2]
+        from backend.storage.database import current_repository
+        repo = current_repository()
+        if repo is not None:
+            from fastapi import HTTPException
+            try:
+                return repo.teaching(session_id)
+            except HTTPException as exc:
+                if exc.status_code == 404:
+                    return None
+                raise
         with self._lock:
             if session_id in self._session_owners and self._session_owners[session_id] != workspace_directory():
                 return None
@@ -733,7 +752,8 @@ def teach_session_start(question: str, teacher: str = None, asset_refs: list = N
     first_step = sess["steps"][0] if sess["steps"] else {}
     first_msg = first_step.get("step_prompt") or f"请尝试完成第 1 步：{first_step.get('title', '')}"
     sess["step_introduced"] = True
-    _session_manager.add_message(result["session_id"], "teacher", first_msg, metadata={"action": "guide"})
+    sess["messages"].append({"role": "teacher", "content": first_msg, "step_index": sess["current_step"], "action": "guide"})
+    _session_manager._persist(sess)
 
     return {
         "session_id": result["session_id"],

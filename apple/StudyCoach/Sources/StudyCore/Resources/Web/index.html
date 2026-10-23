@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' study:; script-src 'self' study: 'unsafe-inline'; style-src 'self' study: 'unsafe-inline'; img-src 'self' study: data:; connect-src 'self' study:; font-src 'self' study:; object-src 'none'">
+<link rel="stylesheet" href="/vendor/katex/katex.min.css"><link rel="stylesheet" href="/geometry.css">
+<script type="importmap">{"imports":{"three":"/vendor/three-0.180.0/build/three.module.min.js"}}</script>
+<script src="/vendor/katex/katex.min.js"></script><script src="/geometry.js"></script>
+<style>:root{color-scheme:light dark}body{font:17px/1.8 -apple-system,BlinkMacSystemFont,sans-serif;margin:22px;color:light-dark(#1d2939,#eee);background:light-dark(#fff,#1c1c1e);overflow-wrap:anywhere}h2{font-size:21px}h3{font-size:17px;margin-top:1.8em}.katex-display{overflow:auto;padding:8px 0}p{white-space:pre-wrap}.geometry-panel{color:#1d2939;background:#fff}button{font:inherit}img{max-width:100%}</style>
+</head><body><main id="content"></main><section id="geometry"></section><script>
+'use strict';
+function textNode(tag,text){const e=document.createElement(tag);e.textContent=String(text||'');return e;}
+function math(element){
+ const walker=document.createTreeWalker(element,NodeFilter.SHOW_TEXT);const texts=[];while(walker.nextNode())texts.push(walker.currentNode);
+ texts.forEach(node=>{const source=node.textContent,pattern=/\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$/g;let m,last=0;const fragment=document.createDocumentFragment();while((m=pattern.exec(source))){fragment.append(document.createTextNode(source.slice(last,m.index)));const span=document.createElement(m[1]?'div':'span');try{katex.render(m[1]||m[2],span,{displayMode:!!m[1],throwOnError:false,trust:false,strict:'ignore'});}catch(_){span.textContent=m[0];}fragment.append(span);last=pattern.lastIndex;}fragment.append(document.createTextNode(source.slice(last)));node.replaceWith(fragment);});
+}
+window.render=function(payload){
+ const root=document.getElementById('content');root.replaceChildren(textNode('h2',payload.content));const answer=payload.answer_json||{};
+ if(payload.showAnswer){(answer.chunk_results||[]).forEach(chunk=>{(chunk.steps||[]).forEach(step=>{root.append(textNode('h3',step.title||step.step_level1||'解题步骤'),textNode('p',step.standard_writing||step.detailed_writing||step.step_answer));});if(chunk.final_answer)root.append(textNode('p','答案：'+chunk.final_answer));});if(!(answer.chunk_results||[]).length&&answer.final_answer)root.append(textNode('p','答案：'+answer.final_answer));}
+ math(root);StudyGeometry.mount(document.getElementById('geometry'),answer,{});
+};
+window.webkit?.messageHandlers?.ready?.postMessage('ready');
+</script></body></html>

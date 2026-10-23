@@ -14,10 +14,14 @@ import shutil
 import sqlite3
 import stat
 
-FILES = ('study_agent.db','mastery.db','.runtime/jobs.sqlite3',
+FILES = ('study_agent.db','mastery.db','.runtime/jobs.sqlite3','.runtime/exam-analyses.sqlite3',
+         '.runtime/student-analysis.sqlite3',
+         '.runtime/curriculum-wiki.sqlite3',
          '.runtime/question_pool.db','.runtime/routine-review.sqlite3',
          'backend/patterns.yaml','backend/board_order.yaml','backend/settings.json','.env')
-TREES = ('.runtime/question-pool','.runtime/question-assets','.runtime/routine-matching','.accounts')
+TREES = ('.runtime/question-pool','.runtime/question-assets','.runtime/routine-matching',
+         '.runtime/curriculum-wiki',
+         '.runtime/exam-uploads','.runtime/student-analysis-uploads','.accounts')
 MANAGED = FILES + TREES
 MANIFEST = 'snapshot-manifest.json'
 
@@ -129,6 +133,15 @@ def backup(source, destination):
                        for suffix in ('-wal','-shm','-journal')):
                     continue
                 copy_file(path,path.relative_to(source).as_posix())
+    # Opening a WAL database for a consistent read can create a transient
+    # destination shm file even though its WAL contents were merged above.
+    for base in destination.rglob('*'):
+        if not base.is_file() or base.name.endswith(('-wal','-shm','-journal')):
+            continue
+        for suffix in ('-wal','-shm','-journal'):
+            sidecar=Path(str(base)+suffix)
+            if sidecar.exists() and sqlite_file(base):
+                regular(sidecar);sidecar.unlink()
     m=destination/MANIFEST;m.write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n');m.chmod(0o600)
     verify(destination)
     return manifest

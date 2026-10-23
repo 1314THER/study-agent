@@ -1,7 +1,7 @@
 # 上传本机 23,255 道原题及审核结果
 
 之前的离线代码包不含题库。本次已单独生成数据包：
-`/Users/sqz/Desktop/git/.runtime/server-sync/study-agent-question-data-20261013.tar.gz`
+`/Users/sqz/Desktop/study-agent/.runtime/server-sync/study-agent-question-data-20261013.tar.gz`
 
 压缩大小约 413 MiB，包含 23,255 道独立原题、61 个来源、23,536 条出处、两批审核账本和 2,708 个原件及图片文件。当前审核批次中 17,005 道有主套路匹配；原有人工审核状态保留。两批审核的 46,510 条快照并不是 46,510 道独立题。
 
@@ -12,7 +12,7 @@
 ## 1. 在 Mac 终端定位数据包
 
 ```bash
-open -R /Users/sqz/Desktop/git/.runtime/server-sync/study-agent-question-data-20261013.tar.gz
+open -R /Users/sqz/Desktop/study-agent/.runtime/server-sync/study-agent-question-data-20261013.tar.gz
 ```
 
 ## 2. 手动上传
