@@ -446,6 +446,10 @@ def _safe_failure(exc):
     # Provider errors may contain request bodies/keys. Never persist their text.
     if isinstance(exc, ValueError):
         return "分类输出无效或未通过目录与原文证据检查"
+    diagnostic = getattr(exc, "diagnostic", None)
+    status = getattr(exc, "status_code", None)
+    if isinstance(diagnostic, str) and diagnostic.replace("_", "").isalnum():
+        return f"Codex CLI category={diagnostic} status={status if type(status) is int else 'unknown'}"
     if isinstance(exc, (TimeoutError, URLError)):
         return "分类请求超时或网络连接失败"
     return "分类请求失败，请检查配置或重试失败项"
