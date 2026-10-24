@@ -1,0 +1,90 @@
+<Slide style={{ padding: 0, background: '#FFFFFF' }}>
+    <Box style={{ height: 72, background: '#1E4FA8', paddingLeft: 40, paddingRight: 40, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>02 · 升维二：从试题到试卷</Text>
+    </Box>
+
+    <Box style={{ flex: 1, paddingTop: 16, paddingBottom: 14, paddingLeft: 40, paddingRight: 40, justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 21, color: '#4A5568', lineHeight: 1.5 }}>
+            题目层只能回答「这道题难不难、对没对」；试卷层新增了偏差、缺口与稳定性三个维度。
+        </Text>
+
+        <Box style={{ flexDirection: 'row', alignItems: 'stretch', gap: 20, flex: 1 }}>
+            <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 20, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Text style={{ fontSize: 19, color: '#8B97A8' }}>下层</Text>
+                    <Text style={{ fontSize: 27, fontWeight: 'bold', color: '#1E4FA8' }}>试题层 · 单题</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 10 }}>
+                    <Box style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Box style={{ width: 8, height: 8, background: '#3D7BD9' }} />
+                        <Text style={{ fontSize: 20, color: '#1A2230', flex: 1, lineHeight: 1.5 }}>这道题的难度分（0–15）</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Box style={{ width: 8, height: 8, background: '#3D7BD9' }} />
+                        <Text style={{ fontSize: 20, color: '#1A2230', flex: 1, lineHeight: 1.5 }}>这道题做对了还是错了</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Box style={{ width: 8, height: 8, background: '#3D7BD9' }} />
+                        <Text style={{ fontSize: 20, color: '#1A2230', flex: 1, lineHeight: 1.5 }}>错在哪一步、属于哪类错因</Text>
+                    </Box>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 12 }}>
+                    <Text style={{ fontSize: 18, color: '#8B97A8', lineHeight: 1.5 }}>单题没有参照系，因此不存在「偏难」或「覆盖缺口」。</Text>
+                </Box>
+            </Box>
+
+            <Box style={{ width: 70, alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 6 }}>
+                <Text style={{ fontSize: 17, fontWeight: 'bold', color: '#FFC107' }}>升维</Text>
+                <Box style={{ width: 46, height: 3, background: '#1E4FA8' }} />
+                <Box style={{ width: 10, height: 10, background: '#1E4FA8' }} />
+            </Box>
+
+            <Box style={{ flex: 1, background: '#E8EFF8', borderRadius: 8, border: '1px solid #3D7BD9', padding: 20, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Text style={{ fontSize: 19, color: '#8B97A8' }}>上层</Text>
+                    <Text style={{ fontSize: 27, fontWeight: 'bold', color: '#0E3F8C' }}>试卷层 · 整卷</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 10 }}>
+                    <Box style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Box style={{ width: 8, height: 8, background: '#0E3F8C' }} />
+                        <Text style={{ fontSize: 20, color: '#1A2230', flex: 1, lineHeight: 1.5 }}>难度拟合：实际 vs 目标，给出偏难偏易方向</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Box style={{ width: 8, height: 8, background: '#0E3F8C' }} />
+                        <Text style={{ fontSize: 20, color: '#1A2230', flex: 1, lineHeight: 1.5 }}>覆盖评估：知识点与属性的不足与超出</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Box style={{ width: 8, height: 8, background: '#0E3F8C' }} />
+                        <Text style={{ fontSize: 20, color: '#1A2230', flex: 1, lineHeight: 1.5 }}>稳定性：会做也错，正误并存</Text>
+                    </Box>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 12 }}>
+                    <Text style={{ fontSize: 18, color: '#0E3F8C', lineHeight: 1.5 }}>产出两份独立报告：评价卷子、评价学生。</Text>
+                </Box>
+            </Box>
+        </Box>
+
+        <Box style={{ flexDirection: 'row', gap: 20 }}>
+            <Box style={{ flex: 1, background: '#FFFFFF', borderRadius: 8, border: '1px solid #D6DCE5', padding: 16, flexDirection: 'column', gap: 8 }}>
+                <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#1E4FA8' }}>报告一 · 试卷质量分析</Text>
+                <Text style={{ fontSize: 19, color: '#4A5568', lineHeight: 1.5 }}>不看学生，只评价卷子：难度拟合得分 15−RMSE，覆盖得分用二次罚函数，逐题输出明细与待复核清单。</Text>
+            </Box>
+            <Box style={{ flex: 1, background: '#FFFFFF', borderRadius: 8, border: '1px solid #D6DCE5', padding: 16, flexDirection: 'column', gap: 8 }}>
+                <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#1E4FA8' }}>报告二 · 学生全卷评价</Text>
+                <Text style={{ fontSize: 19, color: '#4A5568', lineHeight: 1.5 }}>汇总逐题得分、步骤错因与跨考试证据，输出四类发现，每条附建议与验证目标。</Text>
+            </Box>
+        </Box>
+
+        <Box style={{ background: '#0E3F8C', borderRadius: 8, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <Box style={{ width: 6, height: 34, background: '#FFC107' }} />
+            <Text style={{ fontSize: 20, color: '#FFFFFF', lineHeight: 1.5, flex: 1 }}>
+                「偏难」这个概念必须先有目标位才成立——它只存在于试卷层，不存在于题目层。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 44, paddingLeft: 40, paddingRight: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', background: '#F7F9FC', borderTop: '1px solid #E5E7EB' }}>
+        <Text style={{ fontSize: 14, color: '#8B97A8' }}>高中数学 AI 学习系统 · 技术框架汇报</Text>
+        <Text style={{ fontSize: 15, color: '#1E4FA8' }}>07 / 24</Text>
+    </Box>
+</Slide>

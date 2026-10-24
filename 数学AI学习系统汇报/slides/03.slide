@@ -1,0 +1,79 @@
+<Slide style={{ padding: 0, background: '#FFFFFF' }}>
+    <Box style={{ height: 72, background: '#1E4FA8', paddingLeft: 40, paddingRight: 40, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>01 · 现有产品的三种「伪个性化」</Text>
+    </Box>
+
+    <Box style={{ flex: 1, paddingTop: 14, paddingBottom: 12, paddingLeft: 40, paddingRight: 40, justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 22, color: '#4A5568', lineHeight: 1.6 }}>
+            多数产品改变的是「推什么内容、用什么节奏」，而不是教学过程本身。
+        </Text>
+
+        <Box style={{ flexDirection: 'row', alignItems: 'stretch', gap: 24, flex: 1 }}>
+            <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 18, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Box style={{ width: 40, height: 40, background: '#1E4FA8', borderRadius: 6, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' }}>1</Text>
+                    </Box>
+                    <Text style={{ fontSize: 26, fontWeight: 'bold', color: '#1A2230' }}>自适应题库</Text>
+                </Box>
+                <Text style={{ fontSize: 17, color: '#8B97A8', lineHeight: 1.4 }}>连错三题后只降难度，不说错在哪一步。</Text>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Text style={{ fontSize: 19, color: '#8B97A8' }}>它做的</Text>
+                    <Text style={{ fontSize: 21, color: '#1A2230', lineHeight: 1.5 }}>按正确率推送下一道题</Text>
+                </Box>
+                <Text style={{ fontSize: 17, color: '#8B97A8', lineHeight: 1.4 }}>可以跳过最难的一章，考前才发现没掌握。</Text>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 14 }}>
+                    <Text style={{ fontSize: 19, color: '#8B97A8', lineHeight: 1.4 }}>为什么不够</Text>
+                    <Text style={{ fontSize: 20, color: '#D9534F', lineHeight: 1.5 }}>只是推荐算法；它不知道学生错在哪一步、因什么错。</Text>
+                </Box>
+                <Text style={{ fontSize: 17, color: '#8B97A8', lineHeight: 1.4 }}>抄完解析感觉会了，一周后同类题仍不会。</Text>
+            </Box>
+
+            <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 18, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Box style={{ width: 40, height: 40, background: '#1E4FA8', borderRadius: 6, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' }}>2</Text>
+                    </Box>
+                    <Text style={{ fontSize: 26, fontWeight: 'bold', color: '#1A2230' }}>录播课</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Text style={{ fontSize: 19, color: '#8B97A8' }}>它做的</Text>
+                    <Text style={{ fontSize: 21, color: '#1A2230', lineHeight: 1.5 }}>让学生自己选择进度</Text>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 14 }}>
+                    <Text style={{ fontSize: 19, color: '#8B97A8', lineHeight: 1.4 }}>为什么不够</Text>
+                    <Text style={{ fontSize: 20, color: '#D9534F', lineHeight: 1.5 }}>把学习压力与判断责任一并转给了学生，遇到困难时没人指出该回头补哪里。</Text>
+                </Box>
+            </Box>
+
+            <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 18, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Box style={{ width: 40, height: 40, background: '#1E4FA8', borderRadius: 6, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' }}>3</Text>
+                    </Box>
+                    <Text style={{ fontSize: 26, fontWeight: 'bold', color: '#1A2230' }}>拍照搜题</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Text style={{ fontSize: 19, color: '#8B97A8' }}>它做的</Text>
+                    <Text style={{ fontSize: 21, color: '#1A2230', lineHeight: 1.5 }}>直接给出答案与解析</Text>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 14 }}>
+                    <Text style={{ fontSize: 19, color: '#8B97A8', lineHeight: 1.4 }}>为什么不够</Text>
+                    <Text style={{ fontSize: 20, color: '#D9534F', lineHeight: 1.5 }}>跳过思考过程，长期使用会让学生误以为已经掌握，反而损害学习能力。</Text>
+                </Box>
+            </Box>
+        </Box>
+
+        <Box style={{ background: '#0E3F8C', borderRadius: 8, padding: 14, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <Box style={{ width: 6, height: 44, background: '#FFC107' }} />
+            <Text style={{ fontSize: 22, color: '#FFFFFF', lineHeight: 1.5, flex: 1 }}>
+                真正的个性化发生在<span style={{ fontWeight: 'bold' }}>教学过程中</span>：每一步有反馈、每一次错误被看见、每一种不同思路被尊重。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 44, paddingLeft: 40, paddingRight: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', background: '#F7F9FC', borderTop: '1px solid #E5E7EB' }}>
+        <Text style={{ fontSize: 14, color: '#8B97A8' }}>高中数学 AI 学习系统 · 技术框架汇报</Text>
+        <Text style={{ fontSize: 15, color: '#1E4FA8' }}>03 / 24</Text>
+    </Box>
+</Slide>

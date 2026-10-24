@@ -175,7 +175,14 @@ class ReviewStore:
                     content_hash = rc.digest(item)
                     key = rc.cache_key(item, catalog, config, catalog_hash)
                     cached = conn.execute('SELECT * FROM review_cache WHERE cache_key=?', (key,)).fetchone()
-                    human = conn.execute('SELECT decision_json FROM review_humans WHERE item_id=? AND content_hash=?', (item['id'],content_hash)).fetchone()
+                    human = None
+                    history_note = ''
+                    if config.get('preserve_prior_humans_as_history'):
+                        historical = conn.execute('SELECT decision_json FROM review_humans WHERE item_id=? AND content_hash=?', (item['id'],content_hash)).fetchone()
+                        if historical:
+                            history_note = '历史人工决定保留在批次 '+str(config.get('legacy_run_id') or '旧批次')+'；请在新版重新核对。'
+                    else:
+                        human = conn.execute('SELECT decision_json FROM review_humans WHERE item_id=? AND content_hash=?', (item['id'],content_hash)).fetchone()
                     result = json.loads(cached['result_json']) if cached else {}
                     classification = result.get('classification', {})
                     decision = json.loads(human[0]) if human else None
@@ -191,7 +198,7 @@ class ReviewStore:
                        result.get('review',{}).get('kind','') if result.get('review') else '',
                        int(not item['solution'].strip() or item['completeness']!='complete'),
                        decision['review_status'] if decision else 'pending',rc_json(decision['marks']) if decision else '[]',
-                       decision['note'] if decision else '',rc_json(decision) if decision else None))
+                       decision['note'] if decision else history_note,rc_json(decision) if decision else None))
                 source.rollback()
             conn.commit()
         return self.run(run_id)
@@ -509,6 +516,7 @@ def execute_run(store, run_id, caller=None, concurrency=8, progress=None, job_id
     require_owner()
     from backend.jobs import ensure_active, JobStopped
     run=store.run(run_id)
+    run['_store_path']=str(store.path)
     from backend.local_models import validate_routine_config
     validate_routine_config(run['model_config'])
     lock_key=(str(store.path.resolve()),run_id)
@@ -578,43 +586,57 @@ def execute_run(store, run_id, caller=None, concurrency=8, progress=None, job_id
         def classify_batch(batch):
             from backend.local_models import provider
             return provider().classify_batch(batch,store=store,run=run,caller=caller,fatal=fatal,fatal_reason=fatal_reason)
-        workers=max(1,min(8,concurrency))
+        workers=max(1,min(16,concurrency))
         batch_mode=run['model_config'].get('engine')=='codex_luna'
         if batch_mode:
             from backend.local_models import provider
-            work=provider().matching_batches(rows,run['model_config'])
+            work=provider().matching_batches(rows,run['model_config'],run)
         else: work=rows
-        iterator=iter(work); pending=set(); last_update=0; last_report=0
-        warm_completed=0
-        with ThreadPoolExecutor(max_workers=workers,thread_name_prefix='routine-review') as executor:
-            while True:
-                ensure_active()
-                stopping=fatal.is_set() or store.stopping(run_id)
-                # Warm with two useful items, never an extra paid preload request.
-                slots=1 if run['model_config'].get('warm_prefix') and warm_completed<2 else workers
-                while not stopping and len(pending)<slots:
-                    row=next(iterator,None)
-                    if row is None: break
-                    context=copy_context()
-                    pending.add(executor.submit(context.run,classify_batch if batch_mode else classify,row))
-                if not pending: break
-                done,pending=wait(pending,timeout=1,return_when=FIRST_COMPLETED)
-                for future in done: future.result()
-                warm_completed+=len(done)
-                if time.monotonic()-last_update>=2:
-                    with store.connection() as conn,conn:
-                        conn.execute('UPDATE review_runs SET updated_at=? WHERE run_id=?',(time.time(),run_id))
-                    if progress: progress(store.run(run_id))
-                    last_update=time.monotonic()
-                if time.monotonic()-last_report>=30:
-                    store.write_report(run_id)
-                    last_report=time.monotonic()
+        last_update=0; last_report=0
+        def drain_batches(batches, worker, warm=False):
+            nonlocal last_update,last_report
+            iterator=iter(batches); pending=set()
+            warm_completed=0
+            with ThreadPoolExecutor(max_workers=workers,thread_name_prefix='routine-review') as executor:
+                while True:
+                    ensure_active()
+                    stopping=fatal.is_set() or store.stopping(run_id)
+                    slots=1 if warm and run['model_config'].get('warm_prefix') and warm_completed<2 else workers
+                    while not stopping and len(pending)<slots:
+                        batch=next(iterator,None)
+                        if batch is None: break
+                        context=copy_context()
+                        pending.add(executor.submit(context.run,worker,batch))
+                    if not pending: break
+                    done,pending=wait(pending,timeout=1,return_when=FIRST_COMPLETED)
+                    for future in done: future.result()
+                    warm_completed+=len(done)
+                    if time.monotonic()-last_update>=2:
+                        with store.connection() as conn,conn:
+                            conn.execute('UPDATE review_runs SET updated_at=? WHERE run_id=?',(time.time(),run_id))
+                        if progress: progress(store.run(run_id))
+                        last_update=time.monotonic()
+                    if time.monotonic()-last_report>=30:
+                        store.write_report(run_id); last_report=time.monotonic()
+        drain_batches(work,classify_batch if batch_mode else classify,warm=True)
+        if batch_mode and not fatal.is_set() and not store.stopping(run_id):
+            from backend.local_models import provider
+            with store.connection() as conn:
+                audit_sql="SELECT * FROM review_items WHERE run_id=? AND status='matching' AND json_extract(result_json,'$.audit_pending')=1"
+                audit_params=[run_id]
+                if only_item_id is not None:
+                    audit_sql+=' AND item_id=?'; audit_params.append(only_item_id)
+                audit_rows=conn.execute(audit_sql+' ORDER BY item_id',audit_params).fetchall()
+            if audit_rows:
+                audit_work=provider().matching_batches(audit_rows,run['model_config'],run,full_audit=True)
+                drain_batches(audit_work,lambda batch:provider().audit_batch(batch,store=store,run=run,caller=caller,fatal=fatal,fatal_reason=fatal_reason))
         if fatal.is_set() or store.stopping(run_id):
             store.set_state(run_id,'paused',fatal_reason[0] if fatal_reason else '已暂停，可从已保存进度继续')
         else:
             state=store.run(run_id)
-            store.set_state(run_id,'paused' if only_item_id is not None and state['processed']<state['total'] else 'done',
-                            '单题重匹配完成，可继续全量任务' if only_item_id is not None and state['processed']<state['total'] else '')
+            incomplete=state['processed']<state['total']
+            store.set_state(run_id,'paused' if incomplete else 'done',
+                            '仍有题目或全目录复查未完成，可续跑' if incomplete else '')
         store.write_report(run_id)
         return store.run(run_id)
     except BaseException:

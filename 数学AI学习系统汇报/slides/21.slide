@@ -1,0 +1,94 @@
+<Slide style={{ padding: 0, background: '#FFFFFF' }}>
+    <Box style={{ height: 72, background: '#1E4FA8', paddingLeft: 40, paddingRight: 40, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>04 · 全局智能体：负责编排，不负责判断</Text>
+    </Box>
+
+    <Box style={{ flex: 1, paddingTop: 14, paddingBottom: 12, paddingLeft: 40, paddingRight: 40, justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 21, color: '#4A5568', lineHeight: 1.5 }}>
+            智能体决定「调哪个能力」；各能力内部的校验与人工闸门照常生效，不因经过智能体而绕过。
+        </Text>
+
+        <Box style={{ flexDirection: 'row', gap: 22, alignItems: 'stretch', flex: 1 }}>
+            <Box style={{ flex: 1, flexDirection: 'column', gap: 12 }}>
+                <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 16, flexDirection: 'row', gap: 14, alignItems: 'center' }}>
+                    <Box style={{ width: 44, height: 44, background: '#1E4FA8', borderRadius: 6, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 19, fontWeight: 'bold', color: '#FFFFFF' }}>快</Text>
+                    </Box>
+                    <Box style={{ flex: 1, flexDirection: 'column', gap: 4 }}>
+                        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#1A2230' }}>规则快路径</Text>
+                        <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.45 }}>学情查询、页面导航、题号识别直接命中，不调用模型，因此响应最快也没有额外成本。</Text>
+                    </Box>
+                </Box>
+
+                <Box style={{ flex: 1, background: '#E8EFF8', borderRadius: 8, border: '1px solid #3D7BD9', padding: 16, flexDirection: 'row', gap: 14, alignItems: 'center' }}>
+                    <Box style={{ width: 44, height: 44, background: '#0E3F8C', borderRadius: 6, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 19, fontWeight: 'bold', color: '#FFFFFF' }}>轮</Text>
+                    </Box>
+                    <Box style={{ flex: 1, flexDirection: 'column', gap: 4 }}>
+                        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#0E3F8C' }}>工具循环</Text>
+                        <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.4 }}>最多四轮，工具结果以消息形式回灌后继续决策；单个工具异常只降级为提示，不中断整体流程。</Text>
+                    </Box>
+                </Box>
+
+                <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 16, flexDirection: 'row', gap: 14, alignItems: 'center' }}>
+                    <Box style={{ width: 44, height: 44, background: '#1E4FA8', borderRadius: 6, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 19, fontWeight: 'bold', color: '#FFFFFF' }}>底</Text>
+                    </Box>
+                    <Box style={{ flex: 1, flexDirection: 'column', gap: 4 }}>
+                        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#1A2230' }}>规则兜底</Text>
+                        <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.4 }}>模型不可用时纯规则回退，即使完全没有模型，常用查询与页面导航依然可用。</Text>
+                    </Box>
+                </Box>
+            </Box>
+
+            <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 18, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ fontSize: 23, fontWeight: 'bold', color: '#1A2230' }}>可调用的六项能力</Text>
+                    <Text style={{ fontSize: 18, color: '#8B97A8', lineHeight: 1.4 }}>每次请求都会注入当前学情快照</Text>
+                </Box>
+                <Box style={{ flexDirection: 'row', gap: 9, flexWrap: 'wrap' }}>
+                    <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10, border: '1px solid #D6DCE5' }}>
+                        <Text style={{ fontSize: 18, color: '#1A2230' }}>搜题</Text>
+                    </Box>
+                    <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10, border: '1px solid #D6DCE5' }}>
+                        <Text style={{ fontSize: 18, color: '#1A2230' }}>解题</Text>
+                    </Box>
+                    <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10, border: '1px solid #D6DCE5' }}>
+                        <Text style={{ fontSize: 18, color: '#1A2230' }}>教学</Text>
+                    </Box>
+                    <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10, border: '1px solid #D6DCE5' }}>
+                        <Text style={{ fontSize: 18, color: '#1A2230' }}>批改</Text>
+                    </Box>
+                    <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10, border: '1px solid #D6DCE5' }}>
+                        <Text style={{ fontSize: 18, color: '#1A2230' }}>规划</Text>
+                    </Box>
+                    <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10, border: '1px solid #D6DCE5' }}>
+                        <Text style={{ fontSize: 18, color: '#1A2230' }}>学情</Text>
+                    </Box>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 11 }}>
+                    <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.4 }}>每个工具都保持各自的校验规则，不因调用方不同而放宽标准。</Text>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 12, flexDirection: 'column', gap: 5 }}>
+                    <Text style={{ fontSize: 19, fontWeight: 'bold', color: '#1E4FA8' }}>人机分工</Text>
+                    <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.5 }}>编排交给智能体，判断标准由人定义并由代码强制执行，二者不互相替代。</Text>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 12 }}>
+                    <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.5 }}>回复以流式返回，前端同步渲染公式，可保留最近若干轮对话上下文。</Text>
+                </Box>
+            </Box>
+        </Box>
+
+        <Box style={{ background: '#0E3F8C', borderRadius: 8, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <Box style={{ width: 6, height: 32, background: '#FFC107' }} />
+            <Text style={{ fontSize: 19, color: '#FFFFFF', lineHeight: 1.5, flex: 1 }}>
+                它可以决定调用批改，但批改自己的防幻觉约束依然生效——智能体不能绕过闸门。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 44, paddingLeft: 40, paddingRight: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', background: '#F7F9FC', borderTop: '1px solid #E5E7EB' }}>
+        <Text style={{ fontSize: 14, color: '#8B97A8' }}>高中数学 AI 学习系统 · 技术框架汇报</Text>
+        <Text style={{ fontSize: 15, color: '#1E4FA8' }}>21 / 24</Text>
+    </Box>
+</Slide>

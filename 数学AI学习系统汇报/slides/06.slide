@@ -1,0 +1,85 @@
+<Slide style={{ padding: 0, background: '#FFFFFF' }}>
+    <Box style={{ height: 72, background: '#1E4FA8', paddingLeft: 40, paddingRight: 40, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>02 · 升维一：从知识点到套路</Text>
+    </Box>
+
+    <Box style={{ flex: 1, paddingTop: 10, paddingBottom: 8, paddingLeft: 40, paddingRight: 40, justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 21, color: '#4A5568', lineHeight: 1.5 }}>
+            知识点回答「用什么」，套路回答「什么时候用」和「容易与什么搞混」。后者才是学生错因的主要来源。
+        </Text>
+
+        <Box style={{ flexDirection: 'row', alignItems: 'stretch', gap: 20, flex: 1 }}>
+            <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 20, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Text style={{ fontSize: 19, color: '#8B97A8' }}>下层</Text>
+                    <Text style={{ fontSize: 27, fontWeight: 'bold', color: '#1E4FA8' }}>知识点层</Text>
+                </Box>
+                <Box style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
+                    <Text style={{ fontSize: 46, fontWeight: 'bold', color: '#1E4FA8' }}>541</Text>
+                    <Text style={{ fontSize: 19, color: '#4A5568' }}>个三级知识点</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Text style={{ fontSize: 20, color: '#1A2230', lineHeight: 1.5 }}>回答：这道题用了什么知识</Text>
+                    <Text style={{ fontSize: 20, color: '#4A5568', lineHeight: 1.5 }}>例：导数在研究函数单调性中的应用</Text>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 12 }}>
+                    <Text style={{ fontSize: 18, color: '#8B97A8', lineHeight: 1.5 }}>结构上给不出：何时不该用这个方法、它与哪个方法容易混淆。</Text>
+                </Box>
+            </Box>
+
+            <Box style={{ width: 70, alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 6 }}>
+                <Text style={{ fontSize: 17, fontWeight: 'bold', color: '#FFC107' }}>升维</Text>
+                <Box style={{ width: 46, height: 3, background: '#1E4FA8' }} />
+                <Box style={{ width: 10, height: 10, background: '#1E4FA8' }} />
+            </Box>
+
+            <Box style={{ flex: 1, background: '#E8EFF8', borderRadius: 8, border: '1px solid #3D7BD9', padding: 20, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Text style={{ fontSize: 19, color: '#8B97A8' }}>上层</Text>
+                    <Text style={{ fontSize: 27, fontWeight: 'bold', color: '#0E3F8C' }}>套路层</Text>
+                </Box>
+                <Box style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
+                    <Text style={{ fontSize: 46, fontWeight: 'bold', color: '#0E3F8C' }}>288</Text>
+                    <Text style={{ fontSize: 19, color: '#4A5568' }}>条方法条目</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Text style={{ fontSize: 20, color: '#1A2230', lineHeight: 1.5 }}>回答：何时用、易与谁混淆</Text>
+                    <Text style={{ fontSize: 20, color: '#4A5568', lineHeight: 1.5 }}>例：构造差函数证明不等式</Text>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 12 }}>
+                    <Text style={{ fontSize: 18, color: '#0E3F8C', lineHeight: 1.5 }}>新增判别式知识：exclusions 与 confusable_ids。</Text>
+                </Box>
+            </Box>
+        </Box>
+
+        <Box style={{ background: '#FFFFFF', borderRadius: 8, border: '1px solid #D6DCE5', padding: 13, flexDirection: 'row', gap: 16 }}>
+            <Box style={{ width: 300, flexDirection: 'column', gap: 6 }}>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1A2230' }}>真实条目结构示例</Text>
+                <Text style={{ fontSize: 17, color: '#8B97A8', lineHeight: 1.4 }}>SET-001 数集归属：按定义判断元素</Text>
+                <Text style={{ fontSize: 17, color: '#8B97A8', lineHeight: 1.4 }}>key_steps：明确数集定义 → 检验性质 → 判断归属</Text>
+            </Box>
+            <Box style={{ flex: 1, flexDirection: 'column', gap: 8 }}>
+                <Box style={{ background: '#F0F5FC', borderRadius: 6, padding: 10, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1E4FA8', width: 150 }}>exclusions</Text>
+                    <Text style={{ fontSize: 18, color: '#1A2230', flex: 1, lineHeight: 1.4 }}>「点的坐标归属应先区分点集和数集」——何时不该用</Text>
+                </Box>
+                <Box style={{ background: '#F0F5FC', borderRadius: 6, padding: 10, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1E4FA8', width: 150 }}>confusable_ids</Text>
+                    <Text style={{ fontSize: 18, color: '#1A2230', flex: 1, lineHeight: 1.4 }}>指向 SET-002、SET-022——易与谁混淆（双向）</Text>
+                </Box>
+            </Box>
+        </Box>
+
+        <Box style={{ background: '#0E3F8C', borderRadius: 8, padding: 11, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <Box style={{ width: 6, height: 34, background: '#FFC107' }} />
+            <Text style={{ fontSize: 20, color: '#FFFFFF', lineHeight: 1.5, flex: 1 }}>
+                硬数据：288 条中有 exclusions 的 288 条、有 confusable_ids 的 288 条，混淆关系双向成立，并直接构成套路图谱的边。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 44, paddingLeft: 40, paddingRight: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', background: '#F7F9FC', borderTop: '1px solid #E5E7EB' }}>
+        <Text style={{ fontSize: 14, color: '#8B97A8' }}>高中数学 AI 学习系统 · 技术框架汇报</Text>
+        <Text style={{ fontSize: 15, color: '#1E4FA8' }}>06 / 24</Text>
+    </Box>
+</Slide>

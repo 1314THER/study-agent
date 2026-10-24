@@ -1,0 +1,100 @@
+<Slide style={{ padding: 0, background: '#FFFFFF' }}>
+    <Box style={{ height: 72, background: '#1E4FA8', paddingLeft: 40, paddingRight: 40, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>03 · 步骤对象：全系统的唯一数据契约</Text>
+    </Box>
+
+    <Box style={{ flex: 1, paddingTop: 14, paddingBottom: 12, paddingLeft: 40, paddingRight: 40, justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 21, color: '#4A5568', lineHeight: 1.5 }}>
+            上游只生产这一种数据，下游只消费这一种数据——它是所有能力之间的共同语言。
+        </Text>
+
+        <Box style={{ flexDirection: 'row', gap: 22, flex: 1, alignItems: 'stretch' }}>
+            <Box style={{ flex: 1, background: '#F7F9FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 18, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#1E4FA8' }}>每个步骤包含</Text>
+                    <Text style={{ fontSize: 18, color: '#8B97A8', lineHeight: 1.4 }}>教学会话还会补充引导问题与参考答案</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 7 }}>
+                    <Box style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#0E3F8C', width: 190 }}>step_number / title</Text>
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>步骤号与一级步骤名</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#0E3F8C', width: 190 }}>step_level1</Text>
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>二级步骤名，回表校验</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#0E3F8C', width: 190 }}>standard_writing</Text>
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>标准过程，保留关键公式</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#0E3F8C', width: 190 }}>detailed_writing</Text>
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>详细过程，保护公式边界</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#0E3F8C', width: 190 }}>knowledge_point</Text>
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>该步骤涉及的知识点</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#0E3F8C', width: 190 }}>step_difficulty</Text>
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>五维难度，每维 0–3 整数</Text>
+                    </Box>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 12 }}>
+                    <Text style={{ fontSize: 18, color: '#1A2230', lineHeight: 1.5 }}>
+                        最终答案也以步骤形式保存（编号 999），保证整条链路结构统一。
+                    </Text>
+                </Box>
+            </Box>
+
+            <Box style={{ flex: 1, flexDirection: 'column', gap: 12, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ fontSize: 24, fontWeight: 'bold', color: '#1A2230' }}>四个消费方共享它</Text>
+                    <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.4 }}>它们不各自调用模型，而是读取同一份步骤数据后做不同加工。</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 10 }}>
+                    <Box style={{ background: '#E8EFF8', borderRadius: 8, border: '1px solid #3D7BD9', padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                        <Box style={{ width: 6, height: 40, background: '#0E3F8C' }} />
+                        <Box style={{ flex: 1, flexDirection: 'column', gap: 3 }}>
+                            <Text style={{ fontSize: 21, fontWeight: 'bold', color: '#0E3F8C' }}>难度聚合</Text>
+                            <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>读每步五维 → 确定性公式 → 整题难度</Text>
+                        </Box>
+                    </Box>
+                    <Box style={{ background: '#E8EFF8', borderRadius: 8, border: '1px solid #3D7BD9', padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                        <Box style={{ width: 6, height: 40, background: '#0E3F8C' }} />
+                        <Box style={{ flex: 1, flexDirection: 'column', gap: 3 }}>
+                            <Text style={{ fontSize: 21, fontWeight: 'bold', color: '#0E3F8C' }}>AI 批改</Text>
+                            <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>按步骤编号回填四态判分与错因</Text>
+                        </Box>
+                    </Box>
+                    <Box style={{ background: '#E8EFF8', borderRadius: 8, border: '1px solid #3D7BD9', padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                        <Box style={{ width: 6, height: 40, background: '#0E3F8C' }} />
+                        <Box style={{ flex: 1, flexDirection: 'column', gap: 3 }}>
+                            <Text style={{ fontSize: 21, fontWeight: 'bold', color: '#0E3F8C' }}>手把手教学</Text>
+                            <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>逐步骤生成引导问题与参考答案</Text>
+                        </Box>
+                    </Box>
+                    <Box style={{ background: '#E8EFF8', borderRadius: 8, border: '1px solid #3D7BD9', padding: 14, flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                        <Box style={{ width: 6, height: 40, background: '#0E3F8C' }} />
+                        <Box style={{ flex: 1, flexDirection: 'column', gap: 3 }}>
+                            <Text style={{ fontSize: 21, fontWeight: 'bold', color: '#0E3F8C' }}>AI 仿题</Text>
+                            <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>变式题必须产出同样结构才能入库</Text>
+                        </Box>
+                    </Box>
+                </Box>
+            </Box>
+        </Box>
+
+        <Box style={{ background: '#0E3F8C', borderRadius: 8, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <Box style={{ width: 6, height: 32, background: '#FFC107' }} />
+            <Text style={{ fontSize: 19, color: '#FFFFFF', lineHeight: 1.5, flex: 1 }}>
+                因为共享同一份结构，同一道作答在批改与教学中必然得到同一套评分与错因——一致性不是靠约定，而是靠结构保证。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 44, paddingLeft: 40, paddingRight: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', background: '#F7F9FC', borderTop: '1px solid #E5E7EB' }}>
+        <Text style={{ fontSize: 14, color: '#8B97A8' }}>高中数学 AI 学习系统 · 技术框架汇报</Text>
+        <Text style={{ fontSize: 15, color: '#1E4FA8' }}>11 / 24</Text>
+    </Box>
+</Slide>

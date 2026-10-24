@@ -1,0 +1,88 @@
+<Slide style={{ padding: 0, background: '#FFFFFF' }}>
+    <Box style={{ height: 72, background: '#1E4FA8', paddingLeft: 40, paddingRight: 40, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>03 · AI 批改：缺失是观察，不是原因证据</Text>
+    </Box>
+
+    <Box style={{ flex: 1, paddingTop: 14, paddingBottom: 12, paddingLeft: 40, paddingRight: 40, justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 21, color: '#4A5568', lineHeight: 1.5 }}>
+            先把解答展平成带编号的步骤表，模型按编号回填判分——越界的编号直接丢弃，避免编造。
+        </Text>
+
+        <Box style={{ flexDirection: 'row', gap: 24, alignItems: 'stretch', flex: 1 }}>
+            <Box style={{ width: 520, flexDirection: 'column', gap: 10 }}>
+                <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#1A2230' }}>每个步骤的四态判分</Text>
+                <Box style={{ flex: 1, flexDirection: 'row', gap: 10 }}>
+                    <Box style={{ flex: 1, background: '#E8EFF8', borderRadius: 8, border: '1px solid #3D7BD9', padding: 12, justifyContent: 'space-between' }}>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#0E3F8C' }}>correct</Text>
+                        <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>这一步完全正确</Text>
+                    </Box>
+                    <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 12, justifyContent: 'space-between' }}>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1A2230' }}>partial</Text>
+                        <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>方向对，过程不完整</Text>
+                    </Box>
+                </Box>
+                <Box style={{ flex: 1, flexDirection: 'row', gap: 10 }}>
+                    <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 12, justifyContent: 'space-between' }}>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1A2230' }}>missing</Text>
+                        <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>这一步没写，仅此而已</Text>
+                    </Box>
+                    <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 12, justifyContent: 'space-between' }}>
+                        <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1A2230' }}>not_applicable</Text>
+                        <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>思路不同，不适用对照</Text>
+                    </Box>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, border: '1px solid #D6DCE5', padding: 11 }}>
+                    <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.4 }}>思路不同时不逐条对照，而是独立判分并记录新思路。</Text>
+                </Box>
+            </Box>
+
+            <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 16, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#0E3F8C' }}>四条防幻觉硬约束</Text>
+                    <Text style={{ fontSize: 17, color: '#8B97A8', lineHeight: 1.4 }}>写在代码里，不由模型自行决定</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 9 }}>
+                    <Box style={{ flexDirection: 'row', gap: 10 }}>
+                        <Box style={{ width: 24, height: 24, background: '#1E4FA8', borderRadius: 4, alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#FFFFFF' }}>1</Text>
+                        </Box>
+                        <Text style={{ fontSize: 18, color: '#1A2230', flex: 1, lineHeight: 1.4 }}>缺失步骤强制清空错因标签，成因标记一律设为未知，不允许由缺失反推原因。</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 10 }}>
+                        <Box style={{ width: 24, height: 24, background: '#1E4FA8', borderRadius: 4, alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#FFFFFF' }}>2</Text>
+                        </Box>
+                        <Text style={{ fontSize: 18, color: '#1A2230', flex: 1, lineHeight: 1.4 }}>思路相同却出现缺失步骤时，整题是否正确由代码强制置否，不受模型影响。</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 10 }}>
+                        <Box style={{ width: 24, height: 24, background: '#1E4FA8', borderRadius: 4, alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#FFFFFF' }}>3</Text>
+                        </Box>
+                        <Text style={{ fontSize: 18, color: '#1A2230', flex: 1, lineHeight: 1.4 }}>客观题等价判断返回正确、错误、无法确认三值；无法确认时转人工复核，不硬判错。</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 10 }}>
+                        <Box style={{ width: 24, height: 24, background: '#1E4FA8', borderRadius: 4, alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontSize: 14, fontWeight: 'bold', color: '#FFFFFF' }}>4</Text>
+                        </Box>
+                        <Text style={{ fontSize: 18, color: '#1A2230', flex: 1, lineHeight: 1.4 }}>教师提供评分细则时按步累加并逐项封顶，强制校验各项得分之和等于该题满分。</Text>
+                    </Box>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 11 }}>
+                    <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.4 }}>七类错因：符号 · 计算 · 公式记错 · 知识性 · 审题 · 思路 · 其他</Text>
+                </Box>
+            </Box>
+        </Box>
+
+        <Box style={{ background: '#0E3F8C', borderRadius: 8, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <Box style={{ width: 6, height: 32, background: '#FFC107' }} />
+            <Text style={{ fontSize: 19, color: '#FFFFFF', lineHeight: 1.5, flex: 1 }}>
+                学生没写这一步，只能说明他没写，不能推断他因为什么没写——这个区分决定错因能否作为教学依据。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 44, paddingLeft: 40, paddingRight: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', background: '#F7F9FC', borderTop: '1px solid #E5E7EB' }}>
+        <Text style={{ fontSize: 14, color: '#8B97A8' }}>高中数学 AI 学习系统 · 技术框架汇报</Text>
+        <Text style={{ fontSize: 15, color: '#1E4FA8' }}>16 / 24</Text>
+    </Box>
+</Slide>

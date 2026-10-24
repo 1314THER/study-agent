@@ -1,0 +1,76 @@
+<Slide style={{ padding: 0, background: '#FFFFFF' }}>
+    <Box style={{ height: 72, background: '#1E4FA8', paddingLeft: 40, paddingRight: 40, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>03 · 学生全卷评价：从一次错误到稳定模式</Text>
+    </Box>
+
+    <Box style={{ flex: 1, paddingTop: 14, paddingBottom: 12, paddingLeft: 40, paddingRight: 40, justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 21, color: '#4A5568', lineHeight: 1.5 }}>
+            单题只能判对错；跨题才能判断「这是不是一个问题」，以及它属于哪一类问题。
+        </Text>
+
+        <Box style={{ height: 286, paddingTop: 4, paddingBottom: 4 }}>
+            <Table
+                style={{ width: '100%', height: '100%' }}
+                defaultTextStyle={{ fontSize: 18, textAlign: 'left', color: '#1A2230' }}
+                defaultCellStyle={{
+                    border: {
+                        left: { width: 1, color: '#D6DCE5' },
+                        right: { width: 1, color: '#D6DCE5' },
+                        top: { width: 1, color: '#D6DCE5' },
+                        bottom: { width: 1, color: '#D6DCE5' },
+                    },
+                }}
+                cells={[
+                    [
+                        { text: '发现类型', textStyle: { bold: true, fontSize: 19, color: '#FFFFFF' }, cellStyle: { background: { color: '#1E4FA8' } } },
+                        { text: '判据', textStyle: { bold: true, fontSize: 19, color: '#FFFFFF' }, cellStyle: { background: { color: '#1E4FA8' } } },
+                        { text: '对应的补救方向', textStyle: { bold: true, fontSize: 19, color: '#FFFFFF' }, cellStyle: { background: { color: '#1E4FA8' } } },
+                    ],
+                    [
+                        { text: '知识环节', textStyle: { bold: true, fontSize: 18 }, cellStyle: { background: { color: '#F0F5FC' } } },
+                        { text: '同一知识环节在多次考试、多道不同题中出错', cellStyle: { background: { color: '#F0F5FC' } } },
+                        { text: '先做基础变式题，逐题核对后再安排间隔复测', cellStyle: { background: { color: '#F0F5FC' } } },
+                    ],
+                    [
+                        { text: '基础发挥', textStyle: { bold: true, fontSize: 18 } },
+                        { text: '同难度、同知识点下正确与错误并存', },
+                        { text: '分别做不限时与限时题，标记检查过程与错误位置' },
+                    ],
+                    [
+                        { text: '方法选择', textStyle: { bold: true, fontSize: 18 }, cellStyle: { background: { color: '#F0F5FC' } } },
+                        { text: '已确认的方法题中多次未能完整完成', cellStyle: { background: { color: '#F0F5FC' } } },
+                        { text: '先口述方法选择条件，再独立完成母题与变式', cellStyle: { background: { color: '#F0F5FC' } } },
+                    ],
+                    [
+                        { text: '时间分配', textStyle: { bold: true, fontSize: 18 } },
+                        { text: '空白题与部分得分题，结合学生自述' },
+                        { text: '练习分段计时、先跳过卡题再返回，并记录用时' },
+                    ],
+                ]}
+            />
+        </Box>
+
+        <Box style={{ flexDirection: 'row', gap: 20 }}>
+            <Box style={{ flex: 1, background: '#E8EFF8', borderRadius: 8, border: '1px solid #3D7BD9', padding: 14, flexDirection: 'column', gap: 6 }}>
+                <Text style={{ fontSize: 21, fontWeight: 'bold', color: '#0E3F8C' }}>证据门槛</Text>
+                <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.5 }}>需「≥2 次独立考试 且 ≥2 道不同题」才算重复出现；独立复测记录可回挂为新的证据。</Text>
+            </Box>
+            <Box style={{ flex: 1, background: '#E8EFF8', borderRadius: 8, border: '1px solid #3D7BD9', padding: 14, flexDirection: 'column', gap: 6 }}>
+                <Text style={{ fontSize: 21, fontWeight: 'bold', color: '#0E3F8C' }}>每条发现的三件套</Text>
+                <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.5 }}>支持证据与反证并列、成因默认未确认、并写明下一步用什么方式验证。</Text>
+            </Box>
+        </Box>
+
+        <Box style={{ background: '#0E3F8C', borderRadius: 8, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <Box style={{ width: 6, height: 32, background: '#FFC107' }} />
+            <Text style={{ fontSize: 19, color: '#FFFFFF', lineHeight: 1.5, flex: 1 }}>
+                「会做也错」是稳定性问题而不是知识问题——它只能靠同条件下正误并存来推断，补救方式也完全不同。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 44, paddingLeft: 40, paddingRight: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', background: '#F7F9FC', borderTop: '1px solid #E5E7EB' }}>
+        <Text style={{ fontSize: 14, color: '#8B97A8' }}>高中数学 AI 学习系统 · 技术框架汇报</Text>
+        <Text style={{ fontSize: 15, color: '#1E4FA8' }}>18 / 24</Text>
+    </Box>
+</Slide>

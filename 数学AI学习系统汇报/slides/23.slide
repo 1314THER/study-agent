@@ -1,0 +1,68 @@
+<Slide style={{ padding: 0, background: '#FFFFFF' }}>
+    <Box style={{ height: 72, background: '#1E4FA8', paddingLeft: 40, paddingRight: 40, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>05 · 作用：同一份数据，三种用法</Text>
+    </Box>
+
+    <Box style={{ flex: 1, paddingTop: 14, paddingBottom: 12, paddingLeft: 40, paddingRight: 40, justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 21, color: '#4A5568', lineHeight: 1.5 }}>
+            学生产生的每一步数据，最终沉淀为三类不同的价值：个人画像、教学依据与研究材料。
+        </Text>
+
+        <Box style={{ flexDirection: 'column', gap: 14, flex: 1, justifyContent: 'space-between' }}>
+            <Box style={{ flexDirection: 'row', alignItems: 'stretch', gap: 16, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 16 }}>
+                <Box style={{ width: 130, background: '#1E4FA8', borderRadius: 6, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 23, fontWeight: 'bold', color: '#FFFFFF' }}>学生</Text>
+                </Box>
+                <Box style={{ flex: 1, flexDirection: 'column', justifyContent: 'center', gap: 5 }}>
+                    <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#1A2230' }}>拿到的不是「你错了」，而是错在哪一步、属于哪类原因、接下来该练什么</Text>
+                    <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.4 }}>系统区分「不会」与「不稳」，按掌握状态安排复习；仿题只针对自己的错因生成。</Text>
+                </Box>
+                <Box style={{ width: 210, alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 17, color: '#8B97A8', lineHeight: 1.4 }}>诊断 → 针对性变式 → 再校验 → 入库</Text>
+                </Box>
+            </Box>
+
+            <Box style={{ flexDirection: 'row', alignItems: 'stretch', gap: 16, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 16 }}>
+                <Box style={{ width: 130, background: '#1E4FA8', borderRadius: 6, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 23, fontWeight: 'bold', color: '#FFFFFF' }}>教师</Text>
+                </Box>
+                <Box style={{ flex: 1, flexDirection: 'column', justifyContent: 'center', gap: 5 }}>
+                    <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#1A2230' }}>逐题逐步骤批改，整卷的知识点与难度分布，以及可复核的异常清单</Text>
+                    <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.4 }}>班级共性错因可直接定位到知识环节或方法选择，用于调整讲评重点。</Text>
+                </Box>
+                <Box style={{ width: 210, alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 17, color: '#8B97A8', lineHeight: 1.4 }}>从批改机器转为成长管理者</Text>
+                </Box>
+            </Box>
+
+            <Box style={{ flexDirection: 'row', alignItems: 'stretch', gap: 16, background: '#E8EFF8', borderRadius: 8, border: '1px solid #3D7BD9', padding: 16 }}>
+                <Box style={{ width: 130, background: '#0E3F8C', borderRadius: 6, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 23, fontWeight: 'bold', color: '#FFFFFF' }}>教研</Text>
+                </Box>
+                <Box style={{ flex: 1, flexDirection: 'column', justifyContent: 'center', gap: 5 }}>
+                    <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#0E3F8C' }}>套路目录与易混淆关系、试卷质量的量化指标、标注规范与版本追踪</Text>
+                    <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.4 }}>内容审核、分歧仲裁与版本留痕，为后续建立评测集提供基础。</Text>
+                </Box>
+                <Box style={{ width: 210, alignItems: 'flex-end', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 17, color: '#8B97A8', lineHeight: 1.4 }}>可审计的内容治理</Text>
+                </Box>
+            </Box>
+        </Box>
+
+        <Box style={{ background: '#FFFFFF', borderRadius: 8, border: '1px solid #D6DCE5', padding: 13, flexDirection: 'row', gap: 16 }}>
+            <Box style={{ flex: 1, flexDirection: 'column', gap: 4 }}>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1E4FA8' }}>闭环怎么转起来</Text>
+                <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.4 }}>作答被批改 → 错因被标记 → 匹配或新建套路 → 写入巩固日历 → 生成针对性变式 → 再次校验。</Text>
+            </Box>
+            <Box style={{ flex: 1, flexDirection: 'column', gap: 4 }}>
+                <Text style={{ fontSize: 20, fontWeight: 'bold', color: '#1E4FA8' }}>当前边界</Text>
+                <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.4 }}>教师端与学校端仍是规划，尚未实现班级作业、跨班学情与组织权限。</Text>
+            </Box>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 44, paddingLeft: 40, paddingRight: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', background: '#F7F9FC', borderTop: '1px solid #E5E7EB' }}>
+        <Text style={{ fontSize: 14, color: '#8B97A8' }}>高中数学 AI 学习系统 · 技术框架汇报</Text>
+        <Text style={{ fontSize: 15, color: '#1E4FA8' }}>23 / 24</Text>
+    </Box>
+</Slide>

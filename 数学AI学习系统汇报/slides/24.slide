@@ -1,0 +1,105 @@
+<Slide style={{ padding: 0, background: '#FFFFFF' }}>
+    <Box style={{ height: 72, background: '#1E4FA8', paddingLeft: 40, paddingRight: 40, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>05 · 诚实边界与下一步</Text>
+    </Box>
+
+    <Box style={{ flex: 1, paddingTop: 14, paddingBottom: 12, paddingLeft: 40, paddingRight: 40, justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 21, color: '#4A5568', lineHeight: 1.5 }}>
+            把所有「还没做」的摊开讲：这个项目的可信度，恰恰来自它自己写下了待解决问题清单。
+        </Text>
+
+        <Box style={{ flexDirection: 'row', gap: 20, alignItems: 'stretch', flex: 1 }}>
+            <Box style={{ flex: 1, background: '#E8EFF8', borderRadius: 8, border: '1px solid #3D7BD9', padding: 16, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#0E3F8C' }}>已完成</Text>
+                    <Text style={{ fontSize: 17, color: '#8B97A8', lineHeight: 1.4 }}>框架已实现并跑通本地流程</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#0E3F8C', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#1A2230', flex: 1, lineHeight: 1.4 }}>两次升维的评价框架与不可归约论证</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#0E3F8C', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#1A2230', flex: 1, lineHeight: 1.4 }}>288 条套路目录，字段完整</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#0E3F8C', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#1A2230', flex: 1, lineHeight: 1.4 }}>防幻觉约束与人工闸门已落到代码</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#0E3F8C', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#1A2230', flex: 1, lineHeight: 1.4 }}>803 个自动化测试覆盖全部接口与模块</Text>
+                    </Box>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10 }}>
+                    <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>测试验证的是代码行为，不等于模型质量。</Text>
+                </Box>
+            </Box>
+
+            <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 16, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#1A2230' }}>尚未验证</Text>
+                    <Text style={{ fontSize: 17, color: '#8B97A8', lineHeight: 1.4 }}>这些是研究计划，不是缺陷</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#8B97A8', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>没有独立封存的评测集，未做人工双标注一致性检验</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#8B97A8', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>没有真人试用，因此不作任何提分主张</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#8B97A8', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>试卷层框架尚未用真实整卷跑通，时间维度缺客观时间戳</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#8B97A8', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>内容落差：288 条目录对应 29 个母题，23,255 道候选对应 33 道入库</Text>
+                    </Box>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10 }}>
+                    <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>项目自审文档已列出十九项待解决问题。</Text>
+                </Box>
+            </Box>
+        </Box>
+
+        <Box style={{ background: '#FFFFFF', borderRadius: 8, border: '1px solid #D6DCE5', padding: 14, flexDirection: 'column', gap: 9 }}>
+            <Text style={{ fontSize: 21, fontWeight: 'bold', color: '#1A2230' }}>下一步</Text>
+            <Box style={{ flexDirection: 'row', gap: 10, alignItems: 'stretch' }}>
+                <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 6, padding: 11, flexDirection: 'column', gap: 3 }}>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1E4FA8' }}>2026 Q4</Text>
+                    <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>冻结目标目录，完成首批内容审核，统一标注规范</Text>
+                </Box>
+                <Box style={{ width: 16, alignItems: 'center', justifyContent: 'center' }}>
+                    <Box style={{ width: 12, height: 3, background: '#3D7BD9' }} />
+                </Box>
+                <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 6, padding: 11, flexDirection: 'column', gap: 3 }}>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1E4FA8' }}>2027 Q1</Text>
+                    <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>建立标注手册，切分开发集与封存测试集</Text>
+                </Box>
+                <Box style={{ width: 16, alignItems: 'center', justifyContent: 'center' }}>
+                    <Box style={{ width: 12, height: 3, background: '#3D7BD9' }} />
+                </Box>
+                <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 6, padding: 11, flexDirection: 'column', gap: 3 }}>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#1E4FA8' }}>2027 Q2</Text>
+                    <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>开放接口与专用智能体，小规模受控试用</Text>
+                </Box>
+                <Box style={{ width: 16, alignItems: 'center', justifyContent: 'center' }}>
+                    <Box style={{ width: 12, height: 3, background: '#3D7BD9' }} />
+                </Box>
+                <Box style={{ flex: 1, background: '#E8EFF8', borderRadius: 6, padding: 11, flexDirection: 'column', gap: 3 }}>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: '#0E3F8C' }}>2027 Q3</Text>
+                    <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>真人试用、实验分析、结题与论文</Text>
+                </Box>
+            </Box>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 44, paddingLeft: 40, paddingRight: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', background: '#F7F9FC', borderTop: '1px solid #E5E7EB' }}>
+        <Text style={{ fontSize: 14, color: '#8B97A8' }}>高中数学 AI 学习系统 · 技术框架汇报</Text>
+        <Text style={{ fontSize: 15, color: '#1E4FA8' }}>24 / 24</Text>
+    </Box>
+</Slide>

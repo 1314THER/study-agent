@@ -1,0 +1,275 @@
+=== boot pid=3224 ts=2026-10-24 03:44:58.660 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js create 数学AI学习系统汇报.pptx ===
+[2026-10-24 03:44:58.649] [INFO ] [pid=3224] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+=== boot pid=3385 ts=2026-10-24 03:45:49.293 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/01.slide ===
+[2026-10-24 03:45:49.284] [INFO ] [pid=3385] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:45:49.334] [INFO ] [pid=3385] [slide-version] fileId=6B354FD0 version=0 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=3461 ts=2026-10-24 03:46:03.126 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 0 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-qmVu7w/slide_0.png ===
+[2026-10-24 03:46:03.117] [INFO ] [pid=3461] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:46:03.178] [INFO ] [pid=3461] [slide-version] fileId=6B354FD0 version=1 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=3566 ts=2026-10-24 03:46:50.810 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/01.slide --page-index 0 ===
+[2026-10-24 03:46:50.804] [INFO ] [pid=3566] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:46:50.853] [INFO ] [pid=3566] [slide-version] fileId=6B354FD0 version=1 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=3616 ts=2026-10-24 03:46:54.330 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 0 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-KCeXTn/slide_0.png ===
+[2026-10-24 03:46:54.319] [INFO ] [pid=3616] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:46:54.413] [INFO ] [pid=3616] [slide-version] fileId=6B354FD0 version=2 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=3772 ts=2026-10-24 03:47:52.854 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/01.slide --page-index 0 ===
+[2026-10-24 03:47:52.845] [INFO ] [pid=3772] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:47:52.916] [INFO ] [pid=3772] [slide-version] fileId=6B354FD0 version=2 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=3820 ts=2026-10-24 03:47:56.175 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 0 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-wFbIae/slide_0.png ===
+[2026-10-24 03:47:56.160] [INFO ] [pid=3820] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:47:56.258] [INFO ] [pid=3820] [slide-version] fileId=6B354FD0 version=3 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=4013 ts=2026-10-24 03:49:16.750 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/02.slide ===
+[2026-10-24 03:49:16.743] [INFO ] [pid=4013] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:49:16.783] [INFO ] [pid=4013] [slide-version] fileId=6B354FD0 version=3 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=4066 ts=2026-10-24 03:49:20.261 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 1 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-syRiO5/slide_1.png ===
+[2026-10-24 03:49:20.247] [INFO ] [pid=4066] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:49:20.312] [INFO ] [pid=4066] [slide-version] fileId=6B354FD0 version=4 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=4345 ts=2026-10-24 03:51:22.055 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/03.slide ===
+[2026-10-24 03:51:22.048] [INFO ] [pid=4345] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:51:22.090] [INFO ] [pid=4345] [slide-version] fileId=6B354FD0 version=4 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=4371 ts=2026-10-24 03:51:24.435 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/04.slide ===
+[2026-10-24 03:51:24.429] [INFO ] [pid=4371] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:51:24.465] [INFO ] [pid=4371] [slide-version] fileId=6B354FD0 version=5 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=4418 ts=2026-10-24 03:51:26.640 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/05.slide ===
+[2026-10-24 03:51:26.634] [INFO ] [pid=4418] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:51:26.669] [INFO ] [pid=4418] [slide-version] fileId=6B354FD0 version=6 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=4525 ts=2026-10-24 03:51:40.710 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 2 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-f5ISgx/slide_2.png ===
+[2026-10-24 03:51:40.659] [INFO ] [pid=4525] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:51:40.752] [INFO ] [pid=4525] [slide-version] fileId=6B354FD0 version=7 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=4624 ts=2026-10-24 03:52:21.238 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/03.slide --page-index 2 ===
+[2026-10-24 03:52:21.231] [INFO ] [pid=4624] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:52:21.268] [INFO ] [pid=4624] [slide-version] fileId=6B354FD0 version=7 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=4757 ts=2026-10-24 03:52:50.268 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/03.slide --page-index 2 ===
+[2026-10-24 03:52:50.262] [INFO ] [pid=4757] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:52:50.298] [INFO ] [pid=4757] [slide-version] fileId=6B354FD0 version=8 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=4872 ts=2026-10-24 03:53:30.160 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/03.slide --page-index 2 ===
+[2026-10-24 03:53:30.153] [INFO ] [pid=4872] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:53:30.194] [INFO ] [pid=4872] [slide-version] fileId=6B354FD0 version=9 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=4948 ts=2026-10-24 03:53:33.921 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 2 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-MpvktM/slide_2.png ===
+[2026-10-24 03:53:33.883] [INFO ] [pid=4948] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:53:33.969] [INFO ] [pid=4948] [slide-version] fileId=6B354FD0 version=10 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=5074 ts=2026-10-24 03:54:07.409 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/03.slide --page-index 2 ===
+[2026-10-24 03:54:07.403] [INFO ] [pid=5074] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:54:07.440] [INFO ] [pid=5074] [slide-version] fileId=6B354FD0 version=10 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=5133 ts=2026-10-24 03:54:11.131 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 2 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-3B36um/slide_2.png ===
+[2026-10-24 03:54:11.116] [INFO ] [pid=5133] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:54:11.238] [INFO ] [pid=5133] [slide-version] fileId=6B354FD0 version=11 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=5268 ts=2026-10-24 03:54:42.591 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 4 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-lBCERm/slide_4.png ===
+[2026-10-24 03:54:42.507] [INFO ] [pid=5268] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+=== boot pid=5267 ts=2026-10-24 03:54:42.659 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 3 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-Z0PU7C/slide_3.png ===
+[2026-10-24 03:54:42.648] [INFO ] [pid=5267] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:54:42.698] [INFO ] [pid=5268] [slide-version] fileId=6B354FD0 version=11 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+[2026-10-24 03:54:42.736] [INFO ] [pid=5267] [slide-version] fileId=6B354FD0 version=11 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=5583 ts=2026-10-24 03:57:09.382 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/06.slide ===
+[2026-10-24 03:57:09.375] [INFO ] [pid=5583] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:57:09.411] [INFO ] [pid=5583] [slide-version] fileId=6B354FD0 version=11 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=5596 ts=2026-10-24 03:57:11.963 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/07.slide ===
+[2026-10-24 03:57:11.954] [INFO ] [pid=5596] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:57:12.004] [INFO ] [pid=5596] [slide-version] fileId=6B354FD0 version=12 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=5655 ts=2026-10-24 03:57:14.335 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/08.slide ===
+[2026-10-24 03:57:14.328] [INFO ] [pid=5655] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:57:14.373] [INFO ] [pid=5655] [slide-version] fileId=6B354FD0 version=13 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=5700 ts=2026-10-24 03:57:16.645 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/09.slide ===
+[2026-10-24 03:57:16.638] [INFO ] [pid=5700] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:57:16.678] [INFO ] [pid=5700] [slide-version] fileId=6B354FD0 version=14 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=5836 ts=2026-10-24 03:57:32.412 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 7 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-01e3Fy/slide_7.png ===
+[2026-10-24 03:57:32.398] [INFO ] [pid=5836] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:57:32.457] [INFO ] [pid=5836] [slide-version] fileId=6B354FD0 version=15 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=5960 ts=2026-10-24 03:57:54.786 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/06.slide --page-index 5 ===
+[2026-10-24 03:57:54.780] [INFO ] [pid=5960] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:57:54.816] [INFO ] [pid=5960] [slide-version] fileId=6B354FD0 version=15 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=6026 ts=2026-10-24 03:57:58.423 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 5 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-Wi2LX9/slide_5.png ===
+[2026-10-24 03:57:58.414] [INFO ] [pid=6026] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:57:58.466] [INFO ] [pid=6026] [slide-version] fileId=6B354FD0 version=16 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=6177 ts=2026-10-24 03:58:22.279 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 6 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-U5vKiE/slide_6.png ===
+[2026-10-24 03:58:22.270] [INFO ] [pid=6177] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:58:22.324] [INFO ] [pid=6177] [slide-version] fileId=6B354FD0 version=16 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=6330 ts=2026-10-24 03:59:18.441 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/09.slide --page-index 8 ===
+[2026-10-24 03:59:18.430] [INFO ] [pid=6330] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:59:18.480] [INFO ] [pid=6330] [slide-version] fileId=6B354FD0 version=16 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=6497 ts=2026-10-24 03:59:46.270 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/09.slide --page-index 8 ===
+[2026-10-24 03:59:46.264] [INFO ] [pid=6497] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:59:46.301] [INFO ] [pid=6497] [slide-version] fileId=6B354FD0 version=17 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=6576 ts=2026-10-24 03:59:49.896 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 8 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-sVecp8/slide_8.png ===
+[2026-10-24 03:59:49.882] [INFO ] [pid=6576] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 03:59:49.947] [INFO ] [pid=6576] [slide-version] fileId=6B354FD0 version=18 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=6917 ts=2026-10-24 04:01:16.450 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/10.slide ===
+[2026-10-24 04:01:16.444] [INFO ] [pid=6917] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:01:16.481] [INFO ] [pid=6917] [slide-version] fileId=6B354FD0 version=18 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=6930 ts=2026-10-24 04:01:19.024 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/11.slide ===
+[2026-10-24 04:01:19.018] [INFO ] [pid=6930] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:01:19.055] [INFO ] [pid=6930] [slide-version] fileId=6B354FD0 version=19 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=6978 ts=2026-10-24 04:01:21.406 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/12.slide ===
+[2026-10-24 04:01:21.400] [INFO ] [pid=6978] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:01:21.437] [INFO ] [pid=6978] [slide-version] fileId=6B354FD0 version=20 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=7134 ts=2026-10-24 04:01:38.474 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 9 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-fUknKk/slide_9.png ===
+=== boot pid=7135 ts=2026-10-24 04:01:38.475 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 10 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-twn87s/slide_10.png ===
+[2026-10-24 04:01:38.458] [INFO ] [pid=7134] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:01:38.462] [INFO ] [pid=7135] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:01:38.545] [INFO ] [pid=7135] [slide-version] fileId=6B354FD0 version=21 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+[2026-10-24 04:01:38.545] [INFO ] [pid=7134] [slide-version] fileId=6B354FD0 version=21 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=7383 ts=2026-10-24 04:02:21.497 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/10.slide --page-index 9 ===
+[2026-10-24 04:02:21.490] [INFO ] [pid=7383] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:02:21.527] [INFO ] [pid=7383] [slide-version] fileId=6B354FD0 version=21 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=7469 ts=2026-10-24 04:02:25.229 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 9 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-eAQA0r/slide_9.png ===
+[2026-10-24 04:02:25.215] [INFO ] [pid=7469] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:02:25.280] [INFO ] [pid=7469] [slide-version] fileId=6B354FD0 version=22 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=7630 ts=2026-10-24 04:03:07.932 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/11.slide --page-index 10 ===
+[2026-10-24 04:03:07.908] [INFO ] [pid=7630] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:03:07.974] [INFO ] [pid=7630] [slide-version] fileId=6B354FD0 version=22 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=7642 ts=2026-10-24 04:03:08.108 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/10.slide --page-index 9 ===
+[2026-10-24 04:03:08.082] [INFO ] [pid=7642] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:03:08.154] [INFO ] [pid=7642] [slide-version] fileId=6B354FD0 version=22 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=7736 ts=2026-10-24 04:03:12.616 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 10 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-f0YVC0/slide_10.png ===
+=== boot pid=7737 ts=2026-10-24 04:03:12.616 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 9 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-qCOpcL/slide_9.png ===
+[2026-10-24 04:03:12.599] [INFO ] [pid=7736] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:03:12.599] [INFO ] [pid=7737] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:03:12.694] [INFO ] [pid=7736] [slide-version] fileId=6B354FD0 version=24 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+[2026-10-24 04:03:12.694] [INFO ] [pid=7737] [slide-version] fileId=6B354FD0 version=24 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=8040 ts=2026-10-24 04:03:56.776 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 11 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-y3OL6H/slide_11.png ===
+[2026-10-24 04:03:56.761] [INFO ] [pid=8040] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:03:56.820] [INFO ] [pid=8040] [slide-version] fileId=6B354FD0 version=24 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=8529 ts=2026-10-24 04:05:45.297 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/13.slide ===
+[2026-10-24 04:05:45.280] [INFO ] [pid=8529] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:05:45.326] [INFO ] [pid=8529] [slide-version] fileId=6B354FD0 version=24 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=8546 ts=2026-10-24 04:05:47.392 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/14.slide ===
+[2026-10-24 04:05:47.386] [INFO ] [pid=8546] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:05:47.418] [INFO ] [pid=8546] [slide-version] fileId=6B354FD0 version=25 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=8620 ts=2026-10-24 04:05:49.446 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/15.slide ===
+[2026-10-24 04:05:49.440] [INFO ] [pid=8620] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:05:49.477] [INFO ] [pid=8620] [slide-version] fileId=6B354FD0 version=26 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=8663 ts=2026-10-24 04:05:51.470 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/16.slide ===
+[2026-10-24 04:05:51.407] [INFO ] [pid=8663] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:05:51.537] [INFO ] [pid=8663] [slide-version] fileId=6B354FD0 version=27 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=8879 ts=2026-10-24 04:06:06.368 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 12 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-VVvMTA/slide_12.png ===
+[2026-10-24 04:06:06.359] [INFO ] [pid=8879] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:06:06.405] [INFO ] [pid=8879] [slide-version] fileId=6B354FD0 version=28 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=8962 ts=2026-10-24 04:06:18.780 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 13 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-OqOVBw/slide_13.png ===
+[2026-10-24 04:06:18.772] [INFO ] [pid=8962] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:06:18.822] [INFO ] [pid=8962] [slide-version] fileId=6B354FD0 version=28 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=9094 ts=2026-10-24 04:06:30.283 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 14 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-1aast9/slide_14.png ===
+[2026-10-24 04:06:30.275] [INFO ] [pid=9094] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:06:30.324] [INFO ] [pid=9094] [slide-version] fileId=6B354FD0 version=28 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=9240 ts=2026-10-24 04:06:41.720 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 15 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-pBiS2C/slide_15.png ===
+[2026-10-24 04:06:41.713] [INFO ] [pid=9240] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:06:41.757] [INFO ] [pid=9240] [slide-version] fileId=6B354FD0 version=28 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=9492 ts=2026-10-24 04:07:25.942 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/13.slide --page-index 12 ===
+[2026-10-24 04:07:25.937] [INFO ] [pid=9492] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:07:25.970] [INFO ] [pid=9492] [slide-version] fileId=6B354FD0 version=28 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=9543 ts=2026-10-24 04:07:27.968 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/14.slide --page-index 13 ===
+[2026-10-24 04:07:27.936] [INFO ] [pid=9543] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:07:27.995] [INFO ] [pid=9543] [slide-version] fileId=6B354FD0 version=29 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=9586 ts=2026-10-24 04:07:29.947 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/15.slide --page-index 14 ===
+[2026-10-24 04:07:29.928] [INFO ] [pid=9586] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:07:29.976] [INFO ] [pid=9586] [slide-version] fileId=6B354FD0 version=30 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=9640 ts=2026-10-24 04:07:31.991 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/16.slide --page-index 15 ===
+[2026-10-24 04:07:31.984] [INFO ] [pid=9640] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:07:32.029] [INFO ] [pid=9640] [slide-version] fileId=6B354FD0 version=31 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=9783 ts=2026-10-24 04:07:46.399 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 12 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-hleeBG/slide_12.png ===
+[2026-10-24 04:07:46.391] [INFO ] [pid=9783] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:07:46.436] [INFO ] [pid=9783] [slide-version] fileId=6B354FD0 version=32 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=9864 ts=2026-10-24 04:07:55.715 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 13 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-vleKw1/slide_13.png ===
+[2026-10-24 04:07:55.707] [INFO ] [pid=9864] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:07:55.750] [INFO ] [pid=9864] [slide-version] fileId=6B354FD0 version=32 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=9971 ts=2026-10-24 04:08:07.720 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 14 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-sfEWIl/slide_14.png ===
+[2026-10-24 04:08:07.713] [INFO ] [pid=9971] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:08:07.757] [INFO ] [pid=9971] [slide-version] fileId=6B354FD0 version=32 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=10078 ts=2026-10-24 04:08:17.295 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 15 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-wWnJMC/slide_15.png ===
+[2026-10-24 04:08:17.287] [INFO ] [pid=10078] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:08:17.330] [INFO ] [pid=10078] [slide-version] fileId=6B354FD0 version=32 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=10237 ts=2026-10-24 04:08:53.625 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/16.slide --page-index 15 ===
+[2026-10-24 04:08:53.607] [INFO ] [pid=10237] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:08:53.653] [INFO ] [pid=10237] [slide-version] fileId=6B354FD0 version=32 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=10299 ts=2026-10-24 04:08:56.606 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 15 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-kbgpgn/slide_15.png ===
+[2026-10-24 04:08:56.596] [INFO ] [pid=10299] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:08:56.647] [INFO ] [pid=10299] [slide-version] fileId=6B354FD0 version=33 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=10804 ts=2026-10-24 04:11:14.445 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/17.slide ===
+[2026-10-24 04:11:14.440] [INFO ] [pid=10804] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:11:14.472] [INFO ] [pid=10804] [slide-version] fileId=6B354FD0 version=33 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=10817 ts=2026-10-24 04:11:16.472 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/18.slide ===
+[2026-10-24 04:11:16.467] [INFO ] [pid=10817] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:11:16.499] [INFO ] [pid=10817] [slide-version] fileId=6B354FD0 version=34 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=10863 ts=2026-10-24 04:11:18.557 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/19.slide ===
+[2026-10-24 04:11:18.551] [INFO ] [pid=10863] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:11:18.586] [INFO ] [pid=10863] [slide-version] fileId=6B354FD0 version=35 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=10946 ts=2026-10-24 04:11:20.676 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/20.slide ===
+[2026-10-24 04:11:20.654] [INFO ] [pid=10946] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:11:20.707] [INFO ] [pid=10946] [slide-version] fileId=6B354FD0 version=36 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=11078 ts=2026-10-24 04:11:23.803 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 16 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-rGcPyW/slide_16.png ===
+[2026-10-24 04:11:23.792] [INFO ] [pid=11078] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:11:23.847] [INFO ] [pid=11078] [slide-version] fileId=6B354FD0 version=37 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=11230 ts=2026-10-24 04:11:35.158 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 17 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-CNYSPe/slide_17.png ===
+[2026-10-24 04:11:35.150] [INFO ] [pid=11230] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:11:35.198] [INFO ] [pid=11230] [slide-version] fileId=6B354FD0 version=37 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=11472 ts=2026-10-24 04:11:50.327 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 19 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-gRtOth/slide_19.png ===
+[2026-10-24 04:11:50.312] [INFO ] [pid=11472] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:11:50.407] [INFO ] [pid=11472] [slide-version] fileId=6B354FD0 version=37 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=11723 ts=2026-10-24 04:12:27.061 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/18.slide --page-index 17 ===
+[2026-10-24 04:12:27.055] [INFO ] [pid=11723] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:12:27.088] [INFO ] [pid=11723] [slide-version] fileId=6B354FD0 version=37 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=11743 ts=2026-10-24 04:12:29.034 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/19.slide --page-index 18 ===
+[2026-10-24 04:12:29.028] [INFO ] [pid=11743] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:12:29.061] [INFO ] [pid=11743] [slide-version] fileId=6B354FD0 version=38 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=11861 ts=2026-10-24 04:12:32.079 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 17 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-SUruLg/slide_17.png ===
+[2026-10-24 04:12:32.071] [INFO ] [pid=11861] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:12:32.120] [INFO ] [pid=11861] [slide-version] fileId=6B354FD0 version=39 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=12065 ts=2026-10-24 04:13:02.759 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/18.slide --page-index 17 ===
+[2026-10-24 04:13:02.754] [INFO ] [pid=12065] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:13:02.786] [INFO ] [pid=12065] [slide-version] fileId=6B354FD0 version=39 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=12128 ts=2026-10-24 04:13:05.667 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 17 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-Id0m5N/slide_17.png ===
+[2026-10-24 04:13:05.658] [INFO ] [pid=12128] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:13:05.704] [INFO ] [pid=12128] [slide-version] fileId=6B354FD0 version=40 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=12369 ts=2026-10-24 04:13:50.426 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 19 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-ECSwzg/slide_19.png ===
+[2026-10-24 04:13:50.417] [INFO ] [pid=12369] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:13:50.464] [INFO ] [pid=12369] [slide-version] fileId=6B354FD0 version=40 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=12784 ts=2026-10-24 04:15:31.741 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/21.slide ===
+[2026-10-24 04:15:31.736] [INFO ] [pid=12784] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:15:31.768] [INFO ] [pid=12784] [slide-version] fileId=6B354FD0 version=40 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=12801 ts=2026-10-24 04:15:33.954 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/22.slide ===
+[2026-10-24 04:15:33.947] [INFO ] [pid=12801] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:15:33.989] [INFO ] [pid=12801] [slide-version] fileId=6B354FD0 version=41 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=12901 ts=2026-10-24 04:15:36.361 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/23.slide ===
+[2026-10-24 04:15:36.353] [INFO ] [pid=12901] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:15:36.402] [INFO ] [pid=12901] [slide-version] fileId=6B354FD0 version=42 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=12960 ts=2026-10-24 04:15:38.755 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/24.slide ===
+[2026-10-24 04:15:38.743] [INFO ] [pid=12960] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:15:38.790] [INFO ] [pid=12960] [slide-version] fileId=6B354FD0 version=43 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=13135 ts=2026-10-24 04:15:42.327 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 20 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-Y4Rslk/slide_20.png ===
+[2026-10-24 04:15:42.279] [INFO ] [pid=13135] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:15:42.365] [INFO ] [pid=13135] [slide-version] fileId=6B354FD0 version=44 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=13323 ts=2026-10-24 04:15:56.509 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 21 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-LgaTaS/slide_21.png ===
+[2026-10-24 04:15:56.502] [INFO ] [pid=13323] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:15:56.547] [INFO ] [pid=13323] [slide-version] fileId=6B354FD0 version=44 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=13492 ts=2026-10-24 04:16:08.703 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 22 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-0nCQxr/slide_22.png ===
+[2026-10-24 04:16:08.694] [INFO ] [pid=13492] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:16:08.739] [INFO ] [pid=13492] [slide-version] fileId=6B354FD0 version=44 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=13689 ts=2026-10-24 04:16:20.665 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 23 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-nVN7F3/slide_23.png ===
+[2026-10-24 04:16:20.657] [INFO ] [pid=13689] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:16:20.701] [INFO ] [pid=13689] [slide-version] fileId=6B354FD0 version=44 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=14045 ts=2026-10-24 04:17:07.055 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/21.slide --page-index 20 ===
+[2026-10-24 04:17:07.045] [INFO ] [pid=14045] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:17:07.098] [INFO ] [pid=14045] [slide-version] fileId=sid_mvle version=0 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=14087 ts=2026-10-24 04:17:10.992 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/22.slide --page-index 21 ===
+[2026-10-24 04:17:10.955] [INFO ] [pid=14087] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:17:11.032] [INFO ] [pid=14087] [slide-version] fileId=sid_mvle version=1 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=14241 ts=2026-10-24 04:17:14.828 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 20 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-bXUMhe/slide_20.png ===
+[2026-10-24 04:17:14.815] [INFO ] [pid=14241] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:17:14.875] [INFO ] [pid=14241] [slide-version] fileId=sid_mvle version=2 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=14388 ts=2026-10-24 04:17:29.037 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 21 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-IIuLyQ/slide_21.png ===
+[2026-10-24 04:17:29.025] [INFO ] [pid=14388] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:17:29.082] [INFO ] [pid=14388] [slide-version] fileId=sid_mvle version=2 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=14571 ts=2026-10-24 04:17:58.830 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/21.slide --page-index 20 ===
+[2026-10-24 04:17:58.822] [INFO ] [pid=14571] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:17:58.868] [INFO ] [pid=14571] [slide-version] fileId=sid_mvle version=2 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=14675 ts=2026-10-24 04:18:03.590 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 20 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-CCdhUj/slide_20.png ===
+[2026-10-24 04:18:03.575] [INFO ] [pid=14675] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:18:03.637] [INFO ] [pid=14675] [slide-version] fileId=sid_mvle version=3 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=14855 ts=2026-10-24 04:18:31.225 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js upsert-dsl 数学AI学习系统汇报.pptx --dsl-file slides/21.slide --page-index 20 ===
+[2026-10-24 04:18:31.218] [INFO ] [pid=14855] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:18:31.260] [INFO ] [pid=14855] [slide-version] fileId=sid_mvle version=3 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=14970 ts=2026-10-24 04:18:35.732 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 20 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-HToeqA/slide_20.png ===
+[2026-10-24 04:18:35.711] [INFO ] [pid=14970] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:18:35.789] [INFO ] [pid=14970] [slide-version] fileId=sid_mvle version=4 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx
+=== boot pid=15241 ts=2026-10-24 04:18:59.873 cwd=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报 argv=/Users/sqz/.workbuddy/binaries/node/versions/22.22.2-6/lib/node_modules/@tencent/slidep/dist/index.js screenshot /Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx --page-index 23 --out /var/folders/2h/_gj5xskx727gl12nqhnqzhvr0000gn/T/slidep-screenshot-I1Upwz/slide_23.png ===
+[2026-10-24 04:18:59.847] [INFO ] [pid=15241] [server-url] baseUrl=http://127.0.0.1:39099 source=env
+[2026-10-24 04:18:59.981] [INFO ] [pid=15241] [slide-version] fileId=sid_mvle version=4 filePath=/Users/sqz/Desktop/study-agent/数学AI学习系统汇报/数学AI学习系统汇报.pptx

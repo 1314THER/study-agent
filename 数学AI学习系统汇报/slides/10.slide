@@ -1,0 +1,124 @@
+<Slide style={{ padding: 0, background: '#FFFFFF' }}>
+    <Box style={{ height: 72, background: '#1E4FA8', paddingLeft: 40, paddingRight: 40, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>03 · 解题流水线：三段分工与失败降级</Text>
+    </Box>
+
+    <Box style={{ flex: 1, paddingTop: 14, paddingBottom: 12, paddingLeft: 40, paddingRight: 40, justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 21, color: '#4A5568', lineHeight: 1.5 }}>
+            每段只做一件事：不让同一个模型既解题又评分，从而把错误限制在最小环节。
+        </Text>
+
+        <Box style={{ flexDirection: 'row', alignItems: 'stretch', gap: 20, flex: 1 }}>
+            <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 18, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ fontSize: 18, color: '#8B97A8' }}>第一段</Text>
+                    <Text style={{ fontSize: 26, fontWeight: 'bold', color: '#1E4FA8' }}>Solver</Text>
+                </Box>
+                <Text style={{ fontSize: 20, color: '#1A2230', lineHeight: 1.5 }}>解出完整过程，并判断题型、板块与是否可解。</Text>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#3D7BD9', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>限定高中知识范围</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#3D7BD9', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>禁止洛必达、泰勒等超纲方法</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#3D7BD9', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>无法完成时如实声明，不硬解</Text>
+                    </Box>
+                </Box>
+            </Box>
+
+            <Box style={{ width: 44, alignItems: 'center' }}>
+                <Box style={{ width: 6, flex: 1, background: '#D6DCE5' }} />
+                <Box style={{ width: 12, height: 12, background: '#1E4FA8' }} />
+                <Box style={{ width: 6, flex: 1, background: '#D6DCE5' }} />
+            </Box>
+
+            <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 18, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ fontSize: 18, color: '#8B97A8' }}>第二段</Text>
+                    <Text style={{ fontSize: 26, fontWeight: 'bold', color: '#1E4FA8' }}>Verifier</Text>
+                </Box>
+                <Text style={{ fontSize: 20, color: '#1A2230', lineHeight: 1.5 }}>把解答切成块与步骤，并对齐标准命名。</Text>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#3D7BD9', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>步骤名回表校验步骤表</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#3D7BD9', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>知识点从 541 个三级表映射过滤</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#3D7BD9', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>12 个题型各有专用提示词</Text>
+                    </Box>
+                </Box>
+            </Box>
+
+            <Box style={{ width: 44, alignItems: 'center' }}>
+                <Box style={{ width: 6, flex: 1, background: '#D6DCE5' }} />
+                <Box style={{ width: 12, height: 12, background: '#1E4FA8' }} />
+                <Box style={{ width: 6, flex: 1, background: '#D6DCE5' }} />
+            </Box>
+
+            <Box style={{ flex: 1, background: '#E8EFF8', borderRadius: 8, border: '1px solid #3D7BD9', padding: 18, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ fontSize: 18, color: '#8B97A8' }}>第三段</Text>
+                    <Text style={{ fontSize: 26, fontWeight: 'bold', color: '#0E3F8C' }}>Formatter</Text>
+                </Box>
+                <Text style={{ fontSize: 20, color: '#1A2230', lineHeight: 1.5 }}>做全局一致性校验，并为每个步骤打五维难度。</Text>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#0E3F8C', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>检查各块答案是否互相矛盾</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#0E3F8C', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>步骤被删减或字段缺失即判失败</Text>
+                    </Box>
+                    <Box style={{ flexDirection: 'row', gap: 8 }}>
+                        <Box style={{ width: 7, height: 7, background: '#0E3F8C', marginTop: 7 }} />
+                        <Text style={{ fontSize: 18, color: '#4A5568', flex: 1, lineHeight: 1.4 }}>只给五维，不打总分</Text>
+                    </Box>
+                </Box>
+            </Box>
+        </Box>
+
+        <Box style={{ background: '#FFFFFF', borderRadius: 8, border: '1px solid #D6DCE5', padding: 14, flexDirection: 'column', gap: 8 }}>
+            <Text style={{ fontSize: 21, fontWeight: 'bold', color: '#1A2230' }}>失败降级路径：不伪造分数</Text>
+            <Box style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 6, padding: 8, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 17, color: '#1A2230', textAlign: 'center' }}>Formatter 校验失败</Text>
+                </Box>
+                <Box style={{ width: 34, height: 3, background: '#8B97A8' }} />
+                <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 6, padding: 8, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 17, color: '#1A2230', textAlign: 'center' }}>自动重跑一次 Verifier</Text>
+                </Box>
+                <Box style={{ width: 34, height: 3, background: '#8B97A8' }} />
+                <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 6, padding: 8, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 17, color: '#1A2230', textAlign: 'center' }}>再跑 Formatter</Text>
+                </Box>
+                <Box style={{ width: 34, height: 3, background: '#D9534F' }} />
+                <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 6, padding: 8, alignItems: 'center', justifyContent: 'center' }}>
+                    <Text style={{ fontSize: 17, color: '#D9534F', textAlign: 'center' }}>仍失败：保留结果，难度标记「未知」</Text>
+                </Box>
+            </Box>
+        </Box>
+
+        <Box style={{ background: '#0E3F8C', borderRadius: 8, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <Box style={{ width: 6, height: 32, background: '#FFC107' }} />
+            <Text style={{ fontSize: 19, color: '#FFFFFF', lineHeight: 1.5, flex: 1 }}>
+                系统的一贯态度：宁可不给分，也不给假的分数。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 44, paddingLeft: 40, paddingRight: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', background: '#F7F9FC', borderTop: '1px solid #E5E7EB' }}>
+        <Text style={{ fontSize: 14, color: '#8B97A8' }}>高中数学 AI 学习系统 · 技术框架汇报</Text>
+        <Text style={{ fontSize: 15, color: '#1E4FA8' }}>10 / 24</Text>
+    </Box>
+</Slide>

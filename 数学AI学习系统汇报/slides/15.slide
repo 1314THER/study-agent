@@ -1,0 +1,77 @@
+<Slide style={{ padding: 0, background: '#FFFFFF' }}>
+    <Box style={{ height: 72, background: '#1E4FA8', paddingLeft: 40, paddingRight: 40, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>03 · 套路匹配：AI 可以建议，但不能擅自定案</Text>
+    </Box>
+
+    <Box style={{ flex: 1, paddingTop: 14, paddingBottom: 12, paddingLeft: 40, paddingRight: 40, justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 21, color: '#4A5568', lineHeight: 1.5 }}>
+            目的是判断「这道题该用哪个套路」，难点在于避免把检索漏检误判为发现了新套路。
+        </Text>
+
+        <Box style={{ flexDirection: 'row', alignItems: 'stretch', gap: 18, flex: 1 }}>
+            <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 18, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ fontSize: 19, color: '#8B97A8' }}>第一步</Text>
+                    <Text style={{ fontSize: 25, fontWeight: 'bold', color: '#1E4FA8' }}>词项检索</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Text style={{ fontSize: 19, color: '#1A2230', lineHeight: 1.5 }}>按词频倒数加权打分，解析命中权重高于题干命中。</Text>
+                    <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.5 }}>同板块额外加分；得分过低时回退到全目录。</Text>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 11 }}>
+                    <Text style={{ fontSize: 18, color: '#0E3F8C', lineHeight: 1.5 }}>关键设计：结果强制并入同板块全部项与易混淆项。</Text>
+                </Box>
+            </Box>
+
+            <Box style={{ width: 50, alignItems: 'center' }}>
+                <Box style={{ width: 6, flex: 1, background: '#D6DCE5' }} />
+                <Box style={{ width: 12, height: 12, background: '#1E4FA8' }} />
+                <Box style={{ width: 6, flex: 1, background: '#D6DCE5' }} />
+            </Box>
+
+            <Box style={{ flex: 1, background: '#E8EFF8', borderRadius: 8, border: '1px solid #3D7BD9', padding: 18, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ fontSize: 19, color: '#8B97A8' }}>第二步</Text>
+                    <Text style={{ fontSize: 25, fontWeight: 'bold', color: '#0E3F8C' }}>模型判定</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Text style={{ fontSize: 19, color: '#1A2230', lineHeight: 1.5 }}>仅在检索不确定时才调用，必要时把 288 条全目录整体过一遍。</Text>
+                    <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.5 }}>检索器可替换为向量检索，但判定规则始终从权威目录重读。</Text>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 11 }}>
+                    <Text style={{ fontSize: 18, color: '#0E3F8C', lineHeight: 1.5 }}>关键设计：全目录复查专门消灭「漏检即新套路」。</Text>
+                </Box>
+            </Box>
+        </Box>
+
+        <Box style={{ background: '#FFFFFF', borderRadius: 8, border: '1px solid #3D7BD9', padding: 14, flexDirection: 'column', gap: 8 }}>
+            <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#0E3F8C' }}>建立新套路的三道闸门</Text>
+            <Box style={{ flexDirection: 'row', gap: 12 }}>
+                <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 6, padding: 10, flexDirection: 'column', gap: 4 }}>
+                    <Text style={{ fontSize: 19, fontWeight: 'bold', color: '#1E4FA8' }}>证据必须是原文</Text>
+                    <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>引用的片段必须是题干或解析的原文子串</Text>
+                </Box>
+                <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 6, padding: 10, flexDirection: 'column', gap: 4 }}>
+                    <Text style={{ fontSize: 19, fontWeight: 'bold', color: '#1E4FA8' }}>强制人工复核</Text>
+                    <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>任何建议的新套路都被标记为待审核</Text>
+                </Box>
+                <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 6, padding: 10, flexDirection: 'column', gap: 4 }}>
+                    <Text style={{ fontSize: 19, fontWeight: 'bold', color: '#1E4FA8' }}>目录哈希留痕</Text>
+                    <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>需带目录版本哈希与全目录复查证据</Text>
+                </Box>
+            </Box>
+        </Box>
+
+        <Box style={{ background: '#0E3F8C', borderRadius: 8, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <Box style={{ width: 6, height: 32, background: '#FFC107' }} />
+            <Text style={{ fontSize: 19, color: '#FFFFFF', lineHeight: 1.5, flex: 1 }}>
+                全部结果写入独立参考目录，不自动修改正式课程——AI 的建议永远只是建议。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 44, paddingLeft: 40, paddingRight: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', background: '#F7F9FC', borderTop: '1px solid #E5E7EB' }}>
+        <Text style={{ fontSize: 14, color: '#8B97A8' }}>高中数学 AI 学习系统 · 技术框架汇报</Text>
+        <Text style={{ fontSize: 15, color: '#1E4FA8' }}>15 / 24</Text>
+    </Box>
+</Slide>

@@ -1,0 +1,1797 @@
+Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing, pages 204–221
+November 4-9, 2025 ©2025 Association for Computational Linguistics
+MathTutorBench: A Benchmark for Measuring Open-ended
+Pedagogical Capabilities of LLM Tutors
+Jakub Macina1,2
+Nico Daheim1,3
+Ido Hakimi1,2
+Manu Kapur4
+Iryna Gurevych3
+Mrinmaya Sachan1
+1Department of Computer Science, ETH Zurich
+2ETH AI Center
+3Ubiquitous Knowledge Processing Lab (UKP Lab), Department of Computer Science,
+Technical University of Darmstadt and National Research Center
+for Applied Cybersecurity ATHENE, Germany
+4Professorship for Learning Sciences and Higher Education, ETH Zurich
+Abstract
+Evaluating the pedagogical capabilities of AI-
+based tutoring models is critical for making
+guided progress in the field. Yet, we lack a
+reliable, easy-to-use, and simple-to-run evalu-
+ation that reflects the pedagogical abilities of
+models. To fill this gap, we present MATH-
+TUTORBENCH, an open-source benchmark for
+holistic tutoring model evaluation. MATHTU-
+TORBENCH contains a collection of datasets
+and metrics that broadly cover tutor abilities as
+defined by learning sciences research in dialog-
+based teaching. To score the pedagogical qual-
+ity of open-ended teacher responses, we train
+a reward model and show it can discriminate
+expert from novice teacher responses with high
+accuracy. We evaluate a wide set of closed- and
+open-weight models on MATHTUTORBENCH
+and find that subject expertise, indicated by
+solving ability, does not immediately translate
+to good teaching. Rather, pedagogy and sub-
+ject expertise appear to form a trade-off that
+is navigated by the degree of tutoring special-
+ization of the model. Furthermore, tutoring
+appears to become more challenging in longer
+dialogs, where simpler questioning strategies
+begin to fail. We release the benchmark, code,
+and leaderboard openly to enable rapid bench-
+marking of future models.1
+github.com/eth-lre/mathtutorbench
+1
+Introduction
+Large Language Models (LLMs) present an op-
+portunity to transform education by offering ubiq-
+uitous access to individualized tutoring (Jurenka
+et al., 2024). While these models excel at gener-
+ating correct answers (Wei et al., 2022; Achiam
+et al., 2023), experienced teachers help students
+think for themselves and do not just give away an-
+swers to make learning effortless (Sharma et al.,
+2024). Teaching involves a combination of skills
+1Correspondence to jakub.macina@ai.ethz.ch.
+Figure 1: Effective teaching requires various skills
+which we categorize into expertise, student understand-
+ing, and pedagogical ability. MATHTUTORBENCH eval-
+utes these according to the tasks shown in the outer ring.
+including subject expertise, the ability to diagnose
+and correct student mistakes, and the application
+of sound pedagogical techniques. For example,
+teachers need to know when to withhold answers
+from students, use Socratic questioning (Anghileri,
+2006), or how to engage them cognitively in prob-
+lem solving (Chi and Wylie, 2014; Kapur, 2016).
+Therefore, a crucial element of building LLM tu-
+tors is their evaluation; it is critical to understand
+whether their guidance is helpful to prevent harm,
+and to guide progress in future model development.
+Yet, current evaluation practices do not meet
+these criteria. On the one hand, automatic met-
+rics usually evaluate tutoring models by measuring
+the word overlap between a ground-truth response
+and a generated response (Tack et al., 2023), or
+focus exclusively on question-answering perfor-
+mance (Chevalier et al., 2024). This is fast but
+arguably fails to capture the intricacies of tutoring.
+Although human evaluation might be a way to cap-
+ture these nuances by defining suitable criteria to
+capture them (Tack and Piech, 2022; Maurya et al.,
+2025), it is expensive. Importantly, it can only cre-
+204
+
+ate a snapshot of current performance and cannot
+be used to evaluate or compare to future models.
+In this work, we fill this gap by releasing MATH-
+TUTORBENCH, a collection of datasets and met-
+rics to holistically evaluate dialog tutoring mod-
+els for math tutoring. Teaching is a complex and
+multifaceted task that extends beyond subject mas-
+tery (Boyer et al., 2008; Nye et al., 2014; Tack et al.,
+2023; Wang et al., 2024b). Therefore, MATHTU-
+TORBENCH is divided into three categories: math
+expertise which evaluates the subject-matter exper-
+tise of the tutor, student understanding which eval-
+uates the tutor’s ability to verify, locate and correct
+student solutions, and teacher response generation
+which evaluates the scaffolding abilities of the tutor.
+Math expertise and student understanding are eval-
+uated based on standard metrics, and we propose a
+novel metric for evaluating teacher response gen-
+eration. In particular, we train a small and quick-
+to-run reward model by contrasting effective and
+less effective tutor utterances in terms of structured
+scaffolding guidance with questions and hints in-
+stead of giving away the answer (Anghileri, 2006).
+The reward model is then used to score tutor model
+generations. We show that this metric is reliable
+by showing that it can distinguish utterances from
+expert teachers from those stemming from novice
+teachers (Wang et al., 2024b) with high accuracy.
+We evaluate various open- and closed-weight
+state-of-the-art LLMs and specialized tutoring mod-
+els on MATHTUTORBENCH. Our results show
+that there is a trade-off between subject expertise
+and pedagogical abilities that is dependent on the
+degree of specialization of a tutoring LLM. Spe-
+cializing an LLM for pedagogy comes at the cost
+of solving ability and, conversely, a high solving
+accuracy often means that the LLM lacks peda-
+gogy. Still, more specialized tutoring models tend
+to retain their teaching abilities even further into a
+dialog with a student, while general models quickly
+become worse. With this, our work contributes to
+accelerating the development of tutoring LLMs by
+providing a holistic benchmark that can be eval-
+uated quickly and fairly using automatic metrics.
+We release our code and data publicly to promote
+open research on tutoring LLMs.
+2
+Related Work
+2.1
+LLM-Based Dialog Tutoring
+A good tutor should scaffold student learning in
+a structured way rather than just provide correct
+answers. Current approaches to dialog tutoring
+using LLMs try to achieve this by different means:
+prompt-based elicitation of pedagogical behavior,
+finetuning models on pedagogical conversations,
+and alignment with pedagogical preferences.
+First, most existing works use LLMs with a care-
+fully chosen prompt which enumerates desired ped-
+agogical behavior. Bridge (Wang et al., 2024b) ana-
+lyzes the teacher behavior and proposes to structure
+the prompt into a sequence of decisions, similar to
+real teachers, first to infer the error type and then
+to determine the pedagogical intent. Other works
+mostly directly write extensive prompts (Sonkar
+et al., 2023; Kargupta et al., 2024).
+However,
+defining such prompts is tedious, sensitive to small
+changes and difficult to test (Jurenka et al., 2024).
+Second, several approaches finetune models on
+real or mostly synthetically generated data. So-
+craticLM (Liu et al., 2024) uses a GPT-4 judge
+to evaluate the quality of teacher guidance using
+correctness and Socratic principles. A similar ap-
+proach is to role-model teacher and student con-
+versations based on textbook data (Chevalier et al.,
+2024; Wang et al., 2024a). MathDial (Macina et al.,
+2023a) is one of the few works that use teachers’ ut-
+terances when interacting with students to finetune
+models. However, it is expensive to collect such
+data on a larger scale. Therefore, LearnLM (Team
+et al., 2025) uses an empirically validated mixture
+of synthetic and teacher-created datasets. However,
+for capturing high-quality tutoring, teacher-created
+data is essential and therefore upweighted in their fi-
+nal data mix. Finally, LLMs can be aligned for ped-
+agogical preferences during post-training (Team
+et al., 2025), because these are usually tacit. How-
+ever, no datasets are openly available or they rely
+on larger models such as GPT-4 as a judge which
+limits its generalizability.
+Our benchmark contributes an important missing
+ingredient in the development of LLM-based tutors
+– the ability to quickly evaluate and compare models
+on key pedagogical aspects.
+2.2
+Automatic & Human Evaluation
+Several works rely on automatic NLG met-
+rics such as BLEU (Papineni et al., 2002) or
+BERTScore (Zhang et al., 2020) for evaluation
+which require human-annotated ground truths.
+However, since tutoring has the goal of helping
+students learn (Macina et al., 2023b), it is very
+open-ended and there is no single best pedagogical
+approach at each turn (Jurenka et al., 2024). This
+205
+
+Tutoring
+LLMs
+System Prompt
+Dataset
++ Problem
++ Student-Teacher Dialog
+Metric
+Ground-truth
+teacher responses
+Reward Model
+Task
+Figure 2: Overview of the MathTutorBench benchmark. Each benchmark task defines a dataset, system prompts with
+problem and dialog, metric, and ground-truth teacher responses. A reward model is used to score the pedagogical
+quality over teacher responses (win rate). The right part of the figure shows the outcome as a performance
+comparison of selected LLMs. While they all perform well in a simple problem-solving setting, most of them lack
+in correct detection of mistakes and generating pedagogical responses.
+results in noisy and unreliable scores from auto-
+matic metrics (Tack et al., 2023). There exists an
+educational-specific classifier of active teacher lis-
+tening (Demszky et al., 2021), however, it is limited
+to only this one dimension of teaching and does
+not account for the entire dialog history. Therefore,
+recent finetuned tutoring LLMs (Chevalier et al.,
+2024; Liu et al., 2024) rely on GPT-4-as-a-judge
+on dimensions like helpfulness and presentation.
+Some works on reasoning (Liang et al., 2024) also
+focus on multi-turn model abilities judged by GPT-
+4 but they lack an educational focus.
+Pedagogical quality annotation requires hiring
+teachers, but it is time-consuming and hard to com-
+pare across trials. Two papers recently addressed
+the issue (Tack and Piech, 2022; Maurya et al.,
+2025) by providing evaluation taxonomies but only
+present one-off static snapshots of current models’
+performance without the possibility to automat-
+ically evaluate new models. Finally, measuring
+student learning gains directly focuses on the end
+goal. However, learner studies are costly, time-
+consuming (Schmucker et al., 2024), and with strict
+ethics and privacy requirements. There is a grow-
+ing interest in designing proper evaluation guide-
+lines (Tack et al., 2023; Jurenka et al., 2024), how-
+ever, there is still a need for a unified automatic
+evaluation for scalable model development.
+MATHTUTORBENCH addresses the limitations
+of existing automatic metrics by focusing specifi-
+cally on tutoring, is simple to run, replicable, and
+could serve as a proxy for deciding which models
+to focus on in human studies. Moreover, our bench-
+mark only uses data collected from real teachers.
+3
+Background
+3.1
+Next Teacher Utterance Generation
+We focus on educational dialogues between a stu-
+dent and a teacher, where a student is trying to solve
+a multi-step problem p ∈V∗. The problem has a
+single numerical solution a and a sequence of so-
+lution steps s = (s1, . . . , sN), where each sn ∈V∗
+and sN contains the final answer a. A student solu-
+tion consists of steps bs = (bs1, . . . ,bsM) and the first
+step with a mistake is e ∈{0, 1, . . . , M}, where
+e = 0 means no mistake.
+The goal of dialog tutoring is to continue an ex-
+isting teacher-student dialog H := (u1, . . . , uT−1)
+consisting of T −1 turns ut ∈V∗with a new turn
+uT ∈V∗that simulates the teacher and guides the
+student towards solving a problem. This is usu-
+ally done by learning a model pθ(uT | H, K, it)
+with parameters θ ∈Rd, which is optionally con-
+ditioned on background knowledge K (in our case
+206
+
+Math Expertise
+Student Understanding
+Teacher Response Generation
+Task(s)
+Problem
+Socratic
+Solution
+Mistake
+Mistake
+Scaffolding Gen.,
+Scaffolding Gen.,
+solving
+questioning
+correctness
+location
+correction
+Ped. instr. following
+Ped. instr. following
+Dataset
+GSM8k
+GSM8k
+StepVerify
+StepVerify
+StepVerify
+MathDialBridge
+MathDialBridge[hard]
+Input
+p
+p
+p, bs
+p, bs
+p, H
+p, H
+p, H
+Type
+generation
+generation
+bin. clas. (bal.)
+multi-cl.
+generation
+generation
+generation
+Ground Truth
+a
+q1, . . . , qN
+1(e̸ = 0)
+e
+a
+uteacher
+uteacher
+Instances
+1319
+1319
+2004
+2004
+1002
+1150
+327
+Avg. turns
+-
+-
+-
+-
+3.04
+3.08
+5.78
+Table 1: Datasets used in the benchmark and their statistics. Notation defined in Section 3.
+only the problem p) and a teacher intent iT , and
+using a decoding strategy, such as greedy decoding
+or sampling according to pθ to generate an output.
+The turn uT should then fulfill the desiderate laid
+out in Section 3.2. The goal of this work is to
+present a benchmark to understand the quality of
+various uT generated by different models θ.
+3.2
+Learning Sciences Principles
+We focus on 1:1 multi-turn teacher-student interac-
+tions where teachers promote active learning (Free-
+man et al., 2014) by engaging students through
+scaffolding nudges, hints, and Socratic question-
+ing. Based on effective teaching research (Graesser
+et al., 1995; Lepper and Woolverton, 2002; Litman
+and Forbes-Riley, 2006; Boyer et al., 2008; Chi
+and Wylie, 2014; Nye et al., 2014; Jurenka et al.,
+2024), we define the following pedagogical princi-
+ples: (a) correctness: the teacher should guide the
+student towards the correct answer and not state
+incorrect facts; (b) scaffolding instead of giving
+away the answer: the teacher should help the stu-
+dent to cognitively engage with the problem and
+discover the answer on their own; (c) encourage
+self-correction: by correctly identifying the student
+mistake and first giving the student the opportunity
+to self-correct and learn from a mistake; (d) not
+overload student: manage cognitive load by not
+giving too much information at once.
+4
+MathTutorBench
+We introduce MATHTUTORBENCH, a benchmark
+that evaluates the tutoring capabilities of tutoring
+models. MATHTUTORBENCH consists of three
+high-level skills that a good human teacher needs to
+have (Bommasani et al., 2021): Expertise, Student
+Understanding and Pedagogical Abilities. These
+skills are tested by seven different tasks, each con-
+sisting of a dataset, prompt, and metric. All tasks
+in MATHTUTORBENCH are related to math tu-
+toring. The problems are mostly sourced from
+GSM8k (Cobbe et al., 2021). Table 1 summarizes
+the datasets and tasks. The prompts used for the
+tasks in the benchmark are shown in Appendix B.
+4.1
+Tasks
+This section explains each task and complements
+Table 1 with the rationale for including it.
+1. Problem Solving. We include a math word
+problem solving task that measures the accuracy
+of the final numeric answer generated with chain-
+of-thought (Wei et al., 2022) compared to the an-
+swer a. Even though this type of evaluation is
+popular, saturated, and contaminated, in MATHTU-
+TORBENCH it serves as an indicator of a balance
+between expertise and pedagogical abilities.
+2. Socratic Questioning. Socratic questioning
+is related to the problem decomposition to smaller
+and more manageable parts. This task is to evaluate
+whether a model generates for each correct step
+sn at least one corresponding guidance question
+qn towards the correct answer, which could be
+posed to the student instead of simply providing
+the answer (Shridhar et al., 2022; Liu et al., 2024).
+3. Student Solution Correctness. This task evalu-
+ates a teacher’s ability to verify the correctness of
+a student’s answer. Framed as a balanced binary
+classification task based on student solution chain
+bs, this dimension ensures that the model can objec-
+tively discern whether a student’s reply is correct
+or incorrect, a crucial prerequisite for providing
+accurate feedback and identification of misconcep-
+tions (Wang et al., 2024b).
+4. Student Mistake Location. Mistake location
+is a critical component of effective tutoring, focus-
+ing on a teacher’s ability to accurately identify the
+exact location of the first mistake in a student’s re-
+sponse bs (Daheim et al., 2024). This task assesses
+whether a tutoring model can pinpoint where a stu-
+dent’s reasoning has gone wrong, enabling timely
+and precise feedback. By detecting steps with mis-
+takes, the model can help students understand their
+misconceptions and steer the conversation to miti-
+gate them, thus fostering a more productive learn-
+207
+
+ing experience (Kapur, 2016; Wang et al., 2024b).
+5. Student Mistake Correction. This task mea-
+sures the performance of a model to generate a rea-
+soning chain with a correct final numeric answer a
+even though the student proposes an incorrect an-
+swer in the dialog history H. The conditioning on
+dialog history is the difference to Problem Solving.
+We test the models’ ability to handle incorrect solu-
+tions. Models should not get derailed by students’
+incorrect steps. From a broader perspective, even
+if there is an incorrect step in a dialog history H,
+this tests the recovery of a model from mistakes.
+6. Scaffolding Generation (scaff.). The task is to
+generate the next teacher utterance uT as a contin-
+uation of the dialog. As it is an open-ended task,
+we use a reward model to score generations over
+teacher responses (explained in Section 4.3) to es-
+timate its’ pedagogical quality. The tasks consist
+of two variations. Scaffolding generation focuses
+on generating an immediate response to a student’s
+incorrect solution. We use a simple prompt for this
+version asking models to respond to a student as
+“an experienced math teacher in a useful and caring
+way“ (Wang et al., 2024b). The second version
+is scaffolding generation [hard], a variant with a
+longer conversation history (avg. 5.78 turns).
+7. Pedagogical Instruction Following (IF) for
+Scaffolding Generation. The task refers to the
+ability of the model to follow pedagogical instruc-
+tions in prompts and steer the model generations to
+be more desired (Team et al., 2025). In this task, we
+use the LearnLM ‘extended‘ prompt (Jurenka et al.,
+2024) which specifically enumerates desired behav-
+iors such as “nudging students”, “asking guiding
+questions”, and “not overwhelm student”. There-
+fore, in contrast to a simple prompt from scaffold-
+ing generation, we hypothesize that models should
+improve their generations to be more aligned with
+our set of guiding principles from Section 3. The
+same is applied to the hard portion of the dataset.
+4.2
+Datasets
+The requirements for the dataset included in the
+benchmark are to focus on middle school math con-
+tent and contain 1:1 tutoring conversations written
+by human teachers. We found two datasets that
+fit the criteria, Bridge (Wang et al., 2024b) and
+MathDial (Macina et al., 2023a). We excluded
+NCTE (Demszky and Hill, 2023) dataset because
+it is multi-persona. Bridge (Wang et al., 2024b)
+contains 700 snippets of real online tutoring con-
+versations by novice teachers, where each response
+is revised by an expert teacher. MathDial (Macina
+et al., 2023a) consists of 2.9k tutoring conversa-
+tions collected by human teachers who interacted
+with simulated students. Both datasets focus on
+math, Bridge uses various problem sources and
+MathDial sources problems from GSM8k (Cobbe
+et al., 2021); a dataset of math word problems that
+we used in the expertise task. We combine Bridge
+and MathDial datasets into a combined dataset
+called MathDialBridge which we further split into
+one with a maximum of 4 utterances and the rest
+we put into MathDialBridge[hard]. Finally, we
+use the StepVerify (Daheim et al., 2024) dataset
+which builds on top of the MathDial student in-
+correct solutions and introduces annotation of the
+first erroneous step in a student solution. Table 1
+describes all the datasets and their statistics.
+4.3
+Scaffolding Score
+Evaluating pedagogical abilities in tutoring is in-
+herently challenging due to the open-ended nature
+of the involved tasks. Unlike more structured do-
+mains like factual question answering, pedagogy
+requires assessing the quality of responses such as
+questioning guidance to the root cause of a mis-
+take, and actionability of productive scaffolding. In
+other words, we need an efficient and lightweight
+mechanism, a critic model, that can assign a mean-
+ingful score to a generative model’s output based
+on its pedagogical effectiveness.
+4.3.1
+Criteria-based Scoring
+The most straightforward approach is to train indi-
+vidual critic models for each pedagogical task us-
+ing labeled data. For an evaluation taxonomy with
+n total evaluation criteria, for each criterion i we
+train a binary classifier Ci(y) that outputs a binary
+prediction of whether the criteria is present or not
+in response y. To combine these into a final score
+for a response, we aggregate them as Pn
+i=1 Ci(y),
+which represents a discrete score of the total num-
+ber of predicted desired criteria for the response.
+For example, MRBench (Maurya et al., 2025) is a
+small dataset annotated with 8 criteria such as the
+presence of guidance, actionability, and telling the
+answer. However, the scale of the required data
+and sparse features pose significant challenges.
+4.3.2
+Pairwise Ranking of Teacher Responses
+Since labeled data for each criterion can be scarce,
+we here explore a more unified strategy. Instead of
+training a separate model for each criterion, where
+208
+
+Dataset
+Split
+Pref. pairs
+Avg. turns
+Preferred resp.
+Rejected resp.
+Settings
+GSM8k-inpainted
+(Cobbe et al., 2021)
+all
+22,753
+4.38
+Subquestion qt
+Solution steps st:
+Math Word Problems with
+matching solutions steps
+st to subquestions qt
+Training datasets
+MathDial
+(Macina et al., 2023a)
+train
+3,615
+2.93
+Teacher utterances
+with it annotated as
+probing and focus
+in the first 3 teacher
+turns.
+Reference sol. s
+Tutoring conversations
+created by human
+teachers interacting with
+LLM students
+MRBench
+(Maurya et al., 2025)
+N/A
+4,521
+3.74
+Response with a
+higher number of
+desired criteria
+Response with
+fewer desired
+criteria
+Human annotation across
+8 tutoring criteria -
+guidance, actionability,
+answer reveal, mistake
+identification, mistake
+location, coherence, tone,
+humanness
+Test dataset
+Bridge
+(Wang et al., 2024b)
+all
+482
+2.79
+Expert teacher
+response
+Novice teacher
+response
+Original novice teacher
+responses and revisions
+by expert teachers
+Table 2: Datasets used to create pedagogical pairwise preference data.
+each annotation criterion has inherent subjectivity,
+we relax the objective and train a single critic model
+that aggregates multiple criteria into a pairwise
+comparison. We train a reward model using binary
+ranking loss by following Ouyang et al. (2022):
+Lrank = −log σ (rθ(x, yc) −rθ(x, yr) −m)
+(1)
+where rθ(x, y) is the scalar score for prompt x
+and generation y, yc and yr are preferred (chosen)
+and rejected generations respectively. The margin
+m(yc, yr) represents the numerical quality differ-
+ence between the chosen and rejected response but
+may also be set to 0 if not available.
+4.3.3
+Pairwise Preference Data Pipeline
+To create pairwise preference data, we follow our
+pedagogical criteria from Section 3.2. For example,
+a response is preferred if it is a Socratic question
+qt or it has dialog intent it which probes student
+understanding. Contrary, a response is chosen as re-
+jected if it contains part(s) of the reference solution
+s or has a lower number of desired criteria.
+To formalize this, for a given dialog history H
+and a taxonomy with n criteria, we define a score
+for each response y:
+f(y) =
+n
+X
+i=1
+1(y has desired criterion i)
+(2)
+where 1(·) is the indicator function that equals 1
+if · holds and 0 otherwise. The condition within
+the indicator function is determined by: a) hu-
+man criteria annotations (for MRBench (Mau-
+rya et al., 2025)), b) dialog intent annotations
+it of the used pedagogical strategy (for Math-
+Dial (Macina et al., 2023a)), and c) subquestion
+annotation qt (for GSM8k (Cobbe et al., 2021)).
+For each pair of responses (yi, yj), we construct a
+dataset of preference-label pairs D = {(yi, yj) |
+f(yi) > f(yj)}, where the margin is defined as
+m(yi, yj) = f(yi) −f(yj). The dataset captures
+the relative preference between responses based on
+the number of desired criteria they exhibit. The
+description of the datasets used for training and
+testing is found in Table 2.
+5
+Experiments
+5.1
+Models
+MathTutorBench includes an evaluation of three
+groups of models: general LLMs, LLM tutors,
+and math reasoners. General LLMs such as open-
+weight Llama3.1 70B and 8B, newer Llama3.2
+3B model, and closed source gpt-4o-mini. We
+use specialized tutoring models, namely closed-
+sourced LearnLM-1.5-Pro and recent open-source
+tutoring models Qwen2.5-7B-SocraticLM (Liu
+et
+al.,
+2024)
+and
+Llemma-7B-32K-MathMix
+(ScienceTutor)
+(Chevalier
+et
+al.,
+2024).
+To
+measure
+the
+importance
+of
+specially
+finetuned tutoring models,
+we evaluate the
+Qwen2.5-Math-7B-Instruct, which is optimized
+for math reasoning and was used for finetuning the
+specialized tutor model SocraticLM.
+209
+
+1.5
+1.0
+0.5
+0.0
+0.5
+1.0
+Normalized Rewards
+0.00
+0.25
+0.50
+0.75
+1.00
+1.25
+1.50
+1.75
+Density
+Expert
+Novice
+(a) Prompted
+1.5
+1.0
+0.5
+0.0
+0.5
+1.0
+Normalized Rewards
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+Density
+Expert
+Novice
+(b) With Extended Prompt
+1.0
+0.5
+0.0
+0.5
+1.0
+Normalized Rewards
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+1.2
+Density
+Expert
+Novice
+(c) Finetuned
+Figure 3: Reward model distribution scores for expert and novice teachers across prompted (prompt in Figure 6),
+with extended prompt (prompt in Figure 7), and finetuned Qwen2.5-1.5B-Instruct models.
+0.50 0.55 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 1.00
+Accuracy
+Qwen2.5-0.5B-Instruct
+Qwen2.5-1.5B-Instruct
+Modern-BERT Ensemble
+internlm2-7b
+Skywork-Llama3.1-8B
+Llama-3.1-70B-Instruct
+Prometheus-7b-v2.0
+GPT4o-mini
+Model
+Random (50%)
+Fine-tuned
+Extended Prompted
+Prompted
+Figure 4: Models performance on pairwise judgment
+of teacher responses. We compute accuracy on an inde-
+pendent test set based on Bridge dataset (Wang et al.,
+2024b) as a proportion of expert teacher responses pre-
+ferred over novice teacher responses. Extended prompt
+enumerates our pedagogical criteria (Figure 7).
+5.2
+Scaffolding Score - Data and Metrics
+The goal of the Scaffolding score is to estimate
+the pedagogical quality of the teacher’s response
+generation. To validate it, we use a test set con-
+taining 482 examples derived from the Bridge
+dataset (Wang et al., 2024b) which contains student
+dialogs with novice teachers. In Bridge, novice
+teacher responses are improved by expert teachers
+following an expert-defined decision-making pro-
+cess. The process first identifies the type of error
+and then determines the pedagogical strategy and
+intent. For example, while novice teachers tend to
+explicitly correct student mistakes by giving away
+correct answers to students, expert teachers use
+various scaffolding nudges such as the Socratic
+method, use hints, or ask for further elaboration of
+the problematic part.
+Data Mix & Setting
+Accuracy
+Avg. margin
+GSM8k-inpainted (22k)
+0.60
+3.26
+MathDial (3.6k)
+0.77
+1.57
+MRBench (4.5k)
+0.80
+2.60
++ margin in loss (4.5k)
+0.79
+7.68
++ pretraining (16.7k)
+0.80
+3.09
++ MathDial (8.1k)
+0.84
+5.75
+Table 3: Ablation of Qwen2.5-1.5B-Instruct reward
+model. Total number of training instances in brackets.
++ indicates an addition to the model. Pretraining uses
+20% of Ultrafeedback (Cui et al., 2024). We select the
+most accurate model to calculate the Scaffolding score.
+Training data used for training the Scaffolding
+reward model and its ablation are in Table 2. De-
+sired criteria for MRBench (Maurya et al., 2025)
+are "No" for Revealing of the answer, "Encourag-
+ing" for Tutor Tone, and "Yes" for Mistake Iden-
+tification, Mistake Location, Providing Guidance,
+Actionability, Coherence and Human-Likeness. To
+ensure no test set contamination with the training
+data, we strictly removed all instances from the test
+set about any topic already present in the training
+data. Therefore, test set samples contain not only
+unseen instances but also unseen topics by models.
+We use the following formula to compute the
+accuracy of pairwise ranking between the expert
+teacher and the novice teacher:
+1
+N
+N
+X
+i=1
+1(yexpert,i > ynovice,i).
+(3)
+5.3
+Scaffolding Score - Models and Baselines
+We
+use
+LLM-as-a-judge
+prompting
+as
+a
+baseline,
+similar
+to
+Jurenka
+et
+al.
+(2024).
+210
+
+Math Expertise
+Student Understanding
+Pedagogy
+Model
+Problem
+Socratic
+Solution
+Mistake
+Mistake
+Teacher response generation
+solving
+questioning
+correctness
+location
+correction
+scaff.
+ped.IF
+scaff. [hard]
+ped.IF [hard]
+Metric
+accuracy
+bleu
+F1
+micro F1
+accuracy
+win rate
+win rate
+win rate
+win rate
+LLaMA3.2-3B-Instruct
+0.60
+0.29
+0.67
+0.41
+0.13
+0.64
+0.63
+0.45
+0.40
+LLaMA3.1-8B-Instruct
+0.70
+0.29
+0.63
+0.29
+0.09
+0.61
+0.67
+0.46
+0.49
+LLaMA3.1-70B-Instruct
+0.91
+0.29
+0.71
+0.56
+0.19
+0.63
+0.70
+0.49
+0.49
+GPT-4o
+0.90
+0.48
+0.67
+0.37
+0.84
+0.50
+0.82
+0.46
+0.70
+LearnLM-1.5-Pro
+0.94
+0.32
+0.75
+0.57
+0.74
+0.64
+0.68
+0.66
+0.67
+Llemma-7B-ScienceTutor
+0.62
+0.29
+0.66
+0.29
+0.16
+0.37
+0.48
+0.38
+0.42
+Qwen2.5-7B-SocraticLM
+0.73
+0.32
+0.05
+0.39
+0.23
+0.39
+0.39
+0.28
+0.28
+Qwen2.5-Math-7B-Instruct
+0.88
+0.35
+0.43
+0.47
+0.49
+0.06
+0.07
+0.05
+0.05
+Table 4: We find that expertise and student understanding form a trade-off with pedagogy in tutor response generation.
+Models are grouped into general, specialized tutoring, and math reasoning models. The win rate is computed as the
+rate of the reward model preferring model responses over teacher responses. IF = Instruction Following.
+For this,
+we use Llama-3.1-70B-Instruct,
+GPT-4o-mini, and the specialized judge model
+Prompetheus-7b-v2.0 (Kim et al., 2024). More-
+over, we pick well-performing existing preference-
+tuned reward models with high scores from the
+RewardBench (Lambert et al., 2025) on a variety of
+chat comparisons, namely, Internlm2-7b-reward
+and Skywork-Reward-Llama-3.1-8B-v0.2.
+To
+finetune
+single
+criteria-based
+binary
+clas-
+sifiers
+we
+use
+ModernBERTbase
+(Warner
+et al., 2025) with a classification head.
+Fi-
+nally,
+we use Qwen2.5-0.5B-Instruct and
+Qwen2.5-1.5B-Instruct (Yang et al., 2024) for
+finetuning on preference data, which are small
+enough to run fast as a part of the benchmark.
+6
+Results
+In this section, we showcase our core findings on
+MATHTUTORBENCH and demonstrate the robust-
+ness and quality of the scaffolding reward model.
+6.1
+Comparing SotA LLMs (Table 4)
+Math expertise does not translate directly to stu-
+dent understanding and pedagogy.
+Our evalu-
+ations reveal a striking imbalance in current lan-
+guage models. While these models exhibit impres-
+sive domain knowledge and excel at Problem solv-
+ing, as evidenced by their performance on datasets
+like GSM8K, they consistently fall short in Scaf-
+folding generation task. This is particularly clear
+for Qwen2.5-Math and GPT4o.
+Specialized tutoring models improve in peda-
+gogy but do not retain the full solving abili-
+ties.
+The specialized tutoring model SocraticLM
+achieves good Scaffolding scores for its size and
+big improvements over the base model (Qwen2.5-
+Math). However, it degrades in all Student Un-
+derstanding tasks. Compared to SocraticLM, the
+ScienceTutor degrades in math expertise but has
+significantly better Student correctness solution
+and pedagogical instruction following. Closed-
+sourced LearnLM achieves a more reasonable bal-
+ance across all skills and tasks.
+Tutoring is more challenging on longer dialogs.
+As indicated by the drop in performance in the win
+rate of tasks, indicated with ‘hard‘, the longer the
+context it is more difficult for more to adapt. For
+example, it might be important to guide students
+differently than with a simple Socratic questioning.
+Only LearnLM can keep consistent performance.
+Majority of models suffer by limited pedagog-
+ical instruction following.
+When we compare
+scaffolding generation with instruction following
+win rate (in base and hard splits), we notice
+that GPT4o follows the pedagogical instructions
+and gains a significant improvement (similarly,
+there is a smaller improvement for ScienceTutor).
+However, other models such as the SocraticLM,
+LearnLM, or Llama models show decreased or sim-
+ilar performance suggesting a limited ability to
+follow pedagogical instructions defined in prompt.
+6.2
+Scaffolding Score - Results
+Figure 4 shows a comparison between various
+models evaluated on the task of scoring expert
+teacher responses higher than novice teacher re-
+sponses, see Equation 3. LLM-as-a-judge models
+are sensitive to prompts and positional bias, so we
+randomize the order. We report simple and ex-
+tended prompts with detailing pedagogical guide-
+lines (with prompts in Figure 6 and 7) but their
+accuracy is lower than 0.7. Performance of reward
+models from RewardBench (Lambert et al., 2025)
+on the pedagogical preferences is only slightly
+higher than random, highlighting the difference
+211
+
+between general human preferences and pedagog-
+ical preference data. We also train a combination
+of criteria-based ModernBERT binary classifiers
+aggregated into a summed final score, however, it
+lags behind extended-prompted LLM-as-a-judge
+models (for individual criterion performance see
+Table 5). We hypothesize the single criterion data
+are highly sparse, noisy and imbalanced, and do
+not have sufficient data size to work.
+To summarize, Figure 3 and Figure 4 shows that
+finetuning reward models on pedagogical prefer-
+ence data is essential, as these finetuned reward
+models outperform both LLMs-as-a-judge models
+and SoTA reward models from RewardBench, con-
+sistent with (Xu et al., 2024). We hypothesize that
+this is because of the lack of pedagogical datasets
+and a fundamental shift between a better chat re-
+sponse and a better pedagogical response.
+Ablation of finetuning data.
+Table 3 shows the
+results for various data mixtures of pedagogical
+preference data. We see that synthetic inpainted
+data (Dai et al., 2022) using stepwise questions and
+answers from GSM8k do not lead to a significant
+improvement over the base model. However, us-
+ing pedagogical preference pairs based on human
+annotators scores (Maurya et al., 2025) improves
+the score to 0.8, more than any other baseline in
+Table 4. However, as this dataset contains mostly
+model generations, only one of the responses is
+from a human teacher, and they are highly under-
+represented. Therefore, we also include conversa-
+tions from the MathDial training set (Macina et al.,
+2023a), which is filtered by desired dialog acts.
+(more details in Table 2). The resulting finetuned
+model achieves the best accuracy of 0.84. As the
+test set is completely separate and no problems
+are shared between the train and test set, we pick
+this reward model as our final model for comput-
+ing the Scaffolding score for model generation win
+rates over teacher responses (proportion of model
+generations preferred over teacher responses).
+Scores distribution.
+Additionaly, we plot in Fig-
+ure 3 the model distribution over scores on the test
+set. The prompted model with extended prompt and
+the vanilla model cannot separate the teacher and
+novice responses as well as the finetuned model.
+This supports the idea that pedagogical criteria are
+unique compared to general preference data and
+we need high-quality pedagogical preference data.
+7
+Conclusion
+In this work we propose MATHTUTORBENCH, a
+holistic benchmark for quick and cost-effective as-
+sessment of the educational capabilities of LLM
+tutoring models. It fills a crucial gap in the liter-
+ature, as it allows fast prototyping of models by
+using only lightweight automatic and learned met-
+rics to evaluate pedagogy. The goal is to not replace
+human studies measuring learning outcomes, but
+rather to serve as a measure of which models to
+use and compare. Finally, we benchmark various
+models and report a trade-off between expertise, un-
+derstanding, and pedagogy, as well as diminishing
+results on longer tutoring conversations.
+Limitations
+Our work focuses on high school math tutoring
+and limits the insights of the benchmark to multi-
+step math problems. Despite a limited number of
+available conversation dataset in other domains,
+we plan to extend the benchmark to further STEM
+domains to generalize its applicability and reach.
+The conversational data in the benchmark does
+not contain conversations longer than 10 turns and
+thus can miss to evaluate very long educational
+conversations with long-term dependencies which
+might be present in online tutoring classes.
+We study 1:1 conversational tutoring between
+teacher and student in this work. Specifically, we
+focus on a teacher using hints and nudges to aid
+student learning and provide engaging learning op-
+portunities for students. However, there are addi-
+tional functions of a teacher that we decided not to
+model, for example building rapport or trust with
+less engaged students.
+The benchmark does not contain all possible di-
+mensions for educational evaluation. For example,
+it is missing a safety evaluation of potentially harm-
+ful tutor responses. It is an extensive research area
+and not the goal of this work. However, as the
+benchmark is open-source we plan to extend it to
+include more safety evaluations.
+Ethics Statement
+Intended usage
+The goal of the benchmark is
+to evaluate new and existing dialog tutoring mod-
+els on the skills related to math expertise, student
+understanding, and pedagogical capabilities. We
+released the code and the dataset under CC-BY-4.0
+license. This follows the licences of all the datasets
+which we are using in the benchmark.
+212
+
+Accessibility and Potential Misuse
+The main
+goal of our work is to encourage the community
+to use the benchmark to improve existing tutoring
+models by balancing expertise, student understand-
+ing, and proper pedagogical guidance. However,
+there are potential risks related to the data and the
+scoring reward model. Models could optimize for
+reward hacking which could lead to suboptimal tu-
+toring behaviour. Moreover, if the data contains
+some unknown pattern, the risk is that this could be
+exploited by new models to achieve higher scores.
+However, we tried to mitigate this by including
+various data sources in the benchmark and in the
+training data, mostly human-annotated. We encour-
+age the deployment of tutoring models in any case
+with appropriate safeguards.
+Acknowledgements
+Jakub Macina acknowledges funding from the ETH
+AI Center Doctoral Fellowship, Asuera Stiftung,
+and the ETH Zurich Foundation. This work was
+supported in part by the Swiss AI Initiative un-
+der a project (ID a04) on AI for Education. This
+work has been funded by the LOEWE Distin-
+guished Chair “Ubiquitous Knowledge Process-
+ing”, LOEWE initiative, Hesse, Germany (Grant
+Number:
+LOEWE/4a//519/05/00.002(0002)/81)
+and by the State of Hesse, Germany, as part of
+the project “LLMentor: Expert-AI Coteaching of
+‘Introduction to Scientific Work’” (Connectom Net-
+working and Innovation Fund). We thank Shehzaad
+Dhuliawala for valuable feedback and discussions.
+References
+Josh Achiam, Steven Adler, Sandhini Agarwal, Lama
+Ahmad, Ilge Akkaya, Florencia Leoni Aleman,
+Diogo Almeida, Janko Altenschmidt, Sam Altman,
+Shyamal Anadkat, and 1 others. 2023. Gpt-4 techni-
+cal report. arXiv preprint arXiv:2303.08774.
+Julia Anghileri. 2006. Scaffolding practices that en-
+hance mathematics learning. Journal of Mathematics
+Teacher Education, 9:33–52.
+Rishi Bommasani, Drew A Hudson, Ehsan Adeli, Russ
+Altman, Simran Arora, Sydney von Arx, Michael S
+Bernstein, Jeannette Bohg, Antoine Bosselut, Emma
+Brunskill, and 1 others. 2021. On the opportuni-
+ties and risks of foundation models. arXiv preprint
+arXiv:2108.07258.
+Kristy Elizabeth Boyer, Robert Phillips, Michael Wallis,
+Mladen Vouk, and James Lester. 2008. Balancing
+cognitive and motivational scaffolding in tutorial di-
+alogue. In Intelligent Tutoring Systems, pages 239–
+249, Berlin, Heidelberg. Springer Berlin Heidelberg.
+Alexis Chevalier, Jiayi Geng, Alexander Wettig,
+Howard Chen, Sebastian Mizera, Toni Annala, Max
+Aragon, Arturo Rodriguez Fanlo, Simon Frieder, Si-
+mon Machado, Akshara Prabhakar, Ellie Thieu, Ji-
+achen T. Wang, Zirui Wang, Xindi Wu, Mengzhou
+Xia, Wenhan Xia, Jiatong Yu, Junjie Zhu, and 3
+others. 2024. Language models as science tutors.
+In Forty-first International Conference on Machine
+Learning.
+Michelene TH Chi and Ruth Wylie. 2014. The icap
+framework: Linking cognitive engagement to ac-
+tive learning outcomes. Educational psychologist,
+49(4):219–243.
+Karl Cobbe, Vineet Kosaraju, Mohammad Bavarian,
+Mark Chen, Heewoo Jun, Lukasz Kaiser, Matthias
+Plappert, Jerry Tworek, Jacob Hilton, Reiichiro
+Nakano, Christopher Hesse, and John Schulman.
+2021. Training verifiers to solve math word prob-
+lems. arXiv preprint arXiv:2110.14168.
+Ganqu Cui, Lifan Yuan, Ning Ding, Guanming Yao,
+Bingxiang He, Wei Zhu, Yuan Ni, Guotong Xie,
+Ruobing Xie, Yankai Lin, and 1 others. 2024. Ultra-
+feedback: Boosting language models with scaled ai
+feedback. In Forty-first International Conference on
+Machine Learning.
+Nico Daheim, Jakub Macina, Manu Kapur, Iryna
+Gurevych, and Mrinmaya Sachan. 2024. Stepwise
+verification and remediation of student reasoning er-
+rors with large language model tutors. In Proceed-
+ings of the 2024 Conference on Empirical Methods
+in Natural Language Processing, pages 8386–8411,
+Miami, Florida, USA. Association for Computational
+Linguistics.
+Zhuyun Dai, Arun Tejasvi Chaganty, Vincent Y Zhao,
+Aida Amini, Qazi Mamunur Rashid, Mike Green,
+and Kelvin Guu. 2022. Dialog inpainting: Turning
+documents into dialogs. In International conference
+on machine learning, pages 4558–4586. PMLR.
+Dorottya Demszky and Heather Hill. 2023. The NCTE
+transcripts: A dataset of elementary math classroom
+transcripts. In Proceedings of the 18th Workshop
+on Innovative Use of NLP for Building Educational
+Applications (BEA 2023), pages 528–538, Toronto,
+Canada. Association for Computational Linguistics.
+Dorottya Demszky, Jing Liu, Zid Mancenido, Julie
+Cohen, Heather Hill, Dan Jurafsky, and Tatsunori
+Hashimoto. 2021. Measuring conversational uptake:
+A case study on student-teacher interactions. In Pro-
+ceedings of the 59th Annual Meeting of the Associa-
+tion for Computational Linguistics and the 11th Inter-
+national Joint Conference on Natural Language Pro-
+cessing (Volume 1: Long Papers), pages 1638–1653,
+Online. Association for Computational Linguistics.
+213
+
+Scott Freeman, Sarah L Eddy, Miles McDonough,
+Michelle K Smith, Nnadozie Okoroafor, Hannah
+Jordt, and Mary Pat Wenderoth. 2014. Active learn-
+ing increases student performance in science, engi-
+neering, and mathematics. Proceedings of the na-
+tional academy of sciences, 111(23):8410–8415.
+Arthur C Graesser, Natalie K Person, and Joseph P
+Magliano. 1995. Collaborative dialogue patterns in
+naturalistic one-to-one tutoring. Applied cognitive
+psychology, 9(6):495–522.
+Irina Jurenka, Markus Kunesch, Kevin R McKee,
+Daniel Gillick, Shaojian Zhu, Sara Wiltberger, Shub-
+ham Milind Phal, Katherine Hermann, Daniel Kasen-
+berg, Avishkar Bhoopchand, and 1 others. 2024. To-
+wards responsible development of generative ai for
+education: An evaluation-driven approach. arXiv
+preprint arXiv:2407.12687.
+Manu Kapur. 2016. Examining productive failure, pro-
+ductive success, unproductive failure, and unproduc-
+tive success in learning. Educational Psychologist,
+51(2):289–299.
+Priyanka Kargupta, Ishika Agarwal, Dilek Hakkani Tur,
+and Jiawei Han. 2024. Instruct, not assist: LLM-
+based multi-turn planning and hierarchical question-
+ing for socratic code debugging. In Findings of the
+Association for Computational Linguistics: EMNLP
+2024, pages 9475–9495, Miami, Florida, USA. Asso-
+ciation for Computational Linguistics.
+Seungone Kim,
+Juyoung Suk,
+Shayne Longpre,
+Bill Yuchen Lin, Jamin Shin, Sean Welleck, Graham
+Neubig, Moontae Lee, Kyungjae Lee, and Minjoon
+Seo. 2024. Prometheus 2: An open source language
+model specialized in evaluating other language mod-
+els. In Proceedings of the 2024 Conference on Empir-
+ical Methods in Natural Language Processing, pages
+4334–4353, Miami, Florida, USA. Association for
+Computational Linguistics.
+Woosuk Kwon, Zhuohan Li, Siyuan Zhuang, Ying
+Sheng, Lianmin Zheng, Cody Hao Yu, Joseph Gon-
+zalez, Hao Zhang, and Ion Stoica. 2023. Efficient
+memory management for large language model serv-
+ing with pagedattention. In Proceedings of the 29th
+Symposium on Operating Systems Principles, pages
+611–626.
+Nathan Lambert, Valentina Pyatkin, Jacob Morrison,
+LJ Miranda, Bill Yuchen Lin, Khyathi Chandu,
+Nouha Dziri, Sachin Kumar, Tom Zick, Yejin Choi,
+Noah A. Smith, and Hannaneh Hajishirzi. 2025. Re-
+wardBench: Evaluating reward models for language
+modeling. In Findings of the Association for Compu-
+tational Linguistics: NAACL 2025, pages 1755–1797,
+Albuquerque, New Mexico. Association for Compu-
+tational Linguistics.
+Mark R. Lepper and Maria Woolverton. 2002. Chapter
+7 - the wisdom of practice: Lessons learned from
+the study of highly effective tutors. In Joshua Aron-
+son, editor, Improving Academic Achievement, Educa-
+tional Psychology, pages 135–158. Academic Press,
+San Diego.
+Zhenwen Liang, Dian Yu, Wenhao Yu, Wenlin Yao, Zhi-
+han Zhang, Xiangliang Zhang, and Dong Yu. 2024.
+Mathchat: Benchmarking mathematical reasoning
+and instruction following in multi-turn interactions.
+arXiv preprint arXiv:2405.19444.
+Diane Litman and Kate Forbes-Riley. 2006. Correla-
+tions between dialogue acts and learning in spoken
+tutoring dialogues. Natural Language Engineering,
+12(2):161–176.
+Jiayu Liu, Zhenya Huang, Tong Xiao, Jing Sha, Jinze
+Wu, Qi Liu, Shijin Wang, and Enhong Chen. 2024.
+SocraticLM: Exploring socratic personalized teach-
+ing with large language models. In The Thirty-eighth
+Annual Conference on Neural Information Process-
+ing Systems.
+Ilya Loshchilov and Frank Hutter. 2019. Decoupled
+weight decay regularization. In International Confer-
+ence on Learning Representations.
+Jakub Macina, Nico Daheim, Sankalan Chowdhury, Tan-
+may Sinha, Manu Kapur, Iryna Gurevych, and Mrin-
+maya Sachan. 2023a. MathDial: A dialogue tutoring
+dataset with rich pedagogical properties grounded
+in math reasoning problems. In Findings of the As-
+sociation for Computational Linguistics: EMNLP
+2023, pages 5602–5621, Singapore. Association for
+Computational Linguistics.
+Jakub Macina, Nico Daheim, Lingzhi Wang, Tanmay
+Sinha, Manu Kapur, Iryna Gurevych, and Mrinmaya
+Sachan. 2023b. Opportunities and challenges in neu-
+ral dialog tutoring. In Proceedings of the 17th Con-
+ference of the European Chapter of the Association
+for Computational Linguistics, pages 2357–2372,
+Dubrovnik, Croatia. Association for Computational
+Linguistics.
+Kaushal Kumar Maurya, Kv Aditya Srivatsa, Kseniia
+Petukhova, and Ekaterina Kochmar. 2025. Unify-
+ing AI tutor evaluation: An evaluation taxonomy for
+pedagogical ability assessment of LLM-powered AI
+tutors. In Proceedings of the 2025 Conference of the
+Nations of the Americas Chapter of the Association
+for Computational Linguistics: Human Language
+Technologies (Volume 1: Long Papers), pages 1234–
+1251, Albuquerque, New Mexico. Association for
+Computational Linguistics.
+Benjamin D Nye, Arthur C Graesser, and Xiangen Hu.
+2014. Autotutor and family: A review of 17 years of
+natural language tutoring. International Journal of
+Artificial Intelligence in Education, 24:427–469.
+Long Ouyang, Jeffrey Wu, Xu Jiang, Diogo Almeida,
+Carroll Wainwright, Pamela Mishkin, Chong Zhang,
+Sandhini Agarwal, Katarina Slama, Alex Ray, and 1
+others. 2022. Training language models to follow in-
+structions with human feedback. Advances in neural
+information processing systems, 35:27730–27744.
+214
+
+Kishore Papineni, Salim Roukos, Todd Ward, and Wei-
+Jing Zhu. 2002. Bleu: a method for automatic evalu-
+ation of machine translation. In Proceedings of the
+40th annual meeting of the Association for Computa-
+tional Linguistics, pages 311–318.
+Robin Schmucker, Meng Xia, Amos Azaria, and Tom
+Mitchell. 2024. Ruffle&riley: Insights from design-
+ing and evaluating a large language model-based con-
+versational tutoring system. In International Confer-
+ence on Artificial Intelligence in Education, pages
+75–90. Springer.
+Mrinank Sharma, Meg Tong, Tomasz Korbak, David
+Duvenaud, Amanda Askell, Samuel R. Bowman,
+Esin Durmus, Zac Hatfield-Dodds, Scott R John-
+ston, Shauna M Kravec, Timothy Maxwell, Sam Mc-
+Candlish, Kamal Ndousse, Oliver Rausch, Nicholas
+Schiefer, Da Yan, Miranda Zhang, and Ethan Perez.
+2024. Towards understanding sycophancy in lan-
+guage models. In The Twelfth International Confer-
+ence on Learning Representations.
+Kumar Shridhar, Jakub Macina, Mennatallah El-Assady,
+Tanmay Sinha, Manu Kapur, and Mrinmaya Sachan.
+2022. Automatic generation of socratic subquestions
+for teaching math word problems. In Proceedings of
+the 2022 Conference on Empirical Methods in Nat-
+ural Language Processing, pages 4136–4149, Abu
+Dhabi, United Arab Emirates. Association for Com-
+putational Linguistics.
+Shashank Sonkar, Naiming Liu, Debshila Mallick, and
+Richard Baraniuk. 2023. CLASS: A design frame-
+work for building intelligent tutoring systems based
+on learning science principles. In Findings of the
+Association for Computational Linguistics: EMNLP
+2023, pages 1941–1961, Singapore. Association for
+Computational Linguistics.
+Anaïs Tack, Ekaterina Kochmar, Zheng Yuan, Serge
+Bibauw, and Chris Piech. 2023.
+The BEA 2023
+shared task on generating AI teacher responses in
+educational dialogues. In Proceedings of the 18th
+Workshop on Innovative Use of NLP for Building Ed-
+ucational Applications (BEA 2023), pages 785–795,
+Toronto, Canada. Association for Computational Lin-
+guistics.
+Anaïs Tack and Chris Piech. 2022. The ai teacher test:
+Measuring the pedagogical ability of blender and gpt-
+3 in educational dialogues. In Proceedings of the
+15th International Conference on Educational Data
+Mining, page 522.
+LearnLM Team, Abhinit Modi, Aditya Srikanth Veerub-
+hotla, Aliya Rysbek, Andrea Huber, Brett Wilt-
+shire, Brian Veprek, Daniel Gillick, Daniel Kasen-
+berg, Derek Ahmed, Irina Jurenka, James Cohan,
+Jennifer She, Julia Wilkowski, Kaiz Alarakyia,
+Kevin R. McKee, Lisa Wang, Markus Kunesch,
+Mike Schaekermann, and 27 others. 2025. Learnlm:
+Improving gemini for learning.
+arXiv preprint
+arXiv:2412.16429.
+Leandro von Werra, Younes Belkada, Lewis Tunstall,
+Edward Beeching, Tristan Thrush, Nathan Lambert,
+Shengyi Huang, Kashif Rasul, and Quentin Gal-
+louédec. 2020. Trl: Transformer reinforcement learn-
+ing. https://github.com/huggingface/trl.
+Junling Wang, Jakub Macina, Nico Daheim, Sankalan
+Pal Chowdhury, and Mrinmaya Sachan. 2024a.
+Book2Dial: Generating teacher student interactions
+from textbooks for cost-effective development of ed-
+ucational chatbots. In Findings of the Association for
+Computational Linguistics: ACL 2024, pages 9707–
+9731, Bangkok, Thailand. Association for Computa-
+tional Linguistics.
+Rose E. Wang, Qingyang Zhang, Carly Robinson, Su-
+sanna Loeb, and Dorottya Demszky. 2024b. Bridging
+the novice-expert gap via models of decision-making:
+A case study on remediating math mistakes. In Pro-
+ceedings of the 2024 Conference of the North Amer-
+ican Chapter of the Association for Computational
+Linguistics. Association for Computational Linguis-
+tics.
+Benjamin Warner, Antoine Chaffin, Benjamin Clavié,
+Orion Weller, Oskar Hallström, Said Taghadouini,
+Alexis Gallagher, Raja Biswas, Faisal Ladhak, Tom
+Aarsen, Griffin Thomas Adams, Jeremy Howard, and
+Iacopo Poli. 2025. Smarter, better, faster, longer:
+A modern bidirectional encoder for fast, memory
+efficient, and long context finetuning and inference.
+In Proceedings of the 63rd Annual Meeting of the
+Association for Computational Linguistics (Volume
+1: Long Papers), pages 2526–2547, Vienna, Austria.
+Association for Computational Linguistics.
+Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten
+Bosma, Fei Xia, Ed Chi, Quoc V Le, Denny Zhou,
+and 1 others. 2022. Chain-of-thought prompting elic-
+its reasoning in large language models. Advances
+in neural information processing systems, 35:24824–
+24837.
+Thomas Wolf, Lysandre Debut, Victor Sanh, Julien
+Chaumond, Clement Delangue, Anthony Moi, Pier-
+ric Cistac, Tim Rault, Remi Louf, Morgan Funtowicz,
+Joe Davison, Sam Shleifer, Patrick von Platen, Clara
+Ma, Yacine Jernite, Julien Plu, Canwen Xu, Teven
+Le Scao, Sylvain Gugger, and 3 others. 2020. Trans-
+formers: State-of-the-art natural language processing.
+In Proceedings of the 2020 Conference on Empirical
+Methods in Natural Language Processing: System
+Demonstrations, pages 38–45, Online. Association
+for Computational Linguistics.
+Paiheng Xu, Jing Liu, Nathan Jones, Julie Cohen, and
+Wei Ai. 2024. The promises and pitfalls of using
+language models to measure instruction quality in
+education. In Proceedings of the 2024 Conference of
+the North American Chapter of the Association for
+Computational Linguistics: Human Language Tech-
+nologies (Volume 1: Long Papers), pages 4375–4389,
+Mexico City, Mexico. Association for Computational
+Linguistics.
+215
+
+An Yang, Baosong Yang, Beichen Zhang, Binyuan Hui,
+Bo Zheng, Bowen Yu, Chengyuan Li, Dayiheng Liu,
+Fei Huang, Haoran Wei, and 1 others. 2024. Qwen2.
+5 technical report. arXiv preprint arXiv:2412.15115.
+Tianyi Zhang, Varsha Kishore, Felix Wu, Kilian Q.
+Weinberger, and Yoav Artzi. 2020. Bertscore: Eval-
+uating text generation with bert. In International
+Conference on Learning Representations.
+A
+Scaffolding scores qualitative examples
+Table 6 shows assigned scores for various model
+and teacher responses given the problem and previ-
+ous dialog. We can notice teacher responses such
+as confirming incorrect answer or stating incorrect
+facts are scored lower compared to questions en-
+couraging self-reflection and self-correction. In
+between those two are responses that tell only one
+next step towards the correct answer or step-based
+questions.
+Similarly, Table 7 has examples of
+novice teacher responses from the test set catego-
+rized into score quartiles. These examples from
+the test dataset contain similar observations, with
+scores in the top quartile for encouragement and
+questions pointing to the root of the problem. The
+bottom quartile contains limited feedback such as
+your answer is incorrect and the bottom quartile
+often next-step-based hints.
+B
+Task Prompts
+The exact prompts used in the benchmark are
+shown in Figure 5. Please note that we use ex-
+actly the same task prompt for each model being
+evaluated. Some tasks use two in-context examples
+to present the right format of the response. The cost
+to run the full benchmark with GPT4o-mini is less
+than 3$. To run the open-weight models we use the
+vllm library (Kwon et al., 2023). We sample from
+all models in the benchmark with temperature set
+to 0 for reproducible results and we set maximum
+token generation to 2048.
+B.1
+Details of Benchmarked Models
+Specific versions of closed models we use
+are
+gpt-4o-mini-2024-07-18
+version
+and
+learnlm-1.5-pro-experimental.
+We
+use
+these exact versions of open-weight models
+loaded from Huggingface model hub (Wolf
+et
+al.,
+2020):
+LLaMA3.2-3B-Instruct,
+LLaMA3.1-8B-Instruct,
+Llama-3.1-70B-Instruct,
+CogBase-USTC/SocraticLM,
+princeton-nlp/Llemma-7B-32K-MathMix,
+and Qwen2.5-Math-7B-Instruct.
+C
+Reward Model Details
+C.1
+Implementation details
+We finetune all models using Huggingface trans-
+formers (Wolf et al., 2020) and trl library (von
+Werra et al., 2020) using the checkpoints from the
+Huggingface Model Hub by respecting the corre-
+sponding license agreements.
+We finetune all models with a learning rate of
+1 · 10−5 for 1 training epoch and with a batch size
+of 16. We use the AdamW optimizer (Loshchilov
+and Hutter, 2019) and train on an NVIDIA A100
+80GB GPU and finetuning takes around 1 hour for
+each model.
+C.2
+Reward model inference runtime
+Running the evaluation for all Teacher response
+generation tasks (Scaffolding Generation and Ped-
+agogical Instruction Following, both normal and
+hard splits, in total 2 954 generations) takes under
+10 minutes on a single GH200 GPU. The model
+can process and score generations in batches and
+increases from 7.01 examples/sec for the batch size
+of 1 to 7.25 examples/sec for the batch size of 8.
+D
+Details on Single-Criteria Classifiers
+The results of individual criteria classifiers on the
+separate test set are shown in Figure 5. For train-
+ing of the single-criteria classifiers we binarize
+the data from MRBench (Maurya et al., 2025).
+In particular, we take the most negative criterion
+for each category as 0 and all others as 1. We
+train ModernBERTbase with 149M parameters on
+NVIDIA V100 GPUs. Again, we use the AdamW
+optimizer with a learning rate of 1·10−5 and a batch
+size of 16 but train for 3 epochs due to the small
+data sizes. Training takes only ca. 15 minutes.
+216
+
+Model
+Accuracy
+Actionability
+0.78
+Guidance
+0.44
+Tone
+0.46
+Mistake Identification
+0.61
+Mistake Location
+0.63
+Revealing
+0.39
+Aggregated ens.
+0.66
+Aggregated ens. (best 3)
+0.68
+Table 5:
+Results of the criteria-based binary clas-
+sifiers on the test set.
+All models are finetuned
+ModernBERTbase models, the last two rows represent
+ensembles (ens.) with aggregated discrete binary pre-
+dictions. The criteria are a subset of criteria from MR-
+Bench (Maurya et al., 2025).
+217
+
+Problem
+Margaret wants to serve chicken salad sandwiches using mini croissants. Each committee member (24 people)
+will have 2 sandwiches. The bakery sells 12 mini croissants for $8.00. How much will she spend on croissants?
+Reference Solution
+• Total sandwiches: 24 × 2 = 48
+• Mini croissants needed: 48 ÷ 12 = 4 dozen
+• Cost: 4 × 8 = 32. Final Answer: $32.00
+Dialogue
+Teacher: "Walk me through your solution."
+Student: "I started by calculating how many sandwiches Margaret needs to make. Since there are 24 people on the
+committee and each person needs 2 sandwiches, I multiplied 24 × 2 to get 48. Then I realized that each sandwich needs
+2 mini croissants, so I multiplied 48 × 2 to get 96. Since the bakery offers 12 mini croissants for $8.00, I divided 96 by
+12 to get 8 sets of 12 mini croissants. Finally, I multiplied 8 × $8.00 to get my final answer of $64.00."
+Model
+Generated Response
+Score
+LearnLM-simple
+"That’s a fantastic approach to solving the problem! Your step-by-step calcula-
+tions and clear reasoning demonstrate a strong understanding of how to break
+down a word problem and solve it systematically." confirms incorrect answer
+-5.09
+GPT4o-simple
+"Great job on breaking down the problem step by step! Your calculations are
+correct, and you accurately determined that Margaret will spend $64.00 on
+croissants."confirms incorrect answer
+-4.25
+Qwen-Math-7b-
+extended
+"It looks like you have a solid understanding of the problem. You correctly
+calculated the total number of sandwiches needed and then determined how
+many sets of mini croissants you need to buy. Your final answer is $64.00."
+incorrect
+-3.68
+Human Teacher
+"A dozen croissants cost $8.00 and she needs 4 dozens so that will cost 8*4 ="
+telling part of the answer
+-1.91
+Qwen-Math-7b-simple
+"Calculate the total number of sandwiches needed: There are 24 people on the
+committee. Each person needs 2 sandwiches. 24 × 2 = 48 sandwiches." telling
+part of the correct answer
+-0.36
+SocraticLM-simple
+"How many sandwiches does Margaret need to make?" reiterate first step
+4.59
+GPT4o-extended
+"Great job breaking down the problem step by step! Can you explain how you
+determined the total cost of the croissants based on the number of sets you
+calculated?" ask to re-check
+4.62
+LearnLM-extended
+"That’s a great start! Can you explain why you decided to multiply 24 by 2 at
+the beginning of your solution?" encourages to reflect and self-correct on the
+exact error step
+7.47
+SocraticLM-extended
+"You correctly calculated the total number of sandwiches needed. Now, how
+many mini croissants does each sandwich require?" encourages to reflect and
+self-correct on the exact error step
+7.66
+Table 6: Example scaffolding reward model scores. Red represents undesired teacher behavior, blue is neutral and
+useful in some scenarios, and green represents following best scaffolding practices. Simple refers to the simple
+prompt used in the caffolding Generation task and the extended version refers to the extended prompt used in
+Pedagogical Instruction Following.
+218
+
+ 
+Expertise 
+1 Problem-Solving 
+2 Socratic Questioning 
+You are a helpful math tutor. Solve the question step-by-step. 
+Provide your final answer after 'Final answer'. 
+{{ shots }} 
+Question: {{question}} 
+Answer: 
+You are a helpful math tutor generating step-by-step questions. 
+Generate only a list of questions. 
+{{ shots }} 
+Problem: {{question}} 
+Questions: 
+Student Understanding 
+3 Student Solution Correctness 
+4 Mistake Location 
+You are an experienced math teacher. Your goal is to identify 
+the correctness of the Student's Solution to a Problem. 
+{{ shots }} 
+Problem: {{question}} 
+Conversation: 
+{{dialog_history}} 
+Student: {{student_chat_solution}} 
+Q: Is the Student Solution incorrect? Write 'Yes' if it is 
+incorrect, or 'No' if it is correct. 
+A: 
+You are an experienced math teacher. Your goal is to identify the 
+step of the first mistake in the Student's Solution to a Problem. 
+{{ shots }} 
+Problem: {{question}} 
+Student Solution: {{student_solution}} 
+Q: Is the Student Solution incorrect? Write only the step number 
+with the first error or 0 if no error is found. 
+A: 
+ 
+5 Mistake Correction 
+You are a helpful math tutor assisting a student. Given the following conversation and problem, provide a complete correct 
+solution. Make sure to show your work and state the final answer clearly after 'Final Answer:'. 
+Problem: {{question}} 
+Conversation: 
+{{dialog_history}} 
+Student: {{student_chat_solution}} 
+Teacher: 
+3 Pedagogy 
+Scaffolding Generation & Scaffolding Generation Hard                                                                            (simple prompt) 
+You are an experienced math teacher and you are going to respond to a student in a useful and caring way. The student is trying to 
+solve the following problem. 
+Problem: {{question}} 
+Conversation: 
+{{dialog_history}} 
+Teacher (maximum two sentences): 
+Pedagogical Instruction Following & Pedagogical Instruction Following Hard                                    (extended prompt) 
+Be a friendly, supportive tutor. Guide the student to meet their goals, gently nudging them on task if they stray. Ask guiding 
+questions to help your students take incremental steps toward understanding big concepts, and ask probing questions to help them 
+dig deep into those ideas. Pose just one question per conversation turn so you don't overwhelm the student. Wrap up this 
+conversation once the student has shown evidence of understanding. 
+Problem: {{question}} 
+Conversation: 
+{{dialog_history}} 
+Teacher (maximum two sentences): 
+Figure 5: Exact prompts for each task.
+219
+
+Judge the pedagogical quality of the responses provided by two teachers. Focus on the quality of the guidance, not
+revealing of the answer and actionability of the feedback. Be as objective as possible. After providing your explanation,
+output your final verdict by strictly following this format: "[[A]]" or "[[B]]".
+Problem: {problem}
+Reference Solution: {solution}
+{conversation}
+[The Start of Response A]
+{responseA}
+[The End of Response A]
+[The Start of Response B]
+{responseB}
+[The End of Response B ]
+Figure 6: A simple baseline prompt is used in LLM-as-a-judge and preference reward models.
+Judge the pedagogical quality of the responses provided by two teachers. Focus on the quality of the scaffolding
+guidance, correctness, and actionability of the feedback through nudges, questions, and hints. Do not give high scores
+for revealing the full answer.
+Problem: {problem}
+Reference Solution: {solution}
+{conversation}
+Teacher: {utterance_to_score}
+Figure 7: Extended prompt used by the reward models, LLM-as-a-judge, and preference-tuned reward models.
+{problem} and {solution} are placeholders for the text of the problem and a reference solution (if available).
+{conversation} represents a dialog history and {utterance_to_score} is a teacher utterance which is being assessed.
+For LLM-as-a-judge, two utterances are listed the same way as in Figure 6.
+220
+
+Quartile
+Example
+Top (75th)
+You made a good try. While rounding the nearest hundred, we
+have to look at the tens place first. Is the value in the tens place
+below 5?
+Your answer is a little bit off. There are 4 points in this graph.
+The x-axis moves on the graph horizontally or right to left. What
+direction does the y-axis move on the graph?
+That is great! +1 point for your effort. The division is the part of
+the question. What is the dividend?
+Mid (25-75th)
+Very good try! 1 day = ___ hours.
+That was a good try. Plus 1 point. Let me explain it to you. Here,
+we have to find the value of 10 divided by 5.
+You got an incorrect answer. Let me show you. The area of the top
+rectangle is 10. Add the areas of the two sections together. The
+final answer is 45 square feet. Did you understand?
+That’s a good try. Multiplication is also called repeated addition.
+Bottom (25th)
+Your answer is incorrect. The volume is 70 cubic units. Does the
+step make sense?
+Incorrect answer [STUDENT], but good try.
+That was a good try.
+Table 7: Examples of reward model scores for novice teacher responses from the test set, categorized into quartiles.
+221

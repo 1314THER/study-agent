@@ -23,6 +23,8 @@ def main():
     mode.add_argument('--report',action='store_true',help='导出最近批次的全部套路统计')
     mode.add_argument('--configure',metavar='RUN_ID',help='更新剩余题的模型设置，保持暂停')
     parser.add_argument('--engine',choices=('codex_luna','deepseek'),default='deepseek',help='匹配方式；Codex 仅支持安装本地接入的电脑')
+    parser.add_argument('--concurrency',type=int,default=3,help='并发批次数，范围 1–16，默认 3')
+    parser.add_argument('--legacy-run-id',help='可选的历史结果提示批次ID；仅内容哈希一致时使用')
     args=parser.parse_args()
     store=get_store()
     if args.configure:
@@ -38,7 +40,12 @@ def main():
         return 0
     if args.new:
         config=model_config(args.engine); ai_caller(config)
-        run=store.create('cli-'+uuid.uuid4().hex,reference_store().read()['catalog'],config,storage_path())
+        catalog=reference_store().read()['catalog']
+        if args.engine=='codex_luna':
+            from backend.routine_classification import digest
+            config.update(catalog_hash=digest(catalog),legacy_run_id=args.legacy_run_id,
+                          preserve_prior_humans_as_history=True)
+        run=store.create('cli-'+uuid.uuid4().hex,catalog,config,storage_path())
     else:
         current=store.run(args.resume or args.retry_failed)
         if current['model_config'].get('prompt_profile') is None:
@@ -52,7 +59,7 @@ def main():
             print(json.dumps(summary(current),ensure_ascii=False),flush=True)
             last[0]=time.monotonic()
     try:
-        result=execute_run(store,run['run_id'],progress=progress)
+        result=execute_run(store,run['run_id'],concurrency=max(1,min(16,args.concurrency)),progress=progress)
     except KeyboardInterrupt:
         store.control(run['run_id'],'pause')
         print('任务中断，结果已逐题保存；使用 --resume 继续。',flush=True)

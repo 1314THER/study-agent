@@ -1,0 +1,73 @@
+<Slide style={{ background: '#0E3F8C', padding: 56, justifyContent: 'space-between' }}>
+    <Box style={{ flexDirection: 'column', gap: 12 }}>
+        <Text style={{ fontSize: 18, color: '#9EC1F0', letterSpacing: 4 }}>
+            AN AI LEARNING SYSTEM FOR HIGH SCHOOL MATHEMATICS
+        </Text>
+        <Box style={{ width: 130, height: 4, background: '#3D7BD9' }} />
+    </Box>
+
+    <Box style={{ flexDirection: 'row', alignItems: 'stretch', gap: 40, flex: 1 }}>
+        <Box style={{ flexDirection: 'column', justifyContent: 'space-between', flex: 1, paddingTop: 6, paddingBottom: 6 }}>
+            <Box style={{ flexDirection: 'column', gap: 18 }}>
+                <Text style={{ fontSize: 60, fontWeight: 'bold', color: '#FFFFFF', lineHeight: 1.15 }}>
+                    高中数学 AI 学习系统
+                </Text>
+                <Text style={{ fontSize: 30, color: '#C8DCF7', lineHeight: 1.4 }}>
+                    从试题诊断到整卷评价
+                </Text>
+                <Text style={{ fontSize: 24, color: '#8FB4E8', lineHeight: 1.4 }}>
+                    步骤级结构化 · 套路级归因 · 试卷级评价
+                </Text>
+            </Box>
+
+            <Box style={{ flexDirection: 'column', gap: 12 }}>
+                <Box style={{ width: 640, height: 1, background: '#2E5CA8' }} />
+                <Text style={{ fontSize: 21, color: '#B9D2F2', lineHeight: 1.6 }}>
+                    不只是给出答案与解析，而是把每道题拆解为可计算的结构化步骤，
+                    让难度、批改、组卷与学情都建立在同一份数据之上。
+                </Text>
+                <Text style={{ fontSize: 21, color: '#FFC107', lineHeight: 1.6 }}>
+                    核心突破：评价维度从试题升到试卷，从知识点升到套路。
+                </Text>
+            </Box>
+        </Box>
+
+        <Box style={{ width: 340, background: '#123D7F', borderRadius: 10, padding: 24, flexDirection: 'column', justifyContent: 'space-between' }}>
+            <Text style={{ fontSize: 17, color: '#8FB4E8' }}>系统规模（2026-10-24 实测）</Text>
+            <Box style={{ flexDirection: 'column', gap: 10 }}>
+                <Box style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
+                    <Text style={{ fontSize: 40, fontWeight: 'bold', color: '#FFFFFF' }}>25,000+</Text>
+                    <Text style={{ fontSize: 16, color: '#9EC1F0' }}>后端代码行</Text>
+                </Box>
+                <Box style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
+                    <Text style={{ fontSize: 40, fontWeight: 'bold', color: '#FFFFFF' }}>288</Text>
+                    <Text style={{ fontSize: 16, color: '#9EC1F0' }}>条套路目录</Text>
+                </Box>
+                <Box style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
+                    <Text style={{ fontSize: 40, fontWeight: 'bold', color: '#FFFFFF' }}>23,255</Text>
+                    <Text style={{ fontSize: 16, color: '#9EC1F0' }}>道原题池候选</Text>
+                </Box>
+                <Box style={{ flexDirection: 'row', alignItems: 'baseline', gap: 10 }}>
+                    <Text style={{ fontSize: 40, fontWeight: 'bold', color: '#FFFFFF' }}>803</Text>
+                    <Text style={{ fontSize: 16, color: '#9EC1F0' }}>个自动化测试</Text>
+                </Box>
+            </Box>
+            <Box style={{ width: 292, height: 1, background: '#2E5CA8' }} />
+            <Text style={{ fontSize: 16, color: '#7FA3DC', lineHeight: 1.5 }}>
+                纯本地运行，无外部依赖；
+                SQLite + 静态前端 + FastAPI。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <Box style={{ flexDirection: 'column', gap: 6 }}>
+            <Text style={{ fontSize: 20, color: '#FFFFFF' }}>汇报人：（请在此填写）</Text>
+            <Text style={{ fontSize: 18, color: '#9EC1F0' }}>单位：（请在此填写）</Text>
+        </Box>
+        <Box style={{ flexDirection: 'column', gap: 6, alignItems: 'flex-end' }}>
+            <Text style={{ fontSize: 20, color: '#FFFFFF' }}>2026 年 10 月</Text>
+            <Text style={{ fontSize: 16, color: '#7FA3DC' }}>代码版本 2026-10-24</Text>
+        </Box>
+    </Box>
+</Slide>

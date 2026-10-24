@@ -1,0 +1,16 @@
+{"schema":"openai.presentation.layout/v5","unit":"px","slide":{"id":"sl/i107q5of","index":4,"layout":{"id":"ly/14ra9krq","name":"Blank"},"backgroundColor":"rgba(255,255,255,1)","position":{"left":0,"top":0,"width":1600,"height":900}},
+"elements":[
+{"id":"sh/k7mxovud","kind":"shape","position":{"left":75,"top":33.75,"width":56.25,"height":0},"geometry":"line","lineColor":"#176FA3","lineWidth":4.38},
+{"id":"sh/dgbulwnm","kind":"textbox","position":{"left":75,"top":50,"width":1450,"height":60},"text":"From Objectives to Questions: A Planning-based Framework for Educational Mathematical Question Generation","style":{"fontSize":26.56,"typeface":"Arial","color":"#18334B","bold":true,"alignment":"left"},"geometry":"rect","lineWidth":0},
+{"id":"sh/cf2tcr61","kind":"shape","position":{"left":75,"top":130,"width":1450,"height":0},"geometry":"line","lineColor":"#D7E0E6","lineWidth":0.81},
+{"id":"sh/z2tcnm5s","kind":"textbox","position":{"left":75,"top":165,"width":387.5,"height":32.5},"text":"问题","style":{"fontSize":22.51,"typeface":"Arial Unicode MS","color":"#176FA3","bold":true,"alignment":"left"},"geometry":"rect","lineWidth":0},
+{"id":"sh/yhkbe1o7","kind":"textbox","position":{"left":75,"top":212.5,"width":387.5,"height":112.5},"text":"怎样让生成题目\n满足多维教学目标？","style":{"fontSize":31.25,"typeface":"Arial Unicode MS","color":"#18334B","bold":true,"alignment":"left"},"geometry":"rect","lineWidth":0},
+{"id":"sh/l4bupwny","kind":"textbox","position":{"left":75,"top":367.5,"width":387.5,"height":32.5},"text":"贡献","style":{"fontSize":22.51,"typeface":"Arial Unicode MS","color":"#176FA3","bold":true,"alignment":"left"},"geometry":"rect","lineWidth":0},
+{"id":"sh/032tgr6d","kind":"textbox","position":{"left":75,"top":420,"width":400,"height":162.5},"text":"构建多维目标数据集。\nMCTS 搜索结合评审与反思。\n分评可解性与目标满足。","style":{"fontSize":28.75,"typeface":"Arial Unicode MS","color":"#263D50","alignment":"left"},"geometry":"rect","lineWidth":0},
+{"id":"sh/n6dcr65o","kind":"textbox","position":{"left":75,"top":640,"width":387.5,"height":32.5},"text":"证据","style":{"fontSize":22.51,"typeface":"Arial Unicode MS","color":"#176FA3","bold":true,"alignment":"left"},"geometry":"rect","lineWidth":0},
+{"id":"sh/m5kbi1oj","kind":"textbox","position":{"left":75,"top":692.5,"width":406.25,"height":115},"text":"DeepSeek-V3，EduMath-CQ\n目标通过率 43.11%\n指标来自模型评审","style":{"fontSize":26.88,"typeface":"Arial Unicode MS","color":"#263D50","alignment":"left"},"geometry":"rect","lineWidth":0},
+{"id":"im/rqdw7qls","kind":"image","position":{"left":505,"top":180.17,"width":1020,"height":597.16}},
+{"id":"sh/x4vedgvm","kind":"textbox","position":{"left":505,"top":812.5,"width":1020,"height":27.5},"text":"原文图 2｜EQPR 总体框架","style":{"fontSize":17.51,"typeface":"Arial Unicode MS","color":"#5B6E7E","alignment":"center"},"geometry":"rect","lineWidth":0},
+{"id":"sh/ahkvi1cb","kind":"textbox","position":{"left":75,"top":856.25,"width":1368.75,"height":30},"text":"Cheng Cheng et al. ACL 2025. DOI: 10.18653/v1/2025.acl-long.628","style":{"fontSize":16.88,"typeface":"Arial Unicode MS","color":"#5B6E7E","alignment":"left"},"geometry":"rect","lineWidth":0},
+{"id":"sh/v2twb6dw","kind":"textbox","position":{"left":1494,"top":850,"width":50,"height":34},"text":"05","style":{"fontSize":22,"typeface":"Noto Sans CJK SC","color":"#627380","alignment":"left"},"geometry":"rect","lineWidth":0}
+]}

@@ -1,0 +1,90 @@
+<Slide style={{ padding: 0, background: '#FFFFFF' }}>
+    <Box style={{ height: 72, background: '#1E4FA8', paddingLeft: 40, paddingRight: 40, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>05 · 四大优势</Text>
+    </Box>
+
+    <Box style={{ flex: 1, paddingTop: 14, paddingBottom: 12, paddingLeft: 40, paddingRight: 40, justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 21, color: '#4A5568', lineHeight: 1.5 }}>
+            优势不在功能数量，而在三个别人做不到的判断，以及一套让这些判断站得住的约束。
+        </Text>
+
+        <Box style={{ flexDirection: 'column', gap: 16, flex: 1 }}>
+            <Box style={{ flexDirection: 'row', gap: 16, flex: 1 }}>
+            <Box style={{ flex: 1, background: '#E8EFF8', borderRadius: 10, border: '1px solid #3D7BD9', padding: 18, flexDirection: 'column', gap: 8 }}>
+                <Box style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                    <Box style={{ width: 46, height: 46, background: '#0E3F8C', borderRadius: 8, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' }}>1</Text>
+                    </Box>
+                    <Text style={{ fontSize: 25, fontWeight: 'bold', color: '#0E3F8C', flex: 1 }}>评价维度升维</Text>
+                </Box>
+                <Text style={{ fontSize: 19, color: '#1A2230', lineHeight: 1.5, flex: 1 }}>
+                    试题升到试卷，得到偏差、缺口与稳定性；知识点升到套路，得到「何时用」与「易混什么」。上层结论在下层不可归约。
+                </Text>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10 }}>
+                    <Text style={{ fontSize: 17, color: '#8B97A8', lineHeight: 1.4 }}>证据：跨题结论需 ≥2 次考试且 ≥2 道不同题；288 条套路全部含排除条件与易混淆关系。</Text>
+                </Box>
+            </Box>
+
+            <Box style={{ flex: 1, background: '#E8EFF8', borderRadius: 10, border: '1px solid #3D7BD9', padding: 18, flexDirection: 'column', gap: 8 }}>
+                <Box style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                    <Box style={{ width: 46, height: 46, background: '#0E3F8C', borderRadius: 8, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' }}>2</Text>
+                    </Box>
+                    <Text style={{ fontSize: 25, fontWeight: 'bold', color: '#0E3F8C', flex: 1 }}>难度可复现</Text>
+                </Box>
+                <Text style={{ fontSize: 19, color: '#1A2230', lineHeight: 1.5, flex: 1 }}>
+                    模型只给每个步骤打五维，块与整题难度由确定性公式聚合；同一道题两次运行结果一致，权重与阈值可调。
+                </Text>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10 }}>
+                    <Text style={{ fontSize: 17, color: '#8B97A8', lineHeight: 1.4 }}>证据：峰值加半量均值乘覆盖率，向下取整并封顶 3；总分封顶 15。</Text>
+                </Box>
+            </Box>
+
+            </Box>
+
+            <Box style={{ flexDirection: 'row', gap: 16, flex: 1 }}>
+            <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 10, border: '1px solid #D6DCE5', padding: 18, flexDirection: 'column', gap: 8 }}>
+                <Box style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                    <Box style={{ width: 46, height: 46, background: '#1E4FA8', borderRadius: 8, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' }}>3</Text>
+                    </Box>
+                    <Text style={{ fontSize: 25, fontWeight: 'bold', color: '#1A2230', flex: 1 }}>证据链可复核</Text>
+                </Box>
+                <Text style={{ fontSize: 19, color: '#1A2230', lineHeight: 1.5, flex: 1 }}>
+                    每次批改保留题目、作答、标准依据、模型与提示词版本以及人工修改记录；低置信度与歧义进入人工确认。
+                </Text>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10 }}>
+                    <Text style={{ fontSize: 17, color: '#8B97A8', lineHeight: 1.4 }}>证据：缺失步骤强制清空错因；客观题等价判断返回三值而非二值。</Text>
+                </Box>
+            </Box>
+
+            <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 10, border: '1px solid #D6DCE5', padding: 18, flexDirection: 'column', gap: 8 }}>
+                <Box style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                    <Box style={{ width: 46, height: 46, background: '#1E4FA8', borderRadius: 8, alignItems: 'center', justifyContent: 'center' }}>
+                        <Text style={{ fontSize: 22, fontWeight: 'bold', color: '#FFFFFF' }}>4</Text>
+                    </Box>
+                    <Text style={{ fontSize: 25, fontWeight: 'bold', color: '#1A2230', flex: 1 }}>内容合规可控</Text>
+                </Box>
+                <Text style={{ fontSize: 19, color: '#1A2230', lineHeight: 1.5, flex: 1 }}>
+                    候选与正式分层，默认不公开，年份与许可留证；几何演示用受限解析器处理，不执行模型生成的代码。
+                </Text>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10 }}>
+                    <Text style={{ fontSize: 17, color: '#8B97A8', lineHeight: 1.4 }}>证据：23,255 道候选中有 33 道正式入库；年份只从卷面取证。</Text>
+                </Box>
+            </Box>
+            </Box>
+        </Box>
+
+        <Box style={{ background: '#0E3F8C', borderRadius: 8, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <Box style={{ width: 6, height: 32, background: '#FFC107' }} />
+            <Text style={{ fontSize: 19, color: '#FFFFFF', lineHeight: 1.5, flex: 1 }}>
+                若时间有限，只讲前两条：第一条回答「为什么值得做」，第二条回答「为什么别人做不了」。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 44, paddingLeft: 40, paddingRight: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', background: '#F7F9FC', borderTop: '1px solid #E5E7EB' }}>
+        <Text style={{ fontSize: 14, color: '#8B97A8' }}>高中数学 AI 学习系统 · 技术框架汇报</Text>
+        <Text style={{ fontSize: 15, color: '#1E4FA8' }}>22 / 24</Text>
+    </Box>
+</Slide>

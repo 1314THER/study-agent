@@ -1,0 +1,1977 @@
+STEPwise: Supporting Teachers in Diagnosing Students’
+Mathematical Problem-Solving Skills through LLM-Generated
+Questions and Rubrics
+Yoonsu Kim
+School of Computing
+KAIST
+Daejeon, Republic of Korea
+yoonsu16@kaist.ac.kr
+Hayeon Doh
+Department of AI Computing
+KAIST
+Daejeon, Republic of Korea
+hannahdoh@kaist.ac.kr
+Eunhye Kim
+School of Computing
+KAIST
+Daejeon, Republic of Korea
+gracekim027@kaist.ac.kr
+Jinho Son
+Algorithm Labs
+Seoul, Republic of Korea
+sjhfam@algorithmlabs.co.kr
+Juho Kim
+juhokim@kaist.ac.kr
+School of Computing, KAIST
+Daejeon, Republic of Korea
+juho@skillbench.com
+SkillBench
+Santa Barbara, CA, USA
+Framework
+STEP Framework
+Problem solving stage
+Sub-Skill
+Sub-Question
+Primary Error Types
+Evaluation
+Classroom Study
+Formative
+“Skill analysis at 
+scale is hard 
+because...”
+“Diagnosis at scale 
+using 
+!”
+STEPwise
+Pipeline
+SubQ 1-1
+SubQ 2-1
+Rubrics
+Metric 1
+Metric 2
+STEP Pipeline
+SubQ Generation
+Rubric Generation
+Math Problem
+SubQ & Rubrics
+We should look at...
+These are valid in that...
+The system helped me...
+Figure 1: Overview of the research. We conduct a formative study with teachers on what makes problem-solving skill diagnosis
+at scale difficult. Based on the results, we construct STEP, which consists of 4 problem-solving stages with 8 sub-skills. Based
+on STEP, we create an LLM-based pipeline that generates sub-questions and rubrics from math word problems, and evaluate
+them with teachers. Finally, we present STEPwise, a system that incorporates the LLM-pipeline based on STEP and supports
+teachers in diagnosing students’ problem-solving skills, and examine its classroom use through a month-long study with 5
+teachers and 64 students.
+ABSTRACT
+Problem-solving is central to mathematics education. However,
+diagnosing where students’ reasoning breaks down requires in-
+dividualized probing and consistent criteria that teachers cannot
+sustain at classroom scale. We introduce STEP (STage-based Evalu-
+ation of Problem-solving skills), co-designed with six mathematics
+education experts, which operationalizes problem-solving as four
+stages and eight diagnostic sub-skills. By specifying what evidence
+to elicit and assess at each stage, STEP enables an LLM pipeline to
+generate stage-specific questions and rubrics for any math word
+problem, reducing the manual design of diagnostic materials. An ex-
+pert review (N=8) assessed the pedagogical validity of the generated
+materials and informed STEPwise, a teacher-in-the-loop system
+for diagnostic material generation and process-level assessment.
+In a classroom study with 5 teachers and 64 students, STEPwise
+Conference’17, July 2017, Washington, DC, USA
+2026. ACM ISBN 978-x-xxxx-xxxx-x/YY/MM
+https://doi.org/10.1145/nnnnnnn.nnnnnnn
+helped teachers and students locate reasoning breakdowns and
+supported students in reflecting on their reasoning. Together, STEP
+and STEPwise offer a structured approach to fine-grained diagnosis
+at classroom scale.
+CCS CONCEPTS
+• Human-centered computing →Empirical studies in HCI; •
+Applied computing →Computer-assisted instruction.
+KEYWORDS
+Mathematical problem-solving process, Process-level diagnosis,
+Large language models (LLMs), Diagnostic material generation
+ACM Reference Format:
+Yoonsu Kim, Hayeon Doh, Eunhye Kim, Jinho Son, and Juho Kim. 2026.
+STEPwise: Supporting Teachers in Diagnosing Students’ Mathematical
+Problem-Solving Skills through LLM-Generated Questions and Rubrics. In
+. ACM, New York, NY, USA, 20 pages. https://doi.org/10.1145/nnnnnnn.
+nnnnnnn
+arXiv:2610.16344v1  [cs.HC]  12 Oct 2026
+
+Conference’17, July 2017, Washington, DC, USA
+Yoonsu Kim et al.
+1
+INTRODUCTION
+Problem-solving is central to mathematics education. Successfully
+solving a problem requires students not only to know mathematical
+concepts, but also to interpret the problem situation, identify rele-
+vant knowledge, and organize and carry out a solution. Accordingly,
+mathematics educators regard students’ problem-solving processes
+as important instructional targets [3, 17, 35].
+Diagnosing students’ performance at each stage of the problem-
+solving process is essential for supporting their learning [21, 29].
+Yet in practice, it remains heavily dependent on teachers’ profes-
+sional judgment, grounded in their close examination of students’
+problem-solving behavior or written work [15, 51, 59]. Since stu-
+dents do not consistently externalize their reasoning without ex-
+plicit support [12, 54], prior work has emphasized designing tasks
+that intentionally elicit students’ thinking [32, 35], such as written
+explanation prompts. In parallel, research on mathematical prob-
+lem solving has proposed stage-based frameworks that decompose
+the solving process into structured phases [30, 49, 52, 58], offering
+conceptual guidance on what kinds of reasoning may occur at each
+step. However, it remains unclear how these general stages can
+be translated into problem-specific questions that elicit diagnosti-
+cally informative responses. It also remains unclear how teachers
+can consistently assess those responses within everyday classroom
+workflows.
+Motivated by this gap, we conducted a formative study with four
+mathematics teachers (mean teaching experience: 13.25 years) and
+48 students in grades 3–6. Using four general stage-based questions
+adapted from prior work [30], we examined how teachers diag-
+nosed students’ problem-solving processes and what challenges
+they encountered. We identified two challenges. First, questions
+that were not tailored to individual problems often failed to elicit
+the reasoning needed to solve them. Second, teachers needed clear,
+problem-specific rubrics to assess students’ reasoning consistently,
+but constructing such rubrics demanded substantial time and peda-
+gogical effort. These challenges pointed to the need for a framework
+that specifies both what reasoning to elicit and what evidence to
+assess at each stage.
+To address this need, we developed STEP (STage-based Evalua-
+tion of Problem-solving skills), a diagnostic framework co-designed
+with six mathematics education experts and informed by established
+problem-solving frameworks [24, 34, 52, 58, 62]. STEP organizes
+problem solving into four sequential stages and refines each stage
+into two diagnostic sub-skills. These sub-skills distinguish sources
+of difficulty within a broad stage—for example, identifying key
+information versus identifying the problem goal, or applying math-
+ematical knowledge versus constructing a mathematical expression.
+By specifying what evidence to elicit and assess for each sub-skill,
+STEP helps locate where students’ reasoning begins to break down.
+Building on STEP, we developed an LLM-based pipeline that
+instantiates this diagnostic structure for individual math word prob-
+lems. Given a problem, the pipeline generates a sub-question tar-
+geting each sub-skill and a corresponding rubric that characterizes
+different levels of student reasoning. Automating this problem-
+specific generation reduces the manual effort required to create
+diagnostic materials across problems, while the shared structure
+supports consistent process-level assessment.
+We evaluated our approach in two stages. First, eight mathemat-
+ics teachers (mean teaching experience: 11.83 years) participated in
+an expert review of materials generated for 36 problems spanning
+grades 3–6. Six conducted the primary review, while two additional
+teachers resolved disagreements. At the sub-skill level, 91.32% of the
+materials met the construct-validity criterion, while 90.97% met the
+mathematical-accuracy criterion. However, level appropriateness
+(80.21%) and problem-context alignment (72.22%) received lower
+ratings, revealing occasional mismatches with grade-level language,
+curricula, and problem contexts. These limitations made teacher
+review and adaptation a central design requirement. Accordingly,
+we incorporated teachers’ curriculum materials into the generation
+pipeline and enabled teachers to review and edit its outputs. These
+refinements informed STEPwise, a teacher-in-the-loop system for
+diagnostic material generation and process-level assessment.
+We then conducted a month-long classroom study with 5 teach-
+ers and 64 students in grades 3–9 to examine how STEP and STEP-
+wise support process-level diagnosis in classroom use. Over the
+month, teachers generated diagnostic materials for 90 problems in
+total, yielding 720 sub-questions and corresponding rubrics. Teach-
+ers reported two main benefits: they could produce diagnostic mate-
+rials for their own problems easily, and the step-by-step responses
+let them see how far students had progressed and pinpoint where
+the problem-solving process began to break down—a level of de-
+tail they could otherwise obtain only through individual follow-up
+questioning. They further noted that beyond diagnosis, the sub-
+questions themselves serve as a learning experience, guiding stu-
+dents to work through one problem thoroughly and helping them
+develop structured thinking beyond simply applying memorized
+procedures. Students responded positively to the stage-based ap-
+proach in terms of its usefulness for working through problems,
+expressing their reasoning, recognizing their strengths and weak-
+nesses, and willingness to use it for future learning (all means
+between 3.6 and 3.9 out of 5; Figure 5). At the same time, the format
+was not equally easy for everyone: the students who struggled
+most with writing out each stage were those least accustomed to
+articulating their reasoning. Teachers noted that these students are
+the ones who need this kind of diagnosis and practice most, but
+suggested that for them adjacent stages could be merged into fewer
+sub-questions to reduce their burden.
+This work makes three contributions. First, we introduce STEP,
+a diagnostic framework co-designed with mathematics education
+experts that refines four problem-solving stages into eight sub-
+skills and specifies what evidence to elicit and assess at each stage.
+Second, we present an LLM-based pipeline that generates problem-
+specific sub-questions and rubrics based on STEP, and STEPwise, a
+teacher-in-the-loop system that supports diagnostic material gen-
+eration and process-level assessment. Third, through a formative
+study, an expert review, and a month-long classroom deployment,
+we provide empirical findings on the practical challenges of fine-
+grained diagnosis, the strengths and limitations of LLM-generated
+diagnostic materials, and how teachers and students engage with
+stage-based diagnosis in classroom practice.
+
+STEPwise: Diagnosing Mathematical Problem-Solving Skills with LLM-Generated Questions and Rubrics
+Conference’17, July 2017, Washington, DC, USA
+2
+RELATED WORK
+Our work builds on three interconnected areas: theoretical frame-
+works of mathematical problem-solving stages, practical approaches
+to assessing and supporting these processes in educational settings,
+and recent advances in using AI for education.
+2.1
+Problem-Solving Process Frameworks in
+Mathematics Education
+Understanding and teaching problem-solving as a process has been
+a central concern in mathematics education for decades. Polya’s
+seminal work established a foundational four-stage model consist-
+ing of understanding the problem, devising a plan, carrying out the
+plan, and looking back [52], emphasizing mathematical problem-
+solving as deliberate cognitive activities at each stage [52]. Studies
+have shown that Polya’s framework leads to significantly greater
+improvements in students’ word-problem performance [18, 23].
+Building on Polya’s work, Schoenfeld extended the framework by
+incorporating metacognitive dimensions [58, 59]. Schoenfeld ar-
+gued that successful problem-solving requires not only domain
+knowledge and strategies but also metacognitive control—the abil-
+ity to monitor one’s progress, evaluate the effectiveness of strategies,
+and make adaptive decisions during the solving process. They high-
+lighted that students often possess relevant knowledge but fail to
+deploy it effectively due to poor metacognitive regulation.
+Newman’s error analysis [49] provided another influential per-
+spective by identifying specific types of errors students make at
+different stages of problem-solving. Newman’s hierarchy distin-
+guishes between reading errors, comprehension errors, transforma-
+tion errors, process errors, and encoding errors. This framework
+has been particularly useful for diagnostic purposes, as it allows
+teachers to pinpoint where in the problem-solving process students
+encounter difficulties [39, 56, 57]. Other researchers have proposed
+variations and extensions of these frameworks. For example, Krulik
+and Rudnick further specified the set of heuristics that are success-
+ful at all levels of problem-solving [34]. Goulet-Lyle et al. highlight
+the need to establish links between the explicit problem content
+and students’ knowledge while devising a plan [22].
+Despite the richness of these theoretical frameworks, contem-
+porary mathematics education faces new challenges. Research has
+highlighted that students struggle with the early stages of problem-
+solving, particularly in comprehending textual information in word
+problems, due to a growing tendency toward passive media con-
+sumption [30, 61]. These evolving challenges highlight the need for
+practical approaches that can guide and assess students’ problem-
+solving processes.
+2.2
+Assessing and Supporting Problem-Solving
+Processes: Challenges and Approaches
+Assessing students’ problem-solving processes requires more than
+evaluating their final answers. Researchers have argued that ef-
+fective diagnosis must capture how students think and approach
+across each stage of problem-solving [21, 29]. However, making
+these cognitive processes visible has proven challenging, as much
+of students’ reasoning remains implicit unless explicitly external-
+ized [12, 26]. Several approaches have been developed to elicit
+students’ thinking. Think-aloud protocols, where students verbal-
+ize their reasoning while solving problems, have been widely used
+in research settings [20, 40, 46]. However, these methods require
+intensive teacher involvement and can interfere with students’ nat-
+ural problem-solving flow, making them impractical for routine
+classroom assessment [28]. Written explanations offer a more scal-
+able alternative, yet the quality of students’ explanations is highly
+sensitive to the design of prompts [8, 12, 54]. To address these
+limitations, researchers have explored structured approaches, in-
+cluding specialized problem tasks that inherently require students
+to externalize specific aspects of their reasoning and analytical
+frameworks to guide teachers’ evaluation of student work [32]. For
+example, problem-specific scoring rubrics and carefully designed
+sub-questions have been proposed to capture students’ reasoning
+at each stage [16, 29, 31, 50].
+Yet developing such materials for each problem demands substan-
+tial expertise and time, making them difficult to scale in practice [31].
+Therefore, we aim to explore a scalable approach leveraging LLMs
+to generate problem-specific diagnostic materials while maintain-
+ing pedagogical quality.
+2.3
+AI and LLMs in Mathematical Education
+Intelligent tutoring systems (ITSs) have long supported step-level
+diagnosis of mathematical problem solving. Cognitive tutors trace
+each step of a student’s solution with a cognitive model and pro-
+vide feedback when the student’s reasoning departs from a valid
+solution path [4, 33]. Systems have also brought similar forms of
+immediate feedback and formative assessment into classroom set-
+tings [10, 25]. However, this level of diagnosis typically depends
+on problems being modeled in advance. Even authoring tools in-
+tended for non-programmers require substantial effort for each
+problem [2, 42], while identifying which skills a problem assesses
+still relies heavily on expert judgment [47]. This has largely limited
+step-level diagnosis to pre-authored problem banks, rather than
+the problems teachers already use or create for their classes.
+Recent advances in large language models (LLMs) have opened
+new possibilities for supporting mathematics education at scale,
+spanning question generation, automated scoring, and personalized
+feedback. LLMs have demonstrated strong capabilities in generat-
+ing mathematical problems and assessment items from natural lan-
+guage specifications [5, 27, 44], with generated items approaching
+human-authored quality on psychometric criteria [43], and recent
+work has explored decomposing problems into sub-questions to
+support deeper reasoning [6, 37, 60, 68]. However, most existing
+approaches focus on generating standalone problems or factual
+sub-questions, rather than diagnostic sub-questions aligned with
+specific cognitive stages of problem-solving. In the domain of assess-
+ment, LLMs have been applied to rubric generation and automated
+scoring of open-ended responses [13, 14, 64, 65]. Scoring is most
+reliable when the model is conditioned on an explicit rubric and
+exemplar answers [13], yet rubrics are often predefined or designed
+for evaluating complete solutions, rather than being generated adap-
+tively to diagnose student competencies at each problem-solving
+stage. Recent benchmarks evaluate whether LLM tutors can locate
+the step at which a student’s solution goes wrong [41], but they
+
+Conference’17, July 2017, Washington, DC, USA
+Yoonsu Kim et al.
+assess the model’s judgment rather than producing diagnostic mate-
+rials a teacher can use. Beyond generation and scoring, researchers
+have explored using LLMs to simulate student responses [38], en-
+abling evaluation of question quality without large-scale human
+data collection. This direction is relevant for our work, as simu-
+lated student errors can inform the construction of level-specific
+rubrics. While prior work has demonstrated LLMs’ capabilities
+across these educational tasks in isolation, our research uniquely
+combines them to support process-level diagnosis. Rather than
+generating standalone problems or scoring final answers, we auto-
+matically produce integrated diagnostic materials—stage-aligned
+sub-questions and fine-grained rubrics—that cover the full pipeline
+from material generation to student diagnosis.
+3
+FORMATIVE STUDY: CHALLENGES IN
+DIAGNOSING PROBLEM-SOLVING
+PROCESSES IN PRACTICE
+To better understand the practical challenges teachers face when
+diagnosing students’ problem-solving skills, we conducted a forma-
+tive study to examine whether stage-based questions are sufficient
+for assessing students’ reasoning at each problem-solving stage.
+Such questions are a natural starting point for scalable diagnosis,
+as they can be applied across different problems without requiring
+additional preparation.
+3.1
+Study Design
+We worked with four mathematics teachers who teach students
+in grades 3 through 6 (3 male, 1 female; mean age = 43.5 years;
+mean teaching experience = 13.25 years). Drawing on the prior
+work that decomposes the mathematical problem-solving process
+into structured stages [30], we used four guiding questions—similar
+to those in current diagnostic practice:
+(1) Parse—Identifying key information: Underline the im-
+portant information in the problem.
+(2) Extract—Planning a solution strategy: Using the infor-
+mation, describe your plan for solving the problem.
+(3) Retrieve—Recalling relevant knowledge: Write down
+the formulas or concepts needed to solve this problem.
+(4) Combine—Executing the solution: Show your complete
+solution process and arrive at the final answer.
+The teachers then selected grade-appropriate math word problems
+and presented them to students in a structured worksheet format
+that incorporated these four questions.
+A total of 48 students (distributed across grades 3-6) worked
+through the three math word problems each, responding to all four
+questions for each problem. The worksheet included separate re-
+sponse spaces for each stage, allowing students to articulate their
+reasoning step-by-step. After students completed their work, teach-
+ers evaluated each student’s performance at each stage of problem
+solving based on their written responses. Detailed information on
+participant demographics and a sample worksheet are provided in
+Appendix A.1.
+3.2
+Findings from Teacher Interviews
+Following the assessment process, we conducted semi-structured in-
+terviews with teachers to understand their experiences diagnosing
+students’ problem-solving skills at each stage, based on their writ-
+ten responses. Teachers consistently reported two major challenges
+that limited the diagnostic value of this approach.
+Limited Diagnostic Value of Student Responses. Teachers
+reported that generic questions like “Describe your solution strat-
+egy” frequently failed to surface students’ thought processes. One
+teacher said, “The questions were the same regardless of the prob-
+lem, so I couldn’t see how students were actually working through
+it or where their thinking was breaking down.” Because the ques-
+tions were not tailored to each specific problem, students’ responses
+tended to be vague and disconnected from their actual problem-
+solving process. Teachers noted that this issue was particularly
+problematic in the planning and knowledge-recall stages, where
+students struggled to externalize their reasoning, indicating that
+generic questions were insufficient to elicit students’ strategy for-
+mation and concept application reasoning.
+Difficulty in Constructing Stage-Specific Rubrics. Teachers
+found it difficult to develop clear, consistent evaluation criteria for
+each problem-solving stage. Because each problem requires dif-
+ferent reasoning at each stage, teachers struggled to define what
+constituted adequate or exemplary responses. One teacher noted,
+“I knew what kind of thinking I wanted to see, but it was hard to
+articulate clear standards that would apply fairly across different
+students’ responses.” This difficulty was compounded when evalu-
+ating multiple problems, as teachers had to mentally adjust their
+expectations for each problem’s context while trying to maintain
+consistency in their judgments.
+3.3
+Implications
+These findings highlight a fundamental tension in process-level
+assessment: while problem-agnostic questions offer broad applica-
+bility across problems, they fail to elicit the context-specific rea-
+soning required to solve a given problem, including the problem’s
+constraints, mathematical concepts, and solution strategies. Teach-
+ers emphasized that effectively diagnosing problem-solving skills
+would require questions and rubrics tailored to each problem’s
+context—materials that make explicit what constitutes appropri-
+ate reasoning at each stage for that particular problem. However,
+they also acknowledged that creating such customized materials
+for every problem would be time-consuming. Therefore, we ex-
+plored how LLMs could generate problem-specific questions and
+rubrics tailored to each problem-solving stage, which can serve as
+diagnostic materials that teachers need but find too costly to create
+manually.
+4
+STEP FRAMEWORK DEVELOPMENT
+The findings of our formative study show that effective diagnosis
+of students’ problem-solving processes requires diagnostic ques-
+tions that make students’ reasoning explicit within the context
+of a specific problem. However, supporting such context-aligned,
+process-level diagnosis in a systematic and scalable manner first
+requires a clear articulation of what skills should be diagnosed at
+
+STEPwise: Diagnosing Mathematical Problem-Solving Skills with LLM-Generated Questions and Rubrics
+Conference’17, July 2017, Washington, DC, USA
+each stage and what appropriate reasoning looks like for each of
+those skills.
+To address this need, we introduce STEP (STage-based Evaluation
+of Problem-solving skills), a structured problem-solving diagnostic
+framework to support process-level diagnosis of students’ math
+word problem-solving. This framework provides a scaffold for gen-
+erating context-aligned diagnostic materials, such as stage-specific
+sub-questions and rubrics, that can be instantiated for individual
+problems.
+4.1
+Theoretical Foundations
+The development of STEP was informed by established problem-
+solving frameworks in mathematics education, including Polya’s
+four-stage model [52], Schoenfeld’s metacognitive framework [58,
+59], Newman’s error analysis [49], and mathematics curriculum
+standards [17]. While these frameworks provided conceptual ground-
+ing for identifying problem-solving stages, they were developed
+primarily for instructional purposes rather than diagnostic assess-
+ment. Our goal was to operationalize these stages diagnostically,
+focusing on what evidence teachers should look for and what ques-
+tions can reliably elicit that evidence. This guided our subsequent
+co-design process, in which theoretical stages were refined into
+diagnosable skills.
+4.2
+Iterative Framework Development Through
+Expert Interviews
+Building on the four-stage structure used in the formative study
+and grounded in the theoretical frameworks described above, we re-
+fined the framework through multiple rounds of expert consultation.
+We worked with six domain experts, one mathematics education
+researcher with a Ph.D. in mathematics education, and five mathe-
+matics teachers with over 10 years of teaching experience (3 male, 3
+female; mean age = 42.3 years, SD = 7.67; mean teaching experience
+= 16.2 years).
+Interview Process. Through individual semi-structured inter-
+views over multiple rounds, we collaboratively developed a more
+refined framework for process-level diagnosis. For each session,
+we prepared a shared document (Google Slides1) containing our
+current framework draft and example sub-questions generated by
+the LLM based on that framework. We asked experts to review
+the materials and leave comments directly in that document. We
+then conducted individual interviews to discuss their feedback in
+depth. We specifically discussed (1) whether the current framework
+captures skills that can be meaningfully diagnosed at each problem-
+solving stage, (2) what common errors or misconceptions students
+typically exhibit at each stage, and (3) what characteristics make
+questions effective at eliciting diagnostic evidence for those skills.
+Each interview was conducted via Zoom and lasted approximately
+one hour.
+1https://docs.google.com/presentation/
+Iterative Refinement. We began with the mathematics educa-
+tion researcher, whose feedback laid the foundation for the frame-
+work structure. The researcher emphasized the importance of dis-
+tinguishing between general cognitive skills and problem-solving-
+specific skills, guiding the decomposition of each stage into diagnos-
+tically distinct sub-skills—ensuring that each targets a specific rea-
+soning skill that can be independently assessed. We then conducted
+sessions with the five mathematics teachers, whose classroom ex-
+perience helped us refine the framework as a practical diagnostic
+tool and improve the LLM pipeline for generating context-aligned
+sub-questions. They emphasized that sub-questions should elicit
+observable evidence of students’ thinking at each stage—for in-
+stance, rather than simply asking students to perform a calculation,
+questions should prompt students to articulate how they set up the
+problem or why they chose a particular approach. This helped clar-
+ify what counts as diagnostic evidence at each stage, and informed
+iterative refinement to the framework and the sub-question gen-
+eration pipeline. Across these five teacher sessions, we iteratively
+refined the framework by clarifying stage boundaries, decompos-
+ing stages into diagnostically assessable sub-skills, and adjusting
+prompt-generation guidelines to better elicit students’ intermediate
+reasoning. The study was approved by our university’s Institu-
+tional Review Board (IRB). The mathematics education researcher
+received KRW 100,000 in compensation, reflecting their role and
+involvement in the early stages of framework construction, while
+each mathematics teacher received KRW 50,000.
+4.3
+The Final STEP Framework
+The resulting STEP framework consists of four problem-solving
+stages and eight sub-skills (Figure 2). Rather than enumerating pro-
+cedural steps, the framework is designed to support diagnosis by
+clarifying what reasoning should be elicited and what constitutes di-
+agnostic evidence at different points in the problem-solving process.
+Although the problem-solving process is presented as a sequence of
+stages, each stage and sub-skill is designed to be as diagnostically
+independent as possible: each can be assessed based on the evidence
+elicited by its corresponding question, without presupposing suc-
+cessful performance in earlier stages. This design allows teachers
+to pinpoint where breakdowns occur. A defining characteristic of
+STEP is its emphasis on early stages of problem solving. Aligning
+with prior work [30, 61], experts noted that today’s students often
+struggle more with interpreting problem text and structuring infor-
+mation than with calculations. Reflecting this reality, the framework
+assigns equal diagnostic importance to early-stage skills. Together,
+these elements provide a scaffold for generating context-aligned
+diagnostic prompts and rubrics, which we operationalize through
+the LLM-based pipeline described next.
+5
+LLM-BASED PIPELINE FOR DIAGNOSTIC
+MATERIAL GENERATION
+We present an LLM-based pipeline (Figure 3) that generates diag-
+nostic materials for math word problems, consisting of (1) stage-
+specific sub-questions that elicit students’ reasoning at each
+problem-solving stage, and (2) fine-grained rubrics that support
+
+Conference’17, July 2017, Washington, DC, USA
+Yoonsu Kim et al.
+Problem Solving Stage
+Sub-Skill
+Sub-Question
+Primary Error types
+Problem 
+Comprehension 
+1-2. Identifying the problem goal 
+2-1. Organizing conditions
+2-2. Connecting conditions
+3-1. Applying mathematical knowledge
+3-2. Constructing mathematical 
+expressions or models
+4-1. Executing calculations
+4-2. Interpreting and organizing results
+Information 
+Structuring
+Mathematical 
+Expression
+Mathematical 
+computation
+Design the task so students must explicitly identify and use 
+key numbers, units, or conditions from the problem text.
+Require students to clearly state what quantity or outcome 
+the problem is asking for.
+Require students to organize given conditions into a structured 
+form such as variables, lists, or tables.
+Require students to explicitly express relationships among 
+multiple conditions.
+Design the problem so that selecting appropriate mathematical 
+concepts is necessary to proceed.
+Require students to translate the situation into an explicit 
+equation or mathematical model.
+Ensure that correct execution of multi-step calculations is 
+required to reach the solution.
+Require students to present the final answer with appropriate 
+interpretation, units, or explanation.
+Reading Error
+Comprehension Error
+Process Error
+1-1. Identifying key information
+Comprehension Error
+Reading Error
+Encoding Error
+Transformation Error
+Comprehension Error
+Transformation Error
+Transformation Error
+Encoding Error
+Encoding Error
+Transformation Error
+Figure 2: The STEP framework for diagnosing math word problem-solving skills. For each problem solving stage, there are two
+sub-skills, which lead to a sub-question. For each sub-skill, STEP also maps primary error types to it, leading to a total of eight
+sub-questions.
+structured evaluation of student responses. This pipeline was de-
+veloped through iterative collaboration with mathematics teachers,
+incorporating their pedagogical insights.
+5.1
+Sub-Question Generation
+This stage generates a set of diagnostic sub-questions that scaf-
+fold students through the four problem-solving stages of the STEP
+framework. The generation process consists of three modules: (1)
+Problem Solver, which performs CoT-based problem solving, (2)
+Sub-Questions Generator, which generates sub-questions based
+on the problem-solving process, and (3) Verification and Refine-
+ment, which iteratively refines the sub-questions through internal
+verification.
+This process begins by taking a math word problem, its final
+answer, and the target grade level as input. When available, a model
+solution or reference images can be optionally provided.
+Problem Solver. (Figure 3- 1 ) Using this information, the pipeline
+first reasons through the problem step by step, following a chain-
+of-thought [66] process guided by the STEP framework as an inter-
+pretive scaffold to identify the types of reasoning required at each
+stage. The model also identifies the mathematical content domain
+of the problem (e.g., Numbers and Operations, Patterns and Rela-
+tionships, Geometry and Measurement, or Data and Possibility) [45].
+This domain classification enables the pipeline to reference domain-
+and grade-specific curriculum constraints that inform the design
+of diagnostic sub-questions. For example, if a problem is catego-
+rized within the Patterns and Relationships domain for grades 3–4,
+the curriculum specifies that the problem should not involve com-
+plex expressions such as mixed-operation formulas or general-term
+representations when expressing patterns. In our current imple-
+mentation, we operationalize these curriculum constraints using
+Korea’s National Curriculum [45]. This choice reflects the scope of
+our study—our dataset consists of Korean math word problems, and
+our classroom study involves Korean elementary students. How-
+ever, national curricula are formally specified across educational
+systems worldwide [9]. Therefore, the pipeline can be adapted to
+other countries by substituting the relevant curriculum standards.
+Sub-Questions Generator. (Figure 3- 2 ) Based on the problem-
+solving process and curriculum constraints, the pipeline trans-
+forms the identified reasoning steps into a set of stage-specific
+sub-questions aligned with the eight STEP sub-skills. Sub-questions
+are generated under design constraints specified in the national
+curriculum to preserve their diagnostic intent. Each sub-question
+targets a single STEP sub-skill without combining multiple stages,
+and avoids directive question prompts that specify calculations,
+procedures, formulas, or expected answer forms.
+Verification and Refinement. To improve the educational sound-
+ness of generated sub-questions, the pipeline applies a multi-verifier
+check [67]. Four verifiers assess complementary aspects of qual-
+ity: stage elicitation (Figure 3- 3-1 ), context alignment (Figure 3-
+3-2 ), prompt validity (Figure 3- 3-3 ), answer validity (Figure 3-
+3-4 ). These verifiers operationalize the design constraints de-
+scribed above by checking whether each sub-question satisfies
+them in practice. The stage-elicitation verifier assesses whether
+a sub-question targets the intended STEP sub-skill. The context-
+alignment verifier evaluates whether a sub-question is grounded in
+the target problem’s context. The prompt-validity verifier examines
+whether a sub-question is appropriate for the target grade level and
+curriculum scope. The answer-validity verifier checks whether the
+exemplary answer to each sub-question is mathematically correct.
+Each verifier scores a sub-question on a 0–5 scale. If any score falls
+below the maximum-score threshold (5/5), the pipeline regenerates
+the sub-question using verifier feedback, for up to three iterations.
+
+STEPwise: Diagnosing Mathematical Problem-Solving Skills with LLM-Generated Questions and Rubrics
+Conference’17, July 2017, Washington, DC, USA
+Input
+Math Word Problem 
+There is 1L of milk. Out of 1L 
+of milk, Jake drank 250mL 
+and Emma drank 300mL. 
+How many mL of milk are 
+left?
+Answer and Solution
+Metadata
+Documents
+Learning 
+Materials
+Textbook PDF
+Curriculum 
+Information
+Achievement standards
+Item design guidelines
+STEP Framework
+1-1. Identifying key 
+information
+High
+Retrieval
+Vector 
+DB
+Medium
+Low
+1
+Problem Solver
+The key information from the 
+problem is that the total amount ...
+The question asks how many mL of 
+milk ...
+Therefore, the remaining amount of 
+milk is 450mL.
+Total milk: 1L, Jake drank: 250mL, 
+Emma drank: 300mL
+2
+SubQ Generator
+4-2 SubQ: Based on the calculated 
+result, interpret ...
+
+4-2 Exemplary Answer: The 
+remaining amount ...
+...
+5
+Error Pattern Analyzer 
+Correctly understands and 
+converts all ...
+High
+Minor errors due to ...
+Medium
+Incorrect answer due to ...
+Low
+3-1
+3-2
+3-3
+3-4
+6
+SubQ Stage Elicitation 
+Verifier
+Problem-Context 
+Alignment Verifier
+Score: 5
+Suggestions: The question...
+Prompt Validity 
+Verifier
+Score: 2 
+Suggestions: The prompt it...
+Answer Validity 
+Verifier
+Score: 4 
+Suggestions: The answer is...
+Rubric Generator
+Arrives at an incorrect result due to a 
+fundamental misunderstanding of unit 
+conversion.
+Total amount of milk: 1L = 100mL, Jake 's milk: 2500mL, 
+Emma's milk: 300mL
+Total amount of milk: 1L = 1000mL, Jake's milk: 250L, 
+Emma's milk: 3000L
+Sub-
+Question 
+Generation
+Rubric
+Generation
+Score: 4 
+Suggestions: The question...
+Score: 4 
+Suggestions: The question...
+1-1 SubQ: 
+
+1-2 SubQ: 
+
+1-2 Exemplary Answer: 
+1-2. Information 
+Structuring
+...
+......
+Final Answer: 450mL
+Solution: 1L=1000mL ... 
+1000-250-300=450mL
+4-2. Interpreting 
+and organizing 
+results
+Grade:5
+4
+Student’s Error Generator
+Figure 3: The LLM-based Pipeline for STEP. The pipeline transforms a math word problem into verified sub-questions targeting
+the eight sub-skills, and derives three-tier rubrics from simulated student responses and their error patterns.
+We selected this strict threshold through iterative testing, as lower
+thresholds allowed wording or content issues to pass verification.
+Subsequent sub-questions are generated only after the preceding
+generate–verify–regenerate cycle is completed.
+5.2
+Rubric Generation
+This stage generates fine-grained rubrics for evaluating student
+responses to each sub-question. Rather than relying on generic grad-
+ing criteria, our pipeline grounds rubric design in diverse student
+errors across performance levels.
+Students’ Error Generator. (Figure 3- 4 ) For each of the eight
+sub-questions, our pipeline generates student responses across
+three performance levels—low, medium, and high. For both the
+low and medium levels, three plausible incorrect responses are
+generated, and for the high level, three correct-answer variations
+are generated. For each sub-question, the prompt incorporates the
+correct responses from prior steps, thereby preventing cascading er-
+rors from propagating to later stages. The prompts also incorporate
+skill-specific error characteristics grounded in educational research
+(e.g., Newman’s error types [49]), such that low-level errors reflect
+fundamental misunderstandings while medium-level errors reflect
+partial comprehension with minor gaps. Additionally, grade-level
+achievement standards and knowledge scope data are incorporated
+to ensure that generated responses remain grade-appropriate.
+Error Pattern Analyzer. (Figure 3- 5 ) All nine simulated re-
+sponses (three per level) for a given sub-question are analyzed
+to identify qualitative differences across levels. This analysis ex-
+tracts distinct, non-overlapping error patterns and establishes clear
+boundaries between low, medium, and high performance.
+Rubric Generator. (Figure 3- 6 ) Using the error pattern anal-
+ysis, the pipeline constructs a three-tier grading rubric—High (cor-
+rect), Mid (partial understanding), and Low (fundamental error)—
+with criteria and representative examples drawn directly from the
+simulated responses. This approach ensures that rubric criteria are
+specific and actionable, being grounded in concrete error patterns
+observed by the Error Pattern Analyzer.
+All modules in the pipeline employ OpenAI’s GPT-4o model to
+leverage its multimodal capabilities for processing problems that
+may include diagrams or visual elements. Detailed prompts for each
+module are provided in the supplementary materials.
+6
+TWO-STAGE EVALUATION
+To examine how our STEP framework and LLM pipeline function
+in practice, we conducted a two-stage evaluation. Stage 1 involved
+an expert review to gather feedback on the mathematical and ped-
+agogical validity of the diagnostic materials generated by the LLM
+pipeline across diverse problems. Based on the expert feedback,
+we refined the pipeline and developed STEPwise, an end-to-end
+teacher-in-the-loop system that supports the workflow from di-
+agnostic material generation to student diagnosis. Stage 2 then
+involved a month-long classroom deployment of STEPwise with 5
+teachers and 64 students, examining how the STEP framework and
+STEPwise system function in real educational contexts to support
+process-level diagnosis of students’ problem-solving.
+6.1
+Stage 1: Expert Review
+We conducted an expert review with mathematics teachers to gather
+structured feedback on diagnostic materials generated by the LLM
+pipeline based on STEP. The review aimed to (1) understand how
+teachers interpret the pedagogical appropriateness of the generated
+sub-questions and rubrics, and (2) identify practical considerations
+and refinements for classroom use.
+6.1.1
+Review Protocol. Dataset. We used math problem data from
+the AI Hub [1], which provides curriculum-aligned problems with
+problem statements, correct answers, model solutions, and difficulty
+labels across grade levels. We filtered for medium-to-high difficulty
+math word problems at grades 3–6 that require multi-step reasoning,
+and sampled 36 problems covering diverse mathematical content
+
+Conference’17, July 2017, Washington, DC, USA
+Yoonsu Kim et al.
+domains. Due to the smaller pool of eligible lower-grade problems,
+we combined grades 3 and 4 and sampled 12 problems for this band,
+and 12 problems each for grades 5 and 6. Details on the sampled
+problems are in Appendix (Table 4).
+Participants. Six mathematics teachers with at least 5 years of
+teaching experience were recruited through open calls and snow-
+ball sampling (3 male, 3 female; mean age = 38.2, mean teaching
+experience = 11.93 years), with two assigned to each grade band
+(grades 3–4, 5, and 6). Each teacher evaluated 12 problems, each
+consisting of eight stages, resulting in 96 sub-questions and their
+accompanying rubrics. Details are in Appendix (Table 5).
+Procedure. The review consisted of three phases: (1) a 30-minute
+orientation introducing the research purpose, STEP framework,
+and evaluation criteria, (2) an asynchronous evaluation session
+of approximately 2.5 hours in which teachers assessed the gener-
+ated diagnostic materials using given metrics, and (3) a one-hour
+follow-up interview to discuss evaluation reasoning and suggest
+improvements for practical classroom use. Each participant was
+compensated 160,000 KRW for their time.
+Review Dimensions. Drawing on prior work for assessing the
+validity and usability of educational assessment materials [11, 53],
+we defined structured review dimensions to guide teacher feedback.
+Teachers reviewed the generated materials at two levels of gran-
+ularity: each of the eight sub-skills individually, and the full set
+generated for a given problem. At the sub-skill level, teachers re-
+viewed the materials generated for each of the eight STEP sub-skills
+on three dimensions: whether the sub-question and rubric target
+the intended sub-skill for diagnosis (Construct Validity), whether
+their complexity, information load, and phrasing suit the target
+grade level (Level Appropriateness), and whether the exemplary
+answer and rubric criteria are mathematically correct (Mathemati-
+cal Accuracy). At the problem level, teachers reviewed the full set
+of materials generated for a given problem, examining how the
+STEP framework was concretely instantiated in a specific problem-
+solving context. They judged whether the materials naturally con-
+nect to the problem context and guide students through the solving
+process coherently (Problem-Context Alignment), and whether
+they sufficiently cover the full problem-solving process required
+by the problem (Comprehensiveness). For all dimensions, teachers
+made binary (Yes/No) judgments alongside free-form comments,
+encouraging clear decisions while capturing the reasoning behind
+them and surfacing disagreements for follow-up. The exact review
+questions are in Appendix A.3.1.
+Supplementary Review. For each grade band, two teachers
+evaluated the same set of problems. When they disagreed, two
+additional mathematics teachers who had not participated in the
+primary review served as third-party tiebreakers, each assigned
+half of the conflicting cases, to provide supplementary pedagogical
+perspectives and reach a final determination.
+6.1.2
+Expert Review Result. Overall, the expert review suggested
+that materials generated by the LLM pipeline, which operationalizes
+the STEP framework, were generally viewed as pedagogically valid
+and structurally coherent, while also revealing specific areas for
+refinement. Below, we discuss the results for each component in
+detail. Quantitative results are shown in Table 1.
+Component
+Metric
+Score
+Sub-skill Level
+Construct Validity
+91.32%
+Level Appropriateness
+80.21%
+Mathematical Accuracy
+90.97%
+Problem Level
+Problem-Context Alignment
+72.22%
+Comprehensiveness
+77.78%
+Table 1: Expert review results. Score indicates the proportion
+of Yes judgments.
+Sub-skill Level Result. Teachers rated the generated mate-
+rials positively across all three dimensions: Construct Validity
+(91.32%), Mathematical Accuracy (90.97%), and Level Appropriate-
+ness (80.21%). Qualitatively, teachers affirmed that the stage-based
+structure of STEP was well-reflected in the generated materials,
+and that the decomposition into sub-skills made diagnostic inten-
+tions explicit. The relatively lower rating for Level Appropriateness
+reflected occasional phrasing issues: three teachers (E2–E3, E6)
+suggested that some prompts could be simplified for elementary
+students, and six (E2, E4–E8) noted wording that could be better
+aligned with grade-level curriculum. In particular, E6 and E7 pro-
+posed uploading the learning materials they already use in class, so
+that the generated materials would draw on the terms and solution
+methods their students have encountered. E5 also remarked that
+correcting such expressions directly would be simpler than request-
+ing a regenerated version from the AI. Teachers also found the
+rubrics’ inline student-response examples useful for anticipating
+how students reason at each stage, though several noted that their
+specificity occasionally drew attention to particular cases, making
+score boundaries less intuitive (E2–E4, E6–E8).
+Problem Level Result. For the full set of materials generated
+for each problem, 72.22% were rated as coherently connected to
+the problem context (Problem-Context Alignment), and 77.78% as
+comprehensively covering the problem-solving process (Compre-
+hensiveness). Five teachers (E1–E3, E5–E6) agreed that the sets
+guided students through the problem-solving stages in a coherent
+and educationally meaningful way, supporting the validity of STEP
+across diverse problems. At the same time, four teachers (E1–E2,
+E5–E6) noted that a single phrasing or wording misalignment could
+lower the rating for an entire set. This yielded slightly lower scores
+than at the sub-skill level, pointing to individual sub-question qual-
+ity as an area for refinement.
+6.2
+Stage 2: Classroom Study
+6.2.1
+STEPwise System Development. The expert review informed
+two directions for making the pipeline work in real classrooms. First,
+teachers suggested that the generated sub-questions and rubrics
+should better reflect the actual curriculum. In response, we added
+a retrieval-augmented generation (RAG) [36] component through
+which teachers upload their own textbooks or learning materials.
+Given an input problem, the pipeline retrieves the most relevant
+passages from the uploaded materials via embedding-based sim-
+ilarity search, and incorporates them into its reasoning process
+when generating sub-questions and rubrics. This ensures that the
+
+STEPwise: Diagnosing Mathematical Problem-Solving Skills with LLM-Generated Questions and Rubrics
+Conference’17, July 2017, Washington, DC, USA
+(a) 8-step solution
+(b) Sub-questions generation
+(c) Rubric generation
+(d) Student Diagnosis
+Figure 4: The STEPwise system interface. (a) The 8-step solution view shows the input math word problem alongside the
+pipeline’s step-by-step solving process, organized under the STEP framework’s four stages. (b)The sub-question generation
+view shows both the original LLM-generated sub-question and a regenerated version for each sub-skill. Teachers can edit
+questions, view verification results, provide feedback, or hide questions. (c) The rubric generation view for the same sub-skill
+displays a three-tier rubric (High, Medium, Low) with scoring criteria and student example responses. Teachers can edit criteria
+and regenerate rubrics. (d) The student diagnosis view lets teachers upload a student’s submitted responses, which the LLM
+then diagnoses against the previously generated rubrics.
+resulting terminology, solution methods, and approaches align with
+the curriculum content actually covered in that grade and class-
+room. Second, teachers noted that adjusting phrasing themselves
+would be simpler than requesting a regenerated version from the
+AI (E5). We therefore adopted a teacher-in-the-loop design [55], in
+which teachers can directly review, edit, and provide feedback on
+generated materials before deploying them to students.
+The resulting system, STEPwise, supports the full workflow of
+diagnosing students’ problem-solving skills, from diagnostic mate-
+rial generation to student response assessment. Teachers begin by
+inputting a math word problem, optionally along with the textbooks
+or learning materials used in their class, upon which the system
+first solves the problem step-by-step following the STEP frame-
+work (Figure 4a), and then generates stage-aligned sub-questions
+(Figure 4b) and corresponding rubrics (Figure 4c). At each stage of
+the generation process, teachers can review and directly edit the
+outputs, provide natural language feedback to regenerate specific
+parts, or request full regeneration—preventing errors from propa-
+gating to subsequent stages. Alternatively, once teachers feel that
+the generation has stabilized beyond a certain point, they can opt
+to automatically generate the remaining stages in a single batch.
+Teachers can then deploy the finalized materials to students, for
+example by exporting them as a PDF worksheet. Once students sub-
+mit their responses, STEPwise supports teachers in assessing each
+response against the rubrics (Figure 4d) and generates a diagnostic
+report summarizing students’ problem-solving processes at each
+stage (see Figure 7 in the Appendix for a sample report).
+6.2.2
+Classroom Study Design and Procedure. Participants. We
+recruited 5 mathematics teachers (CT1–CT5) through an open call
+(all female; mean age = 41.2, SD = 7.7), together with 64 of their
+students spanning grades 3 through 9. While the pipeline had been
+reviewed for grades 3–6, several teachers asked to use STEPwise
+with their middle-school classes as well; we allowed this and report
+their experience as an exploratory extension beyond the reviewed
+grade range. Informed consent was obtained from the teachers,
+and assent was obtained from students with parental consent. This
+study was approved by the IRB of our university.
+Procedure. To examine how STEPwise is used in real educa-
+tional contexts and what educational value it offers, we deployed
+the system to teachers and had them use it in their own classes for
+approximately one month. After a 40-minute orientation covering
+
+Conference’17, July 2017, Washington, DC, USA
+Yoonsu Kim et al.
+Ease of Expressing 
+Reasoning Process
+Usefulness of Step-by-
+Step Structure
+Self-Awareness of 
+Strengths/Weaknesses
+Willingness to Use for 
+Future Learning
+0%
+25%
+50%
+75%
+100%
+1 - Strongly Disagree
+2 - Disagree
+3 - Neutral
+4 - Agree
+5 - Strongly Agree
+Figure 5: Student survey responses after classroom deploy-
+ment (𝑁= 64). Bars show response distributions on a 5-point
+Likert scale; 58–70% of students agreed or strongly agreed
+across the four items.
+the research goals, the STEP framework, and the STEPwise work-
+flow, teachers used the system on their own: they selected problems
+of their choosing, reviewed and edited the generated sub-questions
+and rubrics, deployed the materials to their students, and submitted
+the collected responses to STEPwise, which scored them against
+the rubrics and produced a diagnostic report for each student. How
+the materials were used—in class, as homework, or both—was left
+to each teacher. Teachers ran this cycle problem by problem, so
+each student’s diagnostic report accumulated over the month rather
+than reflecting a single session. We held a 30-minute check-in in-
+terview midway through the deployment, and at the end teachers
+completed a survey including the System Usability Scale (SUS) [7]
+and open-ended questions, followed by a 30-minute final interview.
+Students completed a brief survey of four dimensions—usefulness of
+the step-by-step structure, ease of expressing the reasoning process,
+self-awareness of their strengths and weaknesses, and willingness
+to use it for future learning—on a 5-point Likert scale, with one
+open-ended question comparing this approach to their typical math
+problem-solving experience (see Appendix A.4.2).
+6.2.3
+Classroom Study Results.
+Scalability of Material Generation and Diagnosis. Over the
+month, the 5 teachers prepared diagnostic materials for 90 problems
+in total, amounting to 720 sub-questions and accompanying rubrics,
+and reported no notable difficulty in using the system (mean SUS
+score [7] of 83.5). As teachers chose the problems themselves, the
+materials reflected what each class was actually working on, and
+varied in topic and difficulty—ranging from regular curriculum
+problems to competition-level ones. Teachers attributed both the
+volume and this freedom of choice to the fact that the only input
+required was a problem they already intended to use: the system
+produced the stage-specific sub-questions and rubrics for what-
+ever they brought to it, and scored student responses against them
+once collected. Teachers described manually authoring eight sub-
+questions and corresponding three-tier rubrics for every problem
+as impractical alongside their regular teaching. They valued being
+able to generate diagnostic materials for any problem they were
+already using in their classes. They therefore viewed STEPwise
+as enabling a form of process-level diagnosis that they could not
+otherwise sustain. CT4 noted that, among the systems she had used,
+its questions were the closest to how questions are posed in her
+own classroom.
+Making the Problem-Solving Process Visible. Teachers con-
+sistently described the central benefit of STEPwise as observing
+the flow of student thinking rather than the correctness of a final
+answer. The stage-based decomposition let them check students’
+comprehension, conceptual knowledge, and logical reasoning sepa-
+rately, and identify how far a student had progressed and where
+their reasoning broke down. In practice, when students cannot solve
+a problem, they often simply say “I don’t know,” and the teacher
+must probe through follow-up questions to locate the breakdown;
+STEPwise made this visible without additional diagnostic ques-
+tioning. Teachers also valued the three-tier rubrics as an explicit
+marking standard: having High, Medium, and Low criteria spelled
+out gave them a clear reference point when giving written feedback
+on student work. This visibility changed what teachers knew about
+their own students. CT5 reported being surprised that a student
+they had vaguely assumed was doing well turned out to be stuck at
+a particular stage, and that seeing this made it much clearer what
+support to provide for that student. Teachers also noted that the
+student diagnosis reports let them identify which students were
+struggling at a specific stage, such as problem comprehension. CT2
+and CT5 further pointed out that reports of this kind are directly
+usable in parent consultations, since they let a teacher explain con-
+cretely where a student struggled rather than simply saying that
+the student is doing well or poorly overall.
+Student Experience. Students rated the approach moderately
+positively across all four survey dimensions (means between 3.59
+and 3.89 out of 5; see Figure 5), with distributions skewed toward
+agreement alongside a persistent minority who disagreed. The
+highest-rated dimension was self-awareness of their strengths and
+weaknesses (𝑀= 3.89,𝑆𝐷= 1.04), suggesting that working through
+the stages made students’ own reasoning gaps visible to them. This
+was followed by willingness to use the approach for future learning
+(𝑀= 3.72, 𝑆𝐷= 1.20), perceived usefulness of the step-by-step
+structure (𝑀= 3.63, 𝑆𝐷= 1.20), and ease of expressing their rea-
+soning process (𝑀= 3.59, 𝑆𝐷= 1.12)—the lowest-rated dimension,
+consistent with teachers’ observation that articulation was the
+central difficulty. In open-ended responses, students reported that
+breaking problems into stages helped them solve more carefully
+and write out their thinking more explicitly than usual, and that
+using what they had established in earlier stages to answer later
+ones helped them see the structure of the problem. At the same
+time, several reported that writing out each step took more time
+than usual, since they needed to explain their thinking instead of
+just giving an answer.
+How Students Engaged with Stage-Based Sub-Questions. A
+finding teachers repeatedly described as unexpected was that de-
+composing a problem into stages did not make it easier for students.
+Teachers had assumed that presenting a problem step by step would
+lower its difficulty, but many students found the stage-based sub-
+questions harder than the original problem. The difficulty lay not in
+
+STEPwise: Diagnosing Mathematical Problem-Solving Skills with LLM-Generated Questions and Rubrics
+Conference’17, July 2017, Washington, DC, USA
+the mathematics but in the act of articulation: breaking one’s think-
+ing into steps and expressing it in sentences or expressions was
+itself the obstacle. Even students who ordinarily solve such prob-
+lems well became stuck, and students who had never written out
+explanations sometimes gave up partway. Teachers observed that
+students across the board tried to jump directly to an answer rather
+than dividing their thinking into parts. Grade-level differences were
+pronounced. CT2 contrasted her elementary students in grades 3–4,
+who tried to write down what they knew in as much detail as they
+could even on competition-level problems, with her middle-school
+students, who more often judged a problem to be difficult from
+the outset and resisted recording their reasoning one stage at a
+time. Teachers read this as evidence that differences in disposition
+and in the ability to express one’s thinking were more visible than
+differences in mathematical ability, and concluded that these are
+themselves things to be taught rather than prerequisites to be as-
+sumed. This asymmetry echoes prior deployments of LLM-based
+scaffolding in K–12 classrooms, where a uniform step-by-step struc-
+ture benefited students overall while placing a disproportionate
+burden on those with lower proficiency [48].
+Even so, teachers observed changes in how students engaged
+with difficult problems. Although the level of detail in students’
+written solutions did not change dramatically, students spent longer
+thinking before writing, and when they encountered a hard problem,
+they re-read it and considered alternative approaches instead of
+giving up. CT1–CT4 also noticed a change in how students asked for
+help: rather than asking for the answer, some students began asking
+questions such as “which part should I think about?” or requesting
+a small hint, and students developed the habit of first grasping
+what a question was asking before writing their solution. Teachers
+therefore characterized the sub-questions as not only a diagnostic
+instrument but a learning experience in themselves, giving students
+practice in working through a single problem thoroughly.
+Adapting the Decomposition to Problems and Students. Teach-
+ers regarded stage-based decomposition as pedagogically sound
+overall: dividing a problem into stages let them see how far a stu-
+dent’s understanding extended, and the stage-specific questions
+themselves gave students a direction for what to consider next.
+They saw it as particularly valuable for students who struggle with
+mathematics or with sustained thinking, since it replaces the blan-
+ket judgment that a student “cannot solve problems” with a specific
+stage at which difficulty arises. Within this, they pointed to cases
+where the granularity could flex. CT1 noted that for some problems
+the intermediate stages already revealed enough about a student’s
+reasoning, so the full eight stages were not always necessary. Teach-
+ers also observed that the students who stood to benefit most were
+sometimes the ones who found eight separate sub-questions most
+burdensome, and suggested merging adjacent stages into fewer,
+broader sub-questions for them. For students with strong or cre-
+ative reasoning, they cautioned that a fixed sequence of stages can
+channel thinking along the provided path rather than letting stu-
+dents devise their own. Teachers also saw room for sub-questions
+that extend thinking rather than lead to the next answer. CT1 ob-
+served that some sub-questions read as guiding students toward
+the following step, and wanted more questions asking why stu-
+dents thought as they did, what alternative solutions exist, or how
+the situation would change if a condition were altered. A paral-
+lel point applied to the rubrics: teachers found the criteria clearly
+differentiated across score levels, but CT2 felt they were oriented
+toward stage-wise correctness and wanted criteria that could also
+credit diverse or creative solution paths. Finally, teachers found
+the diagnostic reports useful for grasping a student’s overall state,
+while CT2 and CT4 wanted them to be more specific and more
+actionable—which types of errors recurred and offering guidance
+for future instruction.
+7
+DISCUSSION
+We discuss the broader implications of our findings across three
+dimensions: students’ self-diagnosis, personalized learning, and
+scaling toward automated deployment. We also reflect on the limi-
+tations of the current work and directions for future research.
+7.1
+Supporting Student Self-Diagnosis
+Although STEPwise was originally designed to support teach-
+ers, our classroom study suggests its potential to support student
+self-diagnosis as well. Self-awareness of their own strengths and
+weaknesses was the highest-rated dimension in the student sur-
+vey (𝑀= 3.89), and several students noted that the stage-based
+structure helped them articulate their thinking more explicitly than
+usual. Teachers likewise observed that students began re-reading
+problems, considering alternative approaches, and asking which
+part to think about rather than asking for the answer. This points to
+a broader opportunity: because each sub-question targets a diagnos-
+tically distinct sub-skill within the STEP framework, stage-based
+sub-questions may naturally scaffold metacognitive reflection [19],
+helping students recognize precisely where their reasoning breaks
+down without requiring explicit teacher intervention. This aligns
+with research on self-regulated learning, which emphasizes the
+importance of students monitoring and evaluating their own cog-
+nitive processes as a foundation for deeper learning [69]. In such a
+setting, STEPwise could present stage-specific sub-questions while
+withholding the full solution, allowing students to work through
+each reasoning stage and develop awareness of where their think-
+ing begins to falter. Future work could explore designs that provide
+students with immediate feedback at each stage, enabling them to
+self-diagnose their reasoning gaps and take greater ownership of
+their learning process.
+7.2
+From Diagnosis to Personalized Learning
+Our findings open a broader opportunity beyond diagnosis: leverag-
+ing stage-level reasoning analysis to support personalized learning.
+Rather than treating diagnostic results as static assessments, stage-
+specific performance profiles could inform targeted instructional
+interventions tailored to each student’s reasoning gaps. For in-
+stance, a student who possesses strong problem comprehension
+skills could skip that stage ahead, while a student who struggles
+with information structuring could receive additional scaffolded
+practice on organizing given conditions into variables or tables.
+Such an adaptive approach would move beyond one-size-fits-all
+diagnosis toward more personalized support, and connect naturally
+to the broader literature on mastery-based and adaptive learning
+systems [63].
+
+Conference’17, July 2017, Washington, DC, USA
+Yoonsu Kim et al.
+Our classroom study points to a further dimension of person-
+alization: not only which stage to support, but how finely to de-
+compose it. Teachers judged stage-based diagnosis most valuable
+for students who struggle, yet those students found eight separate
+sub-questions the most burdensome, and teachers suggested merg-
+ing adjacent stages for them. Prior classroom deployments report a
+similar asymmetry, where step-by-step LLM scaffolding improved
+students’ output overall yet demotivated lower-proficiency students
+and increased their reliance on the system [48]. At the other end,
+teachers cautioned that a fixed sequence of stages may channel
+students with strong or creative reasoning along the provided path
+rather than letting them devise their own. Granularity is there-
+fore not a fixed property of the framework but a parameter to be
+set per student and per problem: stage-level profiles could inform
+how many sub-questions a student receives, and which stages are
+merged, in addition to what content to reteach. Future work could
+explore how to translate stage-level diagnostic results into concrete
+personalized instructional interventions, and how much decompo-
+sition each student needs to make their reasoning visible without
+overwhelming them.
+7.3
+Toward Scalable and Automated Diagnosis
+STEPwise currently relies on a teacher-in-the-loop structure in
+which teachers review and refine generated materials before deploy-
+ment. This design ensures reliability, and teachers in our classroom
+study did not find the review process burdensome. Still, scaling this
+approach to broader contexts, such as large classrooms or online
+learning platforms, would benefit from further reducing teacher
+overhead. In our current implementation, STEPwise already takes
+a step in this direction: rubrics generated by the pipeline are used
+directly by an LLM to automatically score student responses, and
+the resulting scores are aggregated into a diagnostic report that
+summarizes each student’s performance across reasoning stages.
+This end-to-end flow—from problem input to scored diagnostic
+report—demonstrates the feasibility of automating the diagnosis
+process with minimal teacher involvement.
+Further scaling involves two bottlenecks. First, rubric quality:
+teachers in our expert review noted that rubric criteria occasionally
+narrowed to specific cases, which may reflect limited variability in
+the responses simulating students’ errors. Simply increasing the
+number of simulations would add computational overhead without
+guaranteeing broader coverage. A more promising direction is to in-
+corporate real student data as it accumulates through deployment—
+abstracting recurring error patterns and reasoning strategies across
+problems and stages—and using these empirically grounded pat-
+terns to inform the simulation process itself. This would enable
+the pipeline to generate richer, more representative rubrics even
+for new problems, improving diagnostic accuracy without requir-
+ing per-problem data collection. Second, response collection: in our
+classroom study, students completed worksheets on paper, which
+allowed them to express their reasoning naturally. To make this
+compatible with digital scoring, STEPwise allowed teachers to up-
+load photos of these paper worksheets for automatic recognition.
+However, this workaround does not fully resolve the challenge
+of scaling response collection, as uploading and managing files
+for a much larger number of students would itself become a bur-
+den for teachers. Therefore, future work should explore computer-
+based input formats that preserve this expressiveness—for example,
+adaptive block-based interfaces that present relevant mathematical
+operators without prescribing the sequence of operations.
+Automating diagnosis also raises the question of what a diagnos-
+tic report should contain. Teachers in our classroom study found
+the reports useful for grasping a student’s overall state, but wanted
+them to be more specific and more actionable: which types of er-
+rors recurred across problems and what concepts or problem types
+to teach next. They also wanted results to accumulate, so that re-
+peated diagnoses would show how a student’s reasoning changes
+over time rather than reporting each worksheet in isolation. Both
+point beyond per-worksheet scoring toward a longitudinal record
+of stage-level performance, which would also supply exactly the
+empirically grounded error patterns described above.
+7.4
+Limitations and Future Work
+This work has several limitations that point to directions for future
+research. First, stage-based sub-questions do not merely observe
+the problem-solving process—they structure it. What our approach
+diagnoses is therefore a student’s reasoning under a given decom-
+position, which may differ from how the same student would ap-
+proach the problem unaided. Teachers’ concern that a fixed stage
+sequence may channel students with strong reasoning along the
+provided path is one manifestation of this, and future work should
+examine how the presence and granularity of sub-questions shape
+the very process being diagnosed. Second, while our study cap-
+tured students’ immediate experience with the diagnostic materials,
+we did not measure whether engagement with stage-based sub-
+questions leads to gains in problem-solving performance, nor did
+we follow the instructional decisions teachers made based on the
+accumulated diagnostic reports. Longitudinal studies that trace
+this full loop—from diagnosis to targeted instruction to subsequent
+performance—would be an important next step in establishing the
+educational efficacy of this approach. Third, STEPwise’s diagnosis
+step supports the process-level assessment workflow, but we did
+not treat it as a fully validated diagnostic instrument in this work:
+we did not systematically compare STEPwise’s scores against teach-
+ers’ own scoring of the same responses, an important next step for
+establishing diagnostic accuracy at scale. Still, teachers raised no
+concerns about the correctness of the generated reports over the
+course of the deployment. Together, these directions would help es-
+tablish the broader educational value of LLM-generated diagnostic
+materials as a scalable tool for supporting process-level assessment
+in mathematics education.
+8
+CONCLUSION
+We investigated how fine-grained diagnosis of students’ mathemat-
+ical problem-solving processes can be structured and supported
+in classroom practice. Our formative study identified two practi-
+cal challenges: generic stage-based questions often failed to elicit
+problem-specific reasoning, and teachers lacked clear criteria for
+assessing students’ responses consistently. To address these chal-
+lenges, we developed STEP, which refines four sequential problem-
+solving stages into eight diagnostic sub-skills, and an LLM-based
+
+STEPwise: Diagnosing Mathematical Problem-Solving Skills with LLM-Generated Questions and Rubrics
+Conference’17, July 2017, Washington, DC, USA
+pipeline that generates problem-specific sub-questions and rubrics.
+An expert review found strong construct validity and mathematical
+accuracy while revealing limitations in grade-level and problem-
+context alignment, motivating the teacher-in-the-loop design of
+STEPwise. In a month-long classroom deployment, teachers re-
+ported that students’ stage-by-stage responses helped them locate
+reasoning breakdowns, while students generally valued the sup-
+port but varied in their ability to articulate each stage. Together,
+these findings identify both opportunities and design requirements
+for making fine-grained, process-level diagnosis more practical at
+classroom scale.
+REFERENCES
+[1] AI-Hub. [n. d.].
+https://www.aihub.or.kr/aihubdata/data/view.do?dataSetSn=
+71859 [Online; accessed 2026-02-09].
+[2] Vincent Aleven, Bruce M. McLaren, Jonathan Sewall, Martin van Velsen, Octav
+Popescu, Sandra Demi, Michael Ringenberg, and Kenneth R. Koedinger. 2016.
+Example-Tracing Tutors: Intelligent Tutor Development for Non-programmers.
+International Journal of Artificial Intelligence in Education 26, 1 (2016), 224–269.
+https://doi.org/10.1007/s40593-015-0088-2
+[3] Judy Anderson et al. 2009. Mathematics curriculum development and the role of
+problem solving. In ACSA conference, Vol. 1.
+[4] John R. Anderson, Albert T. Corbett, Kenneth R. Koedinger, and Ray. Pelletier.
+1995. Cognitive Tutors: Lessons Learned. Journal of the Learning Sciences 4, 2
+(1995), 167–207. https://doi.org/10.1207/s15327809jls0402_2
+[5] Nimesh Ariyarathne, Harshani Bandara, Yasith Heshan, Omega Gamage,
+Surangika Ranathunga, Dilan Nayanajith, Yutharsan Sivapalan, Gayathri Li-
+hinikaduarachchi, Tharoosha Vihidun, Meenambika Chandirakumar, et al. 2025.
+Elementary math word problem generation using large language models. arXiv
+preprint arXiv:2506.05950 (2025). https://doi.org/10.48550/arXiv.2506.05950
+[6] Nischal Ashok Kumar and Andrew Lan. 2024. Improving Socratic Question
+Generation using Data Augmentation and Preference Optimization. In Proceedings
+of the 19th Workshop on Innovative Use of NLP for Building Educational Applications
+(BEA 2024), Ekaterina Kochmar, Marie Bexte, Jill Burstein, Andrea Horbach,
+Ronja Laarmann-Quante, Anaïs Tack, Victoria Yaneva, and Zheng Yuan (Eds.).
+Association for Computational Linguistics, Mexico City, Mexico, 108–118. https:
+//aclanthology.org/2024.bea-1.10/
+[7] Aaron Bangor, Philip T Kortum, and James T Miller. 2008. An empirical evaluation
+of the system usability scale. Intl. Journal of Human–Computer Interaction 24, 6
+(2008), 574–594. https://doi.org/10.1080/10447310802205776
+[8] Kiran Bisra, Qing Liu, John C Nesbit, Farimah Salimi, and Philip H Winne. 2018.
+Inducing self-explanation: A meta-analysis. Educational Psychology Review 30, 3
+(2018), 703–725. https://doi.org/10.1007/s10648-018-9434-x
+[9] Vahid Borji and Danyal Farsani. 2023. Intended mathematics curriculum in grade
+1: A comparative study. Eurasia Journal of Mathematics, Science and Technology
+Education 19, 3 (2023), em2237.
+[10] Natalie Brezack, Shuangting Yang, Jenna Grady, Abby Lavine, Mingyu Feng,
+and Linlin Li. 2025. Teacher Perspectives on Student Self-Regulated Learning
+in a Math Formative Assessment Platform. In Proceedings of the Twelfth ACM
+Conference on Learning @ Scale (Palermo, Italy) (L@S ’25). Association for Com-
+puting Machinery, New York, NY, USA, 325–329. https://doi.org/10.1145/3698205.
+3733949
+[11] Susan M Brookhart. 2013. How to create and use rubrics for formative assessment
+and grading. Ascd.
+[12] Michelene TH Chi, Miriam Bassok, Matthew W Lewis, Peter Reimann, and
+Robert Glaser. 1989. Self-explanations: How students study and use examples
+in learning to solve problems. Cognitive science 13, 2 (1989), 145–182.
+https:
+//doi.org/10.1207/s15516709cog1302_1
+[13] Edoardo Cipriano, Alessio Ferrato, Carla Limongelli, Daniele Schicchi, and Davide
+Taibi. 2025. Leveraging Large Language Models to Assist Teachers in Code
+Grading. In Artificial Intelligence in Education, Alexandra I. Cristea, Erin Walker,
+Yu Lu, Olga C. Santos, and Seiji Isotani (Eds.). Springer Nature Switzerland, Cham,
+204–217. https://doi.org/10.1007/978-3-031-98459-4_15
+[14] Clayton Cohn, Naveeduddin Mohammed, Gautam Biswas, et al. 2025. CoTAL:
+Human-in-the-Loop Prompt Engineering for Generalizable Formative Assess-
+ment Scoring. arXiv preprint arXiv:2504.02323 (2025). https://doi.org/10.48550/
+arXiv.2504.02323
+[15] LYN Corno. 2008. On teaching adaptively. Educational psychologist 43, 3 (2008),
+161–173. https://doi.org/10.1080/00461520802178466
+[16] Jennifer L Docktor, Jay Dornfeld, Evan Frodermann, Kenneth Heller, Leonardo
+Hsu, Koblar Alan Jackson, Andrew Mason, Qing X Ryan, and Jie Yang. 2016.
+Assessing student written problem solutions: A problem-solving rubric with
+application to introductory physics. Physical review physics education research
+12, 1 (2016), 010130. https://doi.org/10.1103/PhysRevPhysEducRes.12.010130
+[17] Joan Ferrini-Mundy. 2000. Principles and standards for school mathematics: A
+guide for mathematicians. Notices of the American Mathematical Society 47, 8
+(2000).
+[18] Evi Fitriani. 2025. The effectiveness of Polya’s problem-solving strategy in en-
+hancing mathematical word problem comprehension among fifth-grade students.
+Jurnal Penelitian Ilmu Pendidikan 18, 2 (2025), 181–192. https://doi.org/10.21831/
+jpip.v18i2.93790
+[19] John H Flavell. 1979. Metacognition and cognitive monitoring: A new area
+of cognitive–developmental inquiry. American psychologist 34, 10 (1979), 906.
+https://doi.org/10.1037/0003-066X.34.10.906
+[20] Marsha E Fonteyn, Benjamin Kuipers, and Susan J Grobe. 1993. A description of
+think aloud method and protocol analysis. Qualitative health research 3, 4 (1993),
+430–441. https://doi.org/10.1177/104973239300300403
+[21] Robert Glaser, Naomi Chudowsky, and James W Pellegrino. 2001. Knowing
+what students know: The science and design of educational assessment. National
+Academies Press.
+[22] Marie-Pier Goulet-Lyle, Dominic Voyer, and Lieven Verschaffel. 2020. How
+does imposing a step-by-step solution method impact students’ approach to
+mathematical word problem solving? ZDM 52, 1 (2020), 139–149. https://doi.
+org/10.1007/s11858-019-01098-w
+[23] Al-Jehada B Gulam and Joel C Arenas. 2024. Mathematics performance and
+Polya’s method in problem solving. World Journal of Advanced Research and
+Reviews 23, 3 (2024), 2156–2162. https://doi.org/10.30574/wjarr.2024.23.3.2873
+[24] Nourooz Hashemi, Mohd Salleh Abu, Hamidreza Kashefi, Mahani Mokhtar, and
+Khadijeh Rahimi. 2015. Designing learning strategy to improve undergraduate
+students’ problem solving in derivatives and integrals: A conceptual framework.
+Eurasia Journal of Mathematics, Science and Technology Education 11, 2 (2015),
+227–238. https://doi.org/10.12973/eurasia.2015.1318a
+[25] Neil T. Heffernan and Cristina Lindquist Heffernan. 2014. The ASSISTments
+Ecosystem: Building a Platform that Brings Scientists and Teachers Together for
+Minimally Invasive Research on Human Learning and Teaching. International
+Journal of Artificial Intelligence in Education 24, 4 (2014), 470–497. https://doi.
+org/10.1007/s40593-014-0024-x
+[26] Charles Henderson, Edit Yerushalmi, Vince H Kuo, Patricia Heller, and Kenneth
+Heller. 2004. Grading student problem solutions: The challenge of sending a
+consistent message. American Journal of Physics 72, 2 (2004), 164–169. https:
+//doi.org/10.1119/1.1634963
+[27] Dan Hendrycks, Collin Burns, Saurav Kadavath, Akul Arora, Steven Basart, Eric
+Tang, Dawn Song, and Jacob Steinhardt. 2021. Measuring mathematical problem
+solving with the math dataset. arXiv preprint arXiv:2103.03874 (2021).
+[28] Lisa Henjes. 2007. The Use of Think-Aloud Strategies to Solve Word Problems.
+(07 2007).
+[29] Mathematical Sciences Research Institute. 2007. Assessing mathematical pro-
+ficiency. Vol. 53.
+Cambridge university press.
+https://doi.org/10.1017/
+CBO9780511755378
+[30] Hyoungwook Jin, Yoonsu Kim, Yeon Su Park, Bekzat Tilekbay, Jinho Son, and
+Juho Kim. 2024. Using large language models to diagnose math problem-solving
+skills at scale. In Proceedings of the eleventh ACM conference on learning@ scale.
+471–475. https://doi.org/10.1145/3657604.3664697
+[31] David H Jonassen. 2013. Assessing problem solving. In Handbook of research on
+educational communications and technology. Springer, 269–288. https://doi.org/
+10.1007/978-1-4614-3185-5_22
+[32] Regina Kelly, Eilish McLoughlin, and Odilla E Finlayson. 2016. Analysing stu-
+dent written solutions to investigate if problem-solving processes are evident
+throughout. International Journal of Science Education 38, 11 (2016), 1766–1784.
+https://doi.org/10.1080/09500693.2016.1214766
+[33] Kenneth Koedinger, John Anderson, William Hadley, and Mary Mark. 1997.
+Intelligent Tutoring Goes To School in the Big City. International Journal of
+Artificial Intelligence in Education 8 (02 1997), 30–43.
+[34] Stephen Krulik and Jesse A Rudnick. 1988. Problem Solving: A Handbook for
+Elementary School Teachers. ERIC.
+[35] Chien I Lee. 2016. An appropriate prompts system based on the Polya method
+for mathematical problem-solving. Eurasia Journal of Mathematics, Science and
+Technology Education 13, 3 (2016), 893–910. https://doi.org/10.12973/eurasia.2017.
+00649a
+[36] Patrick Lewis, Ethan Perez, Aleksandra Piktus, Fabio Petroni, Vladimir Karpukhin,
+Naman Goyal, Heinrich Küttler, Mike Lewis, Wen-tau Yih, Tim Rocktäschel,
+et al. 2020. Retrieval-augmented generation for knowledge-intensive nlp tasks.
+Advances in neural information processing systems 33 (2020), 9459–9474.
+[37] Jiayu Liu, Zhenya Huang, Tong Xiao, Jing Sha, Jinze Wu, Qi Liu, Shijin Wang, and
+Enhong Chen. 2024. SocraticLM: Exploring Socratic Personalized Teaching with
+Large Language Models. In Advances in Neural Information Processing Systems,
+A. Globerson, L. Mackey, D. Belgrave, A. Fan, U. Paquet, J. Tomczak, and C. Zhang
+(Eds.), Vol. 37. Curran Associates, Inc., 85693–85721. https://doi.org/10.52202/
+079017-2721
+[38] Xinyi Lu and Xu Wang. 2024. Generative Students: Using LLM-Simulated Student
+Profiles to Support Question Item Evaluation. In Proceedings of the Eleventh ACM
+
+Conference’17, July 2017, Washington, DC, USA
+Yoonsu Kim et al.
+Conference on Learning @ Scale (Atlanta, GA, USA) (L@S ’24). Association for
+Computing Machinery, New York, NY, USA, 16–27.
+https://doi.org/10.1145/
+3657604.3662031
+[39] Lita Lupita, Meiliasari Meiliasari, and Lukman El Hakim. 2025. Analysis Of
+Students’ Errors Through Newman’s Theory In Addressing Critical Think-
+ing Ability Questions As Examined Through Cognitive Style. Mathline: Ju-
+rnal Matematika dan Pendidikan Matematika 10, 1 (2025), 237–253.
+https:
+//doi.org/10.31943/mathline.v10i1.840
+[40] Juliette Lyons-Thomas. 2014. Using think-aloud protocols in the validity investi-
+gation of an assessment of complex thinking. Ph. D. Dissertation. University of
+British Columbia.
+[41] Jakub Macina, Nico Daheim, Ido Hakimi, Manu Kapur, Iryna Gurevych, and Mrin-
+maya Sachan. 2025. MathTutorBench: A Benchmark for Measuring Open-ended
+Pedagogical Capabilities of LLM Tutors. In Proceedings of the 2025 Conference on
+Empirical Methods in Natural Language Processing, Christos Christodoulopou-
+los, Tanmoy Chakraborty, Carolyn Rose, and Violet Peng (Eds.). Association for
+Computational Linguistics, Suzhou, China, 204–221. https://doi.org/10.18653/
+v1/2025.emnlp-main.11
+[42] Christopher J. MacLellan and Kenneth R. Koedinger. 2022. Domain-General Tutor
+Authoring with Apprentice Learner Models. International Journal of Artificial
+Intelligence in Education 32, 1 (2022), 76–117. https://doi.org/10.1007/s40593-020-
+00214-2
+[43] Jaclyn Martin Kowal, Kenzie Hurley Bryant, Dan Segall, and Tracy Kantrowitz.
+2025. Harnessing Generative AI for Assessment Item Development: Compar-
+ing AI-Generated and Human-Authored Items. International Journal of Selec-
+tion and Assessment 33, 3 (2025), e70021.
+https://doi.org/10.1111/ijsa.70021
+arXiv:https://onlinelibrary.wiley.com/doi/pdf/10.1111/ijsa.70021
+[44] Roy Meissner, Alexander Pögelt, Katja Ihsberner, Martin Grüttmüller, Silvana
+Tornack, Andreas Thor, Norbert Pengel, Heinz-Werner Wollersheim, and Wolfram
+Hardt. 2024. LLM-generated competence-based e-assessment items for higher
+education mathematics: methodology and evaluation. Frontiers in Education
+Volume 9 - 2024 (2024). https://doi.org/10.3389/feduc.2024.1427502
+[45] Ministry of Education, Republic of Korea. 2022. Mathematics Curriculum (Min-
+istry of Education Notice No. 2022-33, Appendix 8). https://ncic.re.kr
+[46] Marjorie Montague and Brooks Applegate. 1993. Middle school students’ mathe-
+matical problem solving: An analysis of think-aloud protocols. Learning Disability
+Quarterly 16, 1 (1993), 19–32. https://doi.org/10.2307/1511157
+[47] Steven Moore, Robin Schmucker, Tom Mitchell, and John Stamper. 2024. Auto-
+mated Generation and Tagging of Knowledge Components from Multiple-Choice
+Questions. In Proceedings of the Eleventh ACM Conference on Learning @ Scale
+(Atlanta, GA, USA) (L@S ’24). Association for Computing Machinery, New York,
+NY, USA, 122–133. https://doi.org/10.1145/3657604.3662030
+[48] Junho Myung, Hyunseung Lim, Hana Oh, Hyoungwook Jin, Nayeon Kang, So-
+Yeon Ahn, Hwajung Hong, Alice Oh, and Juho Kim. 2026. When Scaffolding
+Breaks: Investigating Student Interaction with LLM-Based Writing Support in
+Real-Time K-12 EFL Classrooms. In Proceedings of the 2026 CHI Conference on
+Human Factors in Computing Systems (CHI ’26). Association for Computing
+Machinery, New York, NY, USA, Article 838, 18 pages. https://doi.org/10.1145/
+3772318.3791517
+[49] Mary A Newman. 1977. An analysis of sixth-grade pupil’s error on written
+mathematical tasks. Victorian Institute for Educational Research Bulletin 39 (1977),
+31–43.
+[50] Andi Saparuddin Nur, Kartono Kartono, Zaenuri Zaenuri, and Rochmad Rochmad.
+2022. The learning trajectory construction of elementary school students in
+solving integer word problems. Participatory Educational Research 9, 1 (2022),
+404–424. https://doi.org/10.17275/per.22.22.9.1
+[51] Kathleen Philipp and Timo Leuders. 2014. Diagnostic Competences of Math-
+ematics Teachers–Processes and Resources. North American Chapter of the
+International Group for the Psychology of Mathematics Education (2014).
+[52] George Polya. 2004. How to solve it: A new aspect of mathematical method. Number
+246. Princeton university press.
+[53] Y Malini Reddy and Heidi Andrade. 2010. A review of rubric use in higher
+education. Assessment & evaluation in higher education 35, 4 (2010), 435–448.
+https://doi.org/10.1080/02602930902862859
+[54] Alexander Renkl. 2013. Toward an instructionally oriented theory of example-
+based learning. Cognitive science 38, 1 (2013), 1–37. https://doi.org/10.1111/cogs.
+12086
+[55] María Jesüs Rodríguez-Triana, Luis P. Prieto, Alejandra Martínez-Monés, Juan I.
+Asensio-Pérez, and Yannis Dimitriadis. 2018. The teacher in the loop: customizing
+multimodal learning analytics for blended learning (LAK ’18). Association for
+Computing Machinery, New York, NY, USA, 417–426. https://doi.org/10.1145/
+3170358.3170364
+[56] Mushlihah Rohmah and Sugeng Sutiarso. 2017. Analysis Problem Solving in
+Mathematical Using Theory Newman</i. Eurasia Journal of Mathematics, Science
+and Technology Education 14, 2 (2017), 671–681. https://doi.org/10.12973/ejmste/
+80630
+[57] Tinyiko Florence Sambo and Tšhegofatšo Phuti Makgakga. 2025. Using New-
+man’s Error Analysis to Analyse Grade 3 Learners’ Errors in Solving Word
+Problems in a Diverse Classroom. Journal of Inquiry Based Activities 15, 2 (2025),
+103–124.
+[58] Alan H Schoenfeld. 1983. Beyond the purely cognitive: Belief systems, social
+cognitions, and metacognitions as driving forces in intellectual performance.
+Cognitive science 7, 4 (1983), 329–363. https://doi.org/10.1207/s15516709cog0704_
+3
+[59] Alan H Schoenfeld. 2014. Mathematical problem solving. Elsevier.
+[60] Kumar Shridhar, Jakub Macina, Mennatallah El-Assady, Tanmay Sinha, Manu
+Kapur, and Mrinmaya Sachan. 2022.
+Automatic generation of socratic sub-
+questions for teaching math word problems. In Proceedings of the 2022 Con-
+ference on Empirical Methods in Natural Language Processing. 4136–4149. https:
+//doi.org/10.18653/v1/2022.emnlp-main.277
+[61] Lauren M Singer and Patricia A Alexander. 2017. Reading on paper and digitally:
+What the past decades of empirical research reveal. Review of educational research
+87, 6 (2017), 1007–1041. https://doi.org/10.3102/0034654317722961
+[62] Yuwalee Thiangthung. 2016. Applying Polya’s four-steps and Schoenfeld’s be-
+havior categories to enhance students’ mathematical problem solving. Journal of
+Advances in Humanities and Social Sciences 2, 5 (2016), 261–268.
+[63] Kurt VanLehn. 2011. The relative effectiveness of human tutoring, intelligent
+tutoring systems, and other tutoring systems. Educational psychologist 46, 4
+(2011), 197–221. https://doi.org/10.1080/00461520.2011.611369
+[64] Hanling Wang, Banghao Chi, Yufei Wu, Kexin Chen, Di Wu, Songning Liu, Yiwei
+Li, Hanyan Niu, and Xiaohui Zhu. 2025. LLMarking: Adaptive Automatic Short-
+Answer Grading Using Large Language Models. In Proceedings of the Twelfth
+ACM Conference on Learning @ Scale (Palermo, Italy) (L@S ’25). Association for
+Computing Machinery, New York, NY, USA, 105–115. https://doi.org/10.1145/
+3698205.3729551
+[65] Yu Wang, Madhumitha Gopalakrishnan, and Yoav Bergner. 2025. Using Generated
+Rubrics to Provide a Window Into Item Evaluation with Multi-agent LLMs. In
+Artificial Intelligence in Education, Alexandra I. Cristea, Erin Walker, Yu Lu, Olga C.
+Santos, and Seiji Isotani (Eds.). Springer Nature Switzerland, Cham, 203–217.
+https://doi.org/10.1007/978-3-031-98420-4_15
+[66] Jason Wei, Xuezhi Wang, Dale Schuurmans, Maarten Bosma, Fei Xia, Ed Chi,
+Quoc V Le, Denny Zhou, et al. 2022. Chain-of-thought prompting elicits reasoning
+in large language models. Advances in neural information processing systems 35
+(2022), 24824–24837.
+[67] Eamon Worden, Kirk Vanacore, Aaron Haim, and Neil Heffernan. 2025. Scaling
+Effective AI-Generated Explanations for Middle School Mathematics in Online
+Learning Platforms. In Proceedings of the Twelfth ACM Conference on Learning
+@ Scale (Palermo, Italy) (L@S ’25). Association for Computing Machinery, New
+York, NY, USA, 40–49. https://doi.org/10.1145/3698205.3729546
+[68] Yongan Yu, Alexandre Krantz, and Nikki G Lobczowski. 2025. From Recall to
+Reasoning: Automated Question Generation for Deeper Math Learning Through
+Large Language Models. In International Conference on Artificial Intelligence in
+Education. Springer, 414–422. https://doi.org/10.1007/978-3-031-98462-4_52
+[69] Barry J Zimmerman. 2002. Becoming a self-regulated learner: An overview.
+Theory into practice 41, 2 (2002), 64–70. https://doi.org/10.1207/s15430421tip4102_
+2
+
+STEPwise: Diagnosing Mathematical Problem-Solving Skills with LLM-Generated Questions and Rubrics
+Conference’17, July 2017, Washington, DC, USA
+A
+APPENDIX
+A.1
+Formative Study Details
+Table 2 summarizes the demographics of teachers who participated
+in the formative study. Figure 6 shows a sample worksheet used
+during the study to elicit teachers’ problem-solving processes and
+instructional strategies.
+Teacher ID
+Age
+Gender
+Teaching Exp. (yrs)
+Formative-T1
+45
+Male
+25
+Formative-T2
+44
+Male
+3 (+15 yrs in assessment question design)
+Formative-T3
+48
+Male
+20
+Formative-T4
+37
+Female
+5
+Table 2: Teacher demographics for formative study (N=4)
+A.2
+Framework Development Details
+Teacher ID
+Age
+Gender
+Teaching Exp. (yrs)
+Framework-T1
+52
+Female
+Mathematics education researcher, Ph.D.
+Framework-T2
+37
+Male
+10
+Framework-T3
+36
+Female
+10
+Framework-T4
+34
+Female
+11
+Framework-T5
+46
+Male
+20
+Framework-T6
+49
+Male
+30
+Table 3: Teacher demographics for framework development
+process (N=6)
+Table 3 summarizes the demographics of teachers who participated
+in iterative framework development.
+A.3
+Expert Review Details
+Table 4 presents the distribution of math word problems used in
+the expert review across grades, topics, and difficulty levels. Table 5
+presents the demographics of all eight participants in the expert
+review, including six primary reviewers and two tiebreakers.
+Grade
+Mathematical content domain
+High
+Medium
+Total
+Grade 3
+Number & Operations
+2
+1
+3
+Geometry & Measurement
+0
+4
+4
+Grade 4
+Number & Operations
+0
+3
+3
+Geometry & Measurement
+0
+2
+2
+Grade 5
+Number & Operations
+4
+2
+6
+Geometry & Measurement
+0
+3
+3
+Change & Measurement
+0
+1
+1
+Data & Probability
+1
+1
+2
+Grade 6
+Number & Operations
+3
+1
+4
+Geometry & Measurement
+4
+0
+4
+Change & Measurement
+2
+1
+3
+Data & Probability
+1
+0
+1
+Total
+17
+19
+36
+Table 4: Distribution of math word problems used in the ex-
+pert review across grades, mathematical content domains,
+and difficulty levels, where High and Medium refer to prob-
+lem difficulty.
+Teacher ID
+Assigned Grade
+Gender
+Age
+Teaching Experience (yrs)
+E1
+Grade 6
+Female
+44
+15
+E2
+Grade 6
+Female
+37
+9.6
+E3
+Grade 5
+Male
+37
+12
+E4
+Grade 5
+Female
+38
+12
+E5
+Grades 3–4
+Male
+39
+14
+E6
+Grades 3–4
+Male
+34
+9
+E7
+Tiebreaker
+Female
+39
+5
+E8
+Tiebreaker
+Male
+46
+18
+Table 5: Teacher demographics for the expert review (N=8).
+E1–E6 were primary reviewers, each assigned to evalu-
+ate problems from a specific grade band. E7–E8 served as
+tiebreakers, resolving disagreements between primary re-
+viewers.
+A.3.1
+Evaluation Questions for Expert Review. The evaluation ques-
+tions used during expert review are listed below.
+Sub-skill Level (Yes/No)
+• Construct Validity: Do this sub-question and rubric ap-
+propriately assess the targeted problem-solving skill at the
+corresponding stage?
+• Level Appropriateness: Are the complexity, information
+load, and phrasing of this sub-question and rubric suitable
+for the target grade level?
+• Mathematical Accuracy: Are the exemplary answer and
+rubric criteria to this sub-question mathematically correct?
+Problem Level (Yes/No)
+• Problem-Context Alignment: Does the overall set of sub-
+questions and rubrics naturally connect to the given problem
+context and effectively guide students through the problem-
+solving process?
+• Comprehensiveness: Does the overall set of sub-questions
+and rubrics sufficiently cover the full problem-solving pro-
+cess for the given problem?
+
+Conference’17, July 2017, Washington, DC, USA
+Yoonsu Kim et al.
+Write the solution process in detail according to the given format.
+In a rectangular prism–shaped water tank like the one below, a stone was 
+placed inside, and the height of the water became 138 cm. 
+Find the volume of the stone.
+[Parse] Identifying key information: Underline the important information in the 
+problem.
+[Extract] Planning a solution strategy: Using the information, describe your plan 
+for solving the problem.
+[Retrieve] Recalling relevant knowledge: Write down the formulas or concepts 
+needed to solve this problem.
+[Combine] Executing the solution: Show your complete solution process and 
+arrive at the final answer.
+Figure 6: A sample worksheet we used for the formative study.
+
+STEPwise: Diagnosing Mathematical Problem-Solving Skills with LLM-Generated Questions and Rubrics
+Conference’17, July 2017, Washington, DC, USA
+A.4
+Classroom Study Details
+A.4.1
+Student Demographics. Table 6 shows the grade distribution
+of the 64 students who participated in the classroom study.
+Grade
+N
+3
+11
+4
+16
+5
+12
+6
+14
+7
+4
+8
+5
+9
+2
+Total
+64
+Table 6: Grade distribution of participating students (N=64).
+A.4.2
+Student Survey Questions for Classroom Study. The survey
+questions we used for the student survey in the classroom study
+are listed below:
+• Usefulness of the Stage-Based Approach: When solving
+the problem using this stage-based approach (i.e., breaking
+a large problem into multiple stages), did this method help
+you solve the problem more effectively?
+• Ease of Expressing Reasoning Process: When using this
+approach, did answering the stage-based questions help you
+express your thinking more clearly?
+• Self-Awareness of Strengths and Weaknesses: While
+solving the problem using this method, did you become
+more aware of which parts you did well and which parts you
+found difficult?
+• Willingness for Future Use: Do you think this stage-based
+approach will be helpful for your future math learning?
+• Open-Ended Question: Compared to your usual way of
+solving math problems, how was solving the problem using
+this stage-based approach different? What aspects did you
+find helpful, and what aspects did you find challenging?
+A.4.3
+Diagnostic Report. Figure 7 shows a sample diagnostic report
+generated by STEPwise, which summarizes the student’s problem-
+solving skills at each stage.
+
+Conference’17, July 2017, Washington, DC, USA
+Yoonsu Kim et al.
+Student Name
+#1 Gear
+#2 Water Tank
+#3 Circumference
+#4 Number Card
+#5 Distance
+#1 Gear
+#2 Water Tank
+#3 Circumference
+#4 Number Card
+#5 Distance
+(a)
+
+STEPwise: Diagnosing Mathematical Problem-Solving Skills with LLM-Generated Questions and Rubrics
+Conference’17, July 2017, Washington, DC, USA
+Student Name
+Overall, in some problems you understood the key concepts accurately and wrote answers at the correct level, 
+but in other problems your completeness suffered because you left out necessary conditions or calculation.
+Overall, you're doing well at accurately identifying what the problem is asking for and calculating it correctly. 
+However, in some cases you failed to properly interpret the conditions, or omitted necessary calculation steps.
+You generally do well at finding the key information and correct answers in the problem, but in some cases the 
+completeness of your answer suffers because you don't fully complete the intermediate calculations.
+You generally grasp the key conditions of the problem well and arrive at correct answers. However, in some 
+problems you didn't fully explain the relationships or rules between conditions as equations.
+(b)
+
+Conference’17, July 2017, Washington, DC, USA
+Yoonsu Kim et al.
+You understand basic concepts and how to express equations well, but there are mistakes in correctly 
+reflecting units and conditions. You need more practice in fully reading the meaning of a problem.
+Your overall ability to understand a problem and set up an equation is good, matching the given conditions, 
+very well. However, in some cases you weren't able to write an answer or lacked sufficient grounds.
+There are problems you calculated correctly, but in some cases you misunderstood basic concepts, leading 
+to incorrect calculation methods, and in some cases you didn't write an answer at all.
+You generally grasped the direction and purpose of your calculations well, but there were cases where you 
+didn't fully write out the answer (e.g., "PM") when dealing with place values, leaving the finish incomplete.
+(c)
+Figure 7: A sample student’s diagnostic report generated by STEPwise. (a) A summary view showing performance across all
+problems, with progress bars, High/Medium/Low score breakdowns, and an overall level badge for each problem. (b)–(c) A
+detailed, stage-by-stage view for a single problem, grouped by the STEP framework’s four stages, where each sub-skill shows a
+progress bar, numerical score, and a text summary of the student’s strengths and areas for improvement.

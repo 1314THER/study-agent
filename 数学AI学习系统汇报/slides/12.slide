@@ -1,0 +1,103 @@
+<Slide style={{ padding: 0, background: '#FFFFFF' }}>
+    <Box style={{ height: 72, background: '#1E4FA8', paddingLeft: 40, paddingRight: 40, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>03 · 难度体系：AI 只做最小判断，聚合交给代码</Text>
+    </Box>
+
+    <Box style={{ flex: 1, paddingTop: 14, paddingBottom: 12, paddingLeft: 40, paddingRight: 40, justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 21, color: '#4A5568', lineHeight: 1.5 }}>
+            让模型直接给整题打总分，两次运行可能不一致，就无法做偏差分析。因此把模型判断限制在最小粒度。
+        </Text>
+
+        <Box style={{ flexDirection: 'row', gap: 20, flex: 1, alignItems: 'stretch' }}>
+            <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 18, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ fontSize: 19, color: '#8B97A8' }}>模型负责</Text>
+                    <Text style={{ fontSize: 25, fontWeight: 'bold', color: '#1E4FA8' }}>每个步骤打五维 0–3</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 9 }}>
+                    <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Box style={{ width: 26, height: 26, background: '#1E4FA8', borderRadius: 4, alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' }}>1</Text>
+                        </Box>
+                        <Text style={{ fontSize: 19, color: '#1A2230', flex: 1 }}>非常规程度</Text>
+                    </Box>
+                    <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Box style={{ width: 26, height: 26, background: '#1E4FA8', borderRadius: 4, alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' }}>2</Text>
+                        </Box>
+                        <Text style={{ fontSize: 19, color: '#1A2230', flex: 1 }}>计算量</Text>
+                    </Box>
+                    <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Box style={{ width: 26, height: 26, background: '#1E4FA8', borderRadius: 4, alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' }}>3</Text>
+                        </Box>
+                        <Text style={{ fontSize: 19, color: '#1A2230', flex: 1 }}>分类讨论</Text>
+                    </Box>
+                    <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Box style={{ width: 26, height: 26, background: '#1E4FA8', borderRadius: 4, alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' }}>4</Text>
+                        </Box>
+                        <Text style={{ fontSize: 19, color: '#1A2230', flex: 1 }}>知识广度</Text>
+                    </Box>
+                    <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 10, flexDirection: 'row', gap: 10, alignItems: 'center' }}>
+                        <Box style={{ width: 26, height: 26, background: '#1E4FA8', borderRadius: 4, alignItems: 'center', justifyContent: 'center' }}>
+                            <Text style={{ fontSize: 15, fontWeight: 'bold', color: '#FFFFFF' }}>5</Text>
+                        </Box>
+                        <Text style={{ fontSize: 19, color: '#1A2230', flex: 1 }}>条件转化难度</Text>
+                    </Box>
+                </Box>
+                <Text style={{ fontSize: 17, color: '#8B97A8', lineHeight: 1.4 }}>0 是默认分；2 分与 3 分设有硬门槛</Text>
+            </Box>
+
+            <Box style={{ width: 60, alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 6 }}>
+                <Text style={{ fontSize: 16, fontWeight: 'bold', color: '#FFC107' }}>聚合</Text>
+                <Box style={{ width: 40, height: 3, background: '#1E4FA8' }} />
+                <Box style={{ width: 10, height: 10, background: '#1E4FA8' }} />
+            </Box>
+
+            <Box style={{ flex: 1, background: '#0E3F8C', borderRadius: 10, padding: 20, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ fontSize: 19, color: '#9EC1F0' }}>代码负责</Text>
+                    <Text style={{ fontSize: 25, fontWeight: 'bold', color: '#FFFFFF' }}>确定性聚合</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 10 }}>
+                    <Box style={{ background: '#123D7F', borderRadius: 6, padding: 12 }}>
+                        <Text style={{ fontSize: 18, color: '#C8DCF7', lineHeight: 1.5 }}>
+                            维度分 = min(3, 峰值 + floor(0.5 × 非零均值 × 非零覆盖率))
+                        </Text>
+                    </Box>
+                    <Box style={{ background: '#123D7F', borderRadius: 6, padding: 12 }}>
+                        <Text style={{ fontSize: 18, color: '#C8DCF7', lineHeight: 1.5 }}>
+                            总分 = min(15, Σ 权重)，权重默认 [0, 1, 2, 4]
+                        </Text>
+                    </Box>
+                    <Box style={{ background: '#123D7F', borderRadius: 6, padding: 12 }}>
+                        <Text style={{ fontSize: 18, color: '#C8DCF7', lineHeight: 1.5 }}>
+                            等级：0–3 容易 · 4–6 中等 · 7–9 困难 · ≥10 极难
+                        </Text>
+                    </Box>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ fontSize: 18, color: '#FFC107', lineHeight: 1.4 }}>可复现 · 可调参 · 可写进论文</Text>
+                    <Text style={{ fontSize: 17, color: '#9EC1F0', lineHeight: 1.4 }}>权重、封顶与等级阈值均可在设置页热修改，无需重启。</Text>
+                </Box>
+            </Box>
+        </Box>
+
+        <Box style={{ flexDirection: 'row', gap: 20 }}>
+            <Box style={{ flex: 1, background: '#FFFFFF', borderRadius: 8, border: '1px solid #D6DCE5', padding: 14, flexDirection: 'column', gap: 6 }}>
+                <Text style={{ fontSize: 21, fontWeight: 'bold', color: '#1E4FA8' }}>提示词里的硬门槛</Text>
+                <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.5 }}>2 分要求真实三分类或跨两板块联动；3 分要求压轴级（构造思路、四分类以上、三板块综合）。</Text>
+            </Box>
+            <Box style={{ flex: 1, background: '#FFFFFF', borderRadius: 8, border: '1px solid #D6DCE5', padding: 14, flexDirection: 'column', gap: 6 }}>
+                <Text style={{ fontSize: 21, fontWeight: 'bold', color: '#1E4FA8' }}>为什么不打总分</Text>
+                <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.5 }}>总分不可复现就无法做整卷偏差分析；把判断压到步骤粒度，聚合才稳定。</Text>
+            </Box>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 44, paddingLeft: 40, paddingRight: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', background: '#F7F9FC', borderTop: '1px solid #E5E7EB' }}>
+        <Text style={{ fontSize: 14, color: '#8B97A8' }}>高中数学 AI 学习系统 · 技术框架汇报</Text>
+        <Text style={{ fontSize: 15, color: '#1E4FA8' }}>12 / 24</Text>
+    </Box>
+</Slide>

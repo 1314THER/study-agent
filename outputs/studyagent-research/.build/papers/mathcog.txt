@@ -1,0 +1,1322 @@
+Benchmarking Large Language Models for
+Diagnosing Students’ Cognitive Skills from
+Handwritten Math Work
+Yoonsu Kim1, Hyoungwook Jin2, Hayeon Doh3, Eunhye Kim1, Dongyun
+Jung1, Seungju Kim1, Kiyoon Choi4, Jinho Son4, and Juho Kim1
+1 School of Computing, KAIST, Daejeon, Republic of Korea
+{yoonsu16,gracekim027,djung2023,sjkim64891,juhokim}@kaist.ac.kr
+2 University of Michigan, Ann Arbor, USA jinhw@umich.edu
+3 Ewha Womans University, Seoul, Republic of Korea hydoh12@ewha.ac.kr
+4 AlgorithmLabs, Seoul, Republic of Korea
+{chlrldbs1,sjhfam}@algorithmlabs.co.kr
+Abstract. Students’ handwritten math work provides a rich resource
+for diagnosing cognitive skills, as it captures intermediate reasoning be-
+yond final answers. We investigate how current large language models
+(LLMs) perform in diagnosing cognitive skills from such work. How-
+ever, student responses vary widely, often omitting steps or providing
+only vague, contextually implicit evidence. Despite recent advances in
+LLMs’ multimodal and reasoning capabilities, their performance under
+such conditions remains underexplored. To address this gap, we con-
+structed MathCog, a benchmark dataset containing 3,036 diagnostic
+verdicts across 639 student responses to 110 math problems, annotated
+by teachers using TIMSS-grounded cognitive skill checklists with eviden-
+tial strength labels (Evident/Vague). Evaluating 18 LLMs, we find that
+(1) all models underperform (F1 < 0.5) regardless of capability, and (2)
+performance degrades sharply under vague evidence. Error analysis re-
+veals systematic patterns: models frequently misattribute vague evidence
+as evident, overthink minimal cues, and hallucinate nonexistent evidence.
+We discuss implications for evidence-aware, teacher-in-the-loop designs
+for LLM-based cognitive diagnosis in educational settings.
+Keywords: Large Language Models in Math · Cognitive Skill Diagnosis
+· Benchmark Dataset for Educational AI
+1
+Introduction
+Diagnosing students’ cognitive skills from their problem-solving work is a long-
+standing goal in mathematics education, as it can reveal where and how students’
+reasoning breaks down beyond final correctness [17,12]. As defined in the TIMSS
+assessment framework [22], cognitive skills refer to students’ abilities to know,
+apply, and reason with mathematical concepts and procedures. Handwritten
+math work is particularly valuable for diagnosing these skills because it can
+reflect intermediate reasoning steps and partial understanding [14,12].
+arXiv:2504.00843v2  [cs.AI]  4 Feb 2026
+
+2
+Y. Kim et al.
+However, such diagnostic evidence is often incomplete, implicit, or unevenly
+expressed across students [11,24], making reliable cognitive skill diagnosis in-
+herently challenging. Despite recent advances in large language models (LLMs),
+including multimodal perception [31,30] and reasoning capabilities [27,9], their
+ability to diagnose students’ cognitive skills from handwritten work remains
+largely unexamined. While prior work has examined LLMs’ own mathematical
+problem-solving abilities [5,6,2], our work extends beyond problem solving to
+examine their ability to diagnose human problem-solving processes.
+In this work, we systematically investigate how well existing LLMs diagnose
+students’ cognitive skills in mathematics. Specifically, we focus on the degree of
+evidential strength in students’ handwritten responses. We address the following
+research questions:
+RQ1. How do different LLMs (varying in image input, reasoning, model size, and
+few-shot prompting) perform in diagnosing students’ cognitive skills?
+RQ2. How does the evidential strength of student responses affect LLM’s cognitive
+skill diagnosis performance?
+To answer these questions, we constructed MathCog, an expert-crafted
+benchmark dataset designed to evaluate cognitive skill diagnosis. In collabo-
+ration with 5 education experts and 15 middle school teachers, we curated 12
+middle school math topics and 110 problems, each with 50+ student responses
+diagnosed by teachers based on a problem-specific diagnostic checklist grounded
+in the TIMSS cognitive framework [22]. Teachers provided binary judgements
+(Yes/No) for each skill and annotated the presence of supporting evidence as Ev-
+ident or Vague, yielding 3,036 diagnostic items total. Critically, we curated our
+dataset to include only problems where human experts achieve >70% agreement,
+establishing a stable ground truth rather than subjective noise.
+Using MathCog, we evaluated 18 closed- and open-source LLMs spanning
+multiple model families, sizes, and capabilities. Results indicate that current
+LLMs struggle to reliably diagnose students’ cognitive skills (all F1 scores <
+0.5), with performance degrading sharply under vague-evidence conditions and
+frequently misattributing weak evidence as strong. Qualitative error analysis fur-
+ther reveals the model’s failure patterns across model types. In particular, mod-
+els often misidentify or hallucinate supporting evidence, or over-infer students’
+cognitive skills from incomplete work, showing that errors cascade throughout
+the diagnostic pipeline from recognizing student responses to interpreting them
+based on the rubric. Building on these findings, we discuss implications for de-
+signing LLM-based diagnostic tools that better elicit students’ diagnostic evi-
+dence of cognitive processes and support teacher-in-the-loop interpretation.
+Our contributions are threefold. (1) We introduce MathCog, an expert-
+crafted benchmark dataset for cognitive skill diagnosis. (2) Using MathCog,
+we evaluate 18 large language models and analyze the effects of multimodality,
+reasoning, model size, and evidential strength on diagnosis performance. (3) We
+analyze diagnostic error patterns under vague-evidence conditions and discuss
+implications for the design and use of LLM-based cognitive diagnostic systems.
+
+LLMs for Diagnosing Cognitive Skill in Math
+3
+2
+Related Work
+We review the foundational framework underlying our cognitive diagnosis task,
+prior investigations into LLMs’ performance in math-related contexts, and ex-
+isting benchmarks, highlighting their current gaps.
+2.1
+Cognitive Diagnosis in Mathematics Education
+The TIMSS [22] is a comprehensive and math-specific framework for cognitive di-
+agnosis, comprising content and cognitive domains. The cognitive domain, which
+evaluates knowledge application, is divided into three key areas: Knowing (recall-
+ing definitions, recognizing mathematical entities, classifying or ordering quan-
+tities, computing), Applying (determining strategies, representing problems, im-
+plementing solution procedures), and Reasoning (analyzing, justifying). This re-
+search aims to explore whether LLMs can substitute for the mapping to enable
+scalable and explainable cognitive diagnosis. To our knowledge, this is the first
+systematic investigation of LLMs in the context of the TIMSS framework.
+2.2
+LLM Capabilities in Mathematical Tasks
+Recent advances have enabled LLMs to achieve remarkable performance in math-
+ematical problem-solving [8,23], yet they show relative weaknesses in diagnosing
+student abilities [20,29]. These diagnostic challenges are further complicated by
+current models’ struggles with multimodal inputs such as visual elements and
+handwritten content [31,4,16]. While some recent work has demonstrated LLMs’
+potential for cross-domain cognitive diagnosis [19], existing research has lim-
+ited systematic exploration of LLMs’ diagnostic capabilities for cognitive skills
+in math specifically. We address this critical gap in the field by providing the
+first comprehensive evaluation of LLMs’ ability to diagnose cognitive skills in
+mathematical contexts using an established educational framework.
+2.3
+Benchmarks for Evaluating Mathematical Assessment Tasks
+In educational settings, several benchmarks have been proposed to evaluate
+LLMs’ performance in mathematical assessment tasks, including grading, skill
+recognition, and error analysis. For example, MathFish [18] aligns 9,900 problems
+with 385 K–12 standards to assess models’ ability to identify targeted mathemat-
+ical skills and concepts. Automated scoring of open-ended constructed responses
+in math word problems has also been studied [10]. Other benchmarks focus on
+misconception detection in multiple-choice questions [13] or handwriting recog-
+nition in student work [4]. While prior research has focused on error detection
+and scoring, diagnosing complex cognitive skills from students’ open-ended hand-
+written responses remains underexplored and under-resourced. To address this
+gap, we introduce a novel dataset for cognitive skill diagnosis that enables sys-
+tematic evaluation of LLMs’ ability to interpret implicit reasoning and diagnose
+students’ cognitive skills beyond final answers.
+
+4
+Y. Kim et al.
+3
+Dataset: MathCog
+Problem
+Student Response Diagnostic Checklist
+Verdict
+When P =
+√
+3
+−7
+√
+5 + 2
+√
+3,
+Q = 2
+√
+3 −
+√
+5
++2
+√
+5, find the
+value of P + Q.
+Recognize: Does the student
+realize that the coefficients can
+be combined when the radicals
+are the same?
+Vague
+Yes
+Compute: Were the addition
+and subtraction calculations
+of coefficients performed
+accurately?
+Evident
+Yes
+Determine: Does the student
+choose a strategy to first
+simply organize each equation
+and then find the final sum?
+Evident
+No
+There is a trapezoid
+with a lower side
+length of 8 cm
+and a height of 4
+cm. If the area of
+this trapezoid is not
+less than 28 cm2,
+find how much
+more cm the length
+of the upper side of
+the trapezoid must be.
+Recall: Does the student
+remember the formula for
+the area of a shape correctly?
+Evident
+Yes
+Compute: Has the student
+calculated the linear and
+constant terms correctly?
+Vague
+No
+Determine: Did the student
+know the need to set up an
+equation and then solve it
+to find the range of solutions
+that meet the conditions?
+Evident
+Yes
+Represent: Has the given
+situation been expressed
+correctly?
+Evident
+No
+Implement: When simplifying
+an expression, does the student
+keep the expression correct by
+performing the same operation
+on both sides?
+Vague
+Yes
+Table 1. Two samples from MathCog. Each data point is composed of a math prob-
+lem, student response, relevant diagnostic checklist, and verdict for each check item.
+To evaluate LLMs’ performance on cognitive skill diagnosis, we created a
+benchmark dataset comprising secondary-school math problems, handwritten
+student responses, diagnostic checklists, and teacher-generated verdicts (Ta-
+ble 1). The math problem and student response data are from AI-Hub5 , which
+provides OCR transcriptions of handwritten work. Each topic includes multiple
+isomorphic problems that share the same problem-solving procedures but differ
+in numerical values (e.g., “Solve x2+2x−3 = 0” and “Solve x2+x−2 = 0”) [25,21].
+From this data, we focused on topics from grades 7–9, where problems are suf-
+ficiently complex to elicit students’ cognitive processes. We further excluded
+topics with fewer than 50 student responses to ensure sufficient data for reliable
+5 The data are available with approval from the provider via AIHub.
+
+LLMs for Diagnosing Cognitive Skill in Math
+5
+evaluation. We decided not to augment our dataset with synthesized data, as it
+might bias our observations on this novel task. Through this filtering process,
+the resulting dataset contains topics, 137 problems, and 796 student responses.
+3.1
+Diagnostic Checklist
+For each topic, we developed a diagnostic checklist commonly applicable to iso-
+morphic problems. Each checklist consists of binary question items mapped to
+one of the 15 cognitive skills defined in the TIMSS 2019 assessment frame-
+work [22]. The checklist items were adapted from TIMSS skill descriptions and
+refined through expert review by five mathematics curriculum and evaluation
+experts with PhD degrees in education and practical experience in making math
+assessment guidelines. Experts gave feedback on the clarity, granularity, and
+validity of the checklist items. The experts also commented on the skills each
+problem can or cannot assess. Experts pointed out that our math problems pri-
+marily focus on calculating numbers and applying knowledge, and hence are
+limited in assessing “reasoning” (e.g., justifying, analyzing, generalizing) [22] by
+design. We scoped our check items to “knowing” and “applying” cognitive do-
+mains only. We took two iterations to refine the checklists, and each checklist
+was reviewed by two experts independently in each iteration.
+3.2
+Teacher-generated Verdict
+We recruited 15 middle school math teachers to evaluate 796 student responses
+based on predefined diagnostic checklists. Teachers had an average of 6.1±4.3
+years of experience (range: 2.5–20 years). Each check item was assessed along two
+dimensions: correctness (Yes/No) and evidential strength (Evident/Vague). A
+“Yes” response indicated that the student fully demonstrated the cognitive action
+specified, while a “No” indicated otherwise, including partially demonstrated
+responses. “Evident” meant there was clear evidence to support the judgment,
+whereas “Vague” signified insufficient evidence. To account for the subjectivity
+Problem 
+Sample answer
+Given the linear equations 
+4x+3=9−2x and 3−4x=x+a, if 
+they have the same solution, 
+find the value of a.
+To find the solution of 
+4x+3=9-2x, 4x+2x = 9-3, 
+6x=6. Therefore, x=1. Since 
+the solution of the two...
+Diagnostic checklist
+Compute: After 
+substituting the value of 
+x into...
+Student’s solution
+Verdict: Vague No
+Ground truth
+{
+  verdict: Evident No
+  evidence: -4x-x=-3+a...
+  explanation: The student...
+}
+Model-wise evaluation
+Teacher 
+evaluation
+LLM 
+evaluation
+Expert
+review
+Model accuracy
+Fig. 1. Overview of the diagnostic pipeline of the MathCog.
+in cognitive diagnosis, each student’s response was evaluated by three teachers
+with overlapping assignments, allowing us to measure inter-rater agreement (see
+
+6
+Y. Kim et al.
+Table 7 in Appendix6). Following the threshold established in prior literature [7],
+we excluded topics with agreement below 70%, resulting in a final dataset of 12
+topics, 110 problems, and 639 student responses. As a result, the benchmark
+focuses on diagnostic cases with stable expert agreement, providing a reliable
+basis for evaluating model performance. These topics cover three-fourths of the
+content domains defined in TIMSS 2019 (see Table 6 in Appendix), and the
+dataset remains reasonably sized given the substantial human effort required for
+expert annotation.
+4
+Experimental Setting
+Using MathCog as a benchmark dataset, we evaluated a diverse set of LLMs
+with varying input modalities, reasoning capabilities, model sizes, and prompting
+strategies to address RQ1, and analyzed how the evidential strength of student
+responses affects diagnosis performance to address RQ2.
+Prompting. We instructed LLMs to evaluate each diagnostic check item
+given a math problem, its solution, a student’s response, and a diagnostic check-
+list. Student’s response image inputs were provided as OCR transcriptions, with
+mathematical formulas and visual cues (e.g., strikethroughs) represented in La-
+TeX. For multimodal settings, we additionally supplied images of student re-
+sponses. Since the original inputs were in Korean, we machine-translated them
+into English to prevent possible performance degradation due to language [1];
+we used Google Translate API for batch translation and manually verified them.
+We employed Chain-of-Thought prompting [16] to guide LLMs to systemati-
+cally address each check item by first restating its content, identifying relevant
+evidence, providing an explanation, and delivering a final verdict. The verdict
+followed one of the four categories used by teachers in MathCog. To examine
+the effect of in-context examples on model performance, we experimented with
+few-shot prompting using two exemplars that covered all four types of verdicts.
+To minimize randomness, all LLMs were run with a temperature setting of zero.
+Full system and user prompts are provided in the Appendix.
+Models. We evaluated 18 LLMs from multiple model families, selected to
+analyze the effects of multimodality, reasoning capability, and model size. For
+multimodality, selected models were tested under both text-only and image-
+augmented conditions; for reasoning, we compared reasoning-oriented models
+with their conventional counterparts within the same model families.
+Metrics. We evaluated LLM outputs against teacher-provided ground-truth
+diagnostic labels. Overall diagnosis performance was assessed using macro F1
+score and accuracy over the four verdict categories. We report macro F1 to
+mitigate the effect of label imbalance across verdicts (see Table 8 in Appendix).
+To address RQ2, we analyzed how the evidential strength of student responses
+affects diagnosis performance. To formalize this analysis, we treat each diagno-
+sis instance as a (student response, cognitive skill) pair, indexed by i. For each
+6 Appendix can be found: OSF appendix materials
+
+LLMs for Diagnosing Cognitive Skill in Math
+7
+instance i, the ground-truth labels consist of a skill judgment yi ∈{Yes, No}
+and evidential strength ei ∈{Evident, Vague}, and the corresponding model
+predictions ˆyi and ˆei. To characterize how models handle evidential strength,
+we define two complementary metrics that capture distinct failure modes in evi-
+dence attribution. First, we define evidence over-attribution (OverAttr) as
+the frequency with which a model assigns “Evident” to cases where the ground-
+truth evidential strength is “Vague”:
+OverAttr = |{i | ei = Vague ∧ˆei = Evident}|
+|{i | ei = Vague}|
+(1)
+This metric reflects the model’s tendency to overstate evidential support under
+vague evidence cases, independent of diagnosis correctness. Second, we define
+evidence false-attribution (FalseAttr) as the frequency with which a model
+assigns Evident to incorrect diagnoses:
+FalseAttr = |{i | ˆyi̸ = yi ∧ˆei = Evident}|
+|{i | ˆyi̸ = yi}|
+(2)
+This metric captures a particularly misleading failure mode, where erroneous
+diagnoses are accompanied by strong evidential claims.
+5
+Results
+This section reports results addressing our research questions.
+Category
+Model
+Precision Recall F1
+Accuracy OverAttr FalseAttr
+Reasoning Model
+DeepSeek-R1
+.447
+.467
+.442
+.773
+.767
+.862
+Gemini-2.0-Flash-Thinking
+.454
+.486
+.418
+.688
+.361
+.432
+o1-Preview
+.423
+.513
+.443
+.711
+.489
+.650
+Multimodal Model Claude-3.5-Sonnet-img
+.408
+.457
+.413
+.691
+.626
+.559
+Gemini-1.5-Flash-img
+.431
+.484
+.429
+.702
+.471
+.471
+GPT-4o-img
+.427
+.494
+.448
+.743
+.656
+.681
+Large Model
+Claude-3.5-Sonnet
+.411
+.487
+.416
+.656
+.551
+.574
+DeepSeek-V3
+.406
+.461
+.417
+.714
+.612
+.595
+Gemini-1.5-Pro
+.429
+.496
+.440
+.706
+.520
+.635
+GPT-4o
+.398
+.476
+.412
+.672
+.648
+.658
+Llama-3.1-405B
+.415
+.439
+.385
+.624
+.467
+.307
+Medium Model
+Llama-3.3-70B
+.415
+.467
+.397
+.635
+.436
+.409
+Qwen-2.5-72B
+.415
+.459
+.416
+.711
+.568
+.500
+Small Model
+Gemini-1.5-Flash
+.432
+.490
+.432
+.679
+.502
+.465
+Gemini-1.5-Flash-8b
+.359
+.427
+.348
+.558
+.537
+.525
+GPT-4o-mini
+.345
+.398
+.352
+.622
+.767
+.784
+Llama-3.1-8B-128K
+.352
+.334
+.323
+.653
+.709
+.624
+Qwen-2.5-7B
+.347
+.337
+.339
+.705
+.758
+.798
+Table 2. Performance of all 18 LLMs tested on skill diagnosis tasks. For each metric,
+blue and red fonts indicate the best and worst values, respectively.
+
+8
+Y. Kim et al.
+Reasoning model
+Multimodal model
+Large model
+Medium Model
+Small model
+0.325
+0.350
+0.375
+0.400
+0.425
+0.450
+F1
+deepseek-R1
+gemini-2.0-flash-thinking
+o1-preview
+claude-3-5-sonnet-img
+gemini-1.5-flash-img
+gpt-4o-img
+claude-3-5-sonnet
+deepseek-V3
+gemini-1.5-pro
+llama-3.1-405B
+gpt-4o
+llama-3.3-70B
+qwen-2.5-72B
+gemini-1.5-flash
+gemini-1.5-flash-8b
+llama-3.1-8B-128K
+gpt-4o-mini
+qwen-2.5-7B
+F1 Score by Model Type (colored by model family)
+model family
+deepseek
+gemini
+openai
+claude
+llama
+qwen
+Fig. 2. F1 score across by model type and family.
+5.1
+RQ1. How do different LLMs perform in diagnosing students’
+cognitive skills?
+Overall, all evaluated LLMs showed limited performance in cognitive skill diagno-
+sis, with macro F1 scores below 0.5 (Figure 2, Table 2). While overall accuracy
+was relatively moderate (M = .680, SD = .050), it obscures important diag-
+nostic failures. Models frequently over-attributed evidential strength (OverAttr;
+M = .580, SD = .120) and falsely attributed evidence (FalseAttr; M = .585,
+SD = .145), often asserting strong evidence even when diagnoses were incorrect.
+Notably, even the best-performing models in terms of F1 score and accuracy (e.g.,
+DeepSeek-R1, GPT-4o-img) showed high OverAttr and FalseAttr values, suggest-
+ing that performance gains often co-occur with unreliable evidential judgement.
+Analysis of skill-specific performance (Figure 3) reveals further insights into
+the limitations of current LLMs. No skill category achieved an F1 score
+above 0.5, indicating that fine-grained diagnosis remains challenging even at
+the individual skill level. Despite this overall limitation, we observed a perfor-
+mance gap between the Knowing and Applying cognitive skills. Contrary to our
+expectation that Knowing skills (e.g., Recall, Recognize) would be easier due to
+their surface-level nature, models performed better on Applying skills in both
+F1 score (t = 4.34, p < .001) and accuracy (t = 4.85, p < .001). However, this
+performance gain came with increased evidential errors. Applying skills exhib-
+ited higher evidence over-attribution (t = 5.44, p < .001) and false-attribution
+(t = 7.66, p < .001) than Knowing skills, indicating a tendency to overstate
+evidential support when diagnosing higher-level cognitive skills.
+We further examined the impact of multimodality, reasoning, model
+size, and few-shot prompting as factors that may influence diagnostic perfor-
+mance (Table 2). Multimodal input provided modest but inconsistent
+benefits. Models supporting image input consistently outperformed their text-
+only counterparts in accuracy, indicating that access to handwritten layouts and
+visual cues helps mitigate errors introduced by OCR transcription. However,
+improvements in F1 score were inconsistent, suggesting that visual input can
+
+LLMs for Diagnosing Cognitive Skill in Math
+9
+recall
+recognize
+classify_order
+compute
+determine
+represent
+implement
+0.20
+0.25
+0.30
+0.35
+0.40
+0.45
+F1
+Knowing
+Applying
+F1 Score
+recall
+recognize
+classify_order
+compute
+determine
+represent
+implement
+0.4
+0.5
+0.6
+0.7
+0.8
+0.9
+Accuracy
+Knowing
+Applying
+Accuracy
+recall
+recognize
+classify_order
+compute
+determine
+represent
+implement
+Cognitive Skill
+0.0
+0.2
+0.4
+0.6
+0.8
+1.0
+OverAttr
+Evidence Over-Attribution
+recall
+recognize
+classify_order
+compute
+determine
+represent
+implement
+Cognitive Skill
+0.2
+0.4
+0.6
+0.8
+1.0
+FalseAttr
+Evidence False-Attribution
+Fig. 3. Performance and evidential attribution errors across cognitive skills, measured
+by F1 score, accuracy, evidence over-attribution, and false-attribution.
+Few-shots
+Precision Recall F1 Accuracy OverAttr FalseAttr
+claude-3-5-sonnet
+.398
+.485
+.410
+.646
+.515
+.647
+deepseek-V3
+.404
+.493
+.404
+.624
+.493
+.497
+gemini-1.5-pro
+.429
+.517
+.430
+.665
+.427
+.552
+gpt-4o
+.390
+.485
+.396
+.637
+.577
+.587
+llama-3.1-405B
+.442
+.494
+.429
+.677
+.476
+.457
+Table 3. Performance of five state-of-the-art models in few-shot experiments. Bold
+values denote improvements over the corresponding zero-shot results.
+sometimes introduce noise and does not uniformly improve fine-grained skill di-
+agnosis. Reasoning-oriented models produced similarly mixed results.
+While some reasoning-oriented models (e.g., DeepSeek-R1, GPT-o1) achieved
+higher F1 scores and accuracy than their non-reasoning counterparts, Gemini
+performed worse. These results suggest that reasoning mechanisms do not uni-
+formly translate into improved cognitive diagnosis. Model size showed a
+moderate positive relationship with performance. Larger models gen-
+erally achieved higher F1 scores than smaller ones, indicating that increased
+parameter capacity supports a more robust interpretation of student responses.
+However, the correlation was moderate (Spearman’s ρ = .570, p = .053), sug-
+gesting that scale alone is insufficient to account for the substantial variability in
+performance across models. Finally, few-shot prompting did not improve
+diagnostic performance. While in-context examples might seem helpful for
+
+10
+Y. Kim et al.
+such nuanced tasks, F1 and accuracy often decreased rather than improved (Ta-
+ble 3), suggesting the challenge lies in the complexity of cognitive skill diagnosis
+rather than prompt design. However, few-shot prompting did reduce tendencies
+toward evidence over-attribution and false-attribution, indicating that examples
+may encourage more cautious, evidence-grounded responses even when overall
+diagnostic accuracy remains limited. Taken together, these findings suggest that
+prompt engineering and model capabilities have limited impact on improving
+the performance of cognitive skill diagnosis.
+5.2
+RQ2. How does the evidential strength of student responses
+affect LLM’s cognitive skill diagnosis performance?
+Vague
+Evident
+Evidential Strength
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+F1 Score
+F1 Score Paired Lines
+model type
+Large model
+Medium Model
+Small model
+Multimodal model
+Reasoning model
+fewshot
+Vague
+Evident
+Evidential Strength
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+F1 Score
+F1 Score Distribution
+Vague
+Evident
+Evidential Strength
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+Accuracy
+Accuracy Paired Lines
+Vague
+Evident
+Evidential Strength
+0.1
+0.2
+0.3
+0.4
+0.5
+0.6
+0.7
+0.8
+Accuracy
+Accuracy Distribution
+Fig. 4. Effect of evidential strength on LLM diagnostic performance for every model.
+Our results reveal a strong dependency of LLM diagnostic perfor-
+mance on the evidential strength of student responses. Across all models,
+both F1 score (t = 64.60, p < .001) and accuracy (t = 17.80, p < .001) were
+substantially higher when student responses contained evident evidence for a
+cognitive skill than when evidence was vague (Fig. 4). The magnitude of this
+gap was substantial (mean ∆F1 = .51; mean ∆Acc = .41), indicating that cur-
+rent LLMs rely heavily on explicit evidence and exhibit limited robustness when
+reasoning under weak or implicit evidential conditions.
+Beyond degraded performance, models also exhibited over-attribution
+bias under vague evidence. Specifically, they frequently labeled responses as
+Evident even when the ground-truth evidential strength was Vague, resulting
+in consistently high OverAttr values. More concerningly, models also showed
+a strong tendency toward FalseAttr, in which they asserted evident evidence
+despite arriving at incorrect cognitive skill diagnoses. In such cases, models pro-
+duced unsupported explanations that appeared plausible yet were not grounded
+in students’ actual responses. Notably, these two tendencies were strongly cor-
+related across models (Spearman’s ρ = .837, p < .001), indicating that models
+prone to over-attributing evidential strength are also more likely to produce
+
+LLMs for Diagnosing Cognitive Skill in Math
+11
+incorrect diagnoses with asserted evidence. This behavior is particularly prob-
+lematic for educational use, as it can mislead teachers and students by presenting
+incorrect diagnoses with seemingly well-justified rationales [15].
+Error code
+Description
+Count (%)
+E1. Evidence Misidentification Incorrectly identifying or relying on insufficient evidence from the student response.
+659 (23.40%)
+E2. Rubric Misinterpretation
+Misunderstanding the diagnostic rubric or evaluation criteria.
+279 (9.91%)
+E3. Over-Inference
+Inferring unstated reasoning beyond the information provided in the student response. 942 (33.45%)
+E4. Consistency Issue
+Inconsistencies between evidence, explanation, and final verdict.
+379 (13.46%)
+E5. Hallucination
+Introducing content or reasoning not present in the student response.
+557 (19.78%)
+Table 4. Error types and their distribution identified from qualitative analysis of LLM
+diagnostic failures under vague evidence.
+To better understand how such errors arise, we conducted a qualitative er-
+ror analysis of model outputs under incorrectly diagnosed vague evidence cases.
+We examined all components generated in the models’ CoT responses, includ-
+ing the identified evidence, explanations, and final verdicts, focusing on how
+the models misinterpreted students’ answers, generated unsupported reasoning,
+and ultimately reached incorrect diagnoses. Three authors collaboratively ana-
+lyzed 372 cases (13.2%) sampled from a total of 2,816 error instances, covering
+18 model responses, and iteratively derived five recurring error types with sub-
+stantial inter-rater reliability (Fleiss’ κ = 0.74). The remaining cases were then
+independently labeled using the agreed error taxonomy.
+Table 4 summarizes the distribution of error types across model categories.
+Errors related to over-inference were most prevalent (33.5%), followed by evi-
+dence misidentification (23.4%) and hallucination (19.8%). We further observed
+systematic differences across model types (Figure 5): smaller models exhibited
+a higher proportion of hallucination errors (48.78%), whereas reasoning-oriented
+models committed over-inferred more frequently (46.61%) beyond the informa-
+tion explicitly provided in student responses.
+Reasoning Model
+Multimodal Model
+Large Model
+Medium Model
+Small Model
+0
+250
+500
+750
+1000
+E1. Evidence Misidentification
+E2. Rubric Misinterpretation
+E3. Over-Inference
+E4. Consistency Issue
+E5. Hallucination 
+Fig. 5. Error type distribution by model category.
+
+12
+Y. Kim et al.
+6
+Discussion
+Our findings imply that current LLMs are not yet reliable for cognitive skill di-
+agnosis without intermediate verification, as errors cascade throughout the diag-
+nostic pipeline. Performance was strongly constrained by the evidential strength
+in student responses rather than by model capabilities. This challenge is closely
+tied to the nature of students’ handwritten work, which often omits intermediate
+reasoning and expresses ideas in implicit or non-linear ways, making diagnostic
+evidence difficult to assess [11,24]. Under such conditions, LLMs tend to over-
+attribute evidential strength and, in some cases, arrive at incorrect diagnoses
+with asserted evidence, raising concerns for real-world educational use.
+Our findings point to an important opportunity: richer diagnostic evidence
+could improve cognitive diagnosis. One promising direction is to design problem-
+solving tasks and interfaces that better elicit students’ reasoning processes and
+justifications, help them organize their steps tidily, and prompt reflection on
+strategy choices. For example, interactive interfaces could track diagnostic evi-
+dence in real-time and request clarification when evidence appears weak, shifting
+from post-hoc inference to active elicitation of cognitive processes.
+Beyond task design, our qualitative error analysis highlights the importance
+of teacher-in-the-loop approaches for mitigating diagnostic failures. Diagnostic
+errors followed recurring patterns across key stages of the diagnostic process,
+including identifying evidence, interpreting diagnostic criteria, and synthesizing
+intermediate reasoning into final judgments. At these stages, teachers can inter-
+vene in targeted ways. Errors such as evidence misidentification can be mitigated
+by having teachers validate whether the identified evidence is actually present
+in the student’s work. Rubric misinterpretation can be addressed by allowing
+teachers to check and correct how model interpretations align with diagnostic
+criteria. For over-inference, teachers can scrutinize whether inferred cognitive
+skills are sufficiently supported by observable evidence, preventing unwarranted
+extrapolation. Consistency issues and hallucinations require human oversight
+to ensure coherence between intermediate reasoning and final diagnostic judg-
+ments. Rather than treating model outputs as final assessments, such selec-
+tive human intervention can reduce diagnostic errors, consistent with prior work
+on evidence-supported reasoning [28] and human-AI complementary assessment
+workflows [26]. Overall, responsibly integrating LLMs into educational assess-
+ment requires moving beyond fully automated diagnosis toward transparency
+and selective human verification.
+7
+Future Work
+While we present a novel, carefully crafted benchmark for evaluating LLM-based
+cognitive skill diagnosis, several directions remain for future work. First, the
+benchmark can be extended in a more targeted manner. Synthetic data gen-
+eration [3] could selectively augment diagnostically challenging cases, such as
+student responses with implicit or vague evidence. Our analysis of 3,036 ver-
+dicts highlights where such challenges arise, motivating controlled data expansion
+
+LLMs for Diagnosing Cognitive Skill in Math
+13
+rather than indiscriminate scaling. Second, future work can broaden the range
+of cognitive demands represented in the dataset. Reasoning-oriented problems
+that require students to generalize or justify their thinking are currently under-
+represented in MathCog, and expanding coverage across problem types, topics,
+and grade levels would enable more comprehensive evaluation. Finally, beyond
+dataset expansion, future work can explore richer evaluation settings for cogni-
+tive diagnosis, such as human–AI collaborative diagnosis scenarios or analyzing
+how LLMs revise diagnostic judgments when provided with additional evidence.
+It could shed light on the reliability and practical use of LLM-based diagnostic
+systems in educational contexts.
+References
+1. Achiam, J., Adler, S., Agarwal, S., Ahmad, L., Akkaya, I., Aleman, F.L., Almeida,
+D., Altenschmidt, J., Altman, S., Anadkat, S., et al.: Gpt-4 technical report. arXiv
+preprint arXiv:2303.08774 (2023)
+2. Ahn, J., Verma, R., Lou, R., Liu, D., Zhang, R., Yin, W.: Large language
+models for mathematical reasoning: Progresses and challenges. arXiv preprint
+arXiv:2402.00157 (2024)
+3. Anaby-Tavor, A., Carmeli, B., Goldbraich, E., Kantor, A., Kour, G., Shlomov,
+S., Tepper, N., Zwerdling, N.: Do not have enough data? deep learning to
+the rescue! In: AAAI Conference on Artificial Intelligence (2019), https://api.
+semanticscholar.org/CorpusID:212821571
+4. Baral, S., Lucy, L., Knight, R., Ng, A., Soldaini, L., Heffernan, N.T., Lo, K.:
+Drawedumath: Evaluating vision language models with expert-annotated students’
+hand-drawn math images. arXiv preprint arXiv:2501.14877 (2025)
+5. Didolkar,
+A.,
+Goyal,
+A.,
+Ke,
+N.R.,
+Guo,
+S.,
+Valko,
+M.,
+Lillicrap,
+T.,
+Jimenez Rezende, D., Bengio, Y., Mozer, M.C., Arora, S.: Metacognitive capabili-
+ties of llms: An exploration in mathematical problem solving. Advances in Neural
+Information Processing Systems 37, 19783–19812 (2024)
+6. Fang, M., Wan, X., Lu, F., Xing, F., Zou, K.: Mathodyssey: Benchmarking math-
+ematical problem-solving skills in large language models using odyssey math data.
+arXiv preprint arXiv:2406.18321 (2024)
+7. Graham, M., Milanowski, A., Miller, J.: Measuring and promoting inter-rater
+agreement of teacher and principal performance ratings. Online Submission (2012)
+8. Guo, D., Yang, D., Zhang, H., Song, J., Zhang, R., Xu, R., Zhu, Q., Ma, S.,
+Wang, P., Bi, X., et al.: Deepseek-r1: Incentivizing reasoning capability in llms via
+reinforcement learning. arXiv preprint arXiv:2501.12948 (2025)
+9. Hao, S., Gu, Y., Luo, H., Liu, T., Shao, X., Wang, X., Xie, S., Ma, H., Samavedhi,
+A., Gao, Q., et al.: Llm reasoners: New evaluation, library, and analysis of step-
+by-step reasoning with large language models. arXiv preprint arXiv:2404.05221
+(2024)
+10. Hellman, S., Andrade, A., Habermehl, K.: Scalable and explainable automated
+scoring for open-ended constructed response math word problems. In: Proceed-
+ings of the 18th Workshop on Innovative Use of NLP for Building Educational
+Applications (BEA 2023). pp. 137–147 (2023)
+11. Henderson, C., Yerushalmi, E., Kuo, V.H., Heller, P., Heller, K.: Grading student
+problem solutions: The challenge of sending a consistent message. American Jour-
+nal of Physics 72(2), 164–169 (2004)
+
+14
+Y. Kim et al.
+12. Jin, H., Kim, Y., Park, Y.S., Tilekbay, B., Son, J., Kim, J.: Using large language
+models to diagnose math problem-solving skills at scale. In: Proceedings of the
+Eleventh ACM Conference on Learning@ Scale. pp. 471–475 (2024)
+13. Kaggle,
+Eedi:
+Eedi
+-
+mining
+misconceptions
+in
+mathemat-
+ics
+dataset
+(2020),
+https://www.kaggle.com/competitions/
+eedi-mining-misconceptions-in-mathematics, accessed: 2025-05-21
+14. Kheong, F.H.: Information processing taxonomy (ipt): An alternative technique
+for assessing mathematical problem-solving (1994)
+15. Kim, S.S., Vaughan, J.W., Liao, Q.V., Lombrozo, T., Russakovsky, O.: Fostering
+appropriate reliance on large language models: The role of explanations, sources,
+and inconsistencies. In: Proceedings of the 2025 CHI Conference on Human Factors
+in Computing Systems. pp. 1–19 (2025)
+16. Liu, T., Chatain, J., Kobel-Keller, L., Kortemeyer, G., Willwacher, T., Sachan,
+M.: Ai-assisted automated short answer grading of handwritten university level
+mathematics exams. arXiv preprint arXiv:2408.11728 (2024)
+17. Livingston, S.A.: Constructed-response test questions: Why we use them; how we
+score them. r&d connections. number 11. Educational Testing Service (2009)
+18. Lucy, L., August, T., Wang, R.E., Soldaini, L., Allison, C., Lo, K.: Mathfish: Evalu-
+ating language model math reasoning via grounding in educational curricula. arXiv
+preprint arXiv:2408.04226 (2024)
+19. Ma, H., Wang, C., Song, S., Yang, S., Zhang, L., Zhang, X.: Large language mod-
+els are zero-shot cross-domain diagnosticians in cognitive diagnosis. Frontiers of
+Digital Education 2(2), 1–14 (2025)
+20. Macina, J., Daheim, N., Hakimi, I., Kapur, M., Gurevych, I., Sachan, M.: Mathtu-
+torbench: A benchmark for measuring open-ended pedagogical capabilities of llm
+tutors. arXiv preprint arXiv:2502.18940 (2025)
+21. Morrison, B.B., Margulieux, L.E., Guzdial, M.: Subgoals, context, and worked
+examples in learning computing problem solving. In: Proceedings of the eleventh
+annual international conference on international computing education research. pp.
+21–29 (2015)
+22. Mullis, I.V.: Timss 2019 assessment frameworks: Introduction (2017), monitoring
+Trends in Mathematics and Science Achievement
+23. OpenAI: Learning to reason with llms (January 2024), https://openai.com/
+index/learning-to-reason-with-llms/
+24. Rahbarnia, F., Hamedian, S., Radmehr, F.: A study on the relationship between
+multiple intelligences and mathematical problem solving based on revised bloom
+taxonomy. Journal of Interdisciplinary Mathematics 17(2), 109–134 (2014)
+25. Reed, S.K., Ackinclose, C.C., Voss, A.A.: Selecting analogous problems: Similarity
+versus inclusiveness. Memory & cognition 18(1), 83–98 (1990)
+26. Strong, J., Men, Q., Noble, J.A.: Trustworthy and practical ai for healthcare: A
+guided deferral system with large language models. In: Proceedings of the AAAI
+Conference on Artificial Intelligence. vol. 39, pp. 28413–28421 (2025)
+27. Wang, B., Yue, X., Sun, H.: Can chatgpt defend its belief in truth? evaluating llm
+reasoning via debate. arXiv preprint arXiv:2305.13160 (2023)
+28. Wang, P., Wang, Y., Diao, M., He, K., Dong, G., Xu, W.: Multi-perspective con-
+sistency enhances confidence estimation in large language models. arXiv preprint
+arXiv:2402.11279 (2024)
+29. Weitekamp, D., Siddiqui, M.N., MacLellan, C.J.: Tutorgym: A testbed for evalu-
+ating ai agents as tutors and students. arXiv preprint arXiv:2505.01563 (2025)
+
+LLMs for Diagnosing Cognitive Skill in Math
+15
+30. Zhang, D., Yu, Y., Dong, J., Li, C., Su, D., Chu, C., Yu, D.: Mm-llms: Recent
+advances in multimodal large language models. arXiv preprint arXiv:2401.13601
+(2024)
+31. Zhang, R., Jiang, D., Zhang, Y., Lin, H., Guo, Z., Qiu, P., Zhou, A., Lu, P.,
+Chang, K.W., Qiao, Y., et al.: Mathverse: Does your multi-modal llm truly see the
+diagrams in visual math problems? In: European Conference on Computer Vision.
+pp. 169–186. Springer (2024)
+
+16
+Y. Kim et al.
+A
+Appendix
+A.1
+Prompts
+The blue text represents the programmatically filled arguments, and the orange
+text represents LLM-generated output.
+A.2
+System Prompt
+# **Task Description**
+You are a middle school math teacher tasked with evaluating students’
+mathematical thinking skills based on their responses to math problems.
+Your goal is to analyze a given student’s response and determine whether
+they exhibit specific cognitive skills in solving the problem. Your
+evaluation must be **strict** and **evidence-based**, meaning that every
+verdict must be backed by direct evidence from the response. If no clear
+evidence exists, do not assume correctness.
+## **Evaluation Categories**
+For each thinking skill in the checklist, you must classify the
+student’s performance into one of the following categories:
+- **Evident Yes**: The student’s response provides clear and explicit
+evidence that the check item is met. A direct quote from the response
+can confirm this.
+- **Vague Yes**: The response suggests that the check item might be
+satisfied, but no specific part of the response directly proves it.
+- **Evident No**: The response explicitly contradicts or fails to meet
+the check item, with clear evidence demonstrating the error or omission.
+- **Vague No**: The response does not appear to satisfy the check item,
+but there is no direct evidence confirming whether the student
+considered it or not.
+## **Input Format**
+You will receive the following data:
+- **Problem**: A math problem given to a student.
+- **Answer**: The correct step-by-step solution.
+- **Response**: The student’s response to the problem.
+- **Check Items**: A set of specific skills to evaluate.
+## **Output Format**
+Return a valid JSON object structured as follows:
+‘‘‘json
+{
+"skills": [
+{
+"checkItem": "<Check Item’s [Label] and the Following
+Question>",
+"evidence": "<Directly Quoted Part of Response>",
+
+LLMs for Diagnosing Cognitive Skill in Math
+17
+"explanation": "<Explanation About Why the Evidence Supports
+the Verdict>",
+"verdict": "Evident Yes" | "Vague Yes" | "Evident No" |
+"Vague No"
+}
+]
+}
+‘‘‘
+A.3
+User Prompt
+# **Task**
+student responses to math problems, extract direct evidence, and
+strictly classify thinking skills according to the given categories.
+Return a valid JSON object structured as follows:
+‘‘‘json
+{
+"skills": [
+{
+"checkItem": "<Check Item’s [Label] and the Following
+Question>",
+"evidence": "<Directly Quoted Part of Response>",
+"explanation": "<Explanation About Why the Evidence Supports
+the Verdict>",
+"verdict": "Evident Yes" | "Vague Yes" | "Evident No" |
+"Vague No"
+}
+]
+}
+‘‘‘
+**Problem:**
+There is a two-digit natural number whose tens digit is 1. If the number
+that changes the tens and ones digits of this natural number is 9 less
+than 5 times the first number, find the first number.
+**Answer:**
+If the number in the ones place is x, this natural number is 10 + x. The
+number where the tens digit and the ones digit are swapped is 10x + 1
+because the tens digit is x and the ones digit is 1. The changed number
+is 9 smaller than 5 times the first number, so 10x + 1 = 5(10 + x) −9
+10x + 1 = 5x + 41 5x = 40 x = 8 Therefore, the first number is 18.
+**Response:**
+1 x x 1 10x + 1 = 5(10 + x) −9 10x + 1 = 50 + 5x −9 41 5x = 40 x = 8
+**Check Items:**
+- [recognize_0] Is the student aware that the relationship between two
+numbers switched can be expressed as addition/subtraction/multiplication?
+
+18
+Y. Kim et al.
+- [recognize_1] Has the student figured out all the elements necessary to
+solve the problem (original numbers, swapped numbers, difference or
+multiple relationships, etc.)?
+- [compute_0] Has the student performed algebraic calculations correctly,
+such as expanding expressions and organizing similar terms?
+- [determine_0] Has the student chosen the appropriate approach to
+solving the problem (e.g., establishing a linear equation)?
+- [represent_0] Are two-digit numbers expressed correctly in the form 10x
++ y (or equivalent)?
+- [implement_0] Does the student proceed consistently with the process of
+expanding the equation and moving terms to find x (or y) according to the
+planned solution strategy?
+**Output:**
+{
+"skills": [
+{
+"checkItem": "[recognize_0] Is the student aware that the
+relationship between two numbers switched can be expressed as
+addition/subtraction/multiplication?",
+"evidence": "10 x+1=5(10+x)-9",
+"explanation": "The student sets up the equation
+10x+1=5(10+x)-9, which shows they understand the relationship
+between the original and swapped numbers involves subtraction
+and multiplication.",
+"verdict": "Evident Yes"
+}, {
+"checkItem": "[recognize_1] Has the student figured out all
+the elements necessary to solve the problem (original numbers,
+swapped numbers, difference or multiple relationships,
+etc.)?",
+"evidence": "10 x+1=5(10+x)-9",
+"explanation": "The student uses the correct equation to
+represent the relationship between the original and swapped
+numbers, indicating they have identified the necessary
+elements.",
+"verdict": "Evident Yes"
+},
+...
+]
+}
+A.4
+MathCog Dataset Details
+This section provides supplementary details of the MathCog dataset, including
+the diagnostic workflow, cognitive skill taxonomy, inter-rater reliability of teach-
+ers’ diagnoses, dataset composition, and representative failure cases of model
+diagnoses.
+
+LLMs for Diagnosing Cognitive Skill in Math
+19
+Domains Cognitive Skills
+Description
+Knowing
+Recall
+Recall definitions, terminology, number properties, units of measurement,
+geometric properties, and notation (e.g., a × b = ab, a + a + a = 3a).
+Recognize
+Recognize numbers, expressions, quantities, and shapes. Recognize entities
+that are mathematically equivalent (e.g., equivalent familiar fractions,
+decimals, and percents; different orientations of simple geometric figures).
+Classify/Order
+Classify numbers, expressions, quantities, and shapes by common properties.
+Compute
+Carry out algorithmic procedures for +, −, ×, ÷ or a combination of these
+with whole numbers, fractions, decimals, and integers. Carry out
+straightforward algebraic procedures.
+Retrieve
+Retrieve information from graphs, tables, texts, or other sources.
+Measure
+Use measuring instruments; and choose appropriate units of measurement.
+Applying
+Determine
+Determine efficient/appropriate operations, strategies, and tools for solving
+problems for which there are commonly used methods of solution.
+Represent/Model
+Display data in tables or graphs; create equations, inequalities, geometric
+figures, or diagrams that model problem situations; and generate equivalent
+representations for a given mathematical entity or relationship.
+Implement
+Implement strategies and operations to solve problems involving familiar
+mathematical concepts and procedures.
+Reasoning
+Analyze
+Determine, describe, or use relationships among numbers, expressions,
+quantities, and shapes.
+Integrate/Synthesize Link different elements of knowledge, related representations, and
+procedures to solve problems.
+Evaluate
+Evaluate alternative problem solving strategies and solutions.
+Draw conclusions
+Make valid inferences on the basis of information and evidence.
+Generalize
+Make statements that represent relationships in more general and more
+widely applicable terms.
+Justify
+Provide mathematical arguments to support a strategy or solution.
+Table 5. Fifteen cognitive skills and their descriptions defined in the TIMSS 2019
+framework.
+Topics
+Content Domain Difficulty
+1. Problems involving the digits of numbers
+Number
+1, 3
+2. Solving for unknowns under special conditions on the solution
+Algebra
+1, 2, 3
+3. Finding unknowns when two equations have the same solution
+Algebra
+1, 2
+4. Applying linear inequalities to geometric figures
+Geometry
+2, 3
+5. Applying linear inequalities to pricing
+Algebra
+1, 2
+7. Using square roots to calculate lengths in geometric figures
+Geometry
+2, 3
+8. Performing simple addition and subtraction of square roots
+Number
+1, 2
+9. Applying multiplication formulas
+Number
+2, 3
+10. Determining coefficients or constants to complete the square
+Number
+1, 2, 3
+11. Solving quadratic equations by factoring
+Algebra
+1, 2
+12. Rewriting expressions in perfect square form
+Algebra
+1, 2
+15. Finding the quadratic function given the vertex and another point on its graph Algebra
+1, 2
+Table 6. The topics and difficulty levels of problems. This information comes from the
+original dataset’s metadata, which details the topic and difficulty level (1-3) of each
+problem. The isomorphic problems require the same mathematical concept to solve,
+but the difference in numbers makes one more tricky and complicated than the other.
+Topics 1
+2
+3
+4
+5
+6
+7
+8
+9 10 11 12 13 14 15
+% Agreement 95 70 96 95 89 68 74 86 80 80 100 88 40 57 78
+Table 7. The inter-rater percentage absolute agreement of each topic. The percentage
+indicates the ratio of unanimous verdicts in each teacher group.
+
+20
+Y. Kim et al.
+Recall Recognize Classify/Order Compute Determine Represent Implement
+Evident Yes
+413
+434
+92
+522
+441
+122
+307
+Evident No
+62
+56
+8
+125
+54
+33
+140
+Vague Yes
+20
+16
+2
+26
+25
+0
+18
+Vague No
+35
+28
+0
+20
+16
+3
+18
+Student responses
+530
+534
+102
+693
+536
+158
+483
+Table 8. Distribution of verdicts and number of diagnosed student responses in each
+cognitive skill. Note that the number of student responses can be larger than the sum of
+the four labels because some diagnostic checklists have two items for the same cognitive
+skill.
+Fig. 6. Illustrative examples of diagnosis check items and student responses that LLMs
+failed to diagnose correctly. Evidence for human judgment is marked with a red box.

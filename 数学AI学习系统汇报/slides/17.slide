@@ -1,0 +1,69 @@
+<Slide style={{ padding: 0, background: '#FFFFFF' }}>
+    <Box style={{ height: 72, background: '#1E4FA8', paddingLeft: 40, paddingRight: 40, justifyContent: 'center' }}>
+        <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#FFFFFF' }}>03 · 试卷质量分析：出卷质量第一次可以被量化</Text>
+    </Box>
+
+    <Box style={{ flex: 1, paddingTop: 14, paddingBottom: 12, paddingLeft: 40, paddingRight: 40, justifyContent: 'space-between' }}>
+        <Text style={{ fontSize: 21, color: '#4A5568', lineHeight: 1.5 }}>
+            不看学生作答，只评价卷子本身：先有目标，再衡量偏差与缺口。
+        </Text>
+
+        <Box style={{ flexDirection: 'row', gap: 20, alignItems: 'stretch', flex: 1 }}>
+            <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 18, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ fontSize: 19, color: '#8B97A8' }}>指标一</Text>
+                    <Text style={{ fontSize: 25, fontWeight: 'bold', color: '#1E4FA8' }}>难度拟合</Text>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 12 }}>
+                    <Text style={{ fontSize: 18, color: '#0E3F8C', lineHeight: 1.5 }}>得分 = 15 − RMSE(实际难度, 目标难度)</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Text style={{ fontSize: 19, color: '#1A2230', lineHeight: 1.5 }}>模板为每题设定目标难度区间，逐题比对后给出偏差。</Text>
+                    <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.5 }}>每题输出偏难 / 偏易 / 匹配的方向，并支持小问级细分。</Text>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 11 }}>
+                    <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.4 }}>整卷得分越高，说明实际难度越贴近命题意图。</Text>
+                </Box>
+            </Box>
+
+            <Box style={{ flex: 1, background: '#F0F5FC', borderRadius: 8, border: '1px solid #D6DCE5', padding: 18, justifyContent: 'space-between' }}>
+                <Box style={{ flexDirection: 'column', gap: 6 }}>
+                    <Text style={{ fontSize: 19, color: '#8B97A8' }}>指标二</Text>
+                    <Text style={{ fontSize: 25, fontWeight: 'bold', color: '#1E4FA8' }}>覆盖评估</Text>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 12 }}>
+                    <Text style={{ fontSize: 18, color: '#0E3F8C', lineHeight: 1.5 }}>得分 = Σ权重·下限² − Σ权重·缺口²</Text>
+                </Box>
+                <Box style={{ flexDirection: 'column', gap: 8 }}>
+                    <Text style={{ fontSize: 19, color: '#1A2230', lineHeight: 1.5 }}>知识点与解题属性双重覆盖，缺口区分「不足」与「超出」。</Text>
+                    <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.5 }}>二次罚函数让「严重缺失」比「多处轻微缺失」扣得更多。</Text>
+                </Box>
+                <Box style={{ background: '#FFFFFF', borderRadius: 6, padding: 11 }}>
+                    <Text style={{ fontSize: 18, color: '#4A5568', lineHeight: 1.4 }}>属性六维由正则触发与步骤五维共同判定，标记为候选待确认。</Text>
+                </Box>
+            </Box>
+        </Box>
+
+        <Box style={{ background: '#E8EFF8', borderRadius: 8, border: '1px solid #3D7BD9', padding: 14, flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+            <Box style={{ width: 240, flexDirection: 'column', gap: 4 }}>
+                <Text style={{ fontSize: 21, fontWeight: 'bold', color: '#0E3F8C' }}>克制的设计</Text>
+                <Text style={{ fontSize: 17, color: '#4A5568', lineHeight: 1.4 }}>不确定时不假装确定</Text>
+            </Box>
+            <Text style={{ fontSize: 19, color: '#1A2230', flex: 1, lineHeight: 1.5 }}>
+                当知识点尚未核对完、或仍有题目未解答时，系统不会把「不足」计为确定缺失，只给出预览分并说明原因。
+            </Text>
+        </Box>
+
+        <Box style={{ background: '#0E3F8C', borderRadius: 8, padding: 12, flexDirection: 'row', alignItems: 'center', gap: 14 }}>
+            <Box style={{ width: 6, height: 32, background: '#FFC107' }} />
+            <Text style={{ fontSize: 19, color: '#FFFFFF', lineHeight: 1.5, flex: 1 }}>
+                输出：逐题难度明细、知识点与属性覆盖矩阵、以及需要人工复核的题目清单。
+            </Text>
+        </Box>
+    </Box>
+
+    <Box style={{ height: 44, paddingLeft: 40, paddingRight: 40, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', background: '#F7F9FC', borderTop: '1px solid #E5E7EB' }}>
+        <Text style={{ fontSize: 14, color: '#8B97A8' }}>高中数学 AI 学习系统 · 技术框架汇报</Text>
+        <Text style={{ fontSize: 15, color: '#1E4FA8' }}>17 / 24</Text>
+    </Box>
+</Slide>
