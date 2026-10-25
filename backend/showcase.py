@@ -31,10 +31,10 @@ LEGACY_ANCHORS = {
 }
 ASSET_PATHS = {
     "/showcase/style.css", "/showcase/app.js", "/showcase/bank.js", "/showcase/data.json", "/showcase/pipeline.json",
+    "/showcase/research-content.json", "/showcase/recordings.json", "/showcase/launch-lettering.svg",
+    "/showcase/fonts/studyagent-handwriting.woff2", "/showcase/fonts/OFL.txt",
+    "/showcase/fonts/coverage.json", "/showcase/fonts/README.md",
     "/showcase/question-bank/manifest.json", "/showcase/question-bank/index.json",
-    "/showcase/assets/ellipse-question.svg", "/showcase/assets/ellipse-page.svg",
-    "/showcase/assets/pyramid-question.svg", "/showcase/assets/pyramid-page.svg",
-    "/showcase/assets/student-paper.pdf", "/showcase/assets/teacher-paper.pdf",
     "/style.css", "/routine-graph.css", "/dimchart.js", "/radar.js", "/launch-lettering.svg",
     "/geometry.js", "/geometry.css",
     "/vendor/katex/katex.min.js", "/vendor/katex/katex.min.css",

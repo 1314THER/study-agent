@@ -12,13 +12,24 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class ShowcaseBankTests(unittest.TestCase):
-    def test_published_library_contains_33_real_questions_and_full_steps(self):
+    def test_published_library_contains_only_source_verified_national_questions(self):
         root=ROOT/'frontend/showcase/question-bank'
         manifest=verify(root)
-        self.assertEqual(manifest['count'],33)
+        self.assertEqual(manifest['count'],2)
         self.assertEqual(set(manifest['files']),{'index.json','part-0000.json'})
         rows=json.loads((root/'part-0000.json').read_text())
+        self.assertEqual(set(rows), {'20230117', '20250116'})
         self.assertTrue(all(row['question'] and row['answer_json']['chunk_results'] for row in rows.values()))
+        for row in rows.values():
+            self.assertEqual(row['region'], '全国卷')
+            self.assertTrue(all('全国' in source['name'] and source['url'].startswith('https://') for source in row['sources']))
+            self.assertTrue(all(source['question_no'] in ('16', '17') for source in row['sources']))
+        recorded=json.loads((ROOT/'frontend/showcase/pipeline.json').read_text())['examples']
+        for identifier,qid in [('national-2023-q17','20230117'),('national-2025-q16','20250116')]:
+            original=recorded[identifier]['xuefeng']['answer_json']
+            self.assertEqual(rows[qid]['answer'],original['final_answer'])
+            for saved,expected in zip(rows[qid]['answer_json']['chunk_results'],original['chunk_results']):
+                self.assertEqual(saved['steps'],expected['steps'])
         text=json.dumps(rows,ensure_ascii=False)
         for private in ('user_id','last_viewed_at','last_exam_at','practice_records','api_key','"owner"','/Users/'):
             self.assertNotIn(private,text)

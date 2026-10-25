@@ -60,7 +60,7 @@
         const block=h.el('section','bank-chunk');block.append(h.el('h4','','第 '+chunk.chunk_id+' 问'));
         for(const step of chunk.steps){
           const card=h.el('article','bank-step');card.append(h.el('h4','','步骤 '+step.step_number+'：'+step.title),h.p(step.standard_writing));
-          if(step.detailed_writing){const detail=h.el('details','step-detail');detail.append(h.el('summary','','详细过程'),h.p(step.detailed_writing,'detail-content'));card.append(detail);}
+          if(step.detailed_writing)card.append(h.details('详细过程',h.p(step.detailed_writing,'detail-content'),'step-detail'));
           block.append(card);
         }
         root.append(block);
@@ -83,10 +83,9 @@
       const item=await detail(id);if(sequence!==state.sequence)return;
       root.replaceChildren(h.el('div','bank-detail-meta',[item.year&&item.year+'年',item.type,...item.categories].filter(Boolean).join(' / ')),h.p(item.question,'bank-question'));
       images(root,item);
-      const answers=h.el('details','step-detail bank-answer');answers.append(h.el('summary','','答案与解析'));
       const answer=h.el('div','detail-content');answer.append(h.p(item.answer||'题源未附答案。','bank-original-answer'));
       explanation(answer,item);
-      answers.append(answer);root.append(answers);
+      root.append(h.details('答案与解析',answer,'step-detail bank-answer'));
       const origins=h.el('section','bank-sources');origins.append(h.el('h3','','题目出处'));
       for(const source of item.sources){
         const line=h.el('p');let caption=source.name+(source.question_no?' / 第'+source.question_no+'题':'')+(source.page_start?' / 第'+source.page_start+'页':'');

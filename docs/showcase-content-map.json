@@ -1,0 +1,718 @@
+{
+  "schema_version": 1,
+  "reviewed_at": "2026-10-25",
+  "read_policy": "每章设计前完整阅读其 source_docs，保留原始文件 SHA256 和参考章节；不能仅以标题、摘要或计划替代全文。",
+  "implementation_snapshot": "数量为2026-10-24快照；能力补充截至2026-10-25，不是线上部署验收。",
+  "source_count": 15,
+  "chapters": [
+    {
+      "id": "overview",
+      "title": "以步骤为基础，连接完整学习过程",
+      "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
+      "sources": [
+        {
+          "file": "docs/项目统筹介绍与讨论导航.md",
+          "sha256": "f35d187fe4408351ede1c7e1e1192029385f4087dda06fd686f78a2f3baeef5f",
+          "line_count": 148,
+          "read_completeness": "full",
+          "reference_sections": [
+            "1–5：定位、模块关系、贯穿案例与实现状态"
+          ]
+        },
+        {
+          "file": "docs/StudyAgent-研究亮点与相关工作调研-20261024.md",
+          "sha256": "9db8480cbc39b64f54987018904f7d8dbd64b0d0387331fc2abe1ee57e1e7427",
+          "line_count": 290,
+          "read_completeness": "full",
+          "reference_sections": [
+            "1、5–8、10–13：主张、依据、验证与限制"
+          ]
+        },
+        {
+          "file": "docs/当前实现能力与名词数量.md",
+          "sha256": "c918966c3792ce5ce227c826ca1248ff89707c0a690ca429034e906f8057c26c",
+          "line_count": 149,
+          "read_completeness": "full",
+          "reference_sections": [
+            "2–11：已有基础与差距"
+          ]
+        }
+      ],
+      "research_urls": [],
+      "research_resources": []
+    },
+    {
+      "id": "concepts",
+      "title": "四个概念，三类不同的判断",
+      "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
+      "sources": [
+        {
+          "file": "docs/项目名词与教学关系定义.md",
+          "sha256": "90a0ebb08a2c9cbe1d4aaae8cc2e111cc038a417cefa070d3615cf00e921065e",
+          "line_count": 95,
+          "read_completeness": "full",
+          "reference_sections": [
+            "1–8：全部概念、前置、训练路线与难度定义"
+          ]
+        },
+        {
+          "file": "docs/知识关系图谱-要素关系与掌握度.md",
+          "sha256": "f807dfed8c73687970dcc3b69b65dc56c9441acad9fb991c478ac33fdd213fb1",
+          "line_count": 241,
+          "read_completeness": "full",
+          "reference_sections": [
+            "0–3、6–8：编号空间、粒度、关系及断点"
+          ]
+        },
+        {
+          "file": "docs/当前实现能力与名词数量.md",
+          "sha256": "c918966c3792ce5ce227c826ca1248ff89707c0a690ca429034e906f8057c26c",
+          "line_count": 149,
+          "read_completeness": "full",
+          "reference_sections": [
+            "1、7–8：数量口径与难度差距"
+          ]
+        },
+        {
+          "file": "docs/StudyAgent-研究亮点与相关工作调研-20261024.md",
+          "sha256": "9db8480cbc39b64f54987018904f7d8dbd64b0d0387331fc2abe1ee57e1e7427",
+          "line_count": 290,
+          "read_completeness": "full",
+          "reference_sections": [
+            "5.1、5.4–5.5：方法边界与课程适配"
+          ]
+        }
+      ],
+      "research_urls": [
+        "https://aclanthology.org/2024.findings-emnlp.323/"
+      ],
+      "research_resources": [
+        {
+          "title": "MathFish：让数学任务关联课程标准",
+          "website": "https://aclanthology.org/2024.findings-emnlp.323/",
+          "paper_or_document": "https://aclanthology.org/2024.findings-emnlp.323.pdf"
+        }
+      ]
+    },
+    {
+      "id": "single",
+      "title": "同一份解析，连接四种能力",
+      "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
+      "sources": [
+        {
+          "file": "docs/单题功能设计思路.md",
+          "sha256": "2b799060508e8af1e3d451f14995d9396d7ea36d0672f68d53ac60389ae65ca6",
+          "line_count": 243,
+          "read_completeness": "full",
+          "reference_sections": [
+            "1–5、7–8：四项能力及研究对照"
+          ]
+        },
+        {
+          "file": "docs/当前实现能力与名词数量.md",
+          "sha256": "c918966c3792ce5ce227c826ca1248ff89707c0a690ca429034e906f8057c26c",
+          "line_count": 149,
+          "read_completeness": "full",
+          "reference_sections": [
+            "2–8：模型、流水线、教学、生成与边界"
+          ]
+        },
+        {
+          "file": "docs/StudyAgent-研究亮点与相关工作调研-20261024.md",
+          "sha256": "9db8480cbc39b64f54987018904f7d8dbd64b0d0387331fc2abe1ee57e1e7427",
+          "line_count": 290,
+          "read_completeness": "full",
+          "reference_sections": [
+            "4.2、5.2、5.5：任务区分与工程价值"
+          ]
+        }
+      ],
+      "research_urls": [
+        "https://aclanthology.org/2024.emnlp-main.478/"
+      ],
+      "research_resources": [
+        {
+          "title": "Verify-then-Generate：先验证学生推理，再生成反馈",
+          "website": "https://aclanthology.org/2024.emnlp-main.478/",
+          "paper_or_document": "https://aclanthology.org/2024.emnlp-main.478.pdf"
+        }
+      ]
+    },
+    {
+      "id": "diagnosis",
+      "title": "错误可见，原因仍需要证据",
+      "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
+      "sources": [
+        {
+          "file": "docs/单题功能设计思路.md",
+          "sha256": "2b799060508e8af1e3d451f14995d9396d7ea36d0672f68d53ac60389ae65ca6",
+          "line_count": 243,
+          "read_completeness": "full",
+          "reference_sections": [
+            "3.1–3.6、8.1–8.2：证据、时间与主动诊断"
+          ]
+        },
+        {
+          "file": "docs/待深化功能研究-提示干预与可靠接入.md",
+          "sha256": "44b4ffc2753741312da899fcb9eea5c48b9c6d18ae22f57c95f89423ad74ceab",
+          "line_count": 178,
+          "read_completeness": "full",
+          "reference_sections": [
+            "2–3：提示及两种错误传播"
+          ]
+        },
+        {
+          "file": "docs/当前实现能力与名词数量.md",
+          "sha256": "c918966c3792ce5ce227c826ca1248ff89707c0a690ca429034e906f8057c26c",
+          "line_count": 149,
+          "read_completeness": "full",
+          "reference_sections": [
+            "4–5、9–10：批改、独立性、诊断与来源版本"
+          ]
+        },
+        {
+          "file": "docs/StudyAgent-研究亮点与相关工作调研-20261024.md",
+          "sha256": "9db8480cbc39b64f54987018904f7d8dbd64b0d0387331fc2abe1ee57e1e7427",
+          "line_count": 290,
+          "read_completeness": "full",
+          "reference_sections": [
+            "4.2–4.4、7–9：文献、指标及实现问题"
+          ]
+        }
+      ],
+      "research_urls": [
+        "https://arxiv.org/html/2504.00843v2",
+        "https://numbas.org.uk/behind-the-design/marking.html",
+        "https://shenleixian.github.io/pdf/iPen.pdf"
+      ],
+      "research_resources": [
+        {
+          "title": "MathCog：模糊证据会诱发过度推断",
+          "website": "https://arxiv.org/abs/2504.00843v2",
+          "paper_or_document": "https://arxiv.org/pdf/2504.00843v2"
+        },
+        {
+          "title": "Numbas：后续步骤可以显式依赖前一步回答",
+          "website": "https://www.numbas.org.uk/",
+          "paper_or_document": "https://numbas.org.uk/behind-the-design/adaptive-marking.html"
+        },
+        {
+          "title": "CogChain：数字笔与多模态模型分析作答轨迹",
+          "website": "https://shenleixian.github.io/",
+          "paper_or_document": "https://shenleixian.github.io/pdf/iPen.pdf"
+        }
+      ]
+    },
+    {
+      "id": "library",
+      "title": "把错题变成下一次可执行的复盘",
+      "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
+      "sources": [
+        {
+          "file": "docs/单题功能设计思路.md",
+          "sha256": "2b799060508e8af1e3d451f14995d9396d7ea36d0672f68d53ac60389ae65ca6",
+          "line_count": 243,
+          "read_completeness": "full",
+          "reference_sections": [
+            "6–7：步骤错因、查询、组卷及复盘"
+          ]
+        },
+        {
+          "file": "docs/当前实现能力与名词数量.md",
+          "sha256": "c918966c3792ce5ce227c826ca1248ff89707c0a690ca429034e906f8057c26c",
+          "line_count": 149,
+          "read_completeness": "full",
+          "reference_sections": [
+            "4、6、9：步骤证据、变式与复测"
+          ]
+        },
+        {
+          "file": "docs/知识关系图谱-要素关系与掌握度.md",
+          "sha256": "f807dfed8c73687970dcc3b69b65dc56c9441acad9fb991c478ac33fdd213fb1",
+          "line_count": 241,
+          "read_completeness": "full",
+          "reference_sections": [
+            "4.3、5：题目快照、去重及证据层次"
+          ]
+        }
+      ],
+      "research_urls": [],
+      "research_resources": []
+    },
+    {
+      "id": "routines",
+      "title": "练会一种方法，还要能认出何时使用",
+      "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
+      "sources": [
+        {
+          "file": "docs/套路层面设计思路.md",
+          "sha256": "b1b26b65ae43c8e23733e2d732bf407f6e34542dd4c6f3560f1029f9b91c8818",
+          "line_count": 144,
+          "read_completeness": "full",
+          "reference_sections": [
+            "1–7：完整训练与推荐设计"
+          ]
+        },
+        {
+          "file": "docs/当前实现能力与名词数量.md",
+          "sha256": "c918966c3792ce5ce227c826ca1248ff89707c0a690ca429034e906f8057c26c",
+          "line_count": 149,
+          "read_completeness": "full",
+          "reference_sections": [
+            "5–8：独立性、生成和未贯通边界"
+          ]
+        },
+        {
+          "file": "docs/StudyAgent-研究亮点与相关工作调研-20261024.md",
+          "sha256": "9db8480cbc39b64f54987018904f7d8dbd64b0d0387331fc2abe1ee57e1e7427",
+          "line_count": 290,
+          "read_completeness": "full",
+          "reference_sections": [
+            "5.1–5.2、8.1、8.3：方法边界与迁移实验"
+          ]
+        }
+      ],
+      "research_urls": [
+        "https://pact.cs.cmu.edu/pubs/AIED%202009%20final%20Pavlik%20Cen%20Keodinger%20corrected.pdf"
+      ],
+      "research_resources": [
+        {
+          "title": "PFA：用成功与失败练习历史建立表现基线",
+          "website": "https://pact.cs.cmu.edu/",
+          "paper_or_document": "https://pact.cs.cmu.edu/pubs/AIED%202009%20final%20Pavlik%20Cen%20Keodinger%20corrected.pdf"
+        }
+      ]
+    },
+    {
+      "id": "exam",
+      "title": "评价卷子，也分析学生怎样完成它",
+      "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
+      "sources": [
+        {
+          "file": "docs/试卷与生涯维度设计思路.md",
+          "sha256": "cca4ec803fb14bbb0851e1a6bd20cfa9b146fefd05fe34217c56df051ddc329b",
+          "line_count": 238,
+          "read_completeness": "full",
+          "reference_sections": [
+            "1–5：模板、评价、生成和整卷作答"
+          ]
+        },
+        {
+          "file": "docs/当前实现能力与名词数量.md",
+          "sha256": "c918966c3792ce5ce227c826ca1248ff89707c0a690ca429034e906f8057c26c",
+          "line_count": 149,
+          "read_completeness": "full",
+          "reference_sections": [
+            "7–10：难度、诊断与输入基础"
+          ]
+        },
+        {
+          "file": "docs/知识关系图谱-要素关系与掌握度.md",
+          "sha256": "f807dfed8c73687970dcc3b69b65dc56c9441acad9fb991c478ac33fdd213fb1",
+          "line_count": 241,
+          "read_completeness": "full",
+          "reference_sections": [
+            "4–5：模板快照、确认条件和证据"
+          ]
+        },
+        {
+          "file": "docs/StudyAgent-研究亮点与相关工作调研-20261024.md",
+          "sha256": "9db8480cbc39b64f54987018904f7d8dbd64b0d0387331fc2abe1ee57e1e7427",
+          "line_count": 290,
+          "read_completeness": "full",
+          "reference_sections": [
+            "6–7、10：可支持主张与评测边界"
+          ]
+        }
+      ],
+      "research_urls": [
+        "https://aclanthology.org/2025.acl-long.628/"
+      ],
+      "research_resources": [
+        {
+          "title": "EQPR：教学目标驱动的数学出题",
+          "website": "https://aclanthology.org/2025.acl-long.628/",
+          "paper_or_document": "https://aclanthology.org/2025.acl-long.628.pdf"
+        }
+      ]
+    },
+    {
+      "id": "career",
+      "title": "长期记录，需要能够被新证据修正",
+      "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
+      "sources": [
+        {
+          "file": "docs/试卷与生涯维度设计思路.md",
+          "sha256": "cca4ec803fb14bbb0851e1a6bd20cfa9b146fefd05fe34217c56df051ddc329b",
+          "line_count": 238,
+          "read_completeness": "full",
+          "reference_sections": [
+            "6–9.5：双路线、长期能力、记忆与预算"
+          ]
+        },
+        {
+          "file": "docs/当前实现能力与名词数量.md",
+          "sha256": "c918966c3792ce5ce227c826ca1248ff89707c0a690ca429034e906f8057c26c",
+          "line_count": 149,
+          "read_completeness": "full",
+          "reference_sections": [
+            "5、9–10：独立性和报告基础"
+          ]
+        },
+        {
+          "file": "docs/StudyAgent-研究亮点与相关工作调研-20261024.md",
+          "sha256": "9db8480cbc39b64f54987018904f7d8dbd64b0d0387331fc2abe1ee57e1e7427",
+          "line_count": 290,
+          "read_completeness": "full",
+          "reference_sections": [
+            "4.3、5.3、8.2–8.3：长期诊断与独立学习验证"
+          ]
+        }
+      ],
+      "research_urls": [
+        "https://aclanthology.org/2026.acl-long.1371/"
+      ],
+      "research_resources": [
+        {
+          "title": "LongTutor：取证、诊断与教学行动之间仍有差距",
+          "website": "https://aclanthology.org/2026.acl-long.1371/",
+          "paper_or_document": "https://aclanthology.org/2026.acl-long.1371.pdf"
+        }
+      ]
+    },
+    {
+      "id": "agent",
+      "title": "让一次请求调动同一套教育能力",
+      "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
+      "sources": [
+        {
+          "file": "docs/教学协同Agent设计.md",
+          "sha256": "fbaf3b332379ed58021be90d203af6d8dfdbab0d2033f3148c5d51167e6778ea",
+          "line_count": 117,
+          "read_completeness": "full",
+          "reference_sections": [
+            "1–11：全文角色、编排、沟通及验收"
+          ]
+        },
+        {
+          "file": "docs/试卷与生涯维度设计思路.md",
+          "sha256": "cca4ec803fb14bbb0851e1a6bd20cfa9b146fefd05fe34217c56df051ddc329b",
+          "line_count": 238,
+          "read_completeness": "full",
+          "reference_sections": [
+            "9：个人助教、分层记忆与任务预算"
+          ]
+        },
+        {
+          "file": "docs/当前实现能力与名词数量.md",
+          "sha256": "c918966c3792ce5ce227c826ca1248ff89707c0a690ca429034e906f8057c26c",
+          "line_count": 149,
+          "read_completeness": "full",
+          "reference_sections": [
+            "11：现有工具与适配边界"
+          ]
+        },
+        {
+          "file": "docs/系统Agent适配与MCP插件接入设计.md",
+          "sha256": "eca19e53df0772097af88c385cde31bbc95943f7b606af830d7ce10ffdb3e839",
+          "line_count": 134,
+          "read_completeness": "full",
+          "reference_sections": [
+            "2–5：业务事实与工具层"
+          ]
+        }
+      ],
+      "research_urls": [],
+      "research_resources": []
+    },
+    {
+      "id": "teacher",
+      "title": "让诊断进入下一次教学安排",
+      "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
+      "sources": [
+        {
+          "file": "docs/教师端设计思路.md",
+          "sha256": "2bbd8a55b298a590b407223c2b1688bcbed4605df7d26f36e4dc22c6e0bcce35",
+          "line_count": 93,
+          "read_completeness": "full",
+          "reference_sections": [
+            "1–9：全部七项目标及研究依据"
+          ]
+        },
+        {
+          "file": "docs/教学协同Agent设计.md",
+          "sha256": "fbaf3b332379ed58021be90d203af6d8dfdbab0d2033f3148c5d51167e6778ea",
+          "line_count": 117,
+          "read_completeness": "full",
+          "reference_sections": [
+            "5、7–9：教师沟通与角色规则"
+          ]
+        },
+        {
+          "file": "docs/试卷与生涯维度设计思路.md",
+          "sha256": "cca4ec803fb14bbb0851e1a6bd20cfa9b146fefd05fe34217c56df051ddc329b",
+          "line_count": 238,
+          "read_completeness": "full",
+          "reference_sections": [
+            "9.4–9.5：协作与负担"
+          ]
+        },
+        {
+          "file": "docs/待深化功能研究-提示干预与可靠接入.md",
+          "sha256": "44b4ffc2753741312da899fcb9eea5c48b9c6d18ae22f57c95f89423ad74ceab",
+          "line_count": 178,
+          "read_completeness": "full",
+          "reference_sections": [
+            "4：干预跟踪"
+          ]
+        },
+        {
+          "file": "docs/StudyAgent-研究亮点与相关工作调研-20261024.md",
+          "sha256": "9db8480cbc39b64f54987018904f7d8dbd64b0d0387331fc2abe1ee57e1e7427",
+          "line_count": 290,
+          "read_completeness": "full",
+          "reference_sections": [
+            "4.1、4.5–4.6：教师研究与效果边界"
+          ]
+        }
+      ],
+      "research_urls": [
+        "https://arxiv.org/html/2610.16344v1",
+        "https://arxiv.org/abs/2410.03017v3"
+      ],
+      "research_resources": [
+        {
+          "title": "STEPwise：从诊断到个性化支持",
+          "website": "https://arxiv.org/abs/2610.16344v1",
+          "paper_or_document": "https://arxiv.org/pdf/2610.16344v1"
+        },
+        {
+          "title": "Tutor CoPilot：支持教师行动需要真实场景验证",
+          "website": "https://arxiv.org/abs/2410.03017v3",
+          "paper_or_document": "https://arxiv.org/pdf/2410.03017v3"
+        }
+      ]
+    },
+    {
+      "id": "school",
+      "title": "从教学证据看改进，也维护体系如何变化",
+      "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
+      "sources": [
+        {
+          "file": "docs/学校端设计思路.md",
+          "sha256": "ff682de8d754e91d5af7aebc70d2eff3c9722093e675377eb20b7cddf0c138cf",
+          "line_count": 81,
+          "read_completeness": "full",
+          "reference_sections": [
+            "1–6：质量、绩效、定制和版本"
+          ]
+        },
+        {
+          "file": "docs/教师端设计思路.md",
+          "sha256": "2bbd8a55b298a590b407223c2b1688bcbed4605df7d26f36e4dc22c6e0bcce35",
+          "line_count": 93,
+          "read_completeness": "full",
+          "reference_sections": [
+            "5–9：教学证据和净工作量"
+          ]
+        },
+        {
+          "file": "docs/自进化与跨学科扩展设计.md",
+          "sha256": "9505d0ff82c1f16e29ed690581225fd9c1d4b9cd8d8387d63dbb5b5bd7798ab0",
+          "line_count": 131,
+          "read_completeness": "full",
+          "reference_sections": [
+            "3–5：维护、教材和学科适配"
+          ]
+        },
+        {
+          "file": "docs/知识关系图谱-要素关系与掌握度.md",
+          "sha256": "f807dfed8c73687970dcc3b69b65dc56c9441acad9fb991c478ac33fdd213fb1",
+          "line_count": 241,
+          "read_completeness": "full",
+          "reference_sections": [
+            "7：当前体系关系断点"
+          ]
+        }
+      ],
+      "research_urls": [
+        "https://cepr.harvard.edu/met-project"
+      ],
+      "research_resources": [
+        {
+          "title": "MET：教学评价需要多来源证据",
+          "website": "https://cepr.harvard.edu/met-project",
+          "paper_or_document": "https://cepr.harvard.edu/file_url/2595"
+        }
+      ]
+    },
+    {
+      "id": "modes",
+      "title": "整体采用与局部接入，各自改变什么",
+      "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
+      "sources": [
+        {
+          "file": "docs/两种教学模式与应用边界.md",
+          "sha256": "f216972b75e158f5693df42f7c6057acfdc134334ae4b0f99af4024d87c26f07",
+          "line_count": 88,
+          "read_completeness": "full",
+          "reference_sections": [
+            "1–7：全文两种模式与验证"
+          ]
+        },
+        {
+          "file": "docs/教师端设计思路.md",
+          "sha256": "2bbd8a55b298a590b407223c2b1688bcbed4605df7d26f36e4dc22c6e0bcce35",
+          "line_count": 93,
+          "read_completeness": "full",
+          "reference_sections": [
+            "1、4–9：接入与教学条件"
+          ]
+        },
+        {
+          "file": "docs/学校端设计思路.md",
+          "sha256": "ff682de8d754e91d5af7aebc70d2eff3c9722093e675377eb20b7cddf0c138cf",
+          "line_count": 81,
+          "read_completeness": "full",
+          "reference_sections": [
+            "2、6：可比较证据与质量验证"
+          ]
+        },
+        {
+          "file": "docs/试卷与生涯维度设计思路.md",
+          "sha256": "cca4ec803fb14bbb0851e1a6bd20cfa9b146fefd05fe34217c56df051ddc329b",
+          "line_count": 238,
+          "read_completeness": "full",
+          "reference_sections": [
+            "6–9：证据来源和协同"
+          ]
+        },
+        {
+          "file": "docs/StudyAgent-研究亮点与相关工作调研-20261024.md",
+          "sha256": "9db8480cbc39b64f54987018904f7d8dbd64b0d0387331fc2abe1ee57e1e7427",
+          "line_count": 290,
+          "read_completeness": "full",
+          "reference_sections": [
+            "4.6、8.3：独立学习实验"
+          ]
+        }
+      ],
+      "research_urls": [
+        "https://doi.org/10.1073/pnas.2422633122"
+      ],
+      "research_resources": [
+        {
+          "title": "高中数学 AI 实验：做得更好与学得更好分开测",
+          "website": "https://doi.org/10.1073/pnas.2422633122",
+          "paper_or_document": "https://hamsabastani.github.io/education_llm.pdf"
+        }
+      ]
+    },
+    {
+      "id": "mcp",
+      "title": "不同入口，共用同一套教育规则",
+      "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
+      "sources": [
+        {
+          "file": "docs/系统Agent适配与MCP插件接入设计.md",
+          "sha256": "eca19e53df0772097af88c385cde31bbc95943f7b606af830d7ce10ffdb3e839",
+          "line_count": 134,
+          "read_completeness": "full",
+          "reference_sections": [
+            "1–9：完整接口、宿主与验证设计"
+          ]
+        },
+        {
+          "file": "docs/教学协同Agent设计.md",
+          "sha256": "fbaf3b332379ed58021be90d203af6d8dfdbab0d2033f3148c5d51167e6778ea",
+          "line_count": 117,
+          "read_completeness": "full",
+          "reference_sections": [
+            "9–11：编排、内置与宿主模式"
+          ]
+        },
+        {
+          "file": "docs/当前实现能力与名词数量.md",
+          "sha256": "c918966c3792ce5ce227c826ca1248ff89707c0a690ca429034e906f8057c26c",
+          "line_count": 149,
+          "read_completeness": "full",
+          "reference_sections": [
+            "11：当前适配边界"
+          ]
+        }
+      ],
+      "research_urls": [
+        "https://modelcontextprotocol.io/specification/2026-07-28"
+      ],
+      "research_resources": [
+        {
+          "title": "MCP 与宿主官方文档",
+          "website": "https://modelcontextprotocol.io/",
+          "paper_or_document": "https://modelcontextprotocol.io/specification/2026-07-28"
+        }
+      ]
+    },
+    {
+      "id": "evolution",
+      "title": "让反馈成为经过验证的下一版本",
+      "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
+      "sources": [
+        {
+          "file": "docs/自进化与跨学科扩展设计.md",
+          "sha256": "9505d0ff82c1f16e29ed690581225fd9c1d4b9cd8d8387d63dbb5b5bd7798ab0",
+          "line_count": 131,
+          "read_completeness": "full",
+          "reference_sections": [
+            "1–6：全文四条演进路线与跨学科"
+          ]
+        },
+        {
+          "file": "docs/待深化功能研究-提示干预与可靠接入.md",
+          "sha256": "44b4ffc2753741312da899fcb9eea5c48b9c6d18ae22f57c95f89423ad74ceab",
+          "line_count": 178,
+          "read_completeness": "full",
+          "reference_sections": [
+            "1–7：全文五类后续研究"
+          ]
+        },
+        {
+          "file": "docs/当前实现能力与名词数量.md",
+          "sha256": "c918966c3792ce5ce227c826ca1248ff89707c0a690ca429034e906f8057c26c",
+          "line_count": 149,
+          "read_completeness": "full",
+          "reference_sections": [
+            "7–11：默认难度、回溯、输入和工具差距"
+          ]
+        },
+        {
+          "file": "docs/StudyAgent-研究亮点与相关工作调研-20261024.md",
+          "sha256": "9db8480cbc39b64f54987018904f7d8dbd64b0d0387331fc2abe1ee57e1e7427",
+          "line_count": 290,
+          "read_completeness": "full",
+          "reference_sections": [
+            "6–13：可支持主张、评测、实验与限制"
+          ]
+        },
+        {
+          "file": "docs/学校端设计思路.md",
+          "sha256": "ff682de8d754e91d5af7aebc70d2eff3c9722093e675377eb20b7cddf0c138cf",
+          "line_count": 81,
+          "read_completeness": "full",
+          "reference_sections": [
+            "4–6：定制、迁移与版本"
+          ]
+        }
+      ],
+      "research_urls": [
+        "https://arxiv.org/abs/2005.11401"
+      ],
+      "research_resources": [
+        {
+          "title": "RAG：检索记忆与模型参数是不同改进路径",
+          "website": "https://arxiv.org/abs/2005.11401",
+          "paper_or_document": "https://arxiv.org/pdf/2005.11401v4"
+        }
+      ]
+    }
+  ]
+}

@@ -61,10 +61,16 @@ class ShowcaseTests(unittest.IsolatedAsyncioTestCase):
             with self.subTest(path=path):
                 self.assertEqual((await self.client.get(path)).status_code, 200)
         for path in ("/settings.json", "/.env", "/study_agent.db", "/backend/settings.json", "/vendor/geometry-manifest.json",
-                     "/nav.js", "/demo-session.js", "/showcase/unreviewed.js", "/showcase/assets",
+                     "/nav.js", "/demo-session.js", "/showcase/unreviewed.js", "/showcase/assets", "/showcase/fonts/build_subset.py",
                      "/showcase/assets/unreviewed.pdf", "/showcase/assets/unreviewed.svg", "/docs", "/openapi.json"):
             with self.subTest(path=path):
                 self.assertEqual((await self.client.get(path)).status_code, 404)
+
+    async def test_retired_non_national_materials_are_not_public_resources(self):
+        for name in ("ellipse-question.svg", "ellipse-page.svg", "pyramid-question.svg", "pyramid-page.svg",
+                     "student-paper.pdf", "teacher-paper.pdf"):
+            response = await self.client.get("/showcase/assets/" + name)
+            self.assertEqual(response.status_code, 404)
 
     async def test_api_and_upload_paths_never_reach_owner_or_teaching(self):
         for path in ("/questions", "/settings", "/solve/step1", "/teach/start", "/jobs", "/jobs/uploads",

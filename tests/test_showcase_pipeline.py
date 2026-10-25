@@ -1,17 +1,29 @@
 """Check the exported production runs are complete and mathematically consistent."""
 import json
+import hashlib
 from pathlib import Path
 import re
+import sys
+import tempfile
 import unittest
+from unittest.mock import patch
 
 ROOT=Path(__file__).resolve().parents[1]
 
 
 class ShowcasePipelineTests(unittest.TestCase):
-    def test_all_three_questions_have_four_distinct_completed_runs(self):
+    def test_national_questions_have_four_distinct_unchanged_completed_runs(self):
         data=json.loads((ROOT/'frontend/showcase/pipeline.json').read_text())
-        self.assertEqual(set(data['examples']),{'national-2025-q16','national-2023-q17','shanghai-2024-q18'})
+        self.assertEqual(set(data['examples']),{'national-2025-q16','national-2023-q17'})
+        # Locked before removing the retired local-paper example. These checks
+        # protect the complete real responses, usage, timestamps and metadata.
+        expected = {
+            'national-2025-q16': 'e67751efd5635c29fc4e4942029147baf1e667b327f8fcb69321fe9045a01cb8',
+            'national-2023-q17': '10fab70fdc104a7f08a0eaadca05beb079dd0e8a76bd853a744a8e8a32219677',
+        }
         for example,runs in data['examples'].items():
+            digest = hashlib.sha256(json.dumps(runs, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
+            self.assertEqual(digest, expected[example], 'Saved production output was rewritten')
             self.assertEqual(set(runs),{'liangliang','taotao','xuefeng','ji'})
             answers=[]
             for teacher,run in runs.items():
@@ -32,6 +44,41 @@ class ShowcasePipelineTests(unittest.TestCase):
                 final=re.sub(r'\s+','',result['final_answer'])
                 if example=='national-2025-q16':self.assertIn('7-(3m+7)(-2)^m',final)
                 elif example=='national-2023-q17':self.assertIn('sqrt{10}',final);self.assertIn('6',final)
-                else:self.assertIn('(1,2)',final);self.assertTrue('infty' in final)
                 answers.append(json.dumps(chunks,ensure_ascii=False,sort_keys=True))
             self.assertEqual(len(set(answers)),4)
+
+    def test_targeted_recording_keeps_other_national_runs_and_discards_retired_cache(self):
+        from scripts import run_showcase_pipeline as recorder
+        import copy
+        original = json.loads((ROOT/'frontend/showcase/pipeline.json').read_text())
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            destination = root/'frontend/showcase/pipeline.json'
+            destination.parent.mkdir(parents=True)
+            published = copy.deepcopy(original)
+            published['examples']['retired-local-paper'] = {'unreviewed': {'content':'must not publish'}}
+            destination.write_text(json.dumps(published))
+            result = copy.deepcopy(original['examples']['national-2023-q17']['xuefeng'])
+            result['run_at'] = '2026-10-25T12:00:00+08:00'
+            with patch.object(recorder, 'ROOT', root), patch.object(recorder, 'CACHE', root/'cache'), \
+                 patch.object(recorder.settings, 'get_api_key', return_value='test-only-key'), \
+                 patch.object(recorder.solver, 'call_deepseek'), \
+                 patch.object(recorder, 'run_one', return_value=('national-2023-q17','xuefeng',result)) as run, \
+                 patch.object(sys, 'argv', ['record','--example','national-2023-q17','--teacher','xuefeng']):
+                recorder.main()
+            run.assert_called_once()
+            saved = json.loads(destination.read_text())
+            self.assertEqual(set(saved['examples']), {'national-2023-q17','national-2025-q16'})
+            self.assertEqual(saved['examples']['national-2025-q16'], original['examples']['national-2025-q16'])
+            for teacher in ('liangliang','taotao','ji'):
+                self.assertEqual(saved['examples']['national-2023-q17'][teacher], original['examples']['national-2023-q17'][teacher])
+            self.assertEqual(saved['examples']['national-2023-q17']['xuefeng'], result)
+
+    def test_recording_rejects_non_national_examples_before_any_model_call(self):
+        from scripts import run_showcase_pipeline as recorder
+        with patch.object(recorder.settings, 'get_api_key') as key, \
+             patch.object(sys, 'argv', ['record','--example','shanghai-2024-q18']):
+            with self.assertRaises(SystemExit) as error:
+                recorder.main()
+        self.assertEqual(error.exception.code, 2)
+        key.assert_not_called()

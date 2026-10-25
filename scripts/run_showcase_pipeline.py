@@ -17,9 +17,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
 from backend import settings, solver
-from backend.demo_presets import get_preset, public_presets
+from backend.demo_presets import get_preset
 
 TEACHERS = ('liangliang', 'taotao', 'xuefeng', 'ji')
+NATIONAL_IDS = ('national-2023-q17', 'national-2025-q16')
+EXPECTED_RUNS = len(NATIONAL_IDS) * len(TEACHERS)
 CACHE = ROOT / '.runtime/showcase-pipeline'
 CONTEXT = threading.local()
 REAL_CALL = solver.call_deepseek
@@ -41,6 +43,8 @@ def traced_call(*args, **kwargs):
 
 
 def run_one(example, teacher, rerun=False):
+    if example['id'] not in NATIONAL_IDS:
+        raise ValueError('公开研究展示只录制全国卷案例')
     preset = get_preset(example['id'])
     prompt_hashes = {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
                      for p in (ROOT / 'backend/prompts').rglob('*.md')}
@@ -96,18 +100,26 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--workers', type=int, choices=range(1, 5), default=4)
     parser.add_argument('--rerun', action='store_true')
-    parser.add_argument('--example', choices=[example['id'] for example in public_presets()])
+    parser.add_argument('--example', choices=NATIONAL_IDS)
     parser.add_argument('--teacher', choices=TEACHERS)
     args = parser.parse_args()
     if not settings.get_api_key('deepseek'):
         raise SystemExit('请先配置本机 DeepSeek API。')
     CACHE.mkdir(parents=True, exist_ok=True, mode=0o700)
     solver.call_deepseek = traced_call
+    destination = ROOT / 'frontend/showcase/pipeline.json'
     output = {'version': 1, 'examples': {}}
+    # A targeted rerun preserves other published records byte-for-byte at the
+    # object level. Never import retired examples from private cache folders.
+    if destination.is_file():
+        published = json.loads(destination.read_text())
+        output['examples'] = {identifier: published.get('examples', {}).get(identifier, {})
+                              for identifier in NATIONAL_IDS}
     failures = []
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
         tasks = {pool.submit(run_one, example, teacher, args.rerun): (example['id'], teacher)
-                 for example in public_presets() if not args.example or example['id'] == args.example
+                 for example in (get_preset(identifier) for identifier in NATIONAL_IDS)
+                 if not args.example or example['id'] == args.example
                  for teacher in TEACHERS if not args.teacher or teacher == args.teacher}
         for task in as_completed(tasks):
             try:
@@ -117,30 +129,14 @@ def main():
                 example_id, teacher = tasks[task]
                 failures.append({'example': example_id, 'teacher': teacher, 'error': str(error)[:300]})
                 print(f'{example_id} / {teacher}: failed ({type(error).__name__})', flush=True)
-    # Keep completed runs from the other examples; each retains its original
-    # timestamp and fingerprint rather than pretending it ran again.
-    for example in public_presets():
-        for teacher in TEACHERS:
-            path = CACHE / example['id'] / teacher / 'result.json'
-            if teacher not in output['examples'].get(example['id'], {}) and path.is_file():
-                value = json.loads(path.read_text())
-                calls = json.loads((path.parent / 'calls.json').read_text())
-                for call in reversed(calls):
-                    try:
-                        structured = json.loads(solver._extract_json(call['content']))
-                    except ValueError:
-                        continue
-                    if isinstance(structured, dict) and structured.get('chunk_results'):
-                        value['stages']['formatter'] = {**call, 'stage': 'formatter'}
-                        break
-                output['examples'].setdefault(example['id'], {})[teacher] = value
     (CACHE / 'run-summary.json').write_text(json.dumps({'completed': sum(map(len, output['examples'].values())),
                                                        'failed': failures}, ensure_ascii=False, indent=2) + '\n')
-    if failures or sum(map(len, output['examples'].values())) != 12:
+    complete = set(output['examples']) == set(NATIONAL_IDS) and all(
+        set(output['examples'][identifier]) == set(TEACHERS) for identifier in NATIONAL_IDS)
+    if failures or not complete or sum(map(len, output['examples'].values())) != EXPECTED_RUNS:
         raise SystemExit(f'{len(failures)} runs failed; check .runtime/showcase-pipeline/run-summary.json')
-    destination = ROOT / 'frontend/showcase/pipeline.json'
     destination.write_text(json.dumps(output, ensure_ascii=False, separators=(',', ':')) + '\n')
-    print('Completed 12 production pipeline runs.', flush=True)
+    print(f'Completed {EXPECTED_RUNS} national-paper production pipeline runs.', flush=True)
 
 
 if __name__ == '__main__':
