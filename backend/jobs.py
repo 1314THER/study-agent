@@ -42,6 +42,16 @@ _CURRENT = ContextVar("study_background_job", default=None)
 PROVIDER_CONCURRENCY = 20
 _SHARED_PROVIDER_LIMIT = threading.BoundedSemaphore(PROVIDER_CONCURRENCY)
 _PROVIDERS = {name: _SHARED_PROVIDER_LIMIT for name in ("deepseek", "zhipu", "codex")}
+
+
+def _teacher_provider(teacher):
+    from backend.settings import get_teacher_config
+    model = ((get_teacher_config(teacher).get("solver") or {}).get("model") or "deepseek-flash")
+    if model.startswith("glm-"):
+        return "zhipu"
+    if model.startswith("gpt-"):
+        return "codex"
+    return "deepseek"
 _PROVIDER_LOCK = threading.Lock()
 _PROVIDER_ACTIVE = 0
 
@@ -321,10 +331,11 @@ class JobManager:
                         runtime.deadline = time.monotonic() + PRESET_TIMEOUT_SECONDS
                         # Demonstrations must start a real call immediately,
                         # rather than time out while waiting behind a long batch.
-                        if len(self.runtimes) >= self.workers or not _PROVIDERS["deepseek"].acquire(blocking=False):
+                        provider = _teacher_provider(args.get("teacher"))
+                        if len(self.runtimes) >= self.workers or not _PROVIDERS[provider].acquire(blocking=False):
                             release()
                             raise JobBusy("AI 正在处理其他任务，请稍后开始真题体验。")
-                        runtime.reserved_provider = "deepseek"
+                        runtime.reserved_provider = provider
                 try:
                     conn.execute("INSERT INTO jobs VALUES (?,?,?,?,?,'queued','queued',0,?,?,?,NULL,NULL,NULL,?)",
                                  (job_id, kind, request_id, fingerprint, _dump(args), "已进入后台队列", now, now, self.runtime_id))
@@ -528,6 +539,10 @@ def validate_args(kind, args):
     args = json.loads(_dump(args))
     if len(_dump(args).encode()) > 1024 * 1024:
         raise ValueError("提交内容超过 1 MiB")
+    if args.get("teacher") is not None:
+        from backend.settings import get_teachers
+        if not isinstance(args["teacher"], str) or args["teacher"] not in get_teachers():
+            raise ValueError("请选择有效的老师")
     if args.get("engine") == "codex_cli" and kind != "pool_prepare":
         raise ValueError("此入口暂不支持本地 Codex，请从原题池准备解析。")
     if kind == "pool_prepare":
@@ -752,14 +767,15 @@ def _grade(args, ctx):
 def _parse_file(args, ctx):
     from backend.multimodal import parse_file
     questions = parse_file(args["_upload_path"], args.get("filename", ""),
-                           progress=lambda page, total: ctx.progress("recognizing", round(5 + 90 * page / max(total, 1)), f"正在识别第 {page}/{total} 页"))
+                           progress=lambda page, total: ctx.progress("recognizing", round(5 + 90 * page / max(total, 1)), f"正在识别第 {page}/{total} 页"),
+                           teacher=args.get("teacher"))
     return {"questions": questions, "total": len(questions)}
 
 
 def _ocr_file(args, ctx):
     from backend.multimodal import recognize_answer_image
     ctx.progress("recognizing", 20, "正在识别手写作答")
-    return recognize_answer_image(args["_upload_path"])
+    return recognize_answer_image(args["_upload_path"], teacher=args.get("teacher"), stage="grade")
 
 
 def _solve_batch_leaf(args, parent):
@@ -771,13 +787,14 @@ def _solve_batch_leaf(args, parent):
             outcome.commit(outcome.value)
         return outcome.value
 
-    # Wait for the shared provider before starting this leaf's 300-second
+    # Wait for the selected teacher's provider before starting this leaf's 300-second
     # window: a queued question must never receive a cache without an AI call.
-    slot = _PROVIDERS["deepseek"]
+    provider = _teacher_provider(args.get("teacher"))
+    slot = _PROVIDERS[provider]
     while not slot.acquire(timeout=0.2):
         ensure_active()
     child = Runtime(parent.manager, parent.job_id, parent.path, "solve", args,
-                    lambda: None, prepared=prepared, reserved_provider="deepseek")
+                    lambda: None, prepared=prepared, reserved_provider=provider)
     child.deadline = time.monotonic() + PRESET_TIMEOUT_SECONDS
     state = {}
 
@@ -1030,13 +1047,17 @@ async def api_submit_job(req: JobRequest):
 
 
 @router.post("/jobs/uploads", status_code=202)
-async def api_upload_job(kind: str = Form(...), request_id: str = Form(...), file: UploadFile = File(...)):
+async def api_upload_job(kind: str = Form(...), request_id: str = Form(...),
+                         teacher: str = Form("liangliang"), file: UploadFile = File(...)):
     import tempfile
     from backend.multimodal import get_supported_extensions
+    from backend.settings import get_teachers
     ext = Path(file.filename or "upload").suffix.lower()
     allowed = get_supported_extensions() if kind == "parse_file" else [".jpg", ".jpeg", ".png"]
     if kind not in ("parse_file", "ocr_file") or ext not in allowed:
         raise HTTPException(status_code=400, detail="文件类型不支持")
+    if teacher not in get_teachers():
+        raise HTTPException(status_code=422, detail="老师参数无效")
     path = storage_path()
     # Initialize and recover the ledger before making an unaccepted upload
     # directory, so first-use orphan recovery cannot remove this new body.
@@ -1064,7 +1085,8 @@ async def api_upload_job(kind: str = Form(...), request_id: str = Form(...), fil
                 digest.update(chunk)
         if not total:
             raise HTTPException(status_code=400, detail="文件为空")
-        public = {"filename": Path(file.filename or "upload").name, "size": total, "sha256": digest.hexdigest()}
+        public = {"filename": Path(file.filename or "upload").name, "size": total,
+                  "sha256": digest.hexdigest(), "teacher": teacher}
         args = {**public, "_upload_path": str(target), "_upload_dir": str(directory)}
         result = await run_in_threadpool(lambda: _manager.submit(kind, args, request_id, fingerprint_args=public))
         accepted = result["args"].get("sha256") == digest.hexdigest() and result["status"] not in TERMINAL

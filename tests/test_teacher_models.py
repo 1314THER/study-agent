@@ -49,6 +49,11 @@ class TeacherSettingsTests(ApiTestCase):
         self.assertEqual(settings.get_teacher_config('liangliang')['solver'],
                          {'model': 'deepseek-flash', 'reasoning_effort': 'high'})
 
+    def test_legacy_vision_model_setting_is_removed(self):
+        migrated = settings._migrate_settings({'api': {'deepseek': {
+            'base_url': 'https://example.invalid/v1', 'vision_model': 'qwen-vl-old'}}})
+        self.assertNotIn('vision_model', migrated['api']['deepseek'])
+
     def test_glm_connection_probe_uses_saved_glm_key(self):
         settings.save_settings({'api': {'zhipu': {'api_key': 'glm-test-key'}}})
         with patch('httpx.post', return_value=SimpleNamespace(status_code=200)) as post:
@@ -95,6 +100,32 @@ class TeacherRoutingTests(unittest.TestCase):
                 solver.call_deepseek('sys', 'user', model='glm-4.7-flash')
             post.assert_not_called()
 
+    def test_glm_47_image_routes_to_glm_46v_with_glm_key(self):
+        from io import BytesIO
+        import base64
+        from PIL import Image
+        image = BytesIO()
+        Image.new('RGB', (10, 10), 'white').save(image, format='PNG')
+        encoded = base64.b64encode(image.getvalue()).decode('ascii')
+        images = [{'type': 'image_url', 'image_url': {'url': 'data:image/png;base64,' + encoded}}]
+        with patch.object(settings, 'get_api_key', return_value='glm-only') as key, \
+                patch.object(settings, 'get_api', return_value=deepcopy(settings.DEFAULTS['api'])), \
+                patch.object(solver, 'get_api_key', side_effect=AssertionError('DS credential accessed')), \
+                patch.object(solver.httpx, 'post', return_value=self.response) as post:
+            solver.call_deepseek('system', 'question', model='glm-4.7-flash',
+                                 reasoning_effort='medium', image_content=images)
+        self.assertEqual(post.call_args.kwargs['json']['model'], 'glm-4.6v-flash')
+        self.assertEqual(post.call_args.kwargs['headers']['Authorization'], 'Bearer glm-only')
+        key.assert_called_once_with('zhipu')
+
+    def test_prepared_demo_reserves_the_configured_teacher_provider(self):
+        from backend import jobs
+        models = {'liangliang': 'glm-4.7-flash', 'taotao': 'deepseek-flash',
+                  'xuefeng': 'glm-5.3-flash', 'ji': 'gpt-6-astra'}
+        with patch.object(settings, 'get_teacher_config', side_effect=lambda teacher: {'solver': {'model': models[teacher]}}):
+            self.assertEqual([jobs._teacher_provider(teacher) for teacher in models],
+                             ['zhipu', 'deepseek', 'zhipu', 'codex'])
+
     def test_cli_gets_model_effort_images_without_reading_api_keys(self):
         images = [{'type': 'image_url', 'image_url': {'url': 'data:image/png;base64,aGVsbG8='}}]
         with patch.object(local_models, 'call_teacher', return_value=('answer', {})) as cli, \
@@ -104,6 +135,20 @@ class TeacherRoutingTests(unittest.TestCase):
             self.assertEqual(cli.call_args.kwargs['model'], 'gpt-6-astra')
             self.assertEqual(cli.call_args.kwargs['reasoning_effort'], 'high')
             self.assertEqual(cli.call_args.kwargs['image_content'], images)
+
+    def test_routine_classifier_uses_standard_teacher_model_routing(self):
+        from backend.routine_classification import make_teacher_caller
+        usage = []
+        config = {'model': 'glm-4.7-flash', 'reasoning_effort': 'medium', 'temperature': .1,
+                  'max_tokens': 100, 'audit_max_tokens': 200, 'json_output': True}
+        with patch('backend.solver.call_deepseek', return_value=('{}', {'finish_reason': 'stop'})) as call:
+            caller = make_teacher_caller(config, timeout_seconds=8,
+                                         usage_callback=lambda item, stage, data: usage.append((item, stage, data)))
+            self.assertEqual(caller('system', '{"stage":"retrieved_match"}', {'id': 4}), '{}')
+        self.assertEqual(call.call_args.kwargs['model'], 'glm-4.7-flash')
+        self.assertEqual(call.call_args.kwargs['reasoning_effort'], 'medium')
+        self.assertIsNone(call.call_args.kwargs['response_format'], 'GLM receives the strict JSON prompt without an unsupported JSON-mode requirement')
+        self.assertEqual(usage[0][1], 'retrieved_match')
 
     def test_cli_gateway_calls_private_adapter_and_blocks_nonlocal(self):
         class Unavailable(Exception):

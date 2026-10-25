@@ -3,7 +3,7 @@ import logging
 import os
 import threading
 
-from fastapi import FastAPI, UploadFile, Query, HTTPException
+from fastapi import FastAPI, UploadFile, Query, HTTPException, Form
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import RedirectResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
@@ -917,7 +917,7 @@ def api_ai_assemble(req: AiAssembleRequest):
 
 
 @app.post("/multimodal/parse")
-async def api_multimodal_parse(file: UploadFile):
+async def api_multimodal_parse(file: UploadFile, teacher: str = Form("liangliang")):
     """上传文件，解析为 LaTeX 题目列表"""
     import tempfile, os, shutil
     from fastapi import HTTPException
@@ -937,7 +937,7 @@ async def api_multimodal_parse(file: UploadFile):
                 if total > 16 * 1024 * 1024:
                     raise HTTPException(status_code=413, detail="文件过大：最多 16 MiB")
                 f.write(chunk)
-        questions = await run_in_threadpool(parse_file, tmp_path, file.filename or "")
+        questions = await run_in_threadpool(parse_file, tmp_path, file.filename or "", teacher=teacher)
         return {"questions": questions, "total": len(questions)}
     except HTTPException:
         raise
@@ -948,7 +948,7 @@ async def api_multimodal_parse(file: UploadFile):
 
 
 @app.post("/ocr/answer")
-async def api_ocr_answer(file: UploadFile):
+async def api_ocr_answer(file: UploadFile, teacher: str = Form("liangliang")):
     """识别手写作答图片，返回识别文本与置信度。"""
     import tempfile, os, shutil
     from fastapi import HTTPException
@@ -968,7 +968,7 @@ async def api_ocr_answer(file: UploadFile):
                     raise HTTPException(status_code=413, detail="文件过大：最多 16 MiB")
                 f.write(chunk)
         from backend.multimodal import recognize_answer_image
-        return await run_in_threadpool(recognize_answer_image, tmp_path)
+        return await run_in_threadpool(recognize_answer_image, tmp_path, teacher=teacher, stage="grade")
     except HTTPException:
         raise
     except Exception as e:
@@ -1346,6 +1346,8 @@ def _sanitize_settings_patch(patch):
             cfg = api.get(provider)
             if isinstance(cfg, dict) and not cfg.get("api_key"):
                 cfg.pop("api_key", None)
+        if isinstance(out["api"].get("deepseek"), dict):
+            out["api"]["deepseek"].pop("vision_model", None)
 
     limits = out.get("limits")
     if limits:

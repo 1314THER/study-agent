@@ -30,7 +30,8 @@ def main():
     parser.add_argument("--url", default="")
     parser.add_argument("--license", default="待核验，未自动授权公开")
     parser.add_argument("--publication-allowed", action="store_true", help="仅在已经核验来源许可时允许后续确认公开")
-    parser.add_argument("--ocr", action="store_true", help="显式文件导入使用已配置 DeepSeek 进行付费 OCR；公开仓库数据不需要")
+    parser.add_argument("--ocr", action="store_true", help="显式文件导入时调用所选老师的模型进行 OCR；公开仓库数据不需要")
+    parser.add_argument("--teacher", choices=("liangliang", "taotao", "xuefeng", "ji"), default="liangliang", help="选择 OCR 识题模型")
     parser.add_argument("--ocr-mode", choices=("auto", "off", "force"))
     parser.add_argument("--pages", default="")
     parser.add_argument("--concurrency", type=int, choices=range(1, 21), default=20)
@@ -42,7 +43,7 @@ def main():
     options = {"ocr": args.ocr, "ocr_mode": args.ocr_mode, "concurrency": args.concurrency,
                "page_numbers": parse_pages(args.pages), "retry_failed": args.retry_failed,
                "resume": True, "cache_dir": str(args.cache_dir), "filename": args.path.name,
-               "answers_path": str(args.answers) if args.answers else None}
+               "answers_path": str(args.answers) if args.answers else None, "teacher": args.teacher}
     conversion_stats, source_report = {}, {}
     if args.ocr and args.kind not in ("image", "pdf"):
         parser.error("OCR 只适用于明确导入的图片或扫描 PDF")

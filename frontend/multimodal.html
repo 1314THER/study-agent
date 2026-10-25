@@ -145,6 +145,13 @@ function safeParseKps(kps){
             <div id="mmParseStatus" role="status" style="display:none;font-size:13px;line-height:1.7;margin-bottom:12px;white-space:pre-wrap;"></div>
 
             <div id="mmUploadArea">
+                <div class="mm-routing-control" style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:12px 14px;margin-bottom:12px;background:#f5f9ff;border:1px solid #d8e7f8;border-radius:12px;">
+                    <label for="mmTeacherSelect" style="font-size:14px;font-weight:600;color:#1d1d1f;white-space:nowrap;">识题与默认解题老师</label>
+                    <select id="mmTeacherSelect" onchange="changeDefaultTeacher(this.value)" style="padding:8px 12px;border:1px solid #c7c7cc;border-radius:8px;background:white;font:inherit;">
+                        <option value="liangliang">梁梁</option><option value="taotao">韬韬</option><option value="xuefeng">雪峰</option><option value="ji">鸡</option>
+                    </select>
+                    <span id="mmRouteHint" role="status" style="flex:1;min-width:240px;font-size:13px;line-height:1.5;color:#526174;">识题和新题默认使用所选老师的模型；梁梁图片识题使用 GLM-4.6V-Flash。</span>
+                </div>
                 <div class="mm-upload-zone" id="dropZone" onclick="document.getElementById('fileInput').click()" ondragover="onDropZoneDragOver(event)" ondragleave="onDropZoneDragLeave(event)" ondrop="onDropZoneDrop(event)">
                     <div class="mm-upload-icon">📄</div>
                     <div class="mm-upload-text">拖拽文件到此处</div>
@@ -243,6 +250,29 @@ var _filePreviewUrls = [];
 var teacherNames = {liangliang:'梁梁',taotao:'韬韬',xuefeng:'雪峰',ji:'鸡'};
 var STORAGE_KEY = 'multimodal_state';
 var _parseAppliedJobs = {};
+var MM_TEACHER_KEY = 'mm_teacher';
+var _mmTeacherModels = {};
+function currentDefaultTeacher(){var saved=localStorage.getItem(MM_TEACHER_KEY)||localStorage.getItem('teacher');return teacherNames[saved]?saved:'liangliang';}
+function changeDefaultTeacher(teacher){
+    if(!teacherNames[teacher])teacher='liangliang';
+    localStorage.setItem(MM_TEACHER_KEY,teacher);
+    localStorage.setItem('teacher',teacher);
+    updateMultimodalRouteHint();
+}
+function updateMultimodalRouteHint(){
+    var select=document.getElementById('mmTeacherSelect'),hint=document.getElementById('mmRouteHint');
+    if(!select||!hint)return;
+    var teacher=teacherNames[select.value]?select.value:'liangliang';
+    var model=((_mmTeacherModels[teacher]||{}).solver||{}).model||({liangliang:'glm-4.7-flash',taotao:'deepseek-flash',xuefeng:'glm-5.3-flash',ji:'gpt-6-astra'}[teacher]);
+    var vision=model==='glm-4.7-flash'?'GLM-4.6V-Flash（图片能力回退）':model;
+    hint.textContent='图片 / PDF：'+vision+'；Word / 文本：'+model+'。识题与新题默认使用'+teacherNames[teacher]+'，每道题仍可单独切换老师。';
+}
+async function loadMultimodalTeacherRoutes(){
+    var select=document.getElementById('mmTeacherSelect');if(!select)return;
+    var saved=currentDefaultTeacher();select.value=teacherNames[saved]?saved:'liangliang';
+    changeDefaultTeacher(select.value);
+    try{var response=await fetch('/settings');if(response.ok){var data=await response.json();_mmTeacherModels=data.teachers||{};updateMultimodalRouteHint();}}catch(e){}
+}
 function readParseGroup(id){try{var key=id||localStorage.getItem('mm_parse_current');return key?JSON.parse(localStorage.getItem('mm_parse_group:'+key)||'null'):null;}catch(e){return null;}}
 function writeParseGroup(group){try{localStorage.setItem('mm_parse_group:'+group.id,JSON.stringify(group));}catch(e){}return group;}
 function renderParseStatus(){
@@ -627,7 +657,8 @@ function onFileSelect(e){
 
 async function uploadFiles(files){
     if(!files||files.length===0)return;
-    var group=writeParseGroup({id:StudyJobs.uuid(),files:Array.from(files).map(function(f){return {name:f.name,status:'uploading'};})});
+    var teacher=currentDefaultTeacher();
+    var group=writeParseGroup({id:StudyJobs.uuid(),teacher:teacher,files:Array.from(files).map(function(f){return {name:f.name,status:'uploading'};})});
     localStorage.setItem('mm_parse_current',group.id);localStorage.setItem('mm_restore_after',String(Date.now()/1000));
     _questions=[];_sessions={};_parseAppliedJobs={};_selectedIdx=-1;saveState();
     document.getElementById('mmSessions').innerHTML='';renderParseStatus();
@@ -637,7 +668,7 @@ async function uploadFiles(files){
     await Promise.all(Array.from(files).map(async function(f,index){
       var accepted;
       try{
-        var fd=new FormData();fd.append('file',f);
+        var fd=new FormData();fd.append('file',f);fd.append('teacher',teacher);
         var data=await StudyJobs.upload('parse_file',fd,{key:'mm_parse:'+group.id+':'+index,route:{page:'multimodal.html',parse_group:group.id,file_index:index},
           onAccepted:function(job){accepted=job;updateParseFile(group.id,index,job);},onProgress:function(job){updateParseFile(group.id,index,job);}});
         updateParseFile(group.id,index,Object.assign({},accepted,{status:'done',error:null}));restoreParseResult(data,accepted);
@@ -1308,7 +1339,7 @@ async function restoreMultiJobs(){
     var id=new URLSearchParams(location.search).get('job'),explicit;
     if(id){explicit=await StudyJobs.get(id);if(explicit.kind==='parse_file'){
       var route=StudyJobs.read('route:'+id),group=route&&readParseGroup(route.parse_group);
-      if(!group){group=writeParseGroup({id:StudyJobs.uuid(),files:[{name:explicit.args&&explicit.args.filename||'文件',job_id:id,status:explicit.status}]});}
+      if(!group){group=writeParseGroup({id:StudyJobs.uuid(),teacher:explicit.args&&explicit.args.teacher||'liangliang',files:[{name:explicit.args&&explicit.args.filename||'文件',job_id:id,status:explicit.status}]});}
       if(localStorage.getItem('mm_parse_current')!==group.id){localStorage.setItem('mm_parse_current',group.id);_questions=[];_sessions={};_parseAppliedJobs={};_selectedIdx=-1;document.getElementById('mmSessions').innerHTML='';saveState();}
     }}
     var r=await fetch('/jobs'),list=await r.json(),after=Number(localStorage.getItem('mm_restore_after')||0);
@@ -1349,12 +1380,13 @@ function restoreParseResult(data,job){
   var group=readParseGroup(),jobId=job&&job.job_id;
   if(group&&jobId&&!group.files.some(function(f){return f.job_id===jobId;}))return;
   if(jobId&&_parseAppliedJobs[jobId])return;
-  data.questions.forEach(function(q){var text=q.latex||q.text||'';if(!text||_questions.some(function(existing){return (existing.latex||existing.text||'')===text;}))return;_questions.push(Object.assign({},q,{latex:text,index:_questions.length+1}));});
+  var defaultTeacher=group&&group.teacher||job&&job.args&&job.args.teacher||'liangliang';
+  data.questions.forEach(function(q){var text=q.latex||q.text||'';if(!text||_questions.some(function(existing){return (existing.latex||existing.text||'')===text;}))return;_questions.push(Object.assign({},q,{latex:text,index:_questions.length+1,recommended_teacher:defaultTeacher}));});
   if(jobId)_parseAppliedJobs[jobId]=true;
   if(_questions.length){document.getElementById('mmLoading').style.display='none';document.getElementById('mmUploadArea').style.display='none';document.getElementById('mmSolveArea').style.display='block';document.getElementById('mmTitle').textContent='共 '+_questions.length+' 道题';renderQuestionList();}
   saveState();renderParseStatus();
 }
-document.addEventListener('DOMContentLoaded',function(){setTimeout(restoreMultiJobs,100);renderParseStatus();});
+document.addEventListener('DOMContentLoaded',function(){setTimeout(restoreMultiJobs,100);renderParseStatus();loadMultimodalTeacherRoutes();});
 
 function demoSourceHtml(q){
     if(!window.STUDY_DEMO||!q||!q.demo_preset_id)return '';
@@ -1367,7 +1399,7 @@ function selectDemoPreset(id){
 function consumeDemoCoachInput(){
     if(!window.STUDY_DEMO)return false;
     var question=localStorage.getItem('_mm_coach_input');if(!question||!question.trim())return false;
-    var idx=_questions.length;_questions.push({latex:question.trim(),index:idx+1,difficulty:'未知',recommended_teacher:'liangliang'});
+    var idx=_questions.length;_questions.push({latex:question.trim(),index:idx+1,difficulty:'未知',recommended_teacher:currentDefaultTeacher()});
     document.getElementById('mmUploadArea').style.display='none';document.getElementById('mmSolveArea').style.display='block';document.getElementById('mmTitle').textContent='共 '+_questions.length+' 道题';
     renderQuestionList();selectQuestion(idx,true);saveState();localStorage.removeItem('_mm_coach_input');return true;
 }
@@ -1380,7 +1412,7 @@ async function initializeDemoQuestions(){
         var response=await fetch('/jobs');if(!response.ok)throw new Error('无法确认已有任务，请刷新重试。');
         var ledger=await response.json(),after=Number(localStorage.getItem('mm_restore_after')||0);
         if((ledger.jobs||[]).some(function(job){return Number(job.created_at||0)>=after&&(job.kind==='parse_file'||(['solve','batch_solve'].includes(job.kind)&&job.args&&job.args.client_page==='multimodal'));})||hasCurrent())return false;
-        _questions=(catalog.presets||[]).map(function(preset,index){var source=preset.source||{};return {latex:preset.question,index:index+1,difficulty:'中等',question_type:'大题',recommended_teacher:'liangliang',demo_preset_id:preset.id,demo_label:preset.label,demo_source_url:source.url,source_type:'高考题',source_meta:{paper_name:source.paper,paper:source.paper,year:source.year,question_number:source.question_number,question_no:String(source.question_number),url:source.url}};});
+        _questions=(catalog.presets||[]).map(function(preset,index){var source=preset.source||{};return {latex:preset.question,index:index+1,difficulty:'中等',question_type:'大题',recommended_teacher:currentDefaultTeacher(),demo_preset_id:preset.id,demo_label:preset.label,demo_source_url:source.url,source_type:'高考题',source_meta:{paper_name:source.paper,paper:source.paper,year:source.year,question_number:source.question_number,question_no:String(source.question_number),url:source.url}};});
         if(!_questions.length)return false;
         document.getElementById('mmUploadArea').style.display='none';document.getElementById('mmSolveArea').style.display='block';document.getElementById('mmTitle').textContent='3 道预设真题';
         renderQuestionList();var selected=_questions.findIndex(function(q){return q.demo_preset_id===catalog.default_id;});selectQuestion(selected<0?0:selected,true);saveState();return true;

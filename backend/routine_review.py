@@ -42,12 +42,16 @@ def model_config(engine='deepseek'):
         from backend.local_models import routine_config
         return routine_config()
     from backend import settings
-    api = settings.get_api().get('deepseek') or {}
+    teacher_cfg = settings.get_teacher_config('liangliang')['solver']
+    model = teacher_cfg.get('model') or 'glm-4.7-flash'
+    provider = 'zhipu' if model.startswith('glm-') else 'deepseek'
+    api = settings.get_api().get(provider) or {}
     maximum = int(settings.get_limits().get('api_max_tokens', 8192))
-    return {'model': settings.get_teacher_config('liangliang')['solver']['model'],
-            'base_url': api.get('base_url') or 'https://api.deepseek.com/v1',
+    return {'model': model, 'provider': provider,
+            'base_url': api.get('base_url') or settings.DEFAULTS['api'][provider]['base_url'],
+            'reasoning_effort': teacher_cfg.get('reasoning_effort') or 'medium',
             'engine':'deepseek', 'temperature': .1, 'max_tokens':min(1024,maximum),
-            'audit_max_tokens':min(2048,maximum), 'thinking':'disabled', 'json_output':True,
+            'audit_max_tokens':min(2048,maximum), 'json_output':True,
             'prompt_profile':rc.CACHE_PROMPT_VERSION, 'warm_prefix':True}
 
 
@@ -66,15 +70,13 @@ def ai_caller(config, usage_callback=None):
         from backend.local_models import provider
         return provider().routine_caller(config,usage_callback)
     from backend import settings
-    from backend.jobs import provider_slot, request_timeout
-    key = settings.get_api_key('deepseek')
-    if not key:
-        raise HTTPException(503, '请先在系统设置中配置 AI Key。')
+    from backend.jobs import request_timeout
+    model = config.get('model', '')
+    provider = 'zhipu' if model.startswith('glm-') else 'deepseek'
+    if not model.startswith('gpt-') and not settings.get_api_key(provider):
+        raise HTTPException(503, '请先在系统设置中配置所选模型服务的 API Key。')
     timeout = min(120, int(settings.get_limits().get('api_timeout_seconds', 120)))
-    def call(system, user, item):
-        with provider_slot('deepseek'):
-            return rc.make_http_caller(config, api_key=key, timeout=request_timeout(timeout), usage_callback=usage_callback)(system, user, item)
-    return call
+    return rc.make_teacher_caller(config, timeout_seconds=request_timeout(timeout), usage_callback=usage_callback)
 
 
 def _alive(pid):

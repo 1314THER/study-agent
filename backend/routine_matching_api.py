@@ -64,21 +64,21 @@ def get_store():
 def get_ai_caller():
     """Reuse account/provider configuration and the system's AI concurrency limit."""
     from backend import settings
-    from backend.jobs import provider_slot, request_timeout
-    api = settings.get_api().get("deepseek") or {}
+    from backend.jobs import request_timeout
     limits = settings.get_limits()
-    config = {"model": settings.get_teacher_config("liangliang")["solver"]["model"],
-              "base_url": api.get("base_url") or "https://api.deepseek.com/v1",
-              "temperature": 0.1, "max_tokens": min(8192, int(limits.get("api_max_tokens", 8192)))}
-    key = settings.get_api_key("deepseek")
-    if not key:
-        raise HTTPException(503, "请先在系统设置中配置 AI Key。")
+    teacher_cfg = settings.get_teacher_config("liangliang")["solver"]
+    model = teacher_cfg.get("model") or "glm-4.7-flash"
+    provider = "zhipu" if model.startswith("glm-") else "deepseek"
+    api = settings.get_api().get(provider) or {}
+    config = {"model": model, "provider": provider,
+              "base_url": api.get("base_url") or settings.DEFAULTS["api"][provider]["base_url"],
+              "temperature": 0.1, "reasoning_effort": teacher_cfg.get("reasoning_effort") or "medium",
+              "max_tokens": min(8192, int(limits.get("api_max_tokens", 8192))), "json_output": True}
+    if not model.startswith("gpt-") and not settings.get_api_key(provider):
+        raise HTTPException(503, "请先在系统设置中配置所选模型服务的 API Key。")
     timeout = min(120, int(limits.get("api_timeout_seconds", 120)))
 
-    def caller(system, user, item):
-        with provider_slot("deepseek"):
-            return rc.make_http_caller(config, api_key=key, timeout=request_timeout(timeout))(system, user, item)
-    return caller
+    return rc.make_teacher_caller(config, timeout_seconds=request_timeout(timeout))
 
 
 def _dump(model, **kwargs):

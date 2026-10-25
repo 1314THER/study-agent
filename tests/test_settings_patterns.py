@@ -110,7 +110,7 @@ class SettingsTest(unittest.TestCase):
         data = get_settings()
         self.assertEqual(set(data["api"]), {"deepseek", "zhipu"})
         self.assertEqual(data["api"]["deepseek"]["api_key"], "")
-        self.assertEqual(data["api"]["deepseek"]["vision_model"], "deepseek-flash")
+        self.assertNotIn("vision_model", data["api"]["deepseek"])
         self.assertEqual(get_teacher_config("liangliang")["solver"]["model"], "glm-4.7-flash")
         self.assertEqual(get_teacher_config("liangliang")["verifier"]["model"], "glm-4.7-flash")
         save_settings({"limits": {"generate_count": 4}})
@@ -127,7 +127,7 @@ class SettingsTest(unittest.TestCase):
             self.assertEqual(get_api_key("deepseek"), "")
             self.assertEqual(get_api_key("dashscope"), "")
             self.assertEqual(get_api()["deepseek"]["base_url"], "https://api.deepseek.com/v1")
-            self.assertEqual(get_api()["deepseek"]["vision_model"], "deepseek-flash")
+            self.assertNotIn("vision_model", get_api()["deepseek"])
 
     def test_owner_account_key_precedes_original_environment(self):
         with patch.object(settings_mod, "_current_identity", return_value={"id": 1, "role": "owner"}), \

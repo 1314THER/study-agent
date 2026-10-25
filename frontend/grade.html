@@ -250,6 +250,7 @@ async function uploadGradeHandwriting() {
     if (statusEl) statusEl.textContent = '正在识别手写内容…';
     var fd = new FormData();
     fd.append('file', input.files[0]);
+    fd.append('teacher', document.getElementById('teacher').value || _teacher || 'liangliang');
     try {
         var draft={};
         ['qSelect','questionInput','answerInput','qType','fullScore','duration','teacher','source','viewedAnswer','skipped'].forEach(function(id){var el=document.getElementById(id);if(el)draft[id]=el.type==='checkbox'?el.checked:el.value;});

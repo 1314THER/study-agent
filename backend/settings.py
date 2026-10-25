@@ -41,7 +41,6 @@ DEFAULTS = {
     "api": {
         "deepseek": {
             "base_url": "https://api.deepseek.com/v1",
-            "vision_model": "deepseek-flash",
             "api_key": "",
         },
         "zhipu": {
@@ -103,8 +102,7 @@ def _migrate_settings(data):
         cfg = data["api"].get("deepseek")
         if isinstance(cfg, dict):
             cfg.pop("model", None)
-            if cfg.get("vision_model") in ("deepseek-v4-flash", "deepseek-v4-flash-vision-exp") or str(cfg.get("vision_model", "")).lower().startswith("qwen"):
-                cfg["vision_model"] = "deepseek-flash"
+            cfg.pop("vision_model", None)
     for cfg in (data.get("teachers") or {}).values():
         if not isinstance(cfg, dict):
             continue

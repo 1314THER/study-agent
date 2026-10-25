@@ -294,8 +294,8 @@ class JobsTest(unittest.TestCase):
             ("teach_finish", {"session_id": "s", "step_errors": {}}, teach, "teach_finish_session", {"saved": True, "saved_question_id": 1}),
             ("generate", {"question_id": 1, "count": 2}, generate, "generate_variants", {"accepted": 2, "items": []}),
             ("grade", {"question_id": 1, "student_answer": "2", "source": "首次"}, grade, "grade_text", {"is_correct": True, "practice_record_id": 1}),
-            ("parse_file", {"_upload_path": "input.png", "filename": "试卷.png"}, multimodal, "parse_file", [{"latex": "x=1"}]),
-            ("ocr_file", {"_upload_path": "input.png"}, multimodal, "recognize_answer_image", {"text": "x=1", "confidence": "high"}),
+            ("parse_file", {"_upload_path": "input.png", "filename": "试卷.png", "teacher": "taotao"}, multimodal, "parse_file", [{"latex": "x=1"}]),
+            ("ocr_file", {"_upload_path": "input.png", "teacher": "ji"}, multimodal, "recognize_answer_image", {"text": "x=1", "confidence": "high"}),
             ("agent", {"message": "打开题库", "history": []}, agent, "agent_act", {"reply": "好", "actions": [{"type": "navigate", "page": "history"}], "blocks": []}),
             ("pattern_check", {"pattern_id": 1, "question_id": 2, "user_answer": "3"}, patterns, "check_pattern_answer", {"is_correct": True}),
             ("pattern_variants", {"pattern_id": 1}, patterns, "ensure_variants", {"generated": 3}),
@@ -309,6 +309,10 @@ class JobsTest(unittest.TestCase):
                     self.assertEqual(mocked.call_args.kwargs["student_answer"], "2")
                 if kind == "teach_chat":
                     self.assertEqual(mocked.call_args.kwargs["expected_revision"], 1)
+                if kind == "parse_file":
+                    self.assertEqual(mocked.call_args.kwargs["teacher"], "taotao")
+                if kind == "ocr_file":
+                    self.assertEqual(mocked.call_args.kwargs["teacher"], "ji")
         with patch.object(settings, "get_api", return_value={"deepseek": {"base_url": "https://example.invalid/v1"}}), \
                 patch.object(settings, "get_api_key", return_value="private-test-key"), \
                 patch.object(httpx, "get", return_value=type("Response", (), {"status_code": 200})()) as get:
@@ -377,7 +381,7 @@ class JobsTest(unittest.TestCase):
             events.append(("recognize", int(args["image_base64"])))
             return '[{"latex":"x=1"}]'
         with patch.object(multimodal, "iter_pdf_images", side_effect=pages), \
-                patch.object(multimodal, "_call_deepseek_vision", side_effect=recognize):
+                patch.object(multimodal, "_call_multimodal_model", side_effect=recognize):
             questions = multimodal.parse_file("fake.pdf")
         self.assertEqual(events, [("render", 1), ("recognize", 1), ("render", 2), ("recognize", 2)])
         self.assertEqual(len(questions), 2)
@@ -932,14 +936,15 @@ class UploadJobsTest(unittest.IsolatedAsyncioTestCase):
             with patch.object(jobs, "_manager", manager), workspace(directory):
                 try:
                     async with httpx.AsyncClient(transport=httpx.ASGITransport(app=app), base_url="http://test") as client:
-                        response = await client.post("/jobs/uploads", data={"kind": "ocr_file", "request_id": "upload-test-1"}, files={"file": ("../../outside.png", b"image-data", "image/png")})
+                        response = await client.post("/jobs/uploads", data={"kind": "ocr_file", "request_id": "upload-test-1", "teacher": "taotao"}, files={"file": ("../../outside.png", b"image-data", "image/png")})
                         self.assertEqual(response.status_code, 202, response.text)
                         job = response.json()
                         self.assertNotIn("_upload_path", job["args"])
                         self.assertEqual(job["args"]["filename"], "outside.png")
+                        self.assertEqual(job["args"]["teacher"], "taotao")
                         self.assertFalse(orphan.exists())
                         self.assertTrue(await asyncio.to_thread(started.wait, 2))
-                        repeated = await client.post("/jobs/uploads", data={"kind": "ocr_file", "request_id": "upload-test-1"}, files={"file": ("outside.png", b"image-data", "image/png")})
+                        repeated = await client.post("/jobs/uploads", data={"kind": "ocr_file", "request_id": "upload-test-1", "teacher": "taotao"}, files={"file": ("outside.png", b"image-data", "image/png")})
                         self.assertEqual(repeated.status_code, 202, repeated.text)
                         self.assertEqual(repeated.json()["job_id"], job["job_id"])
                         self.assertEqual(len(list((Path(directory) / "job-uploads").iterdir())), 1)

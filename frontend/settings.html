@@ -195,7 +195,7 @@
                     <h2>我的账号与 API Key</h2>
                     <p id="accountSummary"></p>
                     <form id="accountKeyForm" class="auth-form">
-                        <label class="auth-field">DeepSeek API Key<input id="accountApiKey" type="password" autocomplete="off" spellcheck="false" minlength="8" maxlength="512" required placeholder="粘贴新的密钥"><small id="accountKeyStatus"></small><small>文字解题、图片识别与教学共用此密钥。<a href="/deepseek-guide.html" target="_blank" rel="noopener">注册与密钥教程 ↗</a></small></label>
+                        <label class="auth-field">DeepSeek API Key<input id="accountApiKey" type="password" autocomplete="off" spellcheck="false" minlength="8" maxlength="512" required placeholder="粘贴新的密钥"><small id="accountKeyStatus"></small><small>韬韬使用此密钥；图片识题按所选老师的模型路由。<a href="/deepseek-guide.html" target="_blank" rel="noopener">注册与密钥教程 ↗</a></small></label>
                         <button class="auth-button primary" type="submit">保存我的密钥</button>
                         <div id="accountKeyMessage" class="auth-message" role="status" hidden></div>
                     </form>
@@ -257,17 +257,16 @@
                 <section class="settings-section" data-owner-only>
                     <div class="section-head">
                         <h2>DeepSeek 接口</h2>
-                        <span class="section-hint">韬韬与图片识别使用 DeepSeek，账号密钥在上方单独保存</span>
+                        <span class="section-hint">韬韬按模型配置使用 DeepSeek；识题和图片识别跟随所选老师，账号密钥在上方单独保存</span>
                     </div>
                     <div class="settings-grid">
                         <div class="settings-card">
-                            <h3>文字解题 / 对话 / 图片识别 / AI 改卷</h3>
+                            <h3>文字解题 / 对话 / AI 改卷</h3>
                             <div class="input-row">
                                 <label for="dsBase">接口地址</label>
                                 <input id="dsBase" type="url" spellcheck="false">
-                                <label for="dsVisionModel">图片模型</label>
-                                <input id="dsVisionModel" type="text" spellcheck="false" placeholder="deepseek-flash">
                             </div>
+                            <p class="section-hint">图片/PDF 识题使用当前老师配置的模型；梁梁选 GLM-4.7-Flash 时自动使用 GLM-4.6V-Flash。</p>
                             <div class="input-row" id="localKeyRow" hidden>
                                 <label for="dsKey">本地 API Key</label>
                                 <input id="dsKey" type="password" placeholder="未配置" autocomplete="off">
@@ -282,7 +281,7 @@
                 <section class="settings-section" data-owner-only>
                     <div class="section-head">
                         <h2>智谱 GLM 接口</h2>
-                        <span class="section-hint">梁梁与雪峰共用此密钥，请填写自己的 API Key</span>
+                        <span class="section-hint">梁梁、雪峰及梁梁图片识题回退共用此密钥，请填写自己的 API Key</span>
                     </div>
                     <div class="settings-card">
                         <div class="input-row">
@@ -516,7 +515,6 @@
                 var ds = api.deepseek || {};
                 document.getElementById("dsBase").value = ds.base_url || "";
                 document.getElementById("dsKey").placeholder = ds.has_key ? "已配置（留空保留）" : "未配置";
-                document.getElementById("dsVisionModel").value = ds.vision_model || "deepseek-flash";
                 setKeyStatus("dsKeyStatus", ds);
                 var glm = api.zhipu || {};
                 document.getElementById("glmBase").value = glm.base_url || "";
@@ -566,7 +564,7 @@
                 },
                 teachers: {},
                 api: {
-                    deepseek: { base_url: val("dsBase"), vision_model: val("dsVisionModel") },
+                    deepseek: { base_url: val("dsBase") },
                     zhipu: { base_url: val("glmBase") }
                 },
                 limits: {

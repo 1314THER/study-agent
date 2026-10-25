@@ -711,9 +711,9 @@ continuation、paper_title、section（question/fragment/answer）。每道题�
 """
 
 
-def _ocr_items(base64_image, filename, page, *, prompt=_OCR_PROMPT):
-    from backend.multimodal import _call_deepseek_vision
-    raw_response = _call_deepseek_vision(image_base64=base64_image, text=prompt)
+def _ocr_items(base64_image, filename, page, *, prompt=_OCR_PROMPT, teacher="liangliang"):
+    from backend.multimodal import _call_multimodal_model
+    raw_response = _call_multimodal_model(image_base64=base64_image, text=prompt, teacher=teacher)
     match = re.search(r"```(?:json)?\s*(.*?)```", raw_response, re.S)
     value = json.loads(match[1] if match else raw_response)
     if not isinstance(value, list):
@@ -747,7 +747,7 @@ def _read_pdf_records(file: Path, options):
     try:
         from functools import partial
         prompt = _OCR_QUESTIONS_PROMPT if options.get("questions_only") else _OCR_PROMPT
-        units = read_pdf_pages(file, options, partial(_ocr_items, prompt=prompt), prompt)
+        units = read_pdf_pages(file, options, partial(_ocr_items, prompt=prompt, teacher=options.get("teacher", "liangliang")), prompt)
     except JobStopped:
         raise
     except Exception as exc:
@@ -919,7 +919,8 @@ def iter_source_records(path, kind, options=None) -> Iterator[dict]:
         if options.get("ocr") is True:
             try:
                 from backend.multimodal import image_to_base64
-                yield from _ocr_items(image_to_base64(str(root)), root.name, 1)
+                yield from _ocr_items(image_to_base64(str(root)), root.name, 1,
+                                       teacher=options.get("teacher", "liangliang"))
             except Exception as exc:
                 yield _error(root.name + "#p1-ocr1", exc, {"file": root.name}, page_start=1, page_end=1)
         else:

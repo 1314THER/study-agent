@@ -4,6 +4,8 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const html = readFileSync(new URL('../frontend/multimodal.html', import.meta.url), 'utf8');
+assert.match(html, /识题与默认解题老师/);
+assert.match(html, /GLM-4\.6V-Flash/);
 const source = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(match => match[1]).join('\n');
 const tick = () => new Promise(resolve => setImmediate(resolve));
 
@@ -45,7 +47,7 @@ const ledger = {
 const firstPage = page(undefined, ledger);
 const p = firstPage.context;
 p.localStorage.setItem('mm_parse_current', 'batch');
-p.writeParseGroup({ id: 'batch', files: [
+p.writeParseGroup({ id: 'batch', teacher: 'taotao', files: [
   { name: 'one.pdf', job_id: 'first', status: 'running' },
   { name: 'two.pdf', job_id: 'second', status: 'queued' },
   { name: 'bad.png', job_id: 'failed', status: 'running' },
@@ -55,6 +57,7 @@ p._sessions = { 0: { done: true, data: { answer: 'kept' } } };
 await p.restoreMultiJobs();
 await tick();
 assert.deepEqual([...p._questions].map(question => question.latex), ['existing edited question', 'x=1', 'y=2']);
+assert.equal(p._questions[1].recommended_teacher, 'taotao', 'parsed questions inherit the selected recognition teacher');
 assert.equal(p._sessions[0].data.answer, 'kept', 'merging recognized files preserves solved state');
 assert.match(firstPage.elements.get('mmParseStatus').textContent, /bad.png：识别失败 · unreadable image/);
 
@@ -100,6 +103,7 @@ const fresh = demoPage();
 assert.equal(await fresh.context.initializeDemoQuestions(), true);
 assert.equal(fresh.context._questions.length, 3);
 assert.equal(fresh.context._questions[fresh.context._selectedIdx].demo_preset_id, catalog.default_id);
+assert.equal(fresh.context._questions[0].recommended_teacher, 'liangliang');
 assert.equal(fresh.context.multiArgs(0).preset_id, catalog.default_id);
 assert.match(fresh.context.demoSourceHtml(fresh.context._questions[0]), /查看原题出处/);
 assert.match(fresh.context.demoSourceHtml(fresh.context._questions[0]), /https:\/\/example.org\/paper.pdf/);
@@ -147,6 +151,10 @@ assert.equal(coach.context.multiArgs(3).preset_id, undefined);
 assert.equal(coach.context.consumeDemoCoachInput(), false, 'consumed coach draft cannot be appended twice');
 assert.equal(formal.context.consumeDemoCoachInput(), false);
 console.log('Coach draft checks passed (append, preserve, select, remove, custom-only, no automatic AI).');
+
+const inheritedTeacher = demoPage(new Map([['teacher', 'ji']]));
+assert.equal(await inheritedTeacher.context.initializeDemoQuestions(), true);
+assert.equal(inheritedTeacher.context._questions[0].recommended_teacher, 'ji', 'multimodal defaults inherit the teacher selected on other solving pages');
 
 // Returning to pending solves restores card progress and ignores older results.
 const recover = page(undefined, {

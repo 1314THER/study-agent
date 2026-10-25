@@ -83,10 +83,11 @@
   </main>
 </div>
 <dialog id="poolSourcesDialog" class="pool-dialog"><div class="pool-dialog-heading"><div><p class="pool-eyebrow">保留原题与出处</p><h2>题源与导入</h2></div><button type="button" class="pool-btn" data-close-dialog="poolSourcesDialog">关闭</button></div>
+  <label>识题老师 <select id="poolOcrTeacher"><option value="liangliang">梁梁</option><option value="taotao">韬韬</option><option value="xuefeng">雪峰</option><option value="ji">鸡</option></select></label><p class="pool-muted">扫描页 OCR 使用所选老师的模型；梁梁的图片任务自动使用 GLM-4.6V-Flash。</p>
   <form id="poolUploadForm" class="pool-upload-form"><label>题源 / 书名<input id="poolUploadName" name="source_name" placeholder="留空使用文件名"></label><label>题源文件<input id="poolUploadFile" name="file" type="file" accept=".pdf,.docx,.txt,.json,.jsonl,.tex,.png,.jpg,.jpeg" required></label><button class="pool-btn primary" id="poolUploadButton" type="submit">上传并提取</button><label class="pool-ocr-option"><input id="poolUploadOcr" type="checkbox" checked> 使用 OCR 识别扫描页中的文字与公式</label></form>
   <p class="pool-muted">支持 PDF、Word、扫描图片和结构化题源。图形题加载原题图或原卷页，题干、选项和图形仍需核对。原文件仅供主人核对。</p>
   <section class="pool-source-card"><h3>在线找题</h3><p class="pool-muted">搜集完整模考卷及导数、概率专题，保留原文件与题图，题目不要求原答案。</p>
-    <form id="poolCollectForm" class="pool-upload-form"><label>题源年份<input id="poolCollectYears" value="2025,2026" placeholder="2025,2026" required></label><label class="pool-ocr-option"><input id="poolCollectTopics" type="checkbox" checked> 同时找导数与概率专题</label><label class="pool-ocr-option"><input id="poolCollectOcr" type="checkbox" checked> 识别扫描题目（使用已配置 DeepSeek，最多 20 并发）</label><button type="submit" id="poolCollectButton" class="pool-btn primary">开始找题</button></form>
+    <form id="poolCollectForm" class="pool-upload-form"><label>题源年份<input id="poolCollectYears" value="2025,2026" placeholder="2025,2026" required></label><label class="pool-ocr-option"><input id="poolCollectTopics" type="checkbox" checked> 同时找导数与概率专题</label><label class="pool-ocr-option"><input id="poolCollectOcr" type="checkbox" checked> 识别扫描题目（使用上方所选老师，最多 20 并发）</label><button type="submit" id="poolCollectButton" class="pool-btn primary">开始找题</button></form>
     <p id="poolCollectionStatus" class="pool-muted" role="status" aria-live="polite"></p>
     <div id="poolCollectionReport"></div>
   </section>

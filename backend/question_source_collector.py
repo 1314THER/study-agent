@@ -141,13 +141,14 @@ def inspect_and_download(candidate, resources, active):
     return result
 
 
-def convert_resource(resource, cache, concurrency, ocr, notify, active, retry_failed=True):
+def convert_resource(resource, cache, concurrency, ocr, notify, active, retry_failed=True, teacher="liangliang"):
     from backend.pool_sources import iter_source_records
     from scripts.sync_question_sources import write_jsonl
     active()
     path = Path(resource["path"])
     stats = {}
     options = {"ocr_mode": "auto" if ocr else "off", "questions_only": True, "language": "zh", "concurrency": concurrency,
+               "teacher": teacher,
                "cache_dir": cache, "resume": True, "retry_failed": retry_failed, "stats": stats,
                "progress": lambda s: notify("ocr", "正在识别 " + resource["title"] + f"：{s['completed_pages']}/{s['total_pages']} 页，缓存 {s['cache_hits']}，失败 {s['failed_pages']}", current_pages=s["completed_pages"], current_failed=s["failed_pages"])}
     requests = 0
@@ -319,7 +320,7 @@ def _collect(args, root, progress=None):
         with ThreadPoolExecutor(max_workers=5) as executor:
             futures = {executor.submit(copy_context().run, convert_resource, r, root.parent / "conversion-cache",
                                        args.get("concurrency", 20), args.get("ocr", True), notify, ensure_active,
-                                       args.get("retry_failed", True)): r for r in ready}
+                                       args.get("retry_failed", True), args.get("teacher", "liangliang")): r for r in ready}
             for future in as_completed(futures):
                 ensure_active()
                 resource = futures[future]
@@ -346,7 +347,7 @@ def _collect(args, root, progress=None):
                             target.chmod(0o600)
                         sid = create_source({"name": resource["title"], "kind": resource["format"], "url": resource["url"],
                                              "revision": resource["sha256"], "file_token": token, "filename": Path(resource["path"]).name,
-                                             "publication_allowed": False, "options": {"ocr": args.get("ocr", True), "questions_only": True, "concurrency": args.get("concurrency", 20)}})
+                                             "publication_allowed": False, "options": {"ocr": args.get("ocr", True), "questions_only": True, "concurrency": args.get("concurrency", 20), "teacher": args.get("teacher", "liangliang")}})
                         result = import_records(sid, records, retry_failed=True)
                         report["added_occurrences"] += result["added_occurrences"]
                     report.setdefault("conversion_results", []).append(converted)

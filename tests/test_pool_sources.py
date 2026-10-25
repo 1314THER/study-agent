@@ -144,7 +144,7 @@ class PoolSourceTests(unittest.TestCase):
     def test_scan_image_requires_explicit_ocr(self):
         file = self.root / "scan.png"
         file.write_bytes(b"source-image")
-        with patch("backend.multimodal._call_deepseek_vision") as api:
+        with patch("backend.multimodal._call_multimodal_model") as api:
             item = next(iter_source_records(file, "image"))
         api.assert_not_called()
         self.assertEqual(item["completeness"], "needs_review")

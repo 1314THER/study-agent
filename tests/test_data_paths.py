@@ -171,7 +171,7 @@ class WorkspaceIsolationTest(unittest.TestCase):
                 self.assertEqual(settings.get_api_key("dashscope"), "")
                 self.assertEqual(settings.get_api()["deepseek"]["base_url"], "https://trusted.example/v1")
                 self.assertNotIn("dashscope", settings.get_api())
-                self.assertEqual(settings.get_api()["deepseek"]["vision_model"], "deepseek-flash")
+                self.assertNotIn("vision_model", settings.get_api()["deepseek"])
                 self.assertEqual(settings.get_teacher_config("liangliang")["solver"]["model"], "trusted-model")
                 self.assertEqual(settings.get_limits()["api_max_tokens"], 512)
                 self.assertEqual(settings.get_limits()["generate_concurrency"], 1)

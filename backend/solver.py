@@ -119,37 +119,75 @@ def get_api_key() -> str:
 
 
 # ---------- 调用 DeepSeek ----------
-def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3, model: str = "deepseek-flash", reasoning_effort: str = None, image_content: list = None):
+def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3, model: str = "deepseek-flash",
+                  reasoning_effort: str = None, image_content: list = None, max_tokens: int = None,
+                  timeout_seconds: int = None, messages: list = None, response_format: dict = None):
+    if image_content and model == "glm-4.7-flash":
+        model = "glm-4.6v-flash"
+    if image_content and model == "glm-4.6v-flash":
+        from backend.multimodal import _fit_glm46v_image
+        fitted = []
+        for part in image_content:
+            part = dict(part)
+            image_url = dict(part.get("image_url") or {})
+            url = image_url.get("url", "")
+            header, separator, encoded = url.partition(",")
+            if separator and header.startswith("data:image/"):
+                encoded, mime = _fit_glm46v_image(encoded)
+                image_url["url"] = f"data:{mime};base64,{encoded}"
+            fitted.append({**part, "image_url": image_url})
+        image_content = fitted
+    full_system = system_prompt + "\n\n" + _LATEX_RULES if _LATEX_RULES else system_prompt
+
+    def flatten_messages():
+        if not messages:
+            return full_system, user_prompt
+        items = [item for item in messages if isinstance(item, dict) and item.get("role") in ("system", "user", "assistant")]
+        system = next((str(item.get("content") or "") for item in items if item.get("role") == "system"), full_system)
+        conversation = "\n\n".join(
+            ("用户" if item["role"] == "user" else "助手") + "：\n" + str(item.get("content") or "")
+            for item in items if item.get("role") != "system"
+        ) or user_prompt
+        if _LATEX_RULES and system != full_system and _LATEX_RULES not in system:
+            system += "\n\n" + _LATEX_RULES
+        return system, conversation
+
+    request_messages = None
+    if messages:
+        request_messages = [dict(item) for item in messages if isinstance(item, dict) and item.get("role") in ("system", "user", "assistant")]
+        if not any(item.get("role") == "system" for item in request_messages):
+            request_messages.insert(0, {"role": "system", "content": full_system})
+        elif _LATEX_RULES and _LATEX_RULES not in str(request_messages[0].get("content") or ""):
+            request_messages[0]["content"] = str(request_messages[0].get("content") or "") + "\n\n" + _LATEX_RULES
+    system_for_single, user_for_single = flatten_messages()
     from backend.local_models import current_caller
     local_caller = current_caller()
     if local_caller is not None:
-        full_system = system_prompt + "\n\n" + _LATEX_RULES if _LATEX_RULES else system_prompt
-        return local_caller(full_system, user_prompt, image_content=image_content)
-    full_system = system_prompt + "\n\n" + _LATEX_RULES if _LATEX_RULES else system_prompt
+        return local_caller(system_for_single, user_for_single, image_content=image_content)
     if model.startswith("gpt-"):
         from backend.local_models import call_teacher
-        return call_teacher(full_system, user_prompt, model=model,
+        return call_teacher(system_for_single, user_for_single, model=model,
                             reasoning_effort=reasoning_effort or "medium", image_content=image_content)
     provider = "zhipu" if model.startswith("glm-") else "deepseek"
     api_key = get_api_key() if provider == "deepseek" else runtime_settings.get_api_key(provider)
     if not api_key:
         raise ValueError("未配置智谱 API Key，请在系统设置页填写")
-    if image_content and model == "glm-4.7-flash":
-        raise ValueError("GLM-4.7-Flash 仅支持文本，请选择支持图片的老师")
     api_cfg = runtime_settings.get_api().get(provider) or {}
     limits = runtime_settings.get_limits()
-    timeout_seconds = limits.get("api_timeout_seconds", 300)
+    timeout_seconds = timeout_seconds or limits.get("api_timeout_seconds", 300)
     base_url = (api_cfg.get("base_url") or runtime_settings.DEFAULTS["api"][provider]["base_url"]).rstrip("/")
     endpoint = base_url if base_url.endswith("/chat/completions") else base_url + "/chat/completions"
     body = {
         "model": model,
-        "messages": [
+        "messages": request_messages or [
             {"role": "system", "content": full_system},
             {"role": "user", "content": ([{"type": "text", "text": user_prompt}] + image_content) if image_content else user_prompt},
         ],
         "temperature": temperature,
-        "max_tokens": limits.get("api_max_tokens", 32000),
+        "max_tokens": max_tokens or limits.get("api_max_tokens", 32000),
     }
+    if response_format:
+        body["response_format"] = response_format
     if provider == "zhipu":
         body["temperature"] = 1.0
         if model.startswith("glm-5.3"):
@@ -157,13 +195,15 @@ def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3
             body["reasoning_effort"] = {"medium": "high", "high": "max", "xhigh": "max", "": "low", None: "low"}.get(reasoning_effort, reasoning_effort)
             body["thinking"] = {"type": "enabled"}
         else:
-            # GLM-4.7-Flash exposes thinking on/off, not effort levels.
+            # GLM 4.x Flash exposes thinking on/off, not effort levels.
             body["thinking"] = {"type": "enabled" if reasoning_effort else "disabled"}
     elif reasoning_effort:
         body["reasoning_effort"] = reasoning_effort
         body["thinking"] = {"type": "enabled"}
     elif image_content:
         body["thinking"] = {"type": "disabled"}
+    if model == "glm-4.6v-flash" and len(json.dumps(body, ensure_ascii=False).encode("utf-8")) > 48 * 1024 * 1024:
+        raise ValueError("图片请求超过 GLM-4.6V-Flash 的请求体限制，请减少图片数量或降低分辨率")
     try:
         from backend.jobs import provider_slot, request_timeout
         with provider_slot(provider):
@@ -183,7 +223,8 @@ def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3
         raise Exception("无法连接到 API 服务器")
     except (httpx.HTTPError, KeyError, json.JSONDecodeError) as e:
         raise Exception(f"API 请求异常: {str(e)[:200]}")
-    usage = data.get("usage", {})
+    usage = dict(data.get("usage", {})) if isinstance(data.get("usage", {}), dict) else {}
+    usage["finish_reason"] = data["choices"][0].get("finish_reason")
     return content, usage
 
 

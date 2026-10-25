@@ -10,12 +10,9 @@ import types
 import unittest
 from unittest.mock import patch
 
-import httpx
-
 import backend.multimodal as mm
 from backend.multimodal import (
-    _call_deepseek_vision,
-    _get_api_key,
+    _call_multimodal_model,
     _read_extraction_prompt,
     docx_to_text,
     file_to_base64,
@@ -23,17 +20,72 @@ from backend.multimodal import (
     parse_file,
     pdf_to_images,
     recognize_answer_image,
+    resolve_multimodal_model,
 )
 from backend.rescore_questions import _clean_final, rescore_question
 
 
 class MultimodalApiTest(unittest.TestCase):
-    def test_get_api_key(self):
-        with patch.object(mm.runtime_settings, "get_api_key", return_value="k"):
-            self.assertEqual(_get_api_key(), "k")
-        with patch.object(mm.runtime_settings, "get_api_key", return_value=""):
+    def test_multimodal_model_follows_selected_teacher(self):
+        expected = {
+            "liangliang": ("glm-4.6v-flash", "glm-4.7-flash"),
+            "taotao": ("deepseek-flash", "deepseek-flash"),
+            "xuefeng": ("glm-5.3-flash", "glm-5.3-flash"),
+            "ji": ("gpt-6-astra", "gpt-6-astra"),
+        }
+        for teacher, (image_model, text_model) in expected.items():
+            with self.subTest(teacher=teacher):
+                self.assertEqual(resolve_multimodal_model(teacher, has_image=True)[0], image_model)
+                self.assertEqual(resolve_multimodal_model(teacher, has_image=False)[0], text_model)
+
+    def test_multimodal_call_passes_selected_model_effort_and_image_to_solver(self):
+        limits = {"multimodal_max_tokens": 1200, "multimodal_timeout_seconds": 9}
+        with patch.object(mm.runtime_settings, "get_limits", return_value=limits), \
+                patch("backend.solver.call_deepseek", return_value=("识别结果", {})) as call:
+            result = _call_multimodal_model(image_base64="YWJj", text="识别公式", teacher="ji")
+        self.assertEqual(result, "识别结果")
+        self.assertEqual(call.call_args.kwargs["model"], "gpt-6-astra")
+        self.assertEqual(call.call_args.kwargs["reasoning_effort"], "medium")
+        self.assertEqual(call.call_args.kwargs["max_tokens"], 1200)
+        self.assertEqual(call.call_args.kwargs["timeout_seconds"], 9)
+        self.assertEqual(call.call_args.kwargs["image_content"][0]["image_url"]["url"], "data:image/png;base64,YWJj")
+
+    def test_multimodal_call_rejects_invalid_or_oversized_image_before_provider(self):
+        with patch.object(mm.runtime_settings, "get_limits", return_value={}), \
+                patch("backend.solver.call_deepseek") as call:
             with self.assertRaises(ValueError):
-                _get_api_key()
+                _call_multimodal_model(image_base64="not-base64")
+            with patch.object(mm, "MAX_IMAGE_BYTES", 2), self.assertRaises(ValueError):
+                _call_multimodal_model(image_base64="YWJj")
+            call.assert_not_called()
+
+    def test_glm46v_image_preserves_whole_frame_and_respects_dimension_limit(self):
+        from PIL import Image
+        with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as f:
+            path = f.name
+        try:
+            Image.new("RGB", (6100, 10), "white").save(path)
+            encoded = file_to_base64(path)
+            fitted, mime = mm._fit_glm46v_image(encoded)
+            image = Image.open(io.BytesIO(base64.b64decode(fitted)))
+            self.assertEqual(mime, "image/jpeg")
+            self.assertLessEqual(max(image.size), 6000)
+            self.assertGreater(image.size[0], image.size[1])
+        finally:
+            os.unlink(path)
+
+    def test_glm46v_keeps_jpeg_data_url_mime(self):
+        from PIL import Image
+        with tempfile.NamedTemporaryFile(suffix=".jpg", delete=False) as f:
+            path = f.name
+        try:
+            Image.new("RGB", (20, 10), "white").save(path, format="JPEG")
+            encoded = file_to_base64(path)
+            fitted, mime = mm._fit_glm46v_image(encoded)
+            self.assertEqual(mime, "image/jpeg")
+            self.assertEqual(fitted, encoded)
+        finally:
+            os.unlink(path)
 
     def test_file_base64(self):
         with tempfile.NamedTemporaryFile(mode="wb", suffix=".bin", delete=False) as f:
@@ -67,84 +119,6 @@ class MultimodalApiTest(unittest.TestCase):
 
     def test_read_extraction_prompt(self):
         self.assertTrue(_read_extraction_prompt().strip())
-
-    def _deepseek_patches(self):
-        return (
-            patch.object(mm, "_get_api_key", return_value="k"),
-            patch.object(mm.runtime_settings, "get_api", return_value={"deepseek": {"base_url": "https://x/v1"}}),
-            patch.object(mm.runtime_settings, "get_limits", return_value={
-                "multimodal_timeout_seconds": 5,
-                "multimodal_max_tokens": 1000,
-            }),
-        )
-
-    def _deepseek_stack(self):
-        from contextlib import ExitStack
-        stack = ExitStack()
-        for p in self._deepseek_patches():
-            stack.enter_context(p)
-        return stack
-
-    def test_call_deepseek_vision_success(self):
-        resp = type("R", (), {
-            "status_code": 200,
-            "json": lambda self: {"choices": [{"message": {"content": "ok"}}]},
-        })()
-        with self._deepseek_stack(), patch.object(mm.httpx, "post", return_value=resp):
-            self.assertEqual(_call_deepseek_vision(text="hi"), "ok")
-
-    def test_vision_request_uses_deepseek_key_model_and_original_image(self):
-        from contextlib import nullcontext
-        resp = type("R", (), {
-            "status_code": 200,
-            "json": lambda self: {"choices": [{"message": {"content": "ok"}}]},
-        })()
-        with self._deepseek_stack(), patch.object(mm.httpx, "post", return_value=resp) as post, \
-                patch("backend.jobs.provider_slot", return_value=nullcontext()) as slot:
-            self.assertEqual(_call_deepseek_vision(image_base64="YWJj", text="识别公式"), "ok")
-        slot.assert_called_once_with("deepseek")
-        self.assertEqual(post.call_args.args[0], "https://x/v1/chat/completions")
-        body = post.call_args.kwargs["json"]
-        self.assertEqual(body["model"], "deepseek-flash")
-        self.assertEqual(body["thinking"], {"type": "disabled"})
-        self.assertEqual(body["messages"][0]["role"], "user")
-        self.assertEqual(body["messages"][0]["content"][0]["image_url"], {
-            "url": "data:image/png;base64,YWJj", "detail": "original",
-        })
-
-    def test_vision_rejects_oversized_invalid_or_truncated_requests(self):
-        with self._deepseek_stack(), patch.object(mm.httpx, "post") as post:
-            with self.assertRaises(ValueError):
-                _call_deepseek_vision(image_base64="not-base64")
-            with patch.object(mm, "MAX_IMAGE_BYTES", 2), self.assertRaises(ValueError):
-                _call_deepseek_vision(image_base64="YWJj")
-            with patch.object(mm, "MAX_REQUEST_BYTES", 2), self.assertRaises(ValueError):
-                _call_deepseek_vision(text="题目")
-            post.assert_not_called()
-        resp = type("R", (), {
-            "status_code": 200,
-            "json": lambda self: {"choices": [{"finish_reason": "length", "message": {"content": "["}}]},
-        })()
-        with self._deepseek_stack(), patch.object(mm.httpx, "post", return_value=resp):
-            with self.assertRaisesRegex(ValueError, "超出输出长度"):
-                _call_deepseek_vision(text="题目")
-
-    def test_call_deepseek_vision_errors(self):
-        resp = type("R", (), {"status_code": 500, "text": "boom"})()
-        with self._deepseek_stack(), patch.object(mm.httpx, "post", return_value=resp):
-            with self.assertRaises(Exception) as ctx:
-                _call_deepseek_vision(text="hi")
-        self.assertIn("500", str(ctx.exception))
-
-        with self._deepseek_stack(), patch.object(mm.httpx, "post", side_effect=httpx.TimeoutException("t")):
-            with self.assertRaises(Exception) as ctx:
-                _call_deepseek_vision(text="hi")
-        self.assertIn("超时", str(ctx.exception))
-
-        with self._deepseek_stack(), patch.object(mm.httpx, "post", side_effect=httpx.ConnectError("c")):
-            with self.assertRaises(Exception) as ctx:
-                _call_deepseek_vision(text="hi")
-        self.assertIn("无法连接", str(ctx.exception))
 
     def test_pdf_to_images_with_fake_fitz(self):
         class FakePix:
@@ -216,7 +190,7 @@ class MultimodalApiTest(unittest.TestCase):
             f.write("1. 求 $x$")
             path = f.name
         try:
-            with patch.object(mm, "_call_deepseek_vision", return_value=self._llm_json()):
+            with patch.object(mm, "_call_multimodal_model", return_value=self._llm_json()):
                 questions = parse_file(path)
             self.assertEqual(questions[0]["latex"], "$x^2=1$")
         finally:
@@ -231,13 +205,13 @@ class MultimodalApiTest(unittest.TestCase):
             docx_path = f.name
         try:
             with patch.object(mm, "iter_pdf_images", return_value=iter([(1, 1, "b64")])), \
-                 patch.object(mm, "_call_deepseek_vision", return_value=self._llm_json()):
+                 patch.object(mm, "_call_multimodal_model", return_value=self._llm_json()):
                 self.assertEqual(len(parse_file(pdf_path)), 1)
             with patch.object(mm, "image_to_base64", return_value="b64"), \
-                 patch.object(mm, "_call_deepseek_vision", return_value=self._llm_json()):
+                 patch.object(mm, "_call_multimodal_model", return_value=self._llm_json()):
                 self.assertEqual(len(parse_file(img_path)), 1)
             with patch.object(mm, "docx_to_text", return_value="题目"), \
-                 patch.object(mm, "_call_deepseek_vision", return_value=self._llm_json()):
+                 patch.object(mm, "_call_multimodal_model", return_value=self._llm_json()):
                 self.assertEqual(len(parse_file(docx_path)), 1)
         finally:
             for p in (pdf_path, img_path, docx_path):
@@ -257,12 +231,12 @@ class MultimodalApiTest(unittest.TestCase):
             path = f.name
         try:
             with patch.object(mm, "image_to_base64", return_value="b64"), \
-                 patch.object(mm, "_call_deepseek_vision", return_value="设 $x=1$，解得 $x=1$。这是完整作答。"):
+                 patch.object(mm, "_call_multimodal_model", return_value="设 $x=1$，解得 $x=1$。这是完整作答。"):
                 result = recognize_answer_image(path)
             self.assertEqual(result["confidence"], "high")
 
             with patch.object(mm, "image_to_base64", return_value="b64"), \
-                 patch.object(mm, "_call_deepseek_vision", return_value="x=1"):
+                 patch.object(mm, "_call_multimodal_model", return_value="x=1"):
                 result = recognize_answer_image(path)
             self.assertEqual(result["confidence"], "medium")
         finally:

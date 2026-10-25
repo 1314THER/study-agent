@@ -21,7 +21,7 @@ KINDS = {".json": "jsonl", ".jsonl": "jsonl", ".tex": "compilation", ".docx": "d
 def main():
     from backend.pool_sources import SOURCE_KINDS, iter_source_records, _OCR_PROMPT
     from backend.source_conversion import file_hash, atomic_json, parse_pages, CACHE_VERSION
-    from backend.multimodal import MODEL
+    from backend.multimodal import resolve_multimodal_model
     from backend.source_policy import MIN_YEAR, is_old, apply_year_policy
     parser = argparse.ArgumentParser(description="批量转录题源，不解题；默认自动识别扫描页并调用现有云 OCR")
     parser.add_argument("inputs", type=Path, nargs="+")
@@ -30,6 +30,8 @@ def main():
     parser.add_argument("--kind", choices=SOURCE_KINDS)
     parser.add_argument("--pages", default="", help="PDF 页码，例如 1,3-8")
     parser.add_argument("--ocr", choices=("auto", "off", "force"), default="auto")
+    parser.add_argument("--teacher", choices=("liangliang", "taotao", "xuefeng", "ji"), default="liangliang",
+                        help="选择题目识别模型的老师")
     parser.add_argument("--concurrency", type=int, choices=range(1, 21), default=20)
     parser.add_argument("--cache-dir", type=Path, default=ROOT / ".runtime/question-pool/conversion-cache")
     parser.add_argument("--no-resume", dest="resume", action="store_false", default=True)
@@ -55,7 +57,8 @@ def main():
                     files.add(file.resolve())
     if not files:
         parser.error("没有找到支持的题源文件")
-    config = {"version": 3, "page_cache_version": CACHE_VERSION, "model": MODEL,
+    model, _ = resolve_multimodal_model(args.teacher, has_image=True)
+    config = {"version": 4, "page_cache_version": CACHE_VERSION, "model": model, "teacher": args.teacher,
               "prompt_sha256": sha256(_OCR_PROMPT.encode()).hexdigest(), "kind": args.kind, "ocr_mode": args.ocr, "page_numbers": pages,
               "minimum_year": MIN_YEAR, "mock_profile": not args.all_papers,
               "answers_sha256": file_hash(args.answers) if args.answers else ""}
@@ -97,7 +100,8 @@ def main():
                     options = {"ocr": args.ocr != "off", "ocr_mode": args.ocr, "concurrency": args.concurrency,
                                "resume": args.resume, "retry_failed": args.retry_failed, "cache_dir": args.cache_dir,
                                "page_numbers": pages, "stats": stats, "progress": progress, "source_report": source_report,
-                               "mock_profile": not args.all_papers, "require_19": not args.all_papers, "answers_path": args.answers}
+                               "mock_profile": not args.all_papers, "require_19": not args.all_papers, "answers_path": args.answers,
+                               "teacher": args.teacher}
                     base.mkdir(parents=True, exist_ok=True, mode=0o700)
                     part = base / ("records-" + uuid.uuid4().hex + ".tmp")
                     try:

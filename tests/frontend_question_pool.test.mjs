@@ -136,6 +136,7 @@ await collection.controller.init();
 collection.field('poolCollectYears').value = '2026，2025,2026';
 collection.field('poolCollectTopics').checked = true;
 collection.field('poolCollectOcr').checked = true;
+collection.field('poolOcrTeacher').value = 'ji';
 collection.context.window.StudyJobs.get = async id => ({job_id: id, kind: 'pool_collect', status: 'done', result: {
   stage: 'done', message: '采集完成', downloaded: 2, question_records: 38, added_occurrences: 19,
   verified_papers: 1, unverified_papers: 1, completed_pages: 8, cache_page_hits: 7, failed_pages: 1,
@@ -144,7 +145,7 @@ collection.context.window.StudyJobs.get = async id => ({job_id: id, kind: 'pool_
 }});
 await collection.controller.collect({preventDefault() {}});
 const collectionCall = collection.server.calls.find(call => call.path === '/question-pool/collect');
-assert.deepEqual(collectionCall.body, {years: [2026, 2025], topics: true, ocr: true, concurrency: 20});
+assert.deepEqual(collectionCall.body, {years: [2026, 2025], topics: true, ocr: true, concurrency: 20, teacher: 'ji'});
 assert.match(collection.field('poolCollectionReport').textContent, /通过整卷核验 1 份.*缓存命中 7.*失败页 1/);
 assert.match(collection.field('poolCollectionReport').textContent, /待核对卷.*尚未通过整卷/);
 assert.equal(collection.field('poolCollectionReport').querySelectorAll('a').some(link => link.href.startsWith('javascript:')), false);
@@ -279,10 +280,12 @@ assert.equal(new URL(allQuery.path, 'http://localhost').searchParams.get('comple
 restored.field('poolUploadFile').files = [new File(['{"question":"集合文字题"}'], 'book.json', {type: 'application/json'})];
 restored.field('poolUploadName').value = '集合教辅';
 restored.field('poolUploadOcr').checked = false;
+restored.field('poolOcrTeacher').value = 'xuefeng';
 await restored.controller.upload({preventDefault() {}});
 const uploadCall = restored.server.calls.find(call => call.path === '/question-pool/uploads');
 assert.equal(uploadCall.body.get('source_name'), '集合教辅');
 assert.equal(uploadCall.body.get('ocr'), 'false');
+assert.equal(uploadCall.body.get('teacher'), 'xuefeng');
 assert.equal(uploadCall.body.get('file').name, 'book.json');
 
 // A page refresh reconnects to a pending accepted job instead of submitting it again.
