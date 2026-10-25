@@ -21,6 +21,7 @@
 
 ```bash
 .venv/bin/python scripts/build_research_showcase.py --check
+.venv/bin/python scripts/build_showcase_dataset.py --check
 .venv/bin/python -m unittest tests.test_showcase tests.test_showcase_data tests.test_showcase_pipeline tests.test_showcase_bank tests.test_showcase_recordings tests.test_research_showcase -v
 python3 scripts/build_research_release.py --output .runtime/research-showcase-release
 ```
@@ -49,6 +50,8 @@ Workbench 可以上传已验收的发布包与配套激活脚本，也可以在*
 git clone https://github.com/1314THER/study-agent.git /root/study-agent-research-source
 git -C /root/study-agent-research-source checkout --detach <完整提交SHA>
 cd /root/study-agent-research-source
+python3 scripts/build_research_showcase.py --check
+python3 scripts/build_showcase_dataset.py --check
 python3 scripts/build_research_release.py --output /root/study-agent-research-release
 cd /root/study-agent-research-release
 sha256sum -c SHA256SUMS

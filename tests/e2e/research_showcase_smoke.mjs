@@ -69,7 +69,7 @@ try{
  await page.locator('.project-architecture').screenshot({path:shots+'/system-architecture.png'});
  // The chapter menu works from the keyboard, and Escape restores focus.
  const contents=page.locator('#contents-toggle');await contents.focus();await page.keyboard.press('Enter');
- assert.equal(await contents.getAttribute('aria-expanded'),'true');assert.equal(await page.locator('#chapter-contents a').count(),14);
+ assert.equal(await contents.getAttribute('aria-expanded'),'true');assert.equal(await page.locator('#chapter-contents a').count(),15);
  await page.keyboard.press('Escape');assert.equal(await contents.getAttribute('aria-expanded'),'false');
  assert.equal(await contents.evaluate(n=>n===document.activeElement),true);
  for(const id of chapters){await page.locator('#'+id).scrollIntoViewIfNeeded();assert(await page.locator('#heading-'+id).isVisible());await fit(page,'chapter '+id);}
@@ -144,8 +144,19 @@ try{
  await choose(page,'agent','教师助理');assert((await page.locator('#scene-agent .scenario-detail').innerText()).includes('班级'));
  await choose(page,'modes','传统教学增强');assert((await page.locator('#scene-modes caption').innerText()).includes('传统教学增强'));
  await choose(page,'mcp','WorkBuddy');await choose(page,'evolution','跨学科扩展');
+ // Reload resumes the public presentation, its selected examples, and the reading position.
+ await choose(page,'single','结构化解题');await page.locator('#example-select').selectOption('national-2025-q16');await page.locator('#teacher-select').selectOption('liangliang');
+ await page.locator('[data-library-tab="library"]').click();await page.locator('#bank-search').fill('数列');await page.waitForFunction(()=>window.ShowcaseBank.state.rows.length===1);
+ await page.evaluate(()=>window.Showcase.selectView('career'));await page.evaluate(()=>window.scrollBy(0,180));
+ const beforeReload=await page.evaluate(()=>({y:scrollY,caseIndex:Showcase.state.caseIndex,condition:Showcase.state.condition}));
+ await page.reload({waitUntil:'networkidle'});assert(!(await page.locator('#opening-dialog').isVisible()),'Reload must not replay the welcome');await ready(page);
+ const restored=await page.evaluate(()=>({y:scrollY,caseIndex:Showcase.state.caseIndex,condition:Showcase.state.condition,example:Showcase.state.example,teacher:Showcase.state.teacher,career:Showcase.state.sceneTabs.career,selected:ShowcaseBank.state.selected.size}));
+ assert(Math.abs(restored.y-beforeReload.y)<8,'Reading position changed after reload: '+JSON.stringify({beforeReload,restored}));
+ assert.equal(restored.caseIndex,beforeReload.caseIndex);assert.equal(restored.condition,beforeReload.condition);assert.equal(restored.example,'national-2025-q16');assert.equal(restored.teacher,'liangliang');assert.equal(restored.career,2);assert.equal(restored.selected,2);assert.equal(await page.locator('#bank-search').inputValue(),'数列');
+ assert.equal(await page.locator('.site-registration a').innerText(),'渝ICP备2026024246号-1');assert.equal(await page.locator('.site-registration a').getAttribute('href'),'https://beian.miit.gov.cn/');
  await checkAudits(context);
  // Phone widths remain within the viewport.
+ await page.evaluate(()=>window.Showcase.clearReadingState());
  await page.setViewportSize({width:390,height:844});await page.goto(base+'/',{waitUntil:'networkidle'});
  assert(await page.locator('#opening-dialog').isVisible(),'Reduced motion should preserve the welcome and explicit entry');
  assert.equal(await page.evaluate(()=>document.activeElement.id),'opening-title');
@@ -162,6 +173,17 @@ try{
  await page.keyboard.press('Escape');
  await page.setViewportSize({width:320,height:740});await fit(page,'320px viewport');
  await page.goto(base+'/#overview',{waitUntil:'networkidle'});await ready(page);await page.screenshot({path:shots+'/mobile-overview.png'});
+ // The separate dataset page exposes audited aggregates and explicitly labeled scale scenarios.
+ await page.setViewportSize({width:1440,height:1000});await page.goto(base+'/showcase/dataset.html',{waitUntil:'networkidle'});
+ assert.equal(await page.locator('h1').innerText(),'数据集');assert.equal(await page.locator('.atlas-node').count(),5);
+ assert.deepEqual(await page.locator('.scenario-equation strong').allTextContents(),['116,305','93,044','69,783','4,076']);
+ assert.equal(await page.locator('.scenario .status-target').count(),4,'Projected quantities need visible planning labels');
+ assert.equal(await page.locator('details,.source-list,.source-hash').count(),0,'The public dataset page should not expose internal audit lists');
+ await fit(page,'dataset desktop');await page.screenshot({path:shots+'/dataset-desktop.png'});
+ await page.getByRole('link',{name:'全量图景',exact:true}).click();await page.screenshot({path:shots+'/dataset-target.png'});
+ for(const width of [390,320]){await page.setViewportSize({width,height:844});await fit(page,'dataset '+width);}
+ await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:shots+'/dataset-mobile.png'});
+ assert.equal(await page.locator('.site-registration a').innerText(),'渝ICP备2026024246号-1');
  await checkAudits(context);await context.close();
  // The scientific text and citations remain available without any JavaScript.
  const plain=await browser.newContext({javaScriptEnabled:false,viewport:{width:390,height:844}});const nojs=await plain.newPage();audit(nojs);
@@ -179,10 +201,22 @@ try{
  assert.equal(await animated.evaluate(()=>document.activeElement.id),'opening-title','Initial focus should identify the cover rather than highlight the entry');
  await animated.screenshot({path:shots+'/opening-home.png'});await animated.locator('#opening-enter').click();
  await animated.waitForFunction(()=>!document.getElementById('opening-dialog').open,{timeout:1000});await ready(animated);
- await animated.locator('#single .chapter-bridge').scrollIntoViewIfNeeded();
- await animated.waitForFunction(()=>document.querySelector('#single .chapter-bridge').classList.contains('is-inview'));
- assert.equal(await animated.locator('#single .bridge-packet').evaluate(n=>getComputedStyle(n).animationName),'bridge-delivery');
- await animated.screenshot({path:shots+'/chapter-transition.png'});await checkAudits(motion);await motion.close();
+ assert.equal(await animated.locator('.chapter-bridge.has-handoff').count(),14,'All chapter handoffs should be enhanced');
+ const handoff=animated.locator('#single .chapter-bridge');
+ await handoff.evaluate(n=>scrollTo({top:n.getBoundingClientRect().top+scrollY-500,behavior:'instant'}));
+ await animated.waitForFunction(()=>Number(document.querySelector('#single .chapter-bridge').dataset.handoffProgress)>0);
+ const early=Number(await handoff.getAttribute('data-handoff-progress'));
+ await handoff.evaluate(n=>scrollTo({top:n.getBoundingClientRect().top+scrollY-160,behavior:'instant'}));
+ await animated.waitForFunction(p=>Number(document.querySelector('#single .chapter-bridge').dataset.handoffProgress)>p+.15,early);
+ assert(await handoff.evaluate(n=>n.classList.contains('is-bridging')),'Native scroll should visibly advance the handoff');
+ assert(Number.parseFloat(await animated.locator('#single .handoff-line-motion').evaluate(n=>getComputedStyle(n).strokeDashoffset))<1);
+ await animated.screenshot({path:shots+'/chapter-transition.png'});
+ await animated.locator('.primary-nav a[href="#concepts"]').click();
+ await animated.waitForFunction(()=>!document.querySelector('.chapter-transit-overlay').hidden);
+ assert.equal(await animated.locator('.chapter-transit-overlay').getAttribute('data-to'),'concepts');
+ await animated.screenshot({path:shots+'/chapter-navigation.png'});
+ await animated.waitForFunction(()=>document.querySelector('.chapter-transit-overlay').hidden);
+ await checkAudits(motion);await motion.close();
  const recorded=records.cases.reduce((n,c)=>n+['basic','same_information','system'].filter(k=>c[k]?.status==='recorded').length,0);
  console.log(JSON.stringify({ok:true,chapters:14,nationalQuestions:2,savedPipelineRuns:8,diagnosticInputs:6,recordedResponses:recorded,conditions:2,viewports:[1440,390,320],noJavaScript:true,network:'same-origin GET only, no cookies',screenshots:shots}));
 }finally{if(browser)await browser.close();server.kill('SIGTERM');}

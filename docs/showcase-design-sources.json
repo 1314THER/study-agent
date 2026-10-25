@@ -33,6 +33,10 @@
     "animation": "原生CSS/SVG，短动画，尊重prefers-reduced-motion",
     "copy": "现实痛点→机制→演示→研究依据；公开称呼统一为学生作答",
     "opening_write_seconds": 1.98,
-    "opening_behavior": "欢迎页停留，点击进入预览；love先快后慢"
+    "opening_behavior": "首次欢迎页停留，点击进入预览；love先快后慢；同标签页刷新恢复正文",
+    "opening_style": "科幻数学坐标空间：深空蓝、暖白数学笔迹、珊瑚红love、低亮度透视网格与光轨、切角入口",
+    "refresh": "sessionStorage只保存公开演示UI选择与章节内阅读位置；新hash导航优先",
+    "registration": "渝ICP备2026024246号-1",
+    "dataset_position": "独立数据集页；导航与基础表示章节之后接入，先理解概念再看数据规模"
   }
 }

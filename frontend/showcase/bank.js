@@ -1,8 +1,8 @@
 (function () {
   'use strict';
   const base='/showcase/question-bank/', $=id=>document.getElementById(id);
-  const state={meta:null,index:null,loading:null,parts:new Map(),selected:new Map(),page:1,rows:[],question:null,sequence:0,routine:null,teacher:false};
-  let api, h;
+  const state={meta:null,index:null,loading:null,parts:new Map(),selected:new Map(),page:1,rows:[],question:null,sequence:0,routine:null,teacher:false,tab:'library'};
+  let api, h, detailReady=Promise.resolve();
   async function json(name){const response=await fetch(base+name,{credentials:'omit'});if(!response.ok)throw new Error('题库加载失败，请重试。');return response.json();}
   function option(select,value,label){select.append(new Option(label,value));}
   async function load(){
@@ -49,7 +49,7 @@
     $('bank-page-label').textContent=state.page+' / '+pages;
     $('bank-prev').disabled=state.page===1;$('bank-next').disabled=state.page>=pages;
     $('bank-clear-routine').hidden=!state.routine;selection();
-    if(page.length&&!state.rows.some(row=>row.id===state.question))showQuestion(page[0].id);
+    if(page.length&&!state.rows.some(row=>row.id===state.question))detailReady=showQuestion(page[0].id);
     if(!page.length)$('bank-detail').replaceChildren(h.el('p','bank-empty','没有匹配的题目。'));
   }
   function selection(){const count=state.selected.size;$('bank-selection').textContent=count?'已选 '+count+' 道题':'选择题目后可组卷';$('bank-build-exam').disabled=!count;$('bank-clear-selection').disabled=!count;}
@@ -103,16 +103,17 @@
     }catch(error){if(sequence===state.sequence)root.replaceChildren(h.el('p','bank-empty',error.message),h.button('重试',()=>showQuestion(id),'button'));}
   }
   async function show(){
-    try{await load();filter();if(state.question===null&&state.rows[0])showQuestion(state.rows[0].id);}
+    try{await load();filter();if(state.question===null&&state.rows[0])detailReady=showQuestion(state.rows[0].id);await detailReady;}
     catch(error){$('library-list').replaceChildren(h.el('p','bank-empty',error.message),h.button('重试',show,'button'));}
   }
   function tab(name){
+    state.tab=name;
     document.querySelectorAll('[data-library-tab]').forEach(button=>{const selected=button.dataset.libraryTab===name;button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;});
     document.querySelectorAll('[data-library-panel]').forEach(panel=>panel.hidden=panel.dataset.libraryPanel!==name);
     $('bank-toolbar').hidden=name!=='library';$('bank-actions').hidden=name!=='library';
     $('library-layout').classList.toggle('is-library',name==='library');
-    if(name==='exam')renderExam(state.teacher);
-    if(name==='library'&&api.state.view==='library')show();
+    if(name==='exam')return renderExam(state.teacher);
+    if(name==='library'&&api.state.view==='library')return show();
   }
   async function renderExam(teacher){
     if(typeof teacher==='boolean')state.teacher=teacher;
@@ -132,6 +133,27 @@
   }
   async function openRoutine(id){await load();state.routine=id;state.page=1;state.question=null;$('bank-search').value='';for(const field of ['category','year','type','source'])$('bank-'+field).value='';api.selectView('library');tab('library');filter();}
   function reset(){state.selected.clear();state.routine=null;state.question=null;state.page=1;state.sequence++;for(const field of ['search','category','year','type','source'])$('bank-'+field).value='';if(state.index)filter();tab('library');}
+  function snapshot(){
+    const filters={};for(const field of ['search','category','year','type','source'])filters[field]=$('bank-'+field).value.slice(0,300);
+    return {filters,selected:[...state.selected.keys()],page:state.page,question:state.question,routine:state.routine,teacher:state.teacher,tab:state.tab};
+  }
+  async function restore(saved){
+    if(!saved||typeof saved!=='object'||Array.isArray(saved))return show();
+    try{
+      await load();const byId=new Map(state.index.map(row=>[String(row.id),row]));
+      for(const field of ['search','category','year','type','source']){
+        const input=$('bank-'+field),value=saved.filters?.[field];
+        if(typeof value==='string'&&value.length<=300&&(field==='search'||[...input.options].some(option=>option.value===value)))input.value=value;
+      }
+      state.selected.clear();if(Array.isArray(saved.selected))for(const id of saved.selected.slice(0,50)){const row=byId.get(String(id));if(row)state.selected.set(row.id,row);}
+      state.page=Number.isInteger(saved.page)&&saved.page>0&&saved.page<10000?saved.page:1;
+      state.routine=typeof saved.routine==='string'&&state.index.some(row=>row.routine===saved.routine)?saved.routine:null;
+      state.teacher=saved.teacher===true;const chosen=byId.get(String(saved.question));state.question=chosen?.id??null;
+      filter();await detailReady;
+      if(state.question!==null&&state.rows.some(row=>row.id===state.question))await showQuestion(state.question);
+      const name=['library','exam','calendar'].includes(saved.tab)?saved.tab:'library';await tab(name);
+    }catch(error){$('library-list').replaceChildren(h.el('p','bank-empty',error.message),h.button('重试',show,'button'));}
+  }
   function init(showcase,helpers){
     api=showcase;h=helpers;api.state.bank=state;
     let debounce;$('bank-search').oninput=()=>{clearTimeout(debounce);debounce=setTimeout(()=>{state.page=1;filter();},180);};
@@ -144,5 +166,5 @@
     for(const entry of api.state.data.library.calendar){const day=h.button('',()=>api.selectView(entry.view),'calendar-day');day.append(h.el('strong','',entry.date),h.el('span','',entry.title),h.el('small','',entry.method));calendar.append(day);}
     tab('library');
   }
-  window.ShowcaseBank={init,show,tab,renderExam,openRoutine,reset,state};
+  window.ShowcaseBank={init,show,tab,renderExam,openRoutine,reset,snapshot,restore,state};
 })();

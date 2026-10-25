@@ -1,0 +1,911 @@
+{
+  "schema_version": 1,
+  "title": "数据集：从教学词表到可追踪的解题实例",
+  "audit": {
+    "date": "2026-10-25",
+    "checked_at": "2026-10-25 17:10:37 Asia/Shanghai",
+    "scope": "当前本地工作区、只读数据库聚合与公开演示快照；不代表所有线上部署或其他用户数据。",
+    "method": "完整阅读两份概念/实现文档；静态文件逐层计数，数据库只读分组聚合。未调用模型。",
+    "matching_state": "paused",
+    "matching_updated_at": "2026-10-25 11:58:47 +08:00"
+  },
+  "headline_metrics": [
+    {
+      "key": "lessons",
+      "value": 329,
+      "unit": "课时",
+      "label": "教学内容的组织尺度",
+      "source": "curriculum"
+    },
+    {
+      "key": "knowledge",
+      "value": 541,
+      "unit": "知识点",
+      "label": "固定三级知识点定义",
+      "source": "knowledge"
+    },
+    {
+      "key": "steps",
+      "value": 359,
+      "unit": "具体步骤",
+      "label": "保留题型与父步骤作用域",
+      "source": "steps"
+    },
+    {
+      "key": "routines",
+      "value": 1019,
+      "unit": "套路目录项",
+      "label": "方法结构的参考目录",
+      "source": "catalog"
+    },
+    {
+      "key": "pool",
+      "value": 23261,
+      "unit": "入池题目",
+      "label": "去重素材，尚待结构化与审核",
+      "source": "pool"
+    }
+  ],
+  "definitions": [
+    {
+      "name": "课时",
+      "count": "329课时",
+      "body": "传统课堂一节课教给学生的内容，是同步练习、作业和学案的组织尺度。课时之间存在先后关系。",
+      "relationship": "课时讲授知识点",
+      "source": "definitions"
+    },
+    {
+      "name": "知识点",
+      "count": "541个三级条目",
+      "body": "衡量学生知识掌握程度的标准，预先定义在YAML中。一组课时可讲授一组知识点，不要求一一对应。",
+      "relationship": "若干知识点前置于一个步骤",
+      "source": "definitions"
+    },
+    {
+      "name": "步骤",
+      "count": "359个具体条目",
+      "body": "可以识别、讲解和专项训练的结构化解题操作。词表步骤在某道题中应用后，才形成包含具体条件、推导和书写的实例步骤。",
+      "relationship": "若干确定步骤按顺序组合",
+      "source": "definitions"
+    },
+    {
+      "name": "套路（母题类）",
+      "count": "1,019项目录",
+      "body": "由若干确定步骤按确定顺序组成的一类题。母题示例题是用来示范它的一道具体题，不能把题类和题目实例混为一谈。",
+      "relationship": "一类方法对应多道题目实例",
+      "source": "definitions"
+    }
+  ],
+  "inventory": [
+    {
+      "layer": "教学词表",
+      "name": "课时",
+      "value": 329,
+      "unit": "课时",
+      "note": "有效教学内容节点；329同时是当前暂定组织尺度。",
+      "source": "curriculum",
+      "status": "已记录"
+    },
+    {
+      "layer": "教学词表",
+      "name": "知识点一级板块",
+      "value": 12,
+      "unit": "个",
+      "note": "板块不是知识点数量，也不是已完成关系映射的数量。",
+      "source": "knowledge",
+      "status": "已记录"
+    },
+    {
+      "layer": "教学词表",
+      "name": "知识点二级分类",
+      "value": 100,
+      "unit": "类",
+      "note": "归属12个板块，便于组织541个三级条目。",
+      "source": "knowledge",
+      "status": "已记录"
+    },
+    {
+      "layer": "教学词表",
+      "name": "三级知识点",
+      "value": 541,
+      "unit": "条",
+      "note": "三级名称去重后仍为541；来自固定YAML定义。",
+      "source": "knowledge",
+      "status": "已记录"
+    },
+    {
+      "layer": "步骤词表",
+      "name": "题型槽位",
+      "value": 12,
+      "unit": "类",
+      "note": "其中7类已有预定义步骤，5类词表仍为空。",
+      "source": "steps",
+      "status": "已记录"
+    },
+    {
+      "layer": "步骤词表",
+      "name": "一级步骤",
+      "value": 99,
+      "unit": "条",
+      "note": "各题型下父步骤条目之和，保留作用域。",
+      "source": "steps",
+      "status": "已记录"
+    },
+    {
+      "layer": "步骤词表",
+      "name": "二级具体步骤",
+      "value": 359,
+      "unit": "条",
+      "note": "可复用操作条目；同名可出现在不同父步骤或题型。",
+      "source": "steps",
+      "status": "已记录"
+    },
+    {
+      "layer": "步骤词表",
+      "name": "具体步骤名称去重",
+      "value": 318,
+      "unit": "个",
+      "note": "仅字符串去重，不是稳定步骤ID数量。",
+      "source": "steps",
+      "status": "已记录"
+    },
+    {
+      "layer": "套路目录",
+      "name": "套路（母题类）",
+      "value": 1019,
+      "unit": "项",
+      "note": "基础参考目录；不是已经验证可训练的1019套课程。",
+      "source": "catalog",
+      "status": "目录待审核"
+    },
+    {
+      "layer": "套路目录",
+      "name": "关键步骤文本引用",
+      "value": 3057,
+      "unit": "条",
+      "note": "各套路key_steps文本之和，不等于独立标准步骤。",
+      "source": "catalog",
+      "status": "已记录"
+    },
+    {
+      "layer": "套路目录",
+      "name": "方法识别信号",
+      "value": 2326,
+      "unit": "条",
+      "note": "帮助判断何时适用一种方法。",
+      "source": "catalog",
+      "status": "已记录"
+    },
+    {
+      "layer": "套路目录",
+      "name": "排除条件",
+      "value": 1247,
+      "unit": "条",
+      "note": "记录方法不应直接套用的条件。",
+      "source": "catalog",
+      "status": "已记录"
+    },
+    {
+      "layer": "套路目录",
+      "name": "易混淆方法引用",
+      "value": 2305,
+      "unit": "条",
+      "note": "目录内confusable_ids引用次数；不是新增套路。",
+      "source": "catalog",
+      "status": "已记录"
+    },
+    {
+      "layer": "课时图谱",
+      "name": "教学知识实体",
+      "value": 174,
+      "unit": "条",
+      "note": "图谱教学节点；与541条YAML知识点口径不同。",
+      "source": "curriculum",
+      "status": "草稿"
+    },
+    {
+      "layer": "课时图谱",
+      "name": "套路实体",
+      "value": 288,
+      "unit": "条",
+      "note": "课时组织中的套路节点；与1019目录、29训练定义分开。",
+      "source": "curriculum",
+      "status": "草稿"
+    },
+    {
+      "layer": "课时图谱",
+      "name": "解法实体",
+      "value": 234,
+      "unit": "条",
+      "note": "具体解法组织节点，不等于完整题目解析数。",
+      "source": "curriculum",
+      "status": "草稿"
+    },
+    {
+      "layer": "课时图谱",
+      "name": "课时关系记录",
+      "value": 4070,
+      "unit": "条",
+      "note": "仅draft关系；另2条rejected不计入。",
+      "source": "curriculum",
+      "status": "草稿"
+    },
+    {
+      "layer": "题池",
+      "name": "去重题目素材",
+      "value": 23261,
+      "unit": "道",
+      "note": "已入池；不等于已结构化、已审核或可公开训练。",
+      "source": "pool",
+      "status": "已入池"
+    },
+    {
+      "layer": "题池",
+      "name": "出处记录",
+      "value": 23542,
+      "unit": "条",
+      "note": "同一道题可有多个出处，不与题目数相加。",
+      "source": "pool",
+      "status": "已记录"
+    },
+    {
+      "layer": "题池",
+      "name": "素材来源",
+      "value": 62,
+      "unit": "个",
+      "note": "来源授权未开放；本页只公开规模和处理状态。",
+      "source": "pool",
+      "status": "已记录"
+    },
+    {
+      "layer": "题池",
+      "name": "已生成结构化prepared_json",
+      "value": 0,
+      "unit": "道",
+      "note": "指题池的结构化准备字段，不代表原素材没有解析文本。",
+      "source": "pool",
+      "status": "待处理"
+    },
+    {
+      "layer": "题池",
+      "name": "已建立正式题目关联",
+      "value": 0,
+      "unit": "道",
+      "note": "题池formal_question_id非空数量。",
+      "source": "pool",
+      "status": "待导入"
+    },
+    {
+      "layer": "匹配候选",
+      "name": "高置信主套路候选",
+      "value": 5813,
+      "unit": "道",
+      "note": "已分类且有主套路、高置信；全部仍待人工审核。",
+      "source": "matching",
+      "status": "候选待审核"
+    },
+    {
+      "layer": "匹配候选",
+      "name": "候选覆盖的目录套路",
+      "value": 554,
+      "unit": "项",
+      "note": "至少出现一次高置信主套路候选的目录项数。",
+      "source": "matching",
+      "status": "候选覆盖"
+    },
+    {
+      "layer": "正式训练",
+      "name": "训练套路定义",
+      "value": 29,
+      "unit": "项",
+      "note": "patterns.yaml与正式训练体系；不是目录的完成率分母。",
+      "source": "training",
+      "status": "已记录"
+    },
+    {
+      "layer": "正式训练",
+      "name": "已有母题角色关联",
+      "value": 25,
+      "unit": "项",
+      "note": "角色关联存在；仍需核验题目与训练目标是否匹配。",
+      "source": "business",
+      "status": "待业务核验"
+    },
+    {
+      "layer": "正式训练",
+      "name": "母题与3个变式角色齐全",
+      "value": 1,
+      "unit": "项",
+      "note": "角色位齐全，不直接等于教学质量已验证。",
+      "source": "business",
+      "status": "待业务核验"
+    },
+    {
+      "layer": "本地业务实例",
+      "name": "题目实例",
+      "value": 33,
+      "unit": "道",
+      "note": "本机正式业务questions记录，与原题池和公开演示分开。",
+      "source": "business",
+      "status": "已记录"
+    },
+    {
+      "layer": "本地业务实例",
+      "name": "题目实例步骤",
+      "value": 147,
+      "unit": "条",
+      "note": "question_steps记录；answer_json步骤合计同为147。",
+      "source": "business",
+      "status": "已记录"
+    },
+    {
+      "layer": "公开演示",
+      "name": "全国卷案例",
+      "value": 2,
+      "unit": "道",
+      "note": "2023新课标全国Ⅰ卷17题、2025全国一卷16题。",
+      "source": "public",
+      "status": "公开展示"
+    },
+    {
+      "layer": "公开演示",
+      "name": "保存管线记录",
+      "value": 8,
+      "unit": "份",
+      "note": "用于展示真实流水线输出，不是8份学生实验。",
+      "source": "recordings",
+      "status": "公开展示"
+    }
+  ],
+  "subjects": [
+    {
+      "name": "集合与逻辑用语",
+      "label": "集合与逻辑用语",
+      "groups": 5,
+      "knowledge": 18,
+      "routines": 50
+    },
+    {
+      "name": "不等式",
+      "label": "不等式",
+      "groups": 3,
+      "knowledge": 23,
+      "routines": 56
+    },
+    {
+      "name": "一元二次式",
+      "label": "一元二次式",
+      "groups": 2,
+      "knowledge": 14,
+      "routines": 46
+    },
+    {
+      "name": "函数与导数",
+      "label": "函数与导数",
+      "groups": 20,
+      "knowledge": 82,
+      "routines": 167
+    },
+    {
+      "name": "指对幂耐克函数",
+      "label": "指对幂函数",
+      "groups": 4,
+      "knowledge": 27,
+      "routines": 58
+    },
+    {
+      "name": "三角函数",
+      "label": "三角函数",
+      "groups": 10,
+      "knowledge": 52,
+      "routines": 86
+    },
+    {
+      "name": "平面向量",
+      "label": "平面向量",
+      "groups": 6,
+      "knowledge": 25,
+      "routines": 59
+    },
+    {
+      "name": "复数",
+      "label": "复数",
+      "groups": 4,
+      "knowledge": 17,
+      "routines": 26
+    },
+    {
+      "name": "立体几何",
+      "label": "立体几何",
+      "groups": 8,
+      "knowledge": 75,
+      "routines": 103
+    },
+    {
+      "name": "数列",
+      "label": "数列",
+      "groups": 5,
+      "knowledge": 21,
+      "routines": 103
+    },
+    {
+      "name": "解析几何",
+      "label": "解析几何",
+      "groups": 12,
+      "knowledge": 86,
+      "routines": 186
+    },
+    {
+      "name": "概率统计",
+      "label": "概率统计",
+      "groups": 21,
+      "knowledge": 101,
+      "routines": 79
+    }
+  ],
+  "step_types": [
+    {
+      "name": "选择题",
+      "parents": 0,
+      "items": 0,
+      "status": "待补词表"
+    },
+    {
+      "name": "多选题",
+      "parents": 0,
+      "items": 0,
+      "status": "待补词表"
+    },
+    {
+      "name": "填空题",
+      "parents": 0,
+      "items": 0,
+      "status": "待补词表"
+    },
+    {
+      "name": "立体几何大题",
+      "parents": 16,
+      "items": 52,
+      "status": "已有词表"
+    },
+    {
+      "name": "解析几何大题",
+      "parents": 16,
+      "items": 67,
+      "status": "已有词表"
+    },
+    {
+      "name": "解三角形大题",
+      "parents": 7,
+      "items": 24,
+      "status": "已有词表"
+    },
+    {
+      "name": "数列大题",
+      "parents": 3,
+      "items": 47,
+      "status": "已有词表"
+    },
+    {
+      "name": "简单的概率统计大题",
+      "parents": 17,
+      "items": 54,
+      "status": "已有词表"
+    },
+    {
+      "name": "困难的概率大题",
+      "parents": 13,
+      "items": 39,
+      "status": "已有词表"
+    },
+    {
+      "name": "函数与导数大题",
+      "parents": 27,
+      "items": 76,
+      "status": "已有词表"
+    },
+    {
+      "name": "其他非常规压轴大题",
+      "parents": 0,
+      "items": 0,
+      "status": "待补词表"
+    },
+    {
+      "name": "简单的非标准题目",
+      "parents": 0,
+      "items": 0,
+      "status": "待补词表"
+    }
+  ],
+  "curriculum": {
+    "entities": [
+      {
+        "name": "课时",
+        "count": 329
+      },
+      {
+        "name": "教学知识",
+        "count": 174
+      },
+      {
+        "name": "套路",
+        "count": 288
+      },
+      {
+        "name": "解法",
+        "count": 234
+      },
+      {
+        "name": "教材",
+        "count": 5
+      },
+      {
+        "name": "章",
+        "count": 18
+      },
+      {
+        "name": "节",
+        "count": 73
+      },
+      {
+        "name": "提纲",
+        "count": 90
+      },
+      {
+        "name": "来源",
+        "count": 13
+      }
+    ],
+    "relationships": [
+      {
+        "name": "讲授",
+        "field": "teaches",
+        "count": 174
+      },
+      {
+        "name": "覆盖",
+        "field": "covers",
+        "count": 337
+      },
+      {
+        "name": "练习",
+        "field": "practices",
+        "count": 234
+      },
+      {
+        "name": "前置",
+        "field": "prerequisite",
+        "count": 628
+      },
+      {
+        "name": "依赖",
+        "field": "requires",
+        "count": 1795
+      },
+      {
+        "name": "套路候选",
+        "field": "routine_candidate",
+        "count": 902
+      }
+    ],
+    "status": "全部有效实体和上述关系当前为draft；另2条rejected关系不计入。"
+  },
+  "pool": {
+    "count": 23261,
+    "occurrences": 23542,
+    "sources": 62,
+    "completeness": [
+      {
+        "name": "原材料完整 complete",
+        "count": 16745,
+        "tone": "complete"
+      },
+      {
+        "name": "材料待核对 needs_review",
+        "count": 6463,
+        "tone": "review"
+      },
+      {
+        "name": "图形待处理 deferred_graphic",
+        "count": 53,
+        "tone": "pending"
+      }
+    ],
+    "types": [
+      {
+        "name": "题型未标注",
+        "count": 15276
+      },
+      {
+        "name": "选择题",
+        "count": 3382
+      },
+      {
+        "name": "大题",
+        "count": 2081
+      },
+      {
+        "name": "填空题",
+        "count": 1642
+      },
+      {
+        "name": "多选题",
+        "count": 880
+      }
+    ],
+    "year_known": 7559,
+    "year_unknown": 15702,
+    "year_min": 2016,
+    "year_max": 2026,
+    "prepared": 0,
+    "formal_linked": 0
+  },
+  "matching": {
+    "total": 23261,
+    "classified": 10516,
+    "high_confidence": 5813,
+    "insufficient": 4703,
+    "covered_routines": 554,
+    "review_pending": 23261,
+    "review_accepted": 0,
+    "states": [
+      {
+        "name": "已完成分类",
+        "key": "classified",
+        "count": 10516,
+        "tone": "complete"
+      },
+      {
+        "name": "匹配状态，等待续跑",
+        "key": "matching",
+        "count": 5972,
+        "tone": "review"
+      },
+      {
+        "name": "待处理",
+        "key": "pending",
+        "count": 5182,
+        "tone": "pending"
+      },
+      {
+        "name": "错误待处理",
+        "key": "error",
+        "count": 1591,
+        "tone": "error"
+      }
+    ]
+  },
+  "data_layers": [
+    {
+      "title": "教学概念层",
+      "objects": "课时 · 知识点 · 步骤 · 套路",
+      "current": "固定词表与目录已经存在，课时图谱已有草稿。",
+      "target": "统一标识、前置关系与版本，让每个实例能够回到对应教学内容。"
+    },
+    {
+      "title": "素材与出处层",
+      "objects": "题目 · 出处 · 题图 · 原解析",
+      "current": "23,261道去重素材保留23,542条出处；完整性、题型与年份各自记录。",
+      "target": "完成授权、识别和素材核验后，再形成可进入业务流程的题目实例。"
+    },
+    {
+      "title": "结构化解析层",
+      "objects": "子问 · 实例步骤 · 知识引用 · 难度",
+      "current": "本地业务库33题、147实例步骤；公开演示保留两道全国卷案例。",
+      "target": "题目经过三阶段解题与核验，每步可连接标准步骤、知识点、解法路径和版本。"
+    },
+    {
+      "title": "匹配与训练层",
+      "objects": "套路候选 · 母题角色 · 变式 · 专项练习",
+      "current": "5,813道高置信主套路候选待审核；训练定义29项，25项有关联母题。",
+      "target": "人工确认方法适配后组织训练角色，并区分整题训练和独立步骤专项训练。"
+    },
+    {
+      "title": "作答与证据层",
+      "objects": "每次作答 · 提示记录 · 错因依据 · 独立复测",
+      "current": "页面只介绍记录结构，不公开学生作答、个人档案或笔迹数据。",
+      "target": "将题目、某次作答和掌握判断分开，保留提示、证据、时间和修订，支持后续核实。"
+    }
+  ],
+  "coverage": [
+    {
+      "link": "课时 → 知识点",
+      "current": "329课时与174教学知识实体；teaches草稿174条。",
+      "next": "将教学节点与541条YAML知识点逐项映射，保留教材、教学先后和版本。",
+      "status": "草稿关系"
+    },
+    {
+      "link": "知识点 → 标准步骤",
+      "current": "知识点和步骤词表各自存在；尚未全量贯通。",
+      "next": "为每个操作补前置知识、适用条件和可检查输出。",
+      "status": "待全量映射"
+    },
+    {
+      "link": "标准步骤 → 套路",
+      "current": "1,019项目录有3,057条关键步骤文本引用。",
+      "next": "把文本引用对齐到带作用域的标准步骤，保留顺序、方法条件和替代路径。",
+      "status": "文本引用"
+    },
+    {
+      "link": "题池 → 套路",
+      "current": "5,813道高置信主套路候选，候选覆盖554目录项。",
+      "next": "人工确认、处理资料不足和错误条目；允许无法匹配与多方法归属。",
+      "status": "候选待审核"
+    },
+    {
+      "link": "题池 → 正式题目",
+      "current": "prepared_json与formal_question_id均为0。",
+      "next": "原材料核验、结构化重解、数学与步骤检查通过后再导入。",
+      "status": "待结构化"
+    },
+    {
+      "link": "套路 → 可训练内容",
+      "current": "29个训练定义；25项有关联母题；1项母题及3变式角色齐全。",
+      "next": "检查角色对应的数学结构、方法边界与难度，补迁移题、延迟复查和步骤练习。",
+      "status": "待业务核验"
+    },
+    {
+      "link": "实例步骤 → 默认难度",
+      "current": "现有实例五维难度；尚无完整的词表步骤默认难度基准。",
+      "next": "教师维护基准，再结合计算量、非常规程度等评估具体题目。",
+      "status": "基准待补"
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "全量实例步骤索引",
+      "base": 23261,
+      "multiplier": 5,
+      "unit": "条实例步骤",
+      "assumption": "假设每道题平均拆成5个实例步骤。",
+      "meaning": "连接具体推导、标准操作、知识引用和本题难度；116,305条是题内操作记录，不是新增标准步骤。"
+    },
+    {
+      "name": "多种讲解风格参考解析",
+      "base": 23261,
+      "multiplier": 4,
+      "unit": "份参考解析",
+      "assumption": "假设每道题保留4份经过核验的讲解风格版本。",
+      "meaning": "服务精简标准过程、详细讲解等不同阅读需要；写法版本不等于4条独立数学解法，也不自动证明教学效果。"
+    },
+    {
+      "name": "围绕原题生成的变式候选",
+      "base": 23261,
+      "multiplier": 3,
+      "unit": "道变式候选",
+      "assumption": "假设每道原题产生3道候选变式。",
+      "meaning": "候选还需去重、重新解题、检查方法适用条件并审核；69,783不能当作已经生成或已入库题目。"
+    },
+    {
+      "name": "目录的初始训练角色位",
+      "base": 1019,
+      "multiplier": 4,
+      "unit": "个训练角色位",
+      "assumption": "假设每项目录先配置1个母题角色与3个变式角色。",
+      "meaning": "4,076是角色配置测算，不是4,076道独立题目；同题能否复用以及迁移、延迟复查题仍需另行设计。"
+    }
+  ],
+  "target_flow": [
+    {
+      "title": "素材可用",
+      "body": "核对题干、图形、答案、出处与使用授权；保留重复出处和内容版本，修复资料不足条目。"
+    },
+    {
+      "title": "过程可检查",
+      "body": "为每个子问保存标准与详细过程，步骤具有输入条件、操作、输出、知识引用和难度依据；替代解法分别记录。"
+    },
+    {
+      "title": "方法可检索",
+      "body": "按照识别信号、关键步骤、排除条件与易混淆方法查找；教师确认候选匹配，保留无匹配或多种成立解法。"
+    },
+    {
+      "title": "训练可组织",
+      "body": "在课时作业、整题训练和单步骤补练之间复用同一套数据；分清母题学习、独立重做、迁移和延迟复查。"
+    },
+    {
+      "title": "结论可追溯",
+      "body": "把每次作答与所用题目、解析版本、提示和证据连接起来；修订源数据时能够识别哪些判断需要重新核实。"
+    }
+  ],
+  "sources": [
+    {
+      "id": "definitions",
+      "title": "项目名词与教学关系定义",
+      "path": "docs/项目名词与教学关系定义.md",
+      "kind": "repository",
+      "sha256": "90a0ebb08a2c9cbe1d4aaae8cc2e111cc038a417cefa070d3615cf00e921065e",
+      "note": "完整阅读；课时、知识点、步骤、套路及前置关系的概念依据。",
+      "url": "https://github.com/1314THER/study-agent/blob/main/docs/项目名词与教学关系定义.md"
+    },
+    {
+      "id": "implementation",
+      "title": "当前实现能力与名词数量",
+      "path": "docs/当前实现能力与名词数量.md",
+      "kind": "repository",
+      "sha256": "c918966c3792ce5ce227c826ca1248ff89707c0a690ca429034e906f8057c26c",
+      "note": "完整阅读；原数量为2026-10-24快照，本页采用2026-10-25只读聚合更新。",
+      "url": "https://github.com/1314THER/study-agent/blob/main/docs/当前实现能力与名词数量.md"
+    },
+    {
+      "id": "knowledge",
+      "title": "知识点层级词表",
+      "path": "backend/categories.yaml",
+      "kind": "repository",
+      "sha256": "4c0581723f1bbffaa3e19e5d82adaf2867c5258de43f31b84152ddd00bfd8249",
+      "note": "按板块、二级分类、三级列表条目计数。",
+      "url": "https://github.com/1314THER/study-agent/blob/main/backend/categories.yaml"
+    },
+    {
+      "id": "steps",
+      "title": "预定义步骤词表",
+      "path": "backend/steps.yaml",
+      "kind": "repository",
+      "sha256": "da5c7423f605c5e7f3afdafe9ae81e2567c23ed30dbd11dcb9b6ba9f94418714",
+      "note": "保留题型与一级步骤作用域；文字名称去重另列。",
+      "url": "https://github.com/1314THER/study-agent/blob/main/backend/steps.yaml"
+    },
+    {
+      "id": "catalog",
+      "title": "套路参考目录",
+      "path": "backend/routine_catalog.json",
+      "kind": "repository",
+      "sha256": "1c29678d43394ab8128638d44f6837a652b79310cd48464cdea6107c33745777",
+      "note": "基础routines数组；目录内容待审核，不合并运行时覆盖。",
+      "url": "https://github.com/1314THER/study-agent/blob/main/backend/routine_catalog.json"
+    },
+    {
+      "id": "training",
+      "title": "正式训练定义",
+      "path": "backend/patterns.yaml",
+      "kind": "repository",
+      "sha256": "c40ed1318ebb8755a98a45fcae9cbc751d11389f35564bf7bd6f18c70a67fe25",
+      "note": "独立的正式训练编号体系，不能与目录相加。",
+      "url": "https://github.com/1314THER/study-agent/blob/main/backend/patterns.yaml"
+    },
+    {
+      "id": "public",
+      "title": "公开展示题目清单",
+      "path": "frontend/showcase/question-bank/manifest.json",
+      "kind": "repository",
+      "sha256": "e471e279f2978d4b9708e15182385aa1ace6430a7ccf212a02b7c0dd70c3c315",
+      "note": "仅公开两道全国卷及其展示资料，与内部题池不同。",
+      "url": "https://github.com/1314THER/study-agent/blob/main/frontend/showcase/question-bank/manifest.json"
+    },
+    {
+      "id": "curriculum",
+      "title": "课时图谱只读聚合",
+      "path": ".runtime/curriculum-wiki.sqlite3",
+      "kind": "aggregate",
+      "note": "cw_entities active=1 按kind/status；cw_edges按kind/status。仅公开聚合值，不附数据库。"
+    },
+    {
+      "id": "pool",
+      "title": "原题池只读聚合",
+      "path": ".runtime/question_pool.db",
+      "kind": "aggregate",
+      "note": "pool_items、pool_sources、pool_occurrences聚合；62个来源publication_allowed均为false，本页不展示其题干与解析。"
+    },
+    {
+      "id": "matching",
+      "title": "当前匹配批次只读聚合",
+      "path": ".runtime/routine-review.sqlite3",
+      "kind": "aggregate",
+      "note": "当前run的review_items按status、review_status及primary_id/confidence分组；任务状态paused。"
+    },
+    {
+      "id": "business",
+      "title": "本地正式业务库只读聚合",
+      "path": "study_agent.db / mastery.db",
+      "kind": "aggregate",
+      "note": "questions、question_steps及训练角色关联；仅统计对象数量，不公开账号、学生记录或作答。"
+    },
+    {
+      "id": "recordings",
+      "title": "公开展示保存记录",
+      "path": "frontend/showcase/pipeline.json / recordings.json",
+      "kind": "public_snapshot",
+      "note": "2个全国卷案例、8份保存管线记录；不作为学生学习效果实验。"
+    }
+  ],
+  "public_data_policy": "本页只包含聚合数量、公开词表结构、概念定义与规划测算；不附内部题池题干、原解析、学生记录或数据库。两道全国卷公开演示另有独立清单。"
+}
