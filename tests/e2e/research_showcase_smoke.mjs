@@ -30,7 +30,7 @@ function audit(page){const value={errors:[],console:[],requests:[],failures:[]};
  page.on('console',message=>{if(message.type()==='error')value.console.push(message.text());});
  page.on('request',r=>value.requests.push({url:r.url(),method:r.method()}));
  page.on('requestfailed',r=>value.failures.push(r.url()+': '+r.failure()?.errorText));return value;}
-async function ready(page){await page.waitForFunction(()=>window.Showcase?.ready);const value=await page.evaluate(async()=>{
+async function ready(page){await page.waitForFunction(()=>Boolean(window.Showcase?.ready));if(await page.locator('#opening-dialog').isVisible())await page.locator('#opening-enter').click();const value=await page.evaluate(async()=>{
  const data=await window.Showcase.ready;return {version:data?.schema_version,error:window.Showcase.state.loadError};});
  assert.equal(value.error,null,'Showcase initialization failed: '+value.error);assert.equal(value.version,2);}
 async function fit(page,label){const metrics=await page.evaluate(()=>({viewport:innerWidth,width:document.documentElement.scrollWidth}));
@@ -163,13 +163,15 @@ try{
  for(const id of chapters){const text=await nojs.locator('#'+id+' .chapter-prose').innerText();assert(text.length>80,'Missing no-JS chapter text: '+id);}
  assert((await nojs.locator('.research-notes a[href^="https://"]').count())>=6,'Research sources unavailable without JS');
  assert(!/上海|shanghai/i.test(await nojs.locator('body').innerText()));await fit(nojs,'no JavaScript');await checkAudits(plain);await plain.close();
- // The fast opening runs without a skip control; the chapter bridges animate once as they enter view.
+ // The decelerating welcome page remains until entry; chapter bridges animate once as they enter view.
  const motion=await browser.newContext({viewport:{width:1440,height:950},reducedMotion:'no-preference'});
  const animated=await motion.newPage();audit(animated);await animated.goto(base+'/',{waitUntil:'domcontentloaded'});
  await animated.locator('#opening-dialog').waitFor({state:'visible',timeout:1500});
- const openingStarted=Date.now();await animated.waitForTimeout(200);await animated.screenshot({path:shots+'/opening-animation.png'});
- await animated.waitForFunction(()=>!document.getElementById('opening-dialog').open,{timeout:2000});
- assert(Date.now()-openingStarted<1700,'The opening did not finish at the accelerated pace');await ready(animated);
+ await animated.waitForTimeout(200);await animated.screenshot({path:shots+'/opening-animation.png'});
+ await animated.waitForTimeout(1900);assert(await animated.locator('#opening-dialog').isVisible(),'The welcome page should wait for the entry button');
+ assert.equal(await animated.locator('#opening-title').innerText(),'study-agent项目介绍页面');
+ await animated.screenshot({path:shots+'/opening-home.png'});await animated.locator('#opening-enter').click();
+ await animated.waitForFunction(()=>!document.getElementById('opening-dialog').open,{timeout:1000});await ready(animated);
  await animated.locator('#single .chapter-bridge').scrollIntoViewIfNeeded();
  await animated.waitForFunction(()=>document.querySelector('#single .chapter-bridge').classList.contains('is-inview'));
  assert.equal(await animated.locator('#single .bridge-packet').evaluate(n=>getComputedStyle(n).animationName),'bridge-delivery');

@@ -216,7 +216,7 @@ def build(content):
 <main id="main-content"><div class="page-intro"><span>高中数学 / 过程诊断 / 方法迁移</span><span>全国卷案例 · 从作答到教学</span></div>
 <p id="demo-status" class="page-status" role="alert" hidden></p>''' + ''.join(sections) + '''</main>
 <footer class="site-footer"><div><strong>StudyAgent</strong><p>让每次作答，成为下一步学习的依据。</p></div><div><a href="https://150.chat/" target="_blank" rel="noopener noreferrer">正式站</a><a href="https://github.com/1314THER/study-agent" target="_blank" rel="noopener noreferrer">代码与研究文档</a><a href="#overview">回到系统总览</a></div></footer>
-<dialog id="opening-dialog" class="opening-dialog" aria-label="数学开场动画"><div id="opening-animation"><img src="/showcase/launch-lettering.svg" width="800" height="420" alt="数学 · love"><p>让每一步作答，都成为下一步学习的起点。</p></div></dialog>
+<dialog id="opening-dialog" class="opening-dialog" aria-labelledby="opening-title"><div id="opening-animation"><h2 id="opening-title" class="opening-title">study-agent项目介绍页面</h2><img src="/showcase/launch-lettering.svg" width="800" height="420" alt="数学 · love"><button id="opening-enter" type="button">点击进入预览</button></div></dialog>
 <aside id="annotation-panel" class="annotation-panel" aria-label="补充批注" hidden><header><h2 id="annotation-title"></h2><button id="annotation-close" type="button" aria-label="关闭批注">×</button></header><div id="annotation-body"></div></aside>
 <noscript><style>.chapter-scene:not(:has(.native-workbench)){display:none}</style><p class="noscript-note">正文、逻辑图与研究对照可直接阅读。</p></noscript>
 </body></html>'''

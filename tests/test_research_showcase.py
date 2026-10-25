@@ -32,6 +32,8 @@ class ResearchShowcaseBuildTests(unittest.TestCase):
         self.assertEqual(page.count('class="research-logic"'), 14)
         self.assertNotIn('id="opening-skip"', page)
         self.assertNotIn('id="reading-progress"', page)
+        self.assertIn('id="opening-enter"', page)
+        self.assertIn('study-agent项目介绍页面', page)
 
     def test_page_content_does_not_select_a_shanghai_exam(self):
         page = build(self.content)

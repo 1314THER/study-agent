@@ -29,9 +29,10 @@
     "chapters": 14,
     "research_logic_diagrams": 14,
     "chapter_bridges": 14,
-    "opening_seconds": 1.14,
-    "opening_controls": "无跳过按钮、无进度条",
+    "opening_controls": "只有进入预览按钮，无跳过按钮、无进度条",
     "animation": "原生CSS/SVG，短动画，尊重prefers-reduced-motion",
-    "copy": "现实痛点→机制→演示→研究依据；公开称呼统一为学生作答"
+    "copy": "现实痛点→机制→演示→研究依据；公开称呼统一为学生作答",
+    "opening_write_seconds": 1.98,
+    "opening_behavior": "欢迎页停留，点击进入预览；love先快后慢"
   }
 }
