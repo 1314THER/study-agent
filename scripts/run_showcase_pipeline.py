@@ -8,7 +8,9 @@ from datetime import datetime
 import argparse
 import hashlib
 import json
+import os
 from pathlib import Path
+import subprocess
 import sys
 import threading
 import time
@@ -37,6 +39,8 @@ def traced_call(*args, **kwargs):
     prompt = args[0]
     stage = 'formatter' if prompt.startswith(solver.FORMATTER_PROMPT) else 'solver' if prompt.startswith(solver.SOLVER_PROMPT) else 'geometry' if prompt.startswith((ROOT / 'backend/prompts/geometry.md').read_text().strip()) else 'verifier'
     CONTEXT.calls.append({'stage': stage, 'model': kwargs.get('model', 'deepseek-flash'),
+                          'resolved_model': usage.get('model') or kwargs.get('model', 'deepseek-flash'),
+                          'provider': 'codex_cli' if kwargs.get('model', '').startswith('gpt-') else 'zhipu' if kwargs.get('model', '').startswith('glm-') else 'deepseek',
                           'reasoning_effort': kwargs.get('reasoning_effort'), 'usage': usage,
                           'seconds': round(time.monotonic() - began, 2), 'content': content})
     return content, usage
@@ -88,6 +92,9 @@ def run_one(example, teacher, rerun=False):
         raise RuntimeError('Incomplete steps')
     value.update(source='pipeline', prepared_example=False, teacher=teacher)
     result = {'fingerprint': fingerprint, 'run_at': datetime.now().astimezone().isoformat(),
+              'execution_origin': 'local_production_code',
+              'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
+              'teacher_config': settings.get_teacher_config(teacher),
               'seconds': round(time.monotonic() - began, 2), 'answer_json': value,
               'stages': {stage: next(call for call in reversed(CONTEXT.calls) if call['stage'] == stage)
                          for stage in ('solver', 'verifier', 'formatter')}}
@@ -103,8 +110,14 @@ def main():
     parser.add_argument('--example', choices=NATIONAL_IDS)
     parser.add_argument('--teacher', choices=TEACHERS)
     args = parser.parse_args()
-    if not settings.get_api_key('deepseek'):
-        raise SystemExit('请先配置本机 DeepSeek API。')
+    os.environ.setdefault('STUDY_LOCAL_CODEX', '1' if (ROOT / '.local-codex/provider.py').is_file() else '0')
+    for teacher in TEACHERS:
+        if args.teacher and teacher != args.teacher:
+            continue
+        model = settings.get_teacher_config(teacher)['solver']['model']
+        provider = 'zhipu' if model.startswith('glm-') else 'deepseek'
+        if not model.startswith('gpt-') and not settings.get_api_key(provider):
+            raise SystemExit(f'请先配置本机 {provider} API。')
     CACHE.mkdir(parents=True, exist_ok=True, mode=0o700)
     solver.call_deepseek = traced_call
     destination = ROOT / 'frontend/showcase/pipeline.json'

@@ -27,7 +27,9 @@ def recorded_examples():
         item['answer_json'] = deepcopy(record['answer_json'])
         item['prepared_example'] = False
         item['recording'] = {'run_at': record['run_at'], 'fingerprint': record['fingerprint'],
-                             'teacher': 'xuefeng', 'kind': 'saved_production_pipeline'}
+                             'teacher': 'xuefeng', 'kind': 'saved_production_pipeline',
+                             'model': record['stages']['solver']['model'],
+                             'reasoning_effort': record['stages']['solver'].get('reasoning_effort')}
         examples.append(item)
     return examples
 
