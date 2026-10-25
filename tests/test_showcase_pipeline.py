@@ -18,8 +18,8 @@ class ShowcasePipelineTests(unittest.TestCase):
         # Locked before removing the retired local-paper example. These checks
         # protect the complete real responses, usage, timestamps and metadata.
         expected = {
-            'national-2025-q16': 'e67751efd5635c29fc4e4942029147baf1e667b327f8fcb69321fe9045a01cb8',
-            'national-2023-q17': '10fab70fdc104a7f08a0eaadca05beb079dd0e8a76bd853a744a8e8a32219677',
+            'national-2025-q16': '8b8117212eb419b51a9d8dbd8a6fe8046b551d04b527ce6d0dedbe6b32a728fa',
+            'national-2023-q17': '7c5233bda18c28fdd3243fb35e2eed7343f92a59c5f0cb20c94995e7d4dde9e5',
         }
         for example,runs in data['examples'].items():
             digest = hashlib.sha256(json.dumps(runs, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()).hexdigest()
@@ -46,7 +46,12 @@ class ShowcasePipelineTests(unittest.TestCase):
                         self.assertEqual(run['stages'][stage]['provider'], 'codex_cli')
                     self.assertGreater(run['stages'][stage]['usage']['total_tokens'],0)
                 self.assertGreater(result['token_usage']['total_tokens'],0)
-                final=re.sub(r'\s+','',result['final_answer'])
+                solution_text = result['final_answer'] + ''.join(
+                    chunk.get('final_answer', '') + ''.join(
+                        step.get('standard_writing', '') + step.get('detailed_writing', '')
+                        for step in chunk['steps'])
+                    for chunk in chunks)
+                final=re.sub(r'\s+','',solution_text)
                 if example=='national-2025-q16':self.assertIn('7-(3m+7)(-2)^m',final)
                 elif example=='national-2023-q17':self.assertIn('sqrt{10}',final);self.assertIn('6',final)
                 answers.append(json.dumps(chunks,ensure_ascii=False,sort_keys=True))

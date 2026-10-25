@@ -4,6 +4,7 @@ Student responses and teaching scripts below are explicitly schematic. Actual
 model comparisons and teaching transitions live separately in recordings.json.
 """
 from copy import deepcopy
+from datetime import datetime
 import hashlib
 import json
 from pathlib import Path
@@ -135,7 +136,7 @@ def build():
             'library': {'title': '全国卷研究展示样例', 'items': rows,
                         'question_ids': [e['id'] for e in rows], 'calendar': [],
                         'note': '仅含两道有保存管线结果的全国卷题；非完整全国卷题库。组卷与打印由当前所选题生成。'},
-            'progress': {'as_of': '2026-10-25', 'scope': '全国卷公开案例', 'published_questions': 2,
+            'progress': {'as_of': datetime.now().astimezone().date().isoformat(), 'scope': '全国卷公开案例', 'published_questions': 2,
                          'completed_pipeline_runs': 8,
                          'note': '两道题各保留四份已保存的真实管线结果；数量不是诊断准确率或学习效果。'},
             'catalog': catalog}
