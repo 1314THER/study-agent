@@ -66,7 +66,7 @@ function closeAnnotation(){$('annotation-panel').hidden=true;if(annotationTrigge
 function bar(title,subtitle){const n=el('div','workbench-bar');n.append(el('strong','',title));if(subtitle)n.append(el('span','',subtitle));return n;}
 function tabs(rows,active,change,label='切换图解'){const n=el('div','scene-tabs');n.setAttribute('role','group');n.setAttribute('aria-label',label);rows.forEach(([id,title])=>{const b=button(title,()=>change(id));b.setAttribute('aria-pressed',String(id===active));n.append(b);});return n;}
 function flow(root,labels,active=0){const n=el('div','flow-strip');labels.forEach((t,i)=>n.append(el('span',i===active?'active':'',t)));root.append(n);return n;}
-function selectView(name){const id=aliases[name]||name;dispatchEvent(new CustomEvent('showcase:navigate',{detail:{from:state.view,to:id}}));state.view=id;if(singleModes[name]){state.mode=singleModes[name];renderSingle();}location.hash=name;$(id)?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});}
+function selectView(name){const id=aliases[name]||name;recordOrigin(id);dispatchEvent(new CustomEvent('showcase:navigate',{detail:{from:state.view,to:id}}));state.view=id;if(singleModes[name]){state.mode=singleModes[name];renderSingle();}location.hash=name;$(id)?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});}
 api.selectView=selectView;api.focusRoutine=id=>{const r=state.data?.catalog?.routines.find(x=>x.id===id);if(r)$('routine-selection').textContent=r.name;};
 function svg(tag,attrs,text){const n=document.createElementNS(NS,tag);Object.entries(attrs||{}).forEach(([k,v])=>n.setAttribute(k,String(v)));if(text!=null)n.textContent=text;return n;}
 function triangle(stage=0){const s=svg('svg',{viewBox:'0 0 440 390',role:'img','aria-label':'全国卷三角形 ABC，AB长5，高为6，辅助线由步骤控制',class:'triangle-figure'});s.append(svg('path',{d:'M90 330 L340 330 L190 30 Z',fill:'#f1f6fc',stroke:'#164991','stroke-width':2.5}));if(stage>=1)s.append(svg('path',{d:'M190 30 V330 M190 316 H204 V330',fill:'none',stroke:'#007f82','stroke-width':2,'stroke-dasharray':'6 5',class:'construction-line'}));[['A',72,352],['B',348,352],['C',185,20],['AB = 5',180,370],['C = π/4',212,85]].forEach(([t,x,y])=>s.append(svg('text',{x,y},t)));if(stage>=1){s.append(svg('text',{x:174,y:351},'D'));s.append(svg('text',{x:204,y:195,fill:'#006f72'},stage>=2?'h = 6':'h'));}if(stage>=2)s.append(svg('text',{x:36,y:184,transform:'rotate(-72 36 184)'},'AC = 2√10'));return s;}
@@ -204,6 +204,31 @@ function navigation(){
  const hash=location.hash.slice(1);currentChapter(aliases[hash]||hash||'overview');
  addEventListener('hashchange',()=>{const id=location.hash.slice(1);if(singleModes[id]){state.mode=singleModes[id];renderSingle();}});
 }
+// Cross-chapter jumps leave a floating companion for returning to the exact spot.
+const originState={y:0};
+const returnButton=el('button','return-to-origin');
+returnButton.type='button';returnButton.hidden=true;
+returnButton.setAttribute('aria-label','回到跳转前的位置');
+returnButton.insertAdjacentHTML('afterbegin','<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 14.5 4 9l5.5-5.5"/><path d="M4 9h9.5a6.5 6.5 0 0 1 0 13H10"/></svg>');
+returnButton.append(el('span','','回到原处'));
+document.body.append(returnButton);
+function currentChapterId(){return [...document.querySelectorAll('[data-chapter]')].find(node=>{const r=node.getBoundingClientRect();return r.top<=innerHeight*.45&&r.bottom>innerHeight*.45})?.id||null;}
+function recordOrigin(targetId){
+ if(!uiReady||!entered)return;
+ const target=aliases[targetId]||targetId,current=currentChapterId();
+ if(!current||target===current)return;
+ originState.y=scrollY;returnButton.hidden=false;
+}
+returnButton.onclick=()=>{
+ returnButton.hidden=true;
+ const top=Math.max(0,Math.min(originState.y,document.documentElement.scrollHeight-innerHeight));
+ scrollTo({top,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+};
+document.addEventListener('click',event=>{
+ if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+ const link=event.target.closest?.('a[href^="#"]');if(!link||link.target==='_blank'||link.hasAttribute('download'))return;
+ recordOrigin(link.hash.slice(1));
+},true);
 function showOpening(force=false){
  const dialog=$('opening-dialog');if(!dialog||(!force&&(entered||(location.hash&&location.hash!=='#overview')))){entered=true;return Promise.resolve();}
  if(dialog.open)return Promise.resolve();
