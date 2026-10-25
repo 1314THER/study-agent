@@ -1,6 +1,6 @@
 {
   "schema_version": 1,
-  "updated_at": "2026-10-25",
+  "updated_at": "2026-10-26",
   "title": "StudyAgent：从过程诊断到方法迁移",
   "scope": "科研项目设计与真实功能结果展示；不据功能演示主张学习效果已验证。",
   "primary_case": "national-2023-q17",
@@ -1030,29 +1030,134 @@
       ],
       "research": [
         {
-          "title": "RAG：检索记忆与模型参数是不同改进路径",
-          "url": "https://arxiv.org/abs/2005.11401",
-          "contribution": "把模型参数中的知识与可更新的外部记忆结合，为回答保留可追溯的材料来源。",
-          "scope": "研究任务不是数学教学。相关文档被召回，不自动说明其适用于当前题型、教材或学生。",
-          "response": "将核实纠错、方法条件与教材案例先进入有版本知识库；模型行为仍有持续误差时，再比较微调。",
-          "validation": "分别检查召回适配、数学与教学正确性、原有能力和成本，不把缓存命中当成模型训练效果。",
-          "task": "输入需要外部知识的问答或生成任务，从可检索文档中寻找信息并生成回答。",
-          "method": "将神经检索器、维基百科向量索引和 seq2seq 生成器结合训练；比较整段生成共用检索文档和逐 token 选择文档两种形式。",
-          "findings": "论文在三项开放域问答取得当时领先结果；生成评估中，比仅参数化的对照更具体、多样和符合事实。",
-          "source_location": "摘要、§2–4（arXiv v4）",
-          "source_url": "https://arxiv.org/pdf/2005.11401v4",
-          "version": "NeurIPS 2020，arXiv v4，2021-04-12",
+          "title": "自进化智能体综述：输入、系统、环境与优化器构成反馈环",
+          "url": "https://arxiv.org/abs/2508.07407",
+          "contribution": "把自进化系统统一抽象为一条反馈环：系统输入、智能体系统、环境与优化器，并按智能体组件梳理进化技术。",
+          "scope": "面向通用智能体任务；教育场景的优化目标与领域约束需要单独设计，不能直接套用。",
+          "response": "把反馈与训练、人工维护、时效更新等路线映射进同一反馈环：内容与规则对应记忆和组件配置，训练对应模型本身。",
+          "validation": "综述本身汇总评测与安全议题；具体进化是否有效，仍以各原始论文的实证为准。",
+          "task": "对自进化智能体技术的系统性综述。",
+          "method": "提出统一概念框架，按模型、提示词、记忆、工具、工作流与通信机制等组件归类进化策略，并讨论评测、安全与伦理。",
+          "findings": "部署后保持静态的系统难以适应动态环境；按组件进化、配合离线评测与安全约束，是当前的主要技术路线。",
+          "source_location": "摘要、§1–3（arXiv v2）",
+          "source_url": "https://arxiv.org/pdf/2508.07407v2",
+          "version": "arXiv v2，2025-08-31",
           "logic": {
-            "input": "当前问题＋外部文档库",
+            "input": "智能体系统与交互数据",
             "stages": [
-              "神经检索",
-              "读取相关材料",
-              "条件生成"
+              "反馈采集",
+              "组件级进化",
+              "评测与安全约束"
             ],
-            "output": "有外部依据的回答"
+            "output": "持续适应的智能体系统"
           },
-          "website_url": "https://arxiv.org/abs/2005.11401",
-          "paper_url": "https://arxiv.org/pdf/2005.11401v4",
+          "website_url": "https://arxiv.org/abs/2508.07407",
+          "paper_url": "https://arxiv.org/pdf/2508.07407v2",
+          "resource_type": "paper"
+        },
+        {
+          "title": "Darwin Gödel Machine：自我修改先过实证验证关",
+          "url": "https://arxiv.org/abs/2505.22954",
+          "contribution": "智能体修改自身代码后，只有在基准上实证验证通过才进入档案库，并保留可追溯的修改谱系。",
+          "scope": "任务是代码基准而非数学教学；能力提升以自动化评测为准，教学收益仍需真实学生独立复测。",
+          "response": "反馈先形成候选版本，经独立评测与小范围使用后再发布，保留回滚依据与历史版本。",
+          "validation": "检查评测能否被钻空子（论文报告了 objective hacking 案例）、改进是否迁移到新任务，而非只看单次得分。",
+          "task": "自我改进的编码智能体：迭代修改自身代码库以提升基准表现。",
+          "method": "从档案库采样一个智能体版本，用基础模型生成新的修改，在编码基准上实证验证后写回档案，形成开放式增长的档案树。",
+          "findings": "SWE-bench 从 20.0% 提升到 50.0%，Polyglot 从 14.2% 到 30.7%；显著优于无自我改进或无开放式探索的基线。",
+          "source_location": "摘要、§1–2（arXiv v3）",
+          "source_url": "https://arxiv.org/pdf/2505.22954v3",
+          "version": "arXiv v3，2026-03-12；首版 2025-05-29",
+          "logic": {
+            "input": "当前智能体代码＋编码基准",
+            "stages": [
+              "采样候选版本",
+              "修改自身代码",
+              "实证验证",
+              "写入档案库"
+            ],
+            "output": "经验证的新版本与可追溯谱系"
+          },
+          "website_url": "https://arxiv.org/abs/2505.22954",
+          "paper_url": "https://arxiv.org/pdf/2505.22954v3",
+          "resource_type": "paper"
+        },
+        {
+          "title": "ReMe：经验库要蒸馏、复用与修剪，而非被动累积",
+          "url": "https://arxiv.org/abs/2512.10696",
+          "contribution": "指出把记忆当作只增不改的静态存档会逐渐退化，经验需要蒸馏、情境化复用和按效用修剪。",
+          "scope": "验证于工具调用与工作流基准；教学经验的效用判断需结合真实学习结果。",
+          "response": "个人记忆与知识库不只增不改：过期条目按证据修剪，修订保留版本、来源与帮助条件。",
+          "validation": "在 BFCL-V3 与 AppWorld 上与无记忆及静态记忆基线比较，并检查修剪是否损害长期表现。",
+          "task": "智能体程序性记忆的动态维护。",
+          "method": "多面蒸馏（成功模式、失败归因、对比洞察）加上情境自适应复用，再按复用效用增删条目。",
+          "findings": "带 ReMe 的 Qwen3-8B 超过无记忆的 Qwen3-14B，显示记忆质量可部分替代模型规模；两项基准取得当时最优。",
+          "source_location": "摘要、§1（arXiv v1）",
+          "source_url": "https://arxiv.org/pdf/2512.10696v1",
+          "version": "arXiv v1，2025-12-11",
+          "logic": {
+            "input": "执行轨迹与任务反馈",
+            "stages": [
+              "经验蒸馏",
+              "情境复用",
+              "效用修剪"
+            ],
+            "output": "可维护的高质量经验库"
+          },
+          "website_url": "https://arxiv.org/abs/2512.10696",
+          "paper_url": "https://arxiv.org/pdf/2512.10696v1",
+          "resource_type": "paper"
+        },
+        {
+          "title": "SwS：先诊断弱点，再合成针对性练习",
+          "url": "https://arxiv.org/abs/2506.08989",
+          "contribution": "从失败轨迹中提炼弱点画像，围绕弱点定向合成新题并再训练，形成自我改进闭环。",
+          "scope": "发生在模型训练层，面向数学推理基准；对学生的迁移与保持仍需独立复测。",
+          "response": "诊断出的薄弱步骤转成变式题候选，经解题校验后再进入训练与复测，与变式生成共用同一约束。",
+          "validation": "在八个数学推理基准上比较自我改进前后，并检查合成题是否重复或泄漏。",
+          "task": "数学推理模型的自我改进训练。",
+          "method": "让模型从自身失败样本中获得弱点意识，围绕弱点合成问题，再用通过验证的数据继续训练。",
+          "findings": "7B 模型八项数学基准平均提升 10.0%，32B 提升 7.7%；无需外部知识注入。",
+          "source_location": "摘要、§1（arXiv v1）",
+          "source_url": "https://arxiv.org/pdf/2506.08989v1",
+          "version": "arXiv v1，2025-06",
+          "logic": {
+            "input": "解题轨迹与失败样本",
+            "stages": [
+              "弱点诊断",
+              "题目合成",
+              "验证与再训练"
+            ],
+            "output": "针对薄弱点的新训练数据"
+          },
+          "website_url": "https://arxiv.org/abs/2506.08989",
+          "paper_url": "https://arxiv.org/pdf/2506.08989v1",
+          "resource_type": "paper"
+        },
+        {
+          "title": "EduLoop-Agent：诊断、推荐与反馈连成教学闭环",
+          "url": "https://arxiv.org/abs/2510.22559",
+          "contribution": "认知诊断、自适应选题与 LLM 反馈不再各自为政，而是形成可解释的闭环。",
+          "scope": "在 ASSISTments 数据集上验证；反馈能否改变后续学习行为还需真实课堂检验。",
+          "response": "诊断证据直接驱动下一步任务安排，反馈引用具体知识点与错误步骤，而不是笼统评语。",
+          "validation": "检查作答预测精度、选题相关性与反馈可执行性，掌握度估计需要可解释。",
+          "task": "个性化学习中的诊断、推荐与反馈闭环。",
+          "method": "神经认知诊断给出知识点级掌握度；有界能力自适应测试动态选题；LLM 将诊断信号转成可执行的学习建议。",
+          "findings": "作答预测表现强且掌握度可解释；自适应推荐提升选题相关性与个性化；反馈与已识别弱点对齐。",
+          "source_location": "摘要、§1、§3（arXiv v1）",
+          "source_url": "https://arxiv.org/pdf/2510.22559v1",
+          "version": "arXiv v1，2025-10",
+          "logic": {
+            "input": "学生作答历史与知识图谱",
+            "stages": [
+              "认知诊断",
+              "自适应选题",
+              "个性化反馈"
+            ],
+            "output": "可解释的学习建议与新任务"
+          },
+          "website_url": "https://arxiv.org/abs/2510.22559",
+          "paper_url": "https://arxiv.org/pdf/2510.22559v1",
           "resource_type": "paper"
         }
       ],

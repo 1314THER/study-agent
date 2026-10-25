@@ -737,13 +737,37 @@
         }
       ],
       "research_urls": [
-        "https://arxiv.org/abs/2005.11401"
+        "https://arxiv.org/abs/2508.07407",
+        "https://arxiv.org/abs/2505.22954",
+        "https://arxiv.org/abs/2512.10696",
+        "https://arxiv.org/abs/2506.08989",
+        "https://arxiv.org/abs/2510.22559"
       ],
       "research_resources": [
         {
-          "title": "RAG：检索记忆与模型参数是不同改进路径",
-          "website": "https://arxiv.org/abs/2005.11401",
-          "paper_or_document": "https://arxiv.org/pdf/2005.11401v4"
+          "title": "自进化智能体综述：输入、系统、环境与优化器构成反馈环",
+          "website": "https://arxiv.org/abs/2508.07407",
+          "paper_or_document": "https://arxiv.org/pdf/2508.07407v2"
+        },
+        {
+          "title": "Darwin Gödel Machine：自我修改先过实证验证关",
+          "website": "https://arxiv.org/abs/2505.22954",
+          "paper_or_document": "https://arxiv.org/pdf/2505.22954v3"
+        },
+        {
+          "title": "ReMe：经验库要蒸馏、复用与修剪，而非被动累积",
+          "website": "https://arxiv.org/abs/2512.10696",
+          "paper_or_document": "https://arxiv.org/pdf/2512.10696v1"
+        },
+        {
+          "title": "SwS：先诊断弱点，再合成针对性练习",
+          "website": "https://arxiv.org/abs/2506.08989",
+          "paper_or_document": "https://arxiv.org/pdf/2506.08989v1"
+        },
+        {
+          "title": "EduLoop-Agent：诊断、推荐与反馈连成教学闭环",
+          "website": "https://arxiv.org/abs/2510.22559",
+          "paper_or_document": "https://arxiv.org/pdf/2510.22559v1"
         }
       ]
     }
