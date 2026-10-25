@@ -7,6 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 import argparse
 import hashlib
+import inspect
 import json
 import os
 from pathlib import Path
@@ -31,6 +32,14 @@ REAL_CALL = solver.call_deepseek
 
 def checksum(value):
     return hashlib.sha256(json.dumps(value, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
+
+
+def solver_cache_key(preset, teacher):
+    return checksum({'question': preset['question'], 'config': settings.get_teacher_config(teacher)['solver'],
+                     'prompts': {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
+                                 for p in (ROOT / 'backend/prompts').rglob('*.md')},
+                     'entrypoint': inspect.getsource(solver.step_solver_only),
+                     'caller': inspect.getsource(REAL_CALL)})
 
 
 def traced_call(*args, **kwargs):
@@ -71,9 +80,18 @@ def run_one(example, teacher, rerun=False):
         CONTEXT.stage = stage
         print(f"{preset['id']} / {teacher}: {stage}", flush=True)
         if stage == 'solver':
-            solved = solver.step_solver_only(question, teacher=teacher)
+            checkpoint = directory / 'solver-checkpoint.json'
+            saved = json.loads(checkpoint.read_text()) if checkpoint.is_file() and not rerun else {}
+            if saved.get('fingerprint') == solver_cache_key(preset, teacher):
+                solved = saved['value']
+                CONTEXT.calls.extend(saved['calls'])
+                print(f"{preset['id']} / {teacher}: resumed saved solver", flush=True)
+            else:
+                solved = solver.step_solver_only(question, teacher=teacher)
             if solved.get('error'):
                 raise RuntimeError(solved.get('detail') or solved['error'])
+            checkpoint.write_text(json.dumps({'fingerprint': solver_cache_key(preset, teacher),
+                                             'value': solved, 'calls': CONTEXT.calls}, ensure_ascii=False, indent=2) + '\n')
             value = solved
         elif stage == 'verifier':
             verified = solver.step_verify_all(solved['content'], question, solved.get('category'), teacher=teacher)

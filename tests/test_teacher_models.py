@@ -78,6 +78,15 @@ class TeacherRoutingTests(unittest.TestCase):
             self.assertNotIn('reasoning_effort', body)
             key.assert_called_with('zhipu')
 
+    def test_verifier_uses_configured_reasoning(self):
+        cfg = deepcopy(settings.DEFAULTS['teachers']['xuefeng'])
+        cfg['verifier']['reasoning_effort'] = 'high'
+        with patch.object(settings, 'get_teacher_config', return_value=cfg), \
+                patch.object(solver, 'call_deepseek', return_value=('[确认：可解]\n### 块1\n步骤1：变形\n标准过程：a=1\n详细过程：a=1', {})) as call:
+            solver.step_verify_all('解答', '问题', '数列', teacher='xuefeng')
+        self.assertEqual(call.call_args.kwargs['model'], 'glm-5.3-flash')
+        self.assertEqual(call.call_args.kwargs['reasoning_effort'], 'high')
+
     def test_unconfigured_glm_does_not_use_ds(self):
         with patch.object(settings, 'get_api_key', return_value=''), \
                 patch.object(solver, 'get_api_key', side_effect=AssertionError('DS fallback')), \
