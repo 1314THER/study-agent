@@ -42,6 +42,16 @@ def solver_cache_key(preset, teacher):
                      'caller': inspect.getsource(REAL_CALL)})
 
 
+def verifier_cache_key(preset, teacher, solved):
+    return checksum({'question': preset['question'], 'solution': solved['content'],
+                     'category': solved.get('category'),
+                     'config': settings.get_teacher_config(teacher)['verifier'],
+                     'prompts': {str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest()
+                                 for p in (ROOT / 'backend/prompts').rglob('*.md')},
+                     'entrypoint': inspect.getsource(solver.step_verify_all),
+                     'caller': inspect.getsource(REAL_CALL)})
+
+
 def traced_call(*args, **kwargs):
     began = time.monotonic()
     content, usage = REAL_CALL(*args, **kwargs)
@@ -74,6 +84,7 @@ def run_one(example, teacher, rerun=False):
             return preset['id'], teacher, cached
     CONTEXT.calls = []
     resumed_solver = None
+    resumed_verifier = None
     usage = dict.fromkeys(('prompt_tokens', 'completion_tokens', 'total_tokens'), 0)
     question = preset['question']
     began = time.monotonic()
@@ -100,7 +111,22 @@ def run_one(example, teacher, rerun=False):
                                                   'recorded_at': datetime.now().astimezone().isoformat()}, ensure_ascii=False, indent=2) + '\n')
             value = solved
         elif stage == 'verifier':
-            verified = solver.step_verify_all(solved['content'], question, solved.get('category'), teacher=teacher)
+            checkpoint = directory / 'verifier-checkpoint.json'
+            saved = json.loads(checkpoint.read_text()) if checkpoint.is_file() and not rerun else {}
+            if saved.get('fingerprint') == verifier_cache_key(preset, teacher, solved):
+                verified = saved['value']
+                CONTEXT.calls.extend(saved['calls'])
+                resumed_verifier = {'source_commit': saved.get('source_commit'),
+                                    'recorded_at': saved.get('recorded_at')}
+                print(f"{preset['id']} / {teacher}: resumed saved verifier", flush=True)
+            else:
+                verified = solver.step_verify_all(solved['content'], question, solved.get('category'), teacher=teacher)
+                verifier_call = next((call for call in reversed(CONTEXT.calls) if call['stage'] == 'verifier'), None)
+                if verifier_call and not verified.get('error'):
+                    checkpoint.write_text(json.dumps({'fingerprint': verifier_cache_key(preset, teacher, solved),
+                                                      'value': verified, 'calls': [verifier_call],
+                                                      'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
+                                                      'recorded_at': datetime.now().astimezone().isoformat()}, ensure_ascii=False, indent=2) + '\n')
             value = verified
         else:
             value = solver.step_final_check(question, verified['chunk_results'], [], usage, teacher=teacher,
@@ -120,6 +146,7 @@ def run_one(example, teacher, rerun=False):
               'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
               'teacher_config': settings.get_teacher_config(teacher),
               'solver_resume': resumed_solver,
+              'verifier_resume': resumed_verifier,
               'seconds': round(time.monotonic() - began, 2), 'answer_json': value,
               'stages': {stage: next(call for call in reversed(CONTEXT.calls) if call['stage'] == stage)
                          for stage in ('solver', 'verifier', 'formatter')}}
