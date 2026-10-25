@@ -674,6 +674,33 @@ def make_http_caller(model_config, *, api_key, timeout=120, usage_callback=None)
     return caller
 
 
+def make_teacher_caller(model_config, *, timeout_seconds=120, usage_callback=None):
+    """Route application matching through the selected teacher's normal provider."""
+    def caller(system, user, item):
+        stage = ""
+        try:
+            stage = json.loads(user).get("stage", "")
+        except (ValueError, AttributeError):
+            pass
+        maximum = model_config.get("max_tokens", 1024)
+        if stage == "full_catalog_audit":
+            maximum = model_config.get("audit_max_tokens", maximum)
+        from backend.solver import call_deepseek
+        content, usage = call_deepseek(
+            system, user, temperature=model_config.get("temperature", .1),
+            model=model_config["model"], reasoning_effort=model_config.get("reasoning_effort") or "medium",
+            max_tokens=maximum, timeout_seconds=timeout_seconds,
+            response_format={"type": "json_object"} if model_config.get("json_output", True)
+            and not model_config["model"].startswith(("glm-", "gpt-")) else None,
+        )
+        if usage_callback:
+            usage_callback(item, stage, usage)
+        if usage.get("finish_reason") == "length":
+            raise ValueError("分类输出超过长度上限，结果未保存为有效分类")
+        return content
+    return caller
+
+
 def provider_usage(payload):
     """Record reported counts only; absent reasoning/cache metrics stay unknown."""
     usage = payload.get("usage") or {}

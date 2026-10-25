@@ -1075,8 +1075,9 @@ def extract_analysis(analysis_id, ctx):
                     page_total += 1
                     ctx.progress("recognizing", min(45, 3 + round(42 * page_total / max(page_count, 1))),
                                  f"多模态识别 PDF 第 {local_page}/{total} 页")
-                    raw = mm._call_deepseek_vision(image_base64=encoded,
-                                                   text=_extract_prompt(local_page, total))
+                    raw = mm._call_multimodal_model(image_base64=encoded,
+                                                   text=_extract_prompt(local_page, total),
+                                                   teacher=analysis.get("teacher"))
                     ensure_active()
                     refs = mm._retain_preview(encoded)
                     pages.append({"page_no": page_total, "items": _parse_exam_response(raw), "asset_refs": refs,
@@ -1087,8 +1088,9 @@ def extract_analysis(analysis_id, ctx):
                 encoded = mm.image_to_base64(path)
                 ctx.progress("recognizing", min(45, 3 + round(42 * page_total / max(len(sources), 1))),
                              f"多模态识别第 {page_total} 张图片")
-                raw = mm._call_deepseek_vision(image_base64=encoded,
-                                               text=_extract_prompt(page_total, len(sources)))
+                raw = mm._call_multimodal_model(image_base64=encoded,
+                                               text=_extract_prompt(page_total, len(sources)),
+                                               teacher=analysis.get("teacher"))
                 ensure_active()
                 refs = mm._retain_preview(encoded)
                 pages.append({"page_no": page_total, "items": _parse_exam_response(raw), "asset_refs": refs,

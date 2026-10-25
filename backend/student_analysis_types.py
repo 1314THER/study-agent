@@ -83,7 +83,7 @@ class DiagnosticFinding:
 
 
 class AnswerExtractor(Protocol):
-    def extract_page(self, image_base64: str, prompt: str) -> str: ...
+    def extract_page(self, image_base64: str, prompt: str, *, teacher: Optional[str] = None) -> str: ...
 
 
 class Grader(Protocol):

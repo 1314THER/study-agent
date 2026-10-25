@@ -45,9 +45,9 @@ _ERROR_TYPES = {"符号错误", "计算错误", "公式记错", "知识性错误
 
 
 class _VisionAnswerExtractor:
-    def extract_page(self, image_base64, prompt):
-        from backend.multimodal import _call_deepseek_vision
-        return _call_deepseek_vision(image_base64=image_base64, text=prompt)
+    def extract_page(self, image_base64, prompt, *, teacher=None):
+        from backend.multimodal import _call_multimodal_model
+        return _call_multimodal_model(image_base64=image_base64, text=prompt, teacher=teacher, stage="grade")
 
 
 class _SharedGrader:
@@ -570,7 +570,7 @@ def run_extract_job(args, ctx):
                      f"正在识别答卷第 {page['page_no']} 页（{index}/{len(pending)}）")
         try:
             encoded = base64.b64encode(Path(page["image_path"]).read_bytes()).decode("ascii")
-            raw = ANSWER_EXTRACTOR.extract_page(encoded, _student_ocr_prompt(attempt))
+            raw = ANSWER_EXTRACTOR.extract_page(encoded, _student_ocr_prompt(attempt), teacher=attempt.get("teacher"))
             fragments = _normalize_fragments(_json_from_vision(raw), known_numbers)
             if not _store_ocr_page(attempt_id, revision, page["page_no"], page["sha256"], fragments):
                 raise RuntimeError("考试记录已变更，识别结果未保存。")

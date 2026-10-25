@@ -50,10 +50,10 @@
     uploads++;render();window.dispatchEvent(new Event('studyuploadstart'));
     var j,intentKey,intent,accepted=false;
     try {
-      var signature=file?[file.name,file.size,file.lastModified].join(':'):'upload';
+      var signature=(form.get('teacher')||'liangliang')+':'+(file?[file.name,file.size,file.lastModified].join(':'):'upload');
       // Protect navigation while hashing as well as uploading. A retry reuses
       // its acceptance ID even when the first HTTP response was lost.
-      if(file&&window.crypto&&crypto.subtle){var digest=await crypto.subtle.digest('SHA-256',await file.arrayBuffer());signature=file.name+':'+file.size+':'+Array.from(new Uint8Array(digest)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');}
+      if(file&&window.crypto&&crypto.subtle){var digest=await crypto.subtle.digest('SHA-256',await file.arrayBuffer());signature=(form.get('teacher')||'liangliang')+':'+file.name+':'+file.size+':'+Array.from(new Uint8Array(digest)).map(function(b){return b.toString(16).padStart(2,'0');}).join('');}
       intentKey=key+':'+signature;var previous=read(intentKey);
       intent=previous&&previous.status==='pending'?previous:{request_id:uuid(),signature:signature,status:'pending'};
       write(intentKey,intent);form.set('kind',kind);form.set('request_id',intent.request_id);

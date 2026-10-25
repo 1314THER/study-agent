@@ -212,7 +212,7 @@ class QuestionAssetTest(unittest.TestCase):
         from backend.multimodal import parse_file
         with tempfile.TemporaryDirectory() as directory,workspace(directory):
             path=Path(directory)/"upload.png";path.write_bytes(self.png())
-            with patch("backend.multimodal._call_deepseek_vision",return_value='[{"latex":"题目"}]'):
+            with patch("backend.multimodal._call_multimodal_model",return_value='[{"latex":"题目"}]'):
                 result=parse_file(str(path))
             path.unlink()
             self.assertTrue(question_assets.resolve_asset(result[0]["asset_refs"][0]).is_file())

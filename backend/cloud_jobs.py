@@ -39,7 +39,7 @@ class CloudJobs:
         for key in ("question", "student_answer", "message"):
             if key in args and (not isinstance(args[key], str) or len(args[key]) > 100000):
                 raise HTTPException(422, "文本参数无效")
-        if args.get("teacher") not in (None, "liangliang", "xuefeng", "ji"):
+        if args.get("teacher") not in (None, "liangliang", "taotao", "xuefeng", "ji"):
             raise HTTPException(422, "教师参数无效")
         if "question_id" in args:
             q = self.repo.question(args["question_id"])
@@ -160,10 +160,10 @@ class CloudJobs:
                 asset = self.repo.asset(args["asset_id"])
                 path = self.asset_root / asset["storage_key"]
                 if kind == "ocr":
-                    result = self._ocr_asset(asset)
+                    result = self._ocr_asset(asset, args.get("teacher"))
                 else:
                     from backend.multimodal import parse_file
-                    result = {"questions": parse_file(str(path), asset["filename"])}
+                    result = {"questions": parse_file(str(path), asset["filename"], teacher=args.get("teacher"))}
             if isinstance(result, dict) and result.get("error"):
                 raise ValueError(result.get("detail") or result["error"])
             self.repo.update_job(job_id, status="done", stage="已完成", progress=100, result=result)
@@ -183,13 +183,13 @@ class CloudJobs:
     def close(self):
         self.executor.shutdown(wait=True, cancel_futures=False)
 
-    def _ocr_asset(self, asset):
+    def _ocr_asset(self, asset, teacher=None):
         from backend.multimodal import recognize_answer_image, _pdf_render_scale
         path = self.asset_root / asset["storage_key"]
         if asset["media_type"] != "application/pdf":
             if asset["media_type"] not in ("image/png", "image/jpeg"):
                 raise ValueError("请使用 JPG、PNG 或 PDF 作答")
-            return recognize_answer_image(str(path))
+            return recognize_answer_image(str(path), teacher=teacher, stage="grade")
         import fitz
         import tempfile
         texts = []
@@ -199,5 +199,5 @@ class CloudJobs:
             for index, page in enumerate(doc):
                 target = Path(folder) / f"{index}.png"
                 page.get_pixmap(matrix=fitz.Matrix(_pdf_render_scale(page, 150), _pdf_render_scale(page, 150))).save(target)
-                texts.append(recognize_answer_image(str(target)).get("text", ""))
+                texts.append(recognize_answer_image(str(target), teacher=teacher, stage="grade").get("text", ""))
         return {"text": "\n\n".join(texts), "confidence": "medium"}

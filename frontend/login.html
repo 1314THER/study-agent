@@ -51,7 +51,7 @@
         <section class="auth-panel" id="register-panel" hidden aria-labelledby="register-title">
             <button class="auth-back" type="button" data-back>← 返回选择</button>
             <h2 id="register-title">创建你的学习空间</h2>
-            <p class="auth-description">验证邮箱后即可注册。解题与图片识别共用一个 DeepSeek API Key。</p>
+            <p class="auth-description">验证邮箱后即可注册。DeepSeek API Key 供韬韬使用；其他老师按各自配置的模型服务调用。</p>
             <div class="auth-channel"><span>邮箱验证</span><span class="off" title="短信服务尚未开放">手机验证 · 暂未开放</span></div>
             <p class="auth-message" id="registration-note" hidden></p>
             <form class="auth-form" id="register-form">
@@ -60,7 +60,7 @@
                 <label class="auth-field">邮箱验证码<span class="auth-code-row"><input name="code" inputmode="numeric" autocomplete="one-time-code" required pattern="[0-9]{6}" maxlength="6" placeholder="6 位验证码"><button class="auth-button" type="button" id="send-code">发送验证码</button></span><small>验证码 5 分钟有效。</small></label>
                 <label class="auth-field">设置密码<input name="password" type="password" autocomplete="new-password" required minlength="12" maxlength="128" placeholder="至少 12 个字符"><small>建议使用一句容易记住的长密码。</small></label>
                 <label class="auth-field">确认密码<input name="confirm_password" type="password" autocomplete="new-password" required minlength="12" maxlength="128" placeholder="再次输入密码"></label>
-                <label class="auth-field">DeepSeek API Key<input name="api_key" type="password" autocomplete="off" spellcheck="false" required minlength="8" maxlength="512" placeholder="粘贴你在 DeepSeek 创建的密钥"><small>密钥用于你的 AI 请求，保存后不会回显。<a href="/deepseek-guide.html" target="_blank" rel="noopener">如何注册 DeepSeek 并创建密钥 ↗</a></small></label>
+                <label class="auth-field">DeepSeek API Key<input name="api_key" type="password" autocomplete="off" spellcheck="false" required minlength="8" maxlength="512" placeholder="粘贴你在 DeepSeek 创建的密钥"><small>密钥仅用于韬韬的 DeepSeek 请求，保存后不会回显。<a href="/deepseek-guide.html" target="_blank" rel="noopener">如何注册 DeepSeek 并创建密钥 ↗</a></small></label>
                 <button class="auth-button primary" type="submit">创建账号并进入 →</button>
             </form>
         </section>

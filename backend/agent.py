@@ -4,8 +4,6 @@ import json
 import re
 import time
 
-import httpx
-
 from backend.categories import CATEGORIES
 from backend.database import MISTAKE_TYPES
 from backend.agent_tools import agent_context, run_tool, tool_descriptions
@@ -643,35 +641,17 @@ def _extract_json(text):
 
 def _call_llm_messages(messages, temperature=0.4):
     try:
-        api_key = runtime_settings.get_api_key("deepseek")
-    except ValueError:
-        return None
-    if not api_key:
-        return None
-    api_cfg = runtime_settings.get_api().get("deepseek") or {}
-    base_url = (api_cfg.get("base_url") or "https://api.deepseek.com/v1").rstrip("/")
-    endpoint = base_url if base_url.endswith("/chat/completions") else base_url + "/chat/completions"
-    settings = runtime_settings.get_settings()
-    model = settings.get("teachers", {}).get("liangliang", {}).get("solver", {}).get("model", "deepseek-flash")
-    max_tokens = min(int(runtime_settings.get_limits().get("api_max_tokens", 32000)), 2000)
-    body = {
-        "model": model,
-        "messages": messages,
-        "temperature": temperature,
-        "max_tokens": max_tokens,
-    }
-    try:
-        from backend.jobs import provider_slot, request_timeout
-        with provider_slot("deepseek"):
-            resp = httpx.post(
-                endpoint,
-                headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
-                json=body,
-                timeout=request_timeout(20),
-            )
-        if resp.status_code != 200:
-            return None
-        return resp.json()["choices"][0]["message"]["content"]
+        from backend.solver import call_deepseek
+        cfg = runtime_settings.get_teacher_config("liangliang").get("solver") or {}
+        limits = runtime_settings.get_limits()
+        content, _ = call_deepseek(
+            _agent_system_prompt(), "", temperature=temperature,
+            model=cfg.get("model") or "glm-4.7-flash",
+            reasoning_effort=cfg.get("reasoning_effort") or "medium",
+            max_tokens=min(int(limits.get("api_max_tokens", 32000)), 2000),
+            timeout_seconds=20, messages=messages,
+        )
+        return content
     except Exception:
         return None
 

@@ -312,6 +312,17 @@ class RoutineReviewTests(unittest.TestCase):
         self.assertEqual(self.store.run()['model_config']['engine'],'deepseek')
         self.assertTrue(enqueue.called)
 
+    def test_routine_review_uses_liangs_configured_model_provider(self):
+        from backend import settings
+        config = {"solver": {"model": "glm-4.7-flash", "reasoning_effort": "medium"}}
+        with patch.object(settings, "get_teacher_config", return_value=config), \
+             patch.object(settings, "get_api", return_value={"zhipu": {"base_url": "https://glm.example/v1"}}):
+            model = rr.model_config()
+        self.assertEqual(model["model"], "glm-4.7-flash")
+        self.assertEqual(model["provider"], "zhipu")
+        self.assertEqual(model["base_url"], "https://glm.example/v1")
+        self.assertEqual(model["reasoning_effort"], "medium")
+
     def test_existing_progress_blocks_all_new_starts_and_preserves_results(self):
         run=self.create();self.run_fake(run)
         with patch.object(rr,'ai_caller') as provider,patch.object(rr,'enqueue_run') as enqueue:

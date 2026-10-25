@@ -225,35 +225,21 @@ class FlowInternalTest(unittest.TestCase):
 
 class LlmCallTest(unittest.TestCase):
     def test_no_api_key(self):
-        with patch.object(agent_mod.runtime_settings, "get_api_key", return_value=""):
+        with patch("backend.solver.call_deepseek", side_effect=ValueError("missing key")):
             self.assertIsNone(_call_llm_messages([{"role": "user", "content": "hi"}]))
 
-    def test_http_error_and_exception(self):
-        with patch.object(agent_mod.runtime_settings, "get_api_key", return_value="k"), \
-             patch.object(agent_mod.runtime_settings, "get_api", return_value={"deepseek": {"base_url": "https://x/v1"}}), \
-             patch.object(agent_mod.runtime_settings, "get_settings", return_value={}), \
-             patch.object(agent_mod.runtime_settings, "get_limits", return_value={"api_max_tokens": 32000}), \
-             patch.object(agent_mod.httpx, "post", return_value=type("R", (), {"status_code": 500})()):
-            self.assertIsNone(_call_llm_messages([{"role": "user", "content": "hi"}]))
-
-        class Boom(Exception):
-            pass
-
-        with patch.object(agent_mod.runtime_settings, "get_api_key", return_value="k"), \
-             patch.object(agent_mod.runtime_settings, "get_api", return_value={"deepseek": {"base_url": "https://x/v1"}}), \
-             patch.object(agent_mod.runtime_settings, "get_settings", return_value={}), \
-             patch.object(agent_mod.runtime_settings, "get_limits", return_value={"api_max_tokens": 32000}), \
-             patch.object(agent_mod.httpx, "post", side_effect=Boom("net")):
-            self.assertIsNone(_call_llm_messages([{"role": "user", "content": "hi"}]))
-
-    def test_success_returns_content(self):
-        resp = type("R", (), {"status_code": 200, "json": lambda self: {"choices": [{"message": {"content": "ok"}}]}})()
-        with patch.object(agent_mod.runtime_settings, "get_api_key", return_value="k"), \
-             patch.object(agent_mod.runtime_settings, "get_api", return_value={"deepseek": {"base_url": "https://x/v1"}}), \
-             patch.object(agent_mod.runtime_settings, "get_settings", return_value={}), \
-             patch.object(agent_mod.runtime_settings, "get_limits", return_value={"api_max_tokens": 32000}), \
-             patch.object(agent_mod.httpx, "post", return_value=resp):
+    def test_model_and_reasoning_follow_liang_teacher_settings(self):
+        cfg = {"solver": {"model": "glm-5.3-flash", "reasoning_effort": "high"}}
+        with patch.object(agent_mod.runtime_settings, "get_teacher_config", return_value=cfg), \
+             patch("backend.solver.call_deepseek", return_value=("ok", {})) as call:
             self.assertEqual(_call_llm_messages([{"role": "user", "content": "hi"}]), "ok")
+        self.assertEqual(call.call_args.kwargs["model"], "glm-5.3-flash")
+        self.assertEqual(call.call_args.kwargs["reasoning_effort"], "high")
+        self.assertEqual(call.call_args.kwargs["messages"][-1]["content"], "hi")
+
+    def test_provider_exceptions_are_reported_as_unavailable(self):
+        with patch("backend.solver.call_deepseek", side_effect=RuntimeError("provider unavailable")):
+            self.assertIsNone(_call_llm_messages([{"role": "user", "content": "hi"}]))
 
 
 if __name__ == "__main__":

@@ -85,7 +85,7 @@ def read_pdf_pages(file, options, ocr_callback, prompt):
     """Return ordered cached page units. No worker ever sees a PyMuPDF object."""
     import fitz
     from backend.jobs import ensure_active, JobStopped
-    from backend.multimodal import MODEL, _pdf_render_scale
+    from backend.multimodal import _pdf_render_scale, resolve_multimodal_model
 
     file = Path(file)
     filename = options.get("filename") or file.name
@@ -98,10 +98,11 @@ def read_pdf_pages(file, options, ocr_callback, prompt):
     dpi = options.get("dpi", 180)
     if type(dpi) is not int or not 72 <= dpi <= 300:
         raise ValueError("渲染 DPI 应为 72 至 300")
-    model = options.get("model") or MODEL
-    if model != MODEL:
-        raise ValueError("采用现有 DeepSeek Flash 图片接口，请勿指定其他模型")
-    config = {"version": CACHE_VERSION, "model": model, "ocr_mode": mode, "dpi": dpi,
+    teacher = options.get("teacher") or "liangliang"
+    model, _ = resolve_multimodal_model(teacher, has_image=True)
+    if options.get("model") and options["model"] != model:
+        raise ValueError("OCR 模型由所选老师决定，请调整老师模型设置")
+    config = {"version": CACHE_VERSION, "model": model, "teacher": teacher, "ocr_mode": mode, "dpi": dpi,
               "prompt_sha256": sha256(prompt.encode()).hexdigest()}
     digest = file_hash(file)
     signature = sha256(json.dumps(config, sort_keys=True).encode()).hexdigest()

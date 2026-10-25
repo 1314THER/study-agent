@@ -376,21 +376,22 @@ class RoutineMatchingTests(unittest.TestCase):
     def test_api_adapter_uses_system_configuration_and_provider_budget(self):
         from backend import settings
         from backend import jobs
+        config = {"solver": {"model": "glm-5.3-flash", "reasoning_effort": "medium"}}
         with patch("sqlite3.connect", side_effect=AssertionError("禁止数据库")), \
-             patch.object(settings, "get_api", return_value={"deepseek": {"base_url": "https://api.example.test/v1"}}), \
+             patch.object(settings, "get_api", return_value={"deepseek": {}, "zhipu": {"base_url": "https://api.example.test/v1"}}), \
              patch.object(settings, "get_limits", return_value={"api_max_tokens": 2048, "api_timeout_seconds": 60}), \
-             patch.object(settings, "get_teacher_config", return_value={"solver": {"model": "chosen-model"}}), \
-             patch.object(settings, "get_api_key", return_value="MOCK-ACCOUNT-KEY"), \
-             patch.object(jobs, "provider_slot") as slot, \
+             patch.object(settings, "get_teacher_config", return_value=config), \
+             patch.object(settings, "get_api_key", return_value="MOCK-ACCOUNT-KEY") as key, \
              patch.object(jobs, "request_timeout", return_value=42) as timeout, \
-             patch.object(rc, "make_http_caller", return_value=lambda s,u,i: result(i)) as adapter:
+             patch.object(rc, "make_teacher_caller", return_value=lambda s,u,i: result(i)) as adapter:
             caller = api.get_ai_caller()
             self.assertEqual(caller("system", "user", self.item)["primary_routine_id"], "SET-017")
-        slot.assert_called_once_with("deepseek")
+        key.assert_called_once_with("zhipu")
         timeout.assert_called_once_with(60)
-        self.assertEqual(adapter.call_args.args[0]["model"], "chosen-model")
+        self.assertEqual(adapter.call_args.args[0]["model"], "glm-5.3-flash")
+        self.assertEqual(adapter.call_args.args[0]["reasoning_effort"], "medium")
         self.assertEqual(adapter.call_args.args[0]["max_tokens"], 2048)
-        self.assertEqual(adapter.call_args.kwargs["timeout"], 42)
+        self.assertEqual(adapter.call_args.kwargs["timeout_seconds"], 42)
 
     def test_pending_old_catalog_review_is_explicitly_marked_stale(self):
         first = self.entry()

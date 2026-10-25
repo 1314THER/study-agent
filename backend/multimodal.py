@@ -1,5 +1,5 @@
 """
-多模态解答：文件解析 + DeepSeek Flash 图片理解与切题
+多模态解答：按所选老师调用模型，处理文件解析、图片理解与切题
 支持 PDF / JPG / PNG / docx / txt
 """
 
@@ -17,18 +17,21 @@ import backend.settings as runtime_settings
 logger = logging.getLogger(__name__)
 
 # ---------- API ----------
-DEEPSEEK_BASE = "https://api.deepseek.com/v1"
-MODEL = "deepseek-flash"
 MAX_IMAGE_BYTES = 32 * 1024 * 1024
+GLM46V_IMAGE_BYTES = 5 * 1024 * 1024
 MAX_IMAGE_SIDE = 8192
 MAX_REQUEST_BYTES = 48 * 1024 * 1024
 
 
-def _get_api_key() -> str:
-    key = runtime_settings.get_api_key("deepseek")
-    if not key:
-        raise ValueError("未找到 DeepSeek API Key，请在系统设置页配置")
-    return key
+def resolve_multimodal_model(teacher=None, stage="solver", has_image=False):
+    """Resolve the selected teacher's model, including Liang's vision fallback."""
+    teacher_config = runtime_settings.get_teacher_config(teacher)
+    stage_config = teacher_config.get(stage) or teacher_config.get("solver") or {}
+    model = stage_config.get("model") or runtime_settings.DEFAULTS["teachers"]["liangliang"]["solver"]["model"]
+    effort = stage_config.get("reasoning_effort") or "medium"
+    if has_image and model == "glm-4.7-flash":
+        model = "glm-4.6v-flash"
+    return model, effort
 
 
 # ---------- 文件解析 ----------
@@ -96,7 +99,7 @@ def image_to_base64(file_path: str) -> str:
     except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
         raise ValueError("无法读取图片，请上传完整的 JPG/PNG 文件") from exc
     if len(data) > MAX_IMAGE_BYTES:
-        raise ValueError("图片超过 DeepSeek 单张 32 MiB 限制，请降低图片分辨率")
+        raise ValueError("图片超过单张 32 MiB 限制，请降低图片分辨率")
     return base64.b64encode(data).decode("utf-8")
 
 
@@ -107,7 +110,7 @@ def docx_to_text(file_path: str) -> str:
     return "\n".join(paragraphs)
 
 
-# ---------- DeepSeek 图片理解 ----------
+# ---------- 按老师选择模型进行多模态理解 ----------
 _PROMPTS_DIR = os.path.join(os.path.dirname(__file__), "prompts")
 
 
@@ -132,73 +135,91 @@ _ANSWER_OCR_PROMPT = (
 )
 
 
-def _call_deepseek_vision(image_base64: Optional[str] = None, text: Optional[str] = None) -> str:
-    """Use the official Chat Completions image_url format with Flash."""
-    api_key = _get_api_key()
-    api_cfg = runtime_settings.get_api().get("deepseek") or {}
+def _fit_glm46v_image(encoded: str) -> tuple[str, str]:
+    """Keep GLM-4.6V image payloads below the provider's per-image limit."""
+    raw = base64.b64decode(encoded, validate=True)
+    from PIL import Image, ImageOps
+    try:
+        with Image.open(io.BytesIO(raw)) as source:
+            image = ImageOps.exif_transpose(source).convert("RGB")
+            width, height = image.size
+            if len(raw) <= GLM46V_IMAGE_BYTES and max(width, height) <= 6000 and source.format in ("PNG", "JPEG"):
+                mime = "image/jpeg" if source.format == "JPEG" else "image/png"
+                image.close()
+                return encoded, mime
+            if max(width, height) > 6000:
+                scale = 6000 / max(width, height)
+                width, height = max(1, int(width * scale)), max(1, int(height * scale))
+            while max(width, height) >= 320:
+                resized = image.resize((width, height), Image.Resampling.LANCZOS) if image.size != (width, height) else image
+                for quality in (92, 86, 80, 74):
+                    output = io.BytesIO()
+                    resized.save(output, format="JPEG", quality=quality, optimize=True)
+                    payload = output.getvalue()
+                    if len(payload) <= GLM46V_IMAGE_BYTES:
+                        result = base64.b64encode(payload).decode("ascii")
+                        if resized is not image:
+                            resized.close()
+                        image.close()
+                        return result, "image/jpeg"
+                if resized is not image:
+                    resized.close()
+                width, height = int(width * 0.85), int(height * 0.85)
+            image.close()
+    except (OSError, ValueError) as exc:
+        raise ValueError("图片过大，无法压缩到 GLM-4.6V-Flash 的上传限制") from exc
+    raise ValueError("图片过大，压缩后仍超过 GLM-4.6V-Flash 的单张图片限制")
+
+
+def _call_multimodal_model(image_base64: Optional[str] = None, text: Optional[str] = None,
+                           teacher: Optional[str] = None, stage: str = "solver") -> str:
+    """Call the selected teacher model for text and image recognition."""
     limits = runtime_settings.get_limits()
-    timeout_seconds = limits.get("multimodal_timeout_seconds", 180)
-    base_url = (api_cfg.get("base_url") or DEEPSEEK_BASE).rstrip("/")
-    endpoint = base_url if base_url.endswith("/chat/completions") else base_url + "/chat/completions"
-    model = api_cfg.get("vision_model") or MODEL
-    if model != MODEL:
-        raise ValueError("图片识别模型请使用 deepseek-flash")
-    messages = [{"role": "user", "content": []}]
-    
+    model, reasoning_effort = resolve_multimodal_model(teacher, stage, has_image=bool(image_base64))
+    image_content = []
+
+    image_mime = "image/png"
     if image_base64:
-        # One page per request; callers may overlap requests under provider_slot.
         try:
             image_bytes = base64.b64decode(image_base64, validate=True)
         except (ValueError, base64.binascii.Error) as exc:
             raise ValueError("图片编码无效") from exc
         if len(image_bytes) > MAX_IMAGE_BYTES:
-            raise ValueError("图片超过 DeepSeek 单张 32 MiB 限制")
-        messages[0]["content"].append({
+            raise ValueError("图片超过单张 32 MiB 限制")
+        if model == "glm-4.6v-flash":
+            image_base64, image_mime = _fit_glm46v_image(image_base64)
+        image_content.append({
             "type": "image_url",
-            "image_url": {"url": f"data:image/png;base64,{image_base64}", "detail": "original"}
+            "image_url": {"url": f"data:{image_mime};base64,{image_base64}", "detail": "original"},
         })
-    
-    messages[0]["content"].append({
-        "type": "text",
-        "text": text or _EXTRACTION_PROMPT
-    })
-    
-    body = {
-        "model": model,
-        "messages": messages,
-        "max_tokens": limits.get("multimodal_max_tokens", 16384),
-        "thinking": {"type": "disabled"},
-    }
-    if len(json.dumps(body, ensure_ascii=False).encode("utf-8")) > MAX_REQUEST_BYTES:
-        raise ValueError("图片请求超过 DeepSeek 48 MiB 请求体限制")
-    
+
+    prompt = text or _EXTRACTION_PROMPT
+    request_body = {"model": model, "prompt": prompt, "images": image_content}
+    if len(json.dumps(request_body, ensure_ascii=False).encode("utf-8")) > MAX_REQUEST_BYTES:
+        raise ValueError("图片请求超过 48 MiB 请求体限制")
+
     try:
-        from backend.jobs import provider_slot, request_timeout
-        with provider_slot("deepseek"):
-            resp = httpx.post(
-                endpoint,
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json"
-                },
-                json=body,
-                timeout=request_timeout(timeout_seconds),
-            )
-        if resp.status_code != 200:
-            raise Exception(f"DeepSeek API 错误 {resp.status_code}")
-        data = resp.json()
-        content = data["choices"][0]["message"]["content"]
+        from backend.solver import call_deepseek
+        result = call_deepseek(
+            "你是一个数学题目识别助手。请遵守用户给出的识别要求。",
+            prompt,
+            model=model,
+            reasoning_effort=reasoning_effort,
+            image_content=image_content or None,
+            max_tokens=limits.get("multimodal_max_tokens", 16384),
+            timeout_seconds=limits.get("multimodal_timeout_seconds", 180),
+        )
+        content = result[0] if isinstance(result, tuple) else result
+        usage = result[1] if isinstance(result, tuple) and len(result) > 1 else {}
         if not isinstance(content, str) or not content.strip():
-            raise ValueError("DeepSeek API 未返回识别文本")
-        if data["choices"][0].get("finish_reason") == "length":
+            raise ValueError("所选老师的模型未返回识别文本")
+        if isinstance(usage, dict) and usage.get("finish_reason") == "length":
             raise ValueError("图片识别结果超出输出长度，请拆分页面或提高识别输出上限")
         return content
-    except httpx.TimeoutException:
-        raise Exception(f"DeepSeek API 请求超时（{timeout_seconds}s）")
-    except httpx.ConnectError:
-        raise Exception("无法连接到 DeepSeek API 服务器")
+    except (httpx.TimeoutException, httpx.ConnectError, httpx.HTTPError):
+        raise
     except (KeyError, json.JSONDecodeError, IndexError, TypeError) as e:
-        raise Exception("DeepSeek API 响应解析失败") from e
+        raise Exception("多模态模型响应解析失败") from e
 
 
 def _parse_questions(raw: str) -> list:
@@ -292,7 +313,8 @@ def _retain_preview(encoded):
 
 
 # ---------- 主入口 ----------
-def parse_file(file_path: str, original_filename: str = "", progress=None) -> list:
+def parse_file(file_path: str, original_filename: str = "", progress=None,
+               teacher: Optional[str] = "liangliang") -> list:
     """解析文件，返回 [{index, latex, difficulty, recommended_teacher}]"""
     ext = os.path.splitext(file_path)[1].lower()
     
@@ -302,7 +324,7 @@ def parse_file(file_path: str, original_filename: str = "", progress=None) -> li
         for page_num, total, page_b64 in iter_pdf_images(file_path):
             if progress:
                 progress(page_num, total)
-            raw = _call_deepseek_vision(image_base64=page_b64, text=_EXTRACTION_PROMPT)
+            raw = _call_multimodal_model(image_base64=page_b64, text=_EXTRACTION_PROMPT, teacher=teacher)
             page_qs = _parse_questions(raw)
             refs = _retain_preview(page_b64)
             for q in page_qs:
@@ -317,7 +339,7 @@ def parse_file(file_path: str, original_filename: str = "", progress=None) -> li
         if progress:
             progress(1, 1)
         b64 = image_to_base64(file_path)
-        raw = _call_deepseek_vision(image_base64=b64, text=_EXTRACTION_PROMPT)
+        raw = _call_multimodal_model(image_base64=b64, text=_EXTRACTION_PROMPT, teacher=teacher)
         questions = _parse_questions(raw)
         refs = _retain_preview(b64)
         for q in questions:
@@ -330,7 +352,7 @@ def parse_file(file_path: str, original_filename: str = "", progress=None) -> li
         if progress:
             progress(1, 1)
         text = docx_to_text(file_path)
-        raw = _call_deepseek_vision(text=_EXTRACTION_PROMPT + "\n\n文本内容：\n" + text)
+        raw = _call_multimodal_model(text=_EXTRACTION_PROMPT + "\n\n文本内容：\n" + text, teacher=teacher)
         questions = _parse_questions(raw)
         return _post_process(questions)
     
@@ -339,7 +361,7 @@ def parse_file(file_path: str, original_filename: str = "", progress=None) -> li
             progress(1, 1)
         with open(file_path, "r", encoding="utf-8", errors="replace") as f:
             text = f.read()
-        raw = _call_deepseek_vision(text=_EXTRACTION_PROMPT + "\n\n文本内容：\n" + text)
+        raw = _call_multimodal_model(text=_EXTRACTION_PROMPT + "\n\n文本内容：\n" + text, teacher=teacher)
         questions = _parse_questions(raw)
         return _post_process(questions)
     
@@ -351,13 +373,13 @@ def get_supported_extensions() -> list:
     return [".pdf", ".jpg", ".jpeg", ".png", ".docx", ".txt"]
 
 
-def recognize_answer_image(file_path: str) -> dict:
+def recognize_answer_image(file_path: str, teacher: Optional[str] = "liangliang", stage: str = "grade") -> dict:
     """识别手写作答图片，返回 {text, confidence}"""
     ext = os.path.splitext(file_path)[1].lower()
     if ext not in (".jpg", ".jpeg", ".png"):
         raise ValueError("仅支持 JPG/PNG 图片")
     b64 = image_to_base64(file_path)
-    raw = _call_deepseek_vision(image_base64=b64, text=_ANSWER_OCR_PROMPT)
+    raw = _call_multimodal_model(image_base64=b64, text=_ANSWER_OCR_PROMPT, teacher=teacher, stage=stage)
     text = (raw or "").strip()
     has_cjk = any("\u4e00" <= ch <= "\u9fff" for ch in text)
     if len(text) >= 10 and has_cjk:

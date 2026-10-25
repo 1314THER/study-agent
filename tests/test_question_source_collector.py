@@ -8,6 +8,20 @@ from backend.question_source_collector import collect, discover_wh, eligible, in
 
 
 class QuestionSourceCollectorTests(unittest.TestCase):
+    def test_resource_ocr_uses_the_selected_teacher(self):
+        import fitz
+        from backend.question_source_collector import convert_resource
+        with tempfile.TemporaryDirectory() as directory:
+            file = Path(directory) / "scan.pdf"
+            with fitz.open() as document:
+                document.new_page()
+                document.save(file)
+            resource = {"path": str(file), "format": "pdf", "kind": "topic", "title": "扫描专题"}
+            with patch("backend.pool_sources.iter_source_records", return_value=[]) as read_records:
+                convert_resource(resource, Path(directory) / "cache", 1, True, lambda *a, **k: None,
+                                 lambda: None, teacher="ji")
+            self.assertEqual(read_records.call_args.args[2]["teacher"], "ji")
+
     def test_cached_complete_paper_is_imported_once_without_ai(self):
         import fitz
         from backend.data_paths import workspace
@@ -30,7 +44,7 @@ class QuestionSourceCollectorTests(unittest.TestCase):
             atomic_json(folder / "resource.json", {"url": "https://www.wh111.com/shuxue/a/2026-05-01/1.html",
                         "title": "2026年甲校高三数学模拟考试试卷", "sha256": file_hash(file), "file": "original.pdf", "format": "pdf", "kind": "mock"})
             args = {"years": [2026], "cached_only": True, "structured": False, "concurrency": 20}
-            with patch("backend.multimodal._call_deepseek_vision") as ai:
+            with patch("backend.multimodal._call_multimodal_model") as ai:
                 first = collect(args, root)
                 second = collect(args, root)
             ai.assert_not_called()

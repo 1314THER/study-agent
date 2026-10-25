@@ -101,7 +101,7 @@ class SourceConversionTests(unittest.TestCase):
             {"question": "9. 选择正确选项", "question_no": "9", "question_type": "多选题", "section": "question"},
             {"question": "2026年甲校模拟考试数学试卷 第1页 共4页", "section": "fragment"},
             {"question": "12. 求随机变量的期望", "question_no": "12", "question_type": "填空题", "section": "question"}], ensure_ascii=False)
-        with patch("backend.multimodal._call_deepseek_vision", return_value=response):
+        with patch("backend.multimodal._call_multimodal_model", return_value=response):
             records = list(iter_source_records(path, "pdf", {"ocr_mode": "auto", "questions_only": True, "cache_dir": self.cache}))
         questions = [r for r in records if r["question_no"]]
         self.assertEqual([r["question_no"] for r in questions], ["8", "9", "12"])
@@ -135,7 +135,7 @@ class SourceConversionTests(unittest.TestCase):
             {"question": "A. $x$\nB. $x^2$\nC. $x^3$\nD. $x^4$", "question_no": "6", "question_type": "选择题", "section": "question"},
             {"question": "二、多项选择题：本题共3小题", "section": "fragment"},
             {"question": "11. 选择所有符合条件的选项", "question_no": "11", "question_type": "选择题", "section": "question"}], ensure_ascii=False)]
-        with patch("backend.multimodal._call_deepseek_vision", side_effect=responses):
+        with patch("backend.multimodal._call_multimodal_model", side_effect=responses):
             records = list(iter_source_records(path, "pdf", {"ocr_mode": "auto", "concurrency": 1, "questions_only": True, "cache_dir": self.cache}))
         questions = [r for r in records if r["question_no"]]
         self.assertEqual([r["question_no"] for r in questions], ["6", "11"])
@@ -148,7 +148,7 @@ class SourceConversionTests(unittest.TestCase):
         make_pdf(text_pdf, ["2025年甲校模拟考试数学试卷\n1. 求函数导数\n【答案】2x"])
         scan_pdf = self.root / "scan.pdf"
         make_pdf(scan_pdf, ["1. 扫描原文"], [1])
-        with patch("backend.multimodal._call_deepseek_vision") as cloud:
+        with patch("backend.multimodal._call_multimodal_model") as cloud:
             text = list(iter_source_records(text_pdf, "pdf", {"ocr_mode": "auto", "cache_dir": self.cache}))
             scan = list(iter_source_records(scan_pdf, "pdf", {"ocr_mode": "off", "cache_dir": self.cache}))
         cloud.assert_not_called()
@@ -224,7 +224,7 @@ class SourceConversionTests(unittest.TestCase):
         make_pdf(path, ["2026年甲校模拟考试数学试卷\n1. 随机变量 X 条件", "续文"], [2])
         response = json.dumps([{"question": r"求分布列：$\begin{array}{c|cc}X&0&1\\P&1/2&1/2\end{array}$",
                                "question_no": "1", "continuation": True, "answer": "0.5", "solution": "原解析"}], ensure_ascii=False)
-        with patch("backend.multimodal._call_deepseek_vision", return_value=response) as cloud:
+        with patch("backend.multimodal._call_multimodal_model", return_value=response) as cloud:
             records = list(iter_source_records(path, "pdf", {"ocr_mode": "auto", "cache_dir": self.cache}))
         self.assertEqual(cloud.call_count, 1)
         self.assertEqual(len(records), 1)

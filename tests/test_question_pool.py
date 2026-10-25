@@ -122,7 +122,8 @@ class QuestionPoolTests(unittest.TestCase):
 
     def test_online_collection_is_owner_only_and_bounds_years_and_concurrency(self):
         self.assertEqual(jobs.validate_args('pool_collect', {'years': [2026, 2025, 2026]})['years'], [2025, 2026])
-        for args in ({'years': [2015]}, {'concurrency': 21}, {'years': [True]}):
+        self.assertEqual(jobs.validate_args('pool_collect', {'years': [2026], 'teacher': 'ji'})['teacher'], 'ji')
+        for args in ({'years': [2015]}, {'concurrency': 21}, {'years': [True]}, {'teacher': 'missing'}):
             with self.assertRaises(ValueError):
                 jobs.validate_args('pool_collect', args)
         with identity_context({'id': 'guest', 'username': 'guest', 'role': 'guest'}):
@@ -153,15 +154,26 @@ class QuestionPoolTests(unittest.TestCase):
         def submit(kind, args, request_id):
             validated = jobs.validate_args(kind, args)
             self.assertEqual(validated["concurrency"], 20)
+            self.assertEqual(validated["teacher"], 'ji')
             return {"job_id": "collection-test", "kind": kind, "status": "queued"}
         with patch.object(jobs, "submit_job", side_effect=submit), self.client() as client:
-            response = client.post("/question-pool/collect", json={"years": [2026]})
+            response = client.post("/question-pool/collect", json={"years": [2026], "teacher": "ji"})
             self.assertEqual(response.status_code, 202)
             self.assertEqual(response.json()["kind"], "pool_collect")
             self.assertEqual(client.get("/question-pool/collection").json()["question_records"], 19)
             self.assertEqual(client.post("/question-pool/collect", json={"years": [2015]}).status_code, 400)
             with identity_context({"id": "guest", "username": "guest", "role": "guest"}):
                 self.assertEqual(client.get("/question-pool/collection").status_code, 403)
+
+    def test_uploaded_source_keeps_the_selected_ocr_teacher_for_retries(self):
+        import json
+        with patch.object(jobs, "submit_job", return_value={"job_id": "import-test", "kind": "pool_import", "status": "queued"}), self.client() as client:
+            response = client.post("/question-pool/uploads", data={"source_name": "扫描练习", "ocr": "true", "teacher": "ji"},
+                                   files={"file": ("scan.png", b"image-fixture", "image/png")})
+        self.assertEqual(response.status_code, 202)
+        with self.pool._connection() as conn:
+            row = conn.execute("SELECT options_json FROM pool_sources WHERE id=?", (response.json()["source_id"],)).fetchone()
+        self.assertEqual(json.loads(row["options_json"]), {"ocr": True, "teacher": "ji"})
 
     def test_repair_into_existing_item_uses_target_version_before_manual_edit(self):
         import json

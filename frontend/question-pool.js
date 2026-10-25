@@ -28,7 +28,8 @@
     if (filters.completeness === 'text_only') filters.completeness = '';
     return {filters: filters, page: Math.max(1, Number(value.page) || 1), pageSize: Number(value.pageSize) === 80 ? 80 : 40,
       activeId: Number(value.activeId) || null, selected: Array.from(new Set((Array.isArray(value.selected) ? value.selected : []).map(Number).filter(function (id) { return Number.isInteger(id) && id > 0; }))),
-      teacher: ['liangliang', 'xuefeng', 'taotao', 'ji'].includes(value.teacher) ? value.teacher : 'liangliang', pendingJob: value.pendingJob || null, commitIntent: value.commitIntent || null};
+      teacher: ['liangliang', 'xuefeng', 'taotao', 'ji'].includes(value.teacher) ? value.teacher : 'liangliang',
+      ocrTeacher: ['liangliang', 'xuefeng', 'taotao', 'ji'].includes(value.ocrTeacher) ? value.ocrTeacher : 'liangliang', pendingJob: value.pendingJob || null, commitIntent: value.commitIntent || null};
   }
   function finalAnswer(prepared) {
     if (!prepared) return '';
@@ -58,7 +59,7 @@
     function button(text, action, cls) { var n = node('button', text, cls || 'pool-btn'); n.type = 'button'; n.addEventListener('click', action); return n; }
     function setOptions(select, entries, value) { select.replaceChildren(); entries.forEach(function (entry) { var option = node('option', entry[1]); option.value = String(entry[0]); select.appendChild(option); }); if (value !== undefined) select.value = String(value); }
     function persist() {
-      var value = {filters: state.filters, page: state.page, pageSize: state.pageSize, activeId: state.activeId, selected: Array.from(state.selected), teacher: el('poolTeacher').value, pendingJob: state.pendingJob, commitIntent: state.commitIntent};
+      var value = {filters: state.filters, page: state.page, pageSize: state.pageSize, activeId: state.activeId, selected: Array.from(state.selected), teacher: el('poolTeacher').value, ocrTeacher: el('poolOcrTeacher').value, pendingJob: state.pendingJob, commitIntent: state.commitIntent};
       try { storage.setItem(STORAGE_KEY, JSON.stringify(value)); } catch (_) {}
     }
     function notice(message, error) { var box = el('poolNotice'); box.textContent = message || ''; box.classList.toggle('error', !!error); box.hidden = !message; }
@@ -494,7 +495,7 @@
     }
     async function upload(event) {
       event.preventDefault(); if (state.busy) return; var file = el('poolUploadFile').files[0]; if (!file) return notice('请选择题源文件。', true);
-      var form = new FormData(); form.append('file', file); form.append('source_name', el('poolUploadName').value.trim() || file.name); var ocr = el('poolUploadOcr'); form.append('ocr', String(!ocr || ocr.checked));
+      var form = new FormData(); form.append('file', file); form.append('source_name', el('poolUploadName').value.trim() || file.name); var ocr = el('poolUploadOcr'); form.append('ocr', String(!ocr || ocr.checked)); form.append('teacher', el('poolOcrTeacher').value || 'liangliang');
       state.busy = true; updateBusy();
       try { notice('正在上传题源文件，请等待服务器确认。'); var job = await api('/question-pool/uploads', 'POST', form); closeDialog('poolSourcesDialog'); el('poolUploadFile').value = ''; await trackJob(job); }
       catch (error) { notice(error.message, true); } finally { state.busy = false; updateBusy(); }
@@ -504,7 +505,7 @@
       var years = Array.from(new Set(el('poolCollectYears').value.split(/[,，、\s]+/).filter(Boolean).map(Number)));
       if (!years.length || years.some(function (y) { return !Number.isInteger(y) || y < 2016 || y > 2100; })) return notice('请输入 2016 年及以后的年份，例如 2025,2026。', true);
       state.busy = true; updateBusy();
-      try { var job = await api('/question-pool/collect', 'POST', {years: years, topics: el('poolCollectTopics').checked, ocr: el('poolCollectOcr').checked, concurrency: 20}); closeDialog('poolSourcesDialog'); notice('在线找题已启动，可以切换页面，任务会继续。'); await trackJob(job); }
+      try { var job = await api('/question-pool/collect', 'POST', {years: years, topics: el('poolCollectTopics').checked, ocr: el('poolCollectOcr').checked, concurrency: 20, teacher: el('poolOcrTeacher').value || 'liangliang'}); closeDialog('poolSourcesDialog'); notice('在线找题已启动，可以切换页面，任务会继续。'); await trackJob(job); }
       catch (error) { notice(error.message, true); } finally { state.busy = false; updateBusy(); }
     }
     async function refresh() { if (!editorNavigation()) return; await loadMeta(); await loadItems(); }
@@ -517,7 +518,7 @@
       listen('poolNext', 'click', async function () { if (!editorNavigation()) return; if (state.page * state.pageSize < state.total) { state.page++; state.activeId = null; await loadItems(); } });
       listen('poolRefresh', 'click', refresh); listen('poolReset', 'click', resetFilters); listen('poolPreviousItem', 'click', function () { return moveItem(-1); }); listen('poolNextItem', 'click', function () { return moveItem(1); });
       listen('poolSelectPage', 'change', function () { var selected = el('poolSelectPage').checked; state.items.forEach(function (item) { if (item.status !== 'imported') { if (selected) state.selected.add(Number(item.id)); else state.selected.delete(Number(item.id)); } }); invalidatePreview(); renderQueue(); renderSelectionState(); });
-      listen('poolClearSelection', 'click', function () { state.selected.clear(); invalidatePreview(); renderQueue(); renderSelectionState(); }); listen('poolTeacher', 'change', persist);
+      listen('poolClearSelection', 'click', function () { state.selected.clear(); invalidatePreview(); renderQueue(); renderSelectionState(); }); listen('poolTeacher', 'change', persist); listen('poolOcrTeacher', 'change', persist);
       listen('poolPrepare', 'click', prepare); listen('poolPrepareCodex', 'click', function () { return prepare('codex_cli'); }); listen('poolPreview', 'click', preview); listen('poolCommit', 'click', commit); listen('poolSourcesButton', 'click', async function () { renderSources(); showDialog('poolSourcesDialog'); await loadCollectionReport(); }); listen('poolUploadForm', 'submit', upload);
       listen('poolCollectForm', 'submit', collect);
       doc.querySelectorAll('[data-close-dialog]').forEach(function (entry) { entry.addEventListener('click', function () { closeDialog(entry.dataset.closeDialog); }); });
@@ -535,7 +536,7 @@
       saved = restoreState(storage);
       var routeJob = window.location && new URLSearchParams(window.location.search || '').get('job');
       Object.assign(state, {filters: saved.filters, page: saved.page, pageSize: saved.pageSize, activeId: saved.activeId, selected: new Set(saved.selected), pendingJob: routeJob || saved.pendingJob, commitIntent: saved.commitIntent});
-      el('poolTeacher').value = saved.teacher; syncFilters(); bind();
+      el('poolTeacher').value = saved.teacher; el('poolOcrTeacher').value = saved.ocrTeacher; syncFilters(); bind();
       state.localCodex = false;
       try { var capabilities = await api('/local-models/status'); state.localCodex = !!(capabilities.codex_cli && capabilities.codex_cli.available); } catch (_) {}
       el('poolPrepareCodex').textContent = state.localCodex ? '用本地 Codex CLI 准备解析' : 'Codex CLI 准备解析（暂不可用）';

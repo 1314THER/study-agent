@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 
 const html = readFileSync(new URL('../frontend/settings.html', import.meta.url), 'utf8');
+assert.doesNotMatch(html, /dsVisionModel|vision_model/);
 const source = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join('\n');
 class Element {
   constructor() { this.children = []; this.attrs = {}; this.value = ''; this.classList = {add() {}}; }
@@ -45,9 +46,10 @@ get('glmKey').value = 'glm-new-test-key';
 inputs.find(el => el.attrs['data-t'] === 'ji' && el.attrs['data-s'] === 'solver' && el.attrs['data-f'] === 'reasoning_effort').value = 'high';
 await context.saveSettings();
 assert.equal(submitted[0].api.zhipu.api_key, 'glm-new-test-key');
+assert.equal(Object.hasOwn(submitted[0].api.deepseek, 'vision_model'), false);
 assert.equal(Object.hasOwn(submitted[0].api.deepseek, 'api_key'), false, 'blank DS input preserves existing credential');
 assert.equal(submitted[0].teachers.ji.solver.reasoning_effort, 'high');
 assert.equal(get('glmKey').value, '', 'clear key after save without echoing it');
 assert.match(get('glmKey').placeholder, /已配置/);
 assert.equal(Object.hasOwn(context.collectSettings().api.zhipu, 'api_key'), false, 'blank GLM input preserves saved credential');
-console.log('Settings checks passed: 16 model/effort stages, GLM key roundtrip and DS key preservation.');
+console.log('Settings checks passed: 16 model/effort stages, teacher routed vision, GLM key roundtrip and DS key preservation.');

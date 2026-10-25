@@ -989,8 +989,12 @@ def validate_collect_args(args):
     concurrency = args.get("concurrency", 20)
     if type(concurrency) is not int or not 1 <= concurrency <= 20:
         raise ValueError("OCR 并发应为 1 至 20")
+    teacher = args.get("teacher", "liangliang")
+    from backend.settings import get_teachers
+    if teacher not in get_teachers():
+        raise ValueError("请选择有效的识题老师")
     return {"years": sorted(set(years)), "concurrency": concurrency, "max_pages": 32,
-            "topics": args.get("topics", True) is True, "ocr": args.get("ocr", True) is True,
+            "topics": args.get("topics", True) is True, "ocr": args.get("ocr", True) is True, "teacher": teacher,
             "structured": True, "convert": True, "import_pool": True}
 
 
@@ -1046,6 +1050,7 @@ class CollectRequest(BaseModel):
     topics: bool = True
     ocr: bool = True
     concurrency: int = 20
+    teacher: str = "liangliang"
     request_id: Optional[str] = None
 
 
@@ -1054,7 +1059,7 @@ def api_collect(req: CollectRequest):
     from backend.jobs import submit_job, _submission_error
     _require_owner()
     try:
-        return submit_job("pool_collect", {"years": req.years, "topics": req.topics, "ocr": req.ocr, "concurrency": req.concurrency}, req.request_id or uuid.uuid4().hex)
+        return submit_job("pool_collect", {"years": req.years, "topics": req.topics, "ocr": req.ocr, "concurrency": req.concurrency, "teacher": req.teacher}, req.request_id or uuid.uuid4().hex)
     except (ValueError, RuntimeError) as exc:
         raise _submission_error(exc)
 
@@ -1119,9 +1124,13 @@ def api_source_retry(source_id: int, req: Optional[SourceRetryRequest] = None):
 
 
 @router.post("/uploads", status_code=202)
-async def api_upload(file: UploadFile = File(...), source_name: str = Form(""), ocr: bool = Form(True)):
+async def api_upload(file: UploadFile = File(...), source_name: str = Form(""), ocr: bool = Form(True), teacher: str = Form("liangliang")):
     from backend.jobs import submit_job, _submission_error
     _require_owner()
+    from backend.settings import get_teachers
+    if teacher not in get_teachers():
+        await file.close()
+        raise HTTPException(400, "请选择有效的识题老师。")
     name = Path(file.filename or "upload").name
     ext = Path(name).suffix.lower()
     kinds = {".pdf": "pdf", ".docx": "docx", ".jpg": "image", ".jpeg": "image", ".png": "image", ".txt": "txt", ".json": "jsonl", ".jsonl": "jsonl", ".tex": "compilation"}
@@ -1154,11 +1163,11 @@ async def api_upload(file: UploadFile = File(...), source_name: str = Form(""), 
         else:
             temporary.replace(target)
         source_id = create_source({"name": source_name.strip() or name, "kind": kinds[ext], "revision": digest.hexdigest(), "filename": name,
-                                   "file_token": token, "license": "私人教辅文件；选中题发布范围待确认", "publication_allowed": False, "options": {"ocr": ocr}})
+                                   "file_token": token, "license": "私人教辅文件；选中题发布范围待确认", "publication_allowed": False, "options": {"ocr": ocr, "teacher": teacher}})
         # Re-uploading the same immutable file with OCR enabled is an explicit
         # owner choice; it must not retain the earlier upload's disabled option.
         with closing(_connection()) as conn, conn:
-            conn.execute("UPDATE pool_sources SET options_json=? WHERE id=?", (_dump({"ocr": ocr}), source_id))
+            conn.execute("UPDATE pool_sources SET options_json=? WHERE id=?", (_dump({"ocr": ocr, "teacher": teacher}), source_id))
         try:
             job = await run_in_threadpool(submit_job, "pool_import", {"source_id": source_id}, uuid.uuid4().hex)
         except (ValueError, RuntimeError) as exc:
