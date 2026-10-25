@@ -653,7 +653,8 @@ def _do_chat_turn(session_id: str, student_message: str = None) -> dict:
 
         try:
             c, _ = call_deepseek(TC, up, temperature=0.2,
-                                 model=cfg.get("verifier", {}).get("model", "deepseek-flash"))
+                                 model=cfg.get("verifier", {}).get("model", "deepseek-flash"),
+                                 reasoning_effort=cfg.get("verifier", {}).get("reasoning_effort"))
             check_result = json.loads(_ej(c))
         except Exception as exc:
             # A failed request is not a wrong student answer. The enclosing

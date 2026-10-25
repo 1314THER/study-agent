@@ -77,32 +77,7 @@ def _read_prompt(name: str) -> str:
 _LATEX_RULES = _read_prompt("latex_rules")
 
 
-TEACHER_CONFIG = {
-    "liangliang": {
-        "solver": {"model": "deepseek-flash", "reasoning_effort": None},
-        "verifier": {"model": "deepseek-flash", "reasoning_effort": "low"},
-        "formatter": {"model": "deepseek-flash", "reasoning_effort": "low"},
-        "grade": {"model": "deepseek-flash", "reasoning_effort": "low"},
-    },
-    "taotao": {
-        "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "low"},
-        "verifier": {"model": "deepseek-flash", "reasoning_effort": "medium"},
-        "formatter": {"model": "deepseek-flash", "reasoning_effort": "low"},
-        "grade": {"model": "deepseek-flash", "reasoning_effort": "medium"},
-    },
-    "xuefeng": {
-        "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
-        "verifier": {"model": "deepseek-flash", "reasoning_effort": "medium"},
-        "formatter": {"model": "deepseek-flash", "reasoning_effort": "low"},
-        "grade": {"model": "deepseek-flash", "reasoning_effort": "medium"},
-    },
-    "ji": {
-        "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
-        "verifier": {"model": "deepseek-flash", "reasoning_effort": "high"},
-        "formatter": {"model": "deepseek-flash", "reasoning_effort": "high"},
-        "grade": {"model": "deepseek-flash", "reasoning_effort": "high"},
-    },
-}
+TEACHER_CONFIG = runtime_settings.DEFAULTS["teachers"]
 
 SOLVER_PROMPT = _read_prompt("solver")
 FORMATTER_PROMPT = _read_prompt("formatter")
@@ -150,14 +125,22 @@ def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3
     if local_caller is not None:
         full_system = system_prompt + "\n\n" + _LATEX_RULES if _LATEX_RULES else system_prompt
         return local_caller(full_system, user_prompt, image_content=image_content)
-    api_key = get_api_key()
-    api_cfg = runtime_settings.get_api().get("deepseek") or {}
+    full_system = system_prompt + "\n\n" + _LATEX_RULES if _LATEX_RULES else system_prompt
+    if model.startswith("gpt-"):
+        from backend.local_models import call_teacher
+        return call_teacher(full_system, user_prompt, model=model,
+                            reasoning_effort=reasoning_effort or "medium", image_content=image_content)
+    provider = "zhipu" if model.startswith("glm-") else "deepseek"
+    api_key = get_api_key() if provider == "deepseek" else runtime_settings.get_api_key(provider)
+    if not api_key:
+        raise ValueError("未配置智谱 API Key，请在系统设置页填写")
+    if image_content and model == "glm-4.7-flash":
+        raise ValueError("GLM-4.7-Flash 仅支持文本，请选择支持图片的老师")
+    api_cfg = runtime_settings.get_api().get(provider) or {}
     limits = runtime_settings.get_limits()
     timeout_seconds = limits.get("api_timeout_seconds", 300)
-    base_url = (api_cfg.get("base_url") or "https://api.deepseek.com/v1").rstrip("/")
+    base_url = (api_cfg.get("base_url") or runtime_settings.DEFAULTS["api"][provider]["base_url"]).rstrip("/")
     endpoint = base_url if base_url.endswith("/chat/completions") else base_url + "/chat/completions"
-    # 自动注入全局 LaTeX 格式要求
-    full_system = system_prompt + "\n\n" + _LATEX_RULES if _LATEX_RULES else system_prompt
     body = {
         "model": model,
         "messages": [
@@ -167,14 +150,23 @@ def call_deepseek(system_prompt: str, user_prompt: str, temperature: float = 0.3
         "temperature": temperature,
         "max_tokens": limits.get("api_max_tokens", 32000),
     }
-    if reasoning_effort:
+    if provider == "zhipu":
+        body["temperature"] = 1.0
+        if model.startswith("glm-5.3"):
+            # The UI's middle level is the middle of low/high/max.
+            body["reasoning_effort"] = {"medium": "high", "high": "max", "xhigh": "max", "": "low", None: "low"}.get(reasoning_effort, reasoning_effort)
+            body["thinking"] = {"type": "enabled"}
+        else:
+            # GLM-4.7-Flash exposes thinking on/off, not effort levels.
+            body["thinking"] = {"type": "enabled" if reasoning_effort else "disabled"}
+    elif reasoning_effort:
         body["reasoning_effort"] = reasoning_effort
         body["thinking"] = {"type": "enabled"}
     elif image_content:
         body["thinking"] = {"type": "disabled"}
     try:
         from backend.jobs import provider_slot, request_timeout
-        with provider_slot("deepseek"):
+        with provider_slot(provider):
             resp = httpx.post(
                 endpoint,
                 headers={"Authorization": f"Bearer {api_key}", "Content-Type": "application/json"},
@@ -718,7 +710,8 @@ def step_solver_only(question: str, question_type: str = None, teacher: str = No
                 raise ValueError("题图标签与附件数量不一致")
             solver_input += "\n\n附图对应关系（按附件顺序）：\n" + "\n".join(
                 f"第 {i + 1} 张附图：{label}" for i, label in enumerate(asset_labels))
-        content, usage = call_deepseek(prompt, solver_input, model="deepseek-flash", image_content=images)
+        content, usage = call_deepseek(prompt, solver_input, model=solver_cfg["model"],
+                                       reasoning_effort=solver_cfg.get("reasoning_effort"), image_content=images)
     else:
         content, usage = call_deepseek(prompt, question, model=solver_cfg["model"], reasoning_effort=solver_cfg.get("reasoning_effort"))
     viable_reason = _check_solver_viable(content)

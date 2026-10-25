@@ -25,36 +25,27 @@ DEFAULTS = {
             {"limit": 9, "level": "困难"},
         ],
     },
+    "teacher_models_version": 2,
     "teachers": {
-        "liangliang": {
-            "solver": {"model": "deepseek-flash", "reasoning_effort": None},
-            "verifier": {"model": "deepseek-flash", "reasoning_effort": "low"},
-            "formatter": {"model": "deepseek-flash", "reasoning_effort": "low"},
-            "grade": {"model": "deepseek-flash", "reasoning_effort": "low"},
-        },
-        "taotao": {
-            "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "low"},
-            "verifier": {"model": "deepseek-flash", "reasoning_effort": "medium"},
-            "formatter": {"model": "deepseek-flash", "reasoning_effort": "low"},
-            "grade": {"model": "deepseek-flash", "reasoning_effort": "medium"},
-        },
-        "xuefeng": {
-            "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
-            "verifier": {"model": "deepseek-flash", "reasoning_effort": "medium"},
-            "formatter": {"model": "deepseek-flash", "reasoning_effort": "low"},
-            "grade": {"model": "deepseek-flash", "reasoning_effort": "medium"},
-        },
-        "ji": {
-            "solver": {"model": "deepseek-v4-pro", "reasoning_effort": "high"},
-            "verifier": {"model": "deepseek-flash", "reasoning_effort": "high"},
-            "formatter": {"model": "deepseek-flash", "reasoning_effort": "high"},
-            "grade": {"model": "deepseek-flash", "reasoning_effort": "high"},
-        },
+        teacher: {
+            stage: {"model": model, "reasoning_effort": "medium"}
+            for stage in ("solver", "verifier", "formatter", "grade")
+        }
+        for teacher, model in {
+            "liangliang": "glm-4.7-flash",
+            "taotao": "deepseek-flash",
+            "xuefeng": "glm-5.3-flash",
+            "ji": "gpt-6-astra",
+        }.items()
     },
     "api": {
         "deepseek": {
             "base_url": "https://api.deepseek.com/v1",
             "vision_model": "deepseek-flash",
+            "api_key": "",
+        },
+        "zhipu": {
+            "base_url": "https://open.bigmodel.cn/api/paas/v4",
             "api_key": "",
         },
     },
@@ -108,8 +99,8 @@ def _migrate_settings(data):
     data = deepcopy(data)
     api = data.get("api")
     if isinstance(api, dict):
-        data["api"] = {"deepseek": api.get("deepseek", {})}
-        cfg = data["api"]["deepseek"]
+        data["api"] = {provider: api[provider] for provider in DEFAULTS["api"] if isinstance(api.get(provider), dict)}
+        cfg = data["api"].get("deepseek")
         if isinstance(cfg, dict):
             cfg.pop("model", None)
             if cfg.get("vision_model") in ("deepseek-v4-flash", "deepseek-v4-flash-vision-exp") or str(cfg.get("vision_model", "")).lower().startswith("qwen"):
@@ -175,6 +166,22 @@ def shared_ai_enabled() -> bool:
     )
 
 
+def _upgrade_teacher_models(data):
+    """Upgrade old DS-only profiles once; preserve subsequent user edits."""
+    if data.get("teacher_models_version") == DEFAULTS["teacher_models_version"]:
+        return data
+    for teacher, stages in (data.get("teachers") or {}).items():
+        if teacher not in DEFAULTS["teachers"] or not isinstance(stages, dict):
+            continue
+        for stage, cfg in stages.items():
+            if stage not in DEFAULTS["teachers"][teacher] or not isinstance(cfg, dict):
+                continue
+            if str(cfg.get("model", "")).startswith("deepseek"):
+                cfg.update(DEFAULTS["teachers"][teacher][stage])
+    data["teacher_models_version"] = DEFAULTS["teacher_models_version"]
+    return data
+
+
 def _read_file_settings(path=None):
     path = path if path is not None else data_path("settings.json", SETTINGS_PATH)
     defaults = deepcopy(DEFAULTS)
@@ -183,7 +190,7 @@ def _read_file_settings(path=None):
     try:
         with open(path, encoding="utf-8") as f:
             data = json.load(f)
-        return _deep_merge(defaults, _migrate_settings(data)) if isinstance(data, dict) else defaults
+        return _deep_merge(defaults, _upgrade_teacher_models(_migrate_settings(data))) if isinstance(data, dict) else defaults
     except (json.JSONDecodeError, OSError):
         return defaults
 
@@ -206,7 +213,9 @@ def get_settings() -> dict:
 def _write_settings(data: dict) -> None:
     path = os.path.abspath(data_path("settings.json", SETTINGS_PATH))
     tmp_path = path + ".tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
+    fd = os.open(tmp_path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    os.fchmod(fd, 0o600)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
     os.replace(tmp_path, path)
     _cache[path] = {"mtime": os.stat(path).st_mtime_ns, "data": data}
@@ -258,7 +267,10 @@ def get_api() -> dict:
     identity = _current_identity()
     if identity and identity.get("role") == "user":
         # Account keys are sent only to the official, server-controlled endpoint.
-        return deepcopy(DEFAULTS["api"])
+        api = deepcopy(DEFAULTS["api"])
+        # Other providers use keys in this account's isolated settings file.
+        api["zhipu"]["api_key"] = (get_settings().get("api", {}).get("zhipu") or {}).get("api_key", "")
+        return api
     shared = None if identity and identity.get("role") == "owner" else _read_shared_ai_settings()
     if shared is not None:
         return _shared_api(shared)
@@ -296,10 +308,10 @@ def _read_env_key(name: str) -> str:
 
 def get_api_key(provider: str) -> str:
     """Account keys take precedence; users never fall back to shared secrets."""
-    if provider != "deepseek":
+    if provider not in DEFAULTS["api"]:
         return ""
     identity = _current_identity()
-    if identity and identity.get("role") in ("owner", "user"):
+    if provider == "deepseek" and identity and identity.get("role") in ("owner", "user"):
         key = _account_api_key()
         if key or identity.get("role") == "user":
             return key

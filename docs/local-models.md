@@ -9,3 +9,7 @@
 `GET /local-models/status` 提供可用状态，未安装接入的环境显示“云端暂不可用”。`POST /question-pool/prepare` 可传 `engine: "deepseek"` 或预留的 `"codex_cli"`；不可用的本地模型请求返回 503，不创建任务、不切换付费 API。通用任务入口也执行同一检查。
 
 Codex 调用使用已有 ChatGPT 登录，不提取或复制登录密钥；调用失败不会回退 DS。每个任务通过独立的调用上下文运行，其他老师、教学、解题任务保留原调用方式。CLI 的具体配置及使用说明保存在 Git 忽略的本地目录中。
+
+## 老师调用
+
+鸡的各阶段默认 `gpt-6-astra` / `medium`，设置页可以修改模型与推理强度。`backend.local_models.call_teacher` 只在本机接入已启用且请求未经过代理时，调用私有的 `backend.routine_codex.run_prompt`，复用 ChatGPT 登录、超时、取消与并发限制。注册普通用户、游客与云端不能使用本机登录额度；失败不会回退到付费 API。私有适配器仍留在 Git 忽略范围，合并代码时保留本机现有文件即可。

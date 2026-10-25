@@ -108,11 +108,11 @@ class SettingsTest(unittest.TestCase):
             json.dump({"api": {"dashscope": {"api_key": "retired-provider-key"}, "deepseek": {"vision_model": "qwen-vl-max"}},
                        "teachers": {"liangliang": {"solver": {"model": "qwen-max"}, "verifier": {"model": "deepseek-v4-flash"}}}}, f)
         data = get_settings()
-        self.assertEqual(set(data["api"]), {"deepseek"})
+        self.assertEqual(set(data["api"]), {"deepseek", "zhipu"})
         self.assertEqual(data["api"]["deepseek"]["api_key"], "")
         self.assertEqual(data["api"]["deepseek"]["vision_model"], "deepseek-flash")
-        self.assertEqual(get_teacher_config("liangliang")["solver"]["model"], "deepseek-flash")
-        self.assertEqual(get_teacher_config("liangliang")["verifier"]["model"], "deepseek-flash")
+        self.assertEqual(get_teacher_config("liangliang")["solver"]["model"], "glm-4.7-flash")
+        self.assertEqual(get_teacher_config("liangliang")["verifier"]["model"], "glm-4.7-flash")
         save_settings({"limits": {"generate_count": 4}})
         with open(self.settings_path, encoding="utf-8") as f:
             self.assertNotIn("retired-provider-key", f.read())
