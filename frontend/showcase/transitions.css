@@ -23,3 +23,24 @@
 @media(max-width:360px){.has-handoff .handoff-stage{padding-inline:12px}.has-handoff .bridge-flow{grid-template-columns:minmax(0,1fr) 26px minmax(0,1fr);gap:6px}.has-handoff .bridge-output,.has-handoff .bridge-input{padding-inline:8px}.handoff-chapter strong{font-size:14px}.has-handoff .bridge-flow strong{font-size:12px}}
 @media(prefers-reduced-motion:reduce){.chapter-bridge.has-handoff{min-height:0;margin-bottom:15px}.has-handoff .handoff-stage{position:static}.has-handoff .bridge-output,.has-handoff .bridge-input,.has-handoff .handoff-next strong,.has-handoff .handoff-arrival-title{opacity:1;transform:none;will-change:auto}.has-handoff .handoff-line-motion{stroke-dashoffset:0}.has-handoff .bridge-packet,.chapter-transit-overlay{display:none!important}.has-handoff .bridge-input:after{opacity:1}}
 @media print{.chapter-bridge.has-handoff{min-height:0}.has-handoff .handoff-stage{position:static;background:#111111;color:#f5f5f5;border-color:#444444}.has-handoff .bridge-output,.has-handoff .bridge-input{background:#111111;opacity:1;transform:none}.has-handoff .handoff-chapter strong,.has-handoff .bridge-flow strong,.has-handoff .chapter-transition{color:#f5f5f5}.handoff-label,.has-handoff .bridge-flow span{color:#b8b8b8}.chapter-transit-overlay{display:none!important}}
+
+/* The handoff reads like a keyframe pass: the travelling line, packet and arrival state are blue. */
+.has-handoff .handoff-context-arrow{stroke:#5c8dff}
+.has-handoff .handoff-line-motion{stroke:#5c8dff}
+.has-handoff .bridge-packet{background:#5c8dff;box-shadow:0 0 0 5px #5c8dff2b}
+.has-handoff .bridge-input:after{border-color:#5c8dff}
+.has-handoff .handoff-arrival-title{border-left:3px solid #5c8dff;padding-left:16px}
+.has-handoff .chapter-transition svg{stroke:#5c8dff}
+.chapter-transit-card{position:relative}
+.chapter-transit-card:before{content:'';position:absolute;top:0;left:12px;right:12px;height:2px;background:linear-gradient(90deg,transparent,#5c8dff 18%,#5c8dff 82%,transparent);opacity:0}
+.chapter-transit-overlay.is-crossing .chapter-transit-card:before{opacity:.9;animation:keyframe-scan .9s linear both}
+.chapter-transit-from{color:#b8b8b8}
+.chapter-transit-to{color:#7aa2ff}
+.chapter-transit-arrow,.chapter-transit-evidence-arrow{stroke:#5c8dff}
+.chapter-transit-relation{border-top-color:#2f4a7a}
+/* Arrival emphasis: when the packet lands at the end of the track, it flashes once. */
+.has-handoff.is-delivered .bridge-packet{background:#7aa2ff;box-shadow:0 0 0 6px #5c8dff40,0 0 16px 3px #5c8dff59;animation:packet-arrive .55s ease-out both!important}
+.has-handoff.is-delivered .handoff-line-motion{stroke:#7aa2ff;filter:drop-shadow(0 0 4px #5c8dff80)}
+.has-handoff.is-delivered .bridge-input:after{box-shadow:0 0 16px 1px #5c8dff4d}
+@keyframes packet-arrive{0%{transform:translateX(-50%) scale(1)}45%{transform:translateX(-50%) scale(1.55)}100%{transform:translateX(-50%) scale(1.15)}}
+@keyframes keyframe-scan{0%{transform:scaleX(.2);transform-origin:left;opacity:0}18%{opacity:.9;transform:scaleX(1);transform-origin:left}82%{opacity:.9;transform-origin:right}100%{transform:scaleX(.2);transform-origin:right;opacity:0}}
