@@ -73,6 +73,7 @@ def run_one(example, teacher, rerun=False):
             print(f"{preset['id']} / {teacher}: cached completed run", flush=True)
             return preset['id'], teacher, cached
     CONTEXT.calls = []
+    resumed_solver = None
     usage = dict.fromkeys(('prompt_tokens', 'completion_tokens', 'total_tokens'), 0)
     question = preset['question']
     began = time.monotonic()
@@ -85,13 +86,18 @@ def run_one(example, teacher, rerun=False):
             if saved.get('fingerprint') == solver_cache_key(preset, teacher):
                 solved = saved['value']
                 CONTEXT.calls.extend(saved['calls'])
+                resumed_solver = {'source_commit': saved.get('source_commit'),
+                                  'recorded_at': saved.get('recorded_at')}
                 print(f"{preset['id']} / {teacher}: resumed saved solver", flush=True)
             else:
                 solved = solver.step_solver_only(question, teacher=teacher)
             if solved.get('error'):
                 raise RuntimeError(solved.get('detail') or solved['error'])
-            checkpoint.write_text(json.dumps({'fingerprint': solver_cache_key(preset, teacher),
-                                             'value': solved, 'calls': CONTEXT.calls}, ensure_ascii=False, indent=2) + '\n')
+            if not resumed_solver:
+                checkpoint.write_text(json.dumps({'fingerprint': solver_cache_key(preset, teacher),
+                                                  'value': solved, 'calls': CONTEXT.calls,
+                                                  'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
+                                                  'recorded_at': datetime.now().astimezone().isoformat()}, ensure_ascii=False, indent=2) + '\n')
             value = solved
         elif stage == 'verifier':
             verified = solver.step_verify_all(solved['content'], question, solved.get('category'), teacher=teacher)
@@ -113,6 +119,7 @@ def run_one(example, teacher, rerun=False):
               'execution_origin': 'local_production_code',
               'source_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=ROOT, text=True).strip(),
               'teacher_config': settings.get_teacher_config(teacher),
+              'solver_resume': resumed_solver,
               'seconds': round(time.monotonic() - began, 2), 'answer_json': value,
               'stages': {stage: next(call for call in reversed(CONTEXT.calls) if call['stage'] == stage)
                          for stage in ('solver', 'verifier', 'formatter')}}
