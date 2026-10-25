@@ -146,7 +146,13 @@ try{
  await choose(page,'mcp','WorkBuddy');await choose(page,'evolution','跨学科扩展');
  await checkAudits(context);
  // Phone widths remain within the viewport.
- await page.setViewportSize({width:390,height:844});await page.goto(base+'/',{waitUntil:'networkidle'});await ready(page);
+ await page.setViewportSize({width:390,height:844});await page.goto(base+'/',{waitUntil:'networkidle'});
+ assert(await page.locator('#opening-dialog').isVisible(),'Reduced motion should preserve the welcome and explicit entry');
+ assert.equal(await page.evaluate(()=>document.activeElement.id),'opening-title');
+ const mobileEntry=await page.locator('#opening-enter').boundingBox();assert(mobileEntry.y+mobileEntry.height<=844,'The phone entry should fit above the viewport edge');
+ await page.screenshot({path:shots+'/opening-mobile.png'});await page.keyboard.press('Tab');
+ assert.equal(await page.evaluate(()=>document.activeElement.id),'opening-enter');await page.keyboard.press('Enter');
+ await page.waitForFunction(()=>!document.getElementById('opening-dialog').open);await ready(page);
  for(const id of chapters){await page.locator('#'+id).scrollIntoViewIfNeeded();await fit(page,'mobile '+id);}
  await choose(page,'single','辅助线与推理');await choose(page,'single','显示辅助线');
  await choose(page,'diagnosis','同信息条件');await fit(page,'mobile comparison');
@@ -170,6 +176,7 @@ try{
  await animated.waitForTimeout(200);await animated.screenshot({path:shots+'/opening-animation.png'});
  await animated.waitForTimeout(1900);assert(await animated.locator('#opening-dialog').isVisible(),'The welcome page should wait for the entry button');
  assert.equal(await animated.locator('#opening-title').innerText(),'study-agent项目介绍页面');
+ assert.equal(await animated.evaluate(()=>document.activeElement.id),'opening-title','Initial focus should identify the cover rather than highlight the entry');
  await animated.screenshot({path:shots+'/opening-home.png'});await animated.locator('#opening-enter').click();
  await animated.waitForFunction(()=>!document.getElementById('opening-dialog').open,{timeout:1000});await ready(animated);
  await animated.locator('#single .chapter-bridge').scrollIntoViewIfNeeded();
