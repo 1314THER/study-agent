@@ -12,7 +12,7 @@ ROOT=Path(__file__).resolve().parents[1]
 
 
 class ShowcasePipelineTests(unittest.TestCase):
-    def test_national_questions_have_four_distinct_unchanged_completed_runs(self):
+    def test_national_questions_have_four_distinct_completed_runs(self):
         data=json.loads((ROOT/'frontend/showcase/pipeline.json').read_text())
         self.assertEqual(set(data['examples']),{'national-2025-q16','national-2023-q17'})
         # Locked before removing the retired local-paper example. These checks
@@ -39,6 +39,11 @@ class ShowcasePipelineTests(unittest.TestCase):
                         self.assertEqual(len(step['step_difficulty']['dimensions']),5)
                 for stage in ('solver','verifier','formatter'):
                     self.assertTrue(run['stages'][stage]['content'])
+                    self.assertEqual(run['stages'][stage]['model'], {'liangliang':'glm-4.7-flash','taotao':'deepseek-flash','xuefeng':'glm-5.3-flash','ji':'gpt-6-astra'}[teacher])
+                    self.assertEqual(run['stages'][stage]['reasoning_effort'], 'medium')
+                    if teacher == 'ji':
+                        self.assertEqual(run['stages'][stage]['resolved_model'], 'gpt-6-astra')
+                        self.assertEqual(run['stages'][stage]['provider'], 'codex_cli')
                     self.assertGreater(run['stages'][stage]['usage']['total_tokens'],0)
                 self.assertGreater(result['token_usage']['total_tokens'],0)
                 final=re.sub(r'\s+','',result['final_answer'])

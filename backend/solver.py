@@ -784,7 +784,8 @@ def step_verify_all(content: str, question: str, category: str = None, question_
     verifier_prompt = _load_verifier_prompt(verifier_cat)
     user_prompt = f"原题：{question}\n\n解答内容：\n{content}"
     v_model = config["verifier"]["model"]
-    verified_out, v_usage = call_deepseek(verifier_prompt, user_prompt, temperature=0.3, model=v_model)
+    verified_out, v_usage = call_deepseek(verifier_prompt, user_prompt, temperature=0.3, model=v_model,
+                                        reasoning_effort=config["verifier"].get("reasoning_effort"))
 
     # 解析 Verifier 输出（可能含多个 ### 块N）
     header, raw_chunks = _split_chunks(verified_out)
