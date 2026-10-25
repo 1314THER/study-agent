@@ -36,7 +36,7 @@ class ResearchShowcaseBuildTests(unittest.TestCase):
         self.assertIn('study-agent项目介绍页面', page)
         self.assertLess(page.index('id="concepts"'), page.index('id="dataset"'))
         self.assertLess(page.index('id="dataset"'), page.index('id="single"'))
-        self.assertIn('href="#dataset">数据集</a>', page)
+        self.assertIn('href="#dataset"', page)
         self.assertIn('查看详细统计', page)
         self.assertEqual(page.count('class="dataset-metric"'), 5)
 

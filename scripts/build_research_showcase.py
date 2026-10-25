@@ -16,6 +16,10 @@ PUBLIC = ROOT / 'frontend/showcase'
 IDS = ['overview', 'concepts', 'dataset', 'single', 'diagnosis', 'library', 'routines',
        'exam', 'career', 'agent', 'teacher', 'school', 'modes', 'mcp', 'evolution']
 STATUS = {'implemented': '已有实现', 'prototype': '设计方案', 'research': '研究方向', 'mixed': '已有基础'}
+NAV_LABELS = {'overview': '项目总览', 'concepts': '基础表示', 'dataset': '数据集', 'single': '单题能力',
+              'diagnosis': '过程诊断', 'library': '错题与题库', 'routines': '套路训练', 'exam': '试卷维度',
+              'career': '生涯评估', 'agent': '教学 Agent', 'teacher': '教师端', 'school': '学校端',
+              'modes': '教学模式', 'mcp': 'MCP 适配', 'evolution': '自进化'}
 
 
 def esc(value):
@@ -175,16 +179,8 @@ def build(content):
     chapters = content['chapters']
     if [c['id'] for c in chapters] != IDS:
         raise ValueError('All fifteen reviewed chapters must retain their order')
-    nav = ''.join('<a href="#' + c['id'] + '"><span>' + str(i + 1).zfill(2) + '</span>' + ('数据集' if c['id'] == 'dataset' else esc(c['title'])) + '</a>' for i, c in enumerate(chapters))
-    trail = ''.join('<a href="#' + target + '" data-system-stage="' + key + '"><span class="trail-full">' + title + '</span><span class="trail-short">' + short + '</span></a>'
-                    for key, target, title, short in [
-                        ('representation', 'concepts', '统一表示', '表示'),
-                        ('single', 'single', '单题证据', '单题'),
-                        ('diagnosis', 'diagnosis', '诊断复盘', '诊断'),
-                        ('training', 'routines', '训练检验', '训练'),
-                        ('history', 'career', '长期记录', '记录'),
-                        ('teaching', 'teacher', '教学协同', '协同'),
-                        ('feedback', 'evolution', '反馈改进', '改进')])
+    nav = ''.join('<a href="#' + c['id'] + '"><span>' + str(i + 1).zfill(2) + '</span>' + esc(NAV_LABELS[c['id']]) + '</a>' for i, c in enumerate(chapters))
+    primary_nav = ''.join('<a href="#' + c['id'] + '" title="' + esc(c['title']) + '">' + esc(NAV_LABELS[c['id']]) + '</a>' for c in chapters)
     sections = []
     aliases = {'single': ['solution', 'grading', 'teaching', 'generation', 'geometry'], 'routines': ['graph'], 'library': ['pool'], 'evolution': ['progress', 'research']}
     for i, chapter in enumerate(chapters):
@@ -192,7 +188,7 @@ def build(content):
         status = chapter['status']
         out = [''.join('<span id="' + a + '" class="anchor-alias" aria-hidden="true"></span>' for a in aliases.get(key, []))]
         out.append('<section class="chapter chapter-' + key + '" id="' + key + '" data-chapter="' + key + '" aria-labelledby="heading-' + key + '">')
-        out.append('<header class="chapter-head"><div class="chapter-position"><span>' + str(i + 1).zfill(2) + '</span><span class="status status-' + status + '">' + STATUS[status] + '</span></div>')
+        out.append('<header class="chapter-head"><div class="chapter-position"><span>' + str(i + 1).zfill(2) + '</span><span class="status status-' + status + '">' + STATUS[status] + '</span><span class="chapter-topic">' + esc(NAV_LABELS[key]) + '</span></div>')
         out.append('<h' + ('1' if i == 0 else '2') + ' id="heading-' + key + '">' + esc(chapter['title']) + '</h' + ('1' if i == 0 else '2') + '><p class="chapter-thesis">' + esc(chapter['thesis']) + '</p></header>')
         if chapter.get('pain'):
             out.append('<div class="pain-point"><span>现实痛点</span><h3>' + esc(chapter['pain']['title']) + '</h3>' + paragraphs(chapter['pain']['text']) + '</div>')
@@ -221,13 +217,12 @@ def build(content):
 <meta name="description" content="StudyAgent 科研项目：以全国卷真实案例，讨论步骤诊断、方法迁移、长期学习证据与教学协同。">
 <meta name="theme-color" content="#080808"><meta name="color-scheme" content="dark"><title>步骤诊断与方法迁移 · StudyAgent 科研展示</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23242424'/%3E%3Ctext x='7' y='24' fill='white' font-size='25'%3EΣ%3C/text%3E%3C/svg%3E">
-<link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/vendor/katex/katex.min.css"><link rel="stylesheet" href="/showcase/style.css"><link rel="stylesheet" href="/showcase/transitions.css">
-<script defer src="/vendor/katex/katex.min.js"></script><script defer src="/dimchart.js"></script><script defer src="/radar.js"></script><script defer src="/showcase/bank.js"></script><script defer src="/showcase/app.js"></script><script defer src="/showcase/transitions.js"></script>
+<link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/vendor/katex/katex.min.css"><link rel="stylesheet" href="/showcase/style.css"><link rel="stylesheet" href="/showcase/handwriting.css"><link rel="stylesheet" href="/showcase/transitions.css">
+<script defer src="/vendor/katex/katex.min.js"></script><script defer src="/dimchart.js"></script><script defer src="/radar.js"></script><script defer src="/showcase/handwriting.js"></script><script defer src="/showcase/bank.js"></script><script defer src="/showcase/app.js"></script><script defer src="/showcase/transitions.js"></script>
 </head><body class="research-showcase"><a class="skip-link" href="#main-content">跳到项目内容</a>
 <header class="site-header"><a class="research-brand" href="#overview"><span class="brand-symbol" aria-hidden="true">∑</span><span>成为数学高手<small>StudyAgent 科研项目</small></span></a>
-<nav class="primary-nav" aria-label="主要章节"><a href="#concepts">表示与诊断</a><a href="#dataset">数据集</a><a href="#routines">训练与评价</a><a href="#agent">教学协同</a><a href="#evolution">研究路线</a></nav>
+<nav class="primary-nav" aria-label="章节导航">''' + primary_nav + '''</nav>
 <button id="contents-toggle" type="button" aria-expanded="false" aria-controls="chapter-contents">章节目录<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7 5 5 5-5"/></svg></button></header>
-<nav id="system-trail" class="system-trail" aria-label="系统主线与当前环节">''' + trail + '''</nav>
 <nav id="chapter-contents" class="chapter-contents" aria-label="完整章节目录" hidden>''' + nav + '''</nav>
 <main id="main-content"><div class="page-intro"><span>高中数学 / 过程诊断 / 方法迁移</span><span>全国卷案例 · 从作答到教学</span></div>
 <p id="demo-status" class="page-status" role="alert" hidden></p>''' + ''.join(sections) + '''</main>

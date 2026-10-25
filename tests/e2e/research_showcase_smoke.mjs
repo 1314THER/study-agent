@@ -77,7 +77,8 @@ try{
  await page.keyboard.press('Escape');assert.equal(await contents.getAttribute('aria-expanded'),'false');
  assert.equal(await contents.evaluate(n=>n===document.activeElement),true);
  for(const id of chapters){await page.locator('#'+id).scrollIntoViewIfNeeded();assert(await page.locator('#heading-'+id).isVisible());await fit(page,'chapter '+id);}
- assert.equal(await page.locator('#system-trail a').count(),7,'The shared system path must remain available across chapters');
+ assert.equal(await page.locator('#system-trail,.system-trail').count(),0,'The redundant second navigation row should be removed');
+ assert.deepEqual(await page.locator('.primary-nav a').evaluateAll(nodes=>nodes.map(n=>n.hash.slice(1))),chapters,'The single header must map directly to all chapters');
  // Both questions and all four genuine saved runs must be selectable.
  await choose(page,'single','结构化解题');assert.equal(await page.locator('#example-select option').count(),2);assert.equal(await page.locator('#teacher-select option').count(),4);
  for(const example of ['national-2023-q17','national-2025-q16'])for(const teacher of ['liangliang','taotao','xuefeng','ji']){
@@ -104,6 +105,8 @@ try{
  for(let i=0;i<records.cases.length;i++){
   const c=records.cases[i];await page.locator('#scene-diagnosis [aria-label="诊断情境"] button').nth(i).click();
   assert.equal(await page.locator('#scene-diagnosis .handwriting-sheet').getAttribute('data-source'),c.student_answer,'Handwriting presentation lost the original test input');
+  assert((await page.locator('#scene-diagnosis .handwriting-sheet .paper-math .katex').count())>0,'Mathematical expressions should be typeset independently of handwritten prose');
+  assert.equal(await page.locator('#scene-diagnosis .handwriting-sheet .katex-error').count(),0);
   for(const [condition,label] of [['basic','常见使用方式'],['same_information','同信息条件']]){
    await choose(page,'diagnosis',label);assert.equal(await page.locator('#scene-diagnosis .comparison-grid .record-output').count(),2);
    for(const [value,column] of [[c[condition],0],[c.system,1]]){

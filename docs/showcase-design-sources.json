@@ -34,7 +34,7 @@
     "copy": "现实痛点→机制→演示→研究依据；公开称呼统一为学生作答",
     "opening_write_seconds": 1.98,
     "opening_behavior": "首次欢迎页停留，点击进入预览；love先快后慢；同标签页刷新恢复正文",
-    "opening_style": "黑灰数学坐标空间：黑底、白色数学笔迹、柔灰love、透视网格与光轨、切角入口",
+    "opening_style": "黑灰数学坐标空间：白色数学笔迹、红色love、灰阶透视网格与光轨、切角入口",
     "refresh": "sessionStorage只保存公开演示UI选择与章节内阅读位置；新hash导航优先",
     "registration": "渝ICP备2026024246号-1",
     "dataset_position": "作为第3章嵌在基础表示与单题能力之间；详细统计再跳转",
@@ -44,7 +44,10 @@
       "surface_raised": "#191919",
       "border": "#333333",
       "text": "#f5f5f5",
-      "muted": "#b8b8b8"
-    }
+      "muted": "#b8b8b8",
+      "love_accent": "#ff555e"
+    },
+    "navigation": "单行导航与15个正文章节一一对应，当前章高亮；手机完整目录",
+    "student_writing": "手写中文、独立标点与本地KaTeX数学排版；原始作答逐字保留"
   }
 }

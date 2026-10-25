@@ -1,0 +1,12 @@
+/* Text keeps the handwriting face; mathematics uses the local mathematical fonts. */
+.handwriting-sheet .paper-ink-typeset{font-size:22px;line-height:2.2;letter-spacing:.015em;transform:none;white-space:pre-wrap;overflow-wrap:anywhere;word-break:normal}
+.paper-ink-typeset .paper-punctuation{font-family:'PingFang SC','Microsoft YaHei',sans-serif;font-size:.82em;letter-spacing:0;line-height:1;white-space:pre-wrap}
+.paper-ink-typeset .paper-math{font-family:KaTeX_Main,'Times New Roman',serif;font-size:.91em;line-height:1.5;letter-spacing:0;white-space:normal;overflow-wrap:normal;word-break:normal}
+.paper-ink-typeset .paper-math .katex{font-size:1em;line-height:1.5;color:inherit;text-rendering:auto}
+.paper-ink-typeset .paper-math .katex-html{white-space:normal;line-height:1.5}
+.paper-ink-typeset .paper-math .katex .base{margin-block:5px;vertical-align:baseline}
+.paper-ink-typeset .paper-math .katex .mspace{white-space:normal}
+.intro-attempt .paper-ink-typeset{font-size:23px}
+.handwriting-sheet:has(.paper-ink-typeset){background-image:none;background-color:#151515;padding-block:18px 21px;overflow:visible}
+@media(max-width:640px){.handwriting-sheet .paper-ink-typeset{font-size:21px;line-height:2.2}.paper-ink-typeset .paper-math{font-size:.91em}.paper-ink-typeset .paper-punctuation{font-size:.83em}.handwriting-sheet:has(.paper-ink-typeset){padding-block:15px 18px}}
+@media print{.handwriting-sheet:has(.paper-ink-typeset){background:#fff;border-color:#ccc}.handwriting-sheet .paper-ink-typeset{color:#111}}

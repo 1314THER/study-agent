@@ -70,7 +70,7 @@ function selectView(name){const id=aliases[name]||name;dispatchEvent(new CustomE
 api.selectView=selectView;api.focusRoutine=id=>{const r=state.data?.catalog?.routines.find(x=>x.id===id);if(r)$('routine-selection').textContent=r.name;};
 function svg(tag,attrs,text){const n=document.createElementNS(NS,tag);Object.entries(attrs||{}).forEach(([k,v])=>n.setAttribute(k,String(v)));if(text!=null)n.textContent=text;return n;}
 function triangle(stage=0){const s=svg('svg',{viewBox:'0 0 440 390',role:'img','aria-label':'全国卷三角形 ABC，AB长5，高为6，辅助线由步骤控制',class:'triangle-figure'});s.append(svg('path',{d:'M90 330 L340 330 L190 30 Z',fill:'#f1f6fc',stroke:'#164991','stroke-width':2.5}));if(stage>=1)s.append(svg('path',{d:'M190 30 V330 M190 316 H204 V330',fill:'none',stroke:'#007f82','stroke-width':2,'stroke-dasharray':'6 5',class:'construction-line'}));[['A',72,352],['B',348,352],['C',185,20],['AB = 5',180,370],['C = π/4',212,85]].forEach(([t,x,y])=>s.append(svg('text',{x,y},t)));if(stage>=1){s.append(svg('text',{x:174,y:351},'D'));s.append(svg('text',{x:204,y:195,fill:'#006f72'},stage>=2?'h = 6':'h'));}if(stage>=2)s.append(svg('text',{x:36,y:184,transform:'rotate(-72 36 184)'},'AC = 2√10'));return s;}
-function handwriting(text){const source=String(text||''),paper=el('div','handwriting-sheet'),ink=el('div','paper-ink'),re=/_\(([^)]+)\)|_([A-Za-z0-9]+)|\^\(([^)]+)\)|\^([A-Za-z0-9]+)/g;paper.dataset.source=source;let end=0;for(const m of source.matchAll(re)){ink.append(document.createTextNode(source.slice(end,m.index)));ink.append(el(m[1]||m[2]?'sub':'sup','',m[1]||m[2]||m[3]||m[4]));end=m.index+m[0].length;}ink.append(document.createTextNode(source.slice(end)));paper.append(ink);return paper;}
+function handwriting(text){if(window.ShowcaseHandwriting)return window.ShowcaseHandwriting.render(text);const source=String(text||''),paper=el('div','handwriting-sheet'),ink=el('div','paper-ink'),re=/_\(([^)]+)\)|_([A-Za-z0-9]+)|\^\(([^)]+)\)|\^([A-Za-z0-9]+)/g;paper.dataset.source=source;let end=0;for(const m of source.matchAll(re)){ink.append(document.createTextNode(source.slice(end,m.index)));ink.append(el(m[1]||m[2]?'sub':'sup','',m[1]||m[2]||m[3]||m[4]));end=m.index+m[0].length;}ink.append(document.createTextNode(source.slice(end)));paper.append(ink);return paper;}
 function architectureDiagram(){
  const figure=el('figure','project-architecture'),caption=el('figcaption');caption.append(el('h3','','系统怎样连成一个整体'),p('底层定义形成共同语言；单题能力产生证据；学习记录支持后续训练与教学。'));figure.append(caption);
  const layers=[
@@ -181,7 +181,29 @@ function renderModes(){
 }
 function renderMcp(){const root=scenario('mcp','入口不同，教育规则与记录共用',['产品内置 Agent','DeepSeek 官方 DSH','WorkBuddy'],['已有内部搜索、解题、教学、批改、规划与学情查询基础。','计划通过 MCP 调用共用教育业务，宿主负责对话，系统维护领域结果。','计划通过连接器与技能调用工具；课件生成还需要实际可用的文档能力。']);const graph=el('div','mcp-topology');['课程 · 步骤 · 题库 · 作答 · 学习记录','共用教育业务与 MCP 适配','内置 Agent　 /　官方 DSH　 /　WorkBuddy'].forEach(x=>graph.append(el('div','',x)));root.append(graph,note('练习生成与课件素材等任务共用教育业务，宿主提供对话和相应文档能力。'));}
 function renderEvolution(){const root=scenario('evolution','改进经过验证，再回到系统',['教师反馈','人工维护','新试题与教材','跨学科扩展'],['经核实反馈用于知识库、记忆或模型改进，各技术路径分别验收。','修订数据、关系和参数，记录版本与受影响的历史。','新材料作为候选核对，再判断步骤、套路、知识点或课时变化。','复用基础设施，重建学科任务、评价与学习效果验证。']);flow(root,['获得反馈','核对来源','离线评价','发布版本','教学再验证'],2);root.append(note('每次改进都回到同一组任务检查，并保留内容与规则的历史版本。'));}
-function navigation(){document.addEventListener('click',event=>{const trigger=event.target.closest?.('[data-annotation]');if(trigger)openAnnotation(trigger.dataset.annotation,trigger);const link=event.target.closest?.('a[href^="#"]');if(link&&singleModes[link.hash.slice(1)]){state.mode=singleModes[link.hash.slice(1)];renderSingle();}});$('annotation-close').onclick=closeAnnotation;document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('annotation-panel').hidden)closeAnnotation();});const toggle=$('contents-toggle'),contents=$('chapter-contents');toggle.onclick=()=>{contents.hidden=!contents.hidden;toggle.setAttribute('aria-expanded',String(!contents.hidden));};document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!contents.hidden){contents.hidden=true;toggle.setAttribute('aria-expanded','false');toggle.focus();}});document.querySelectorAll('a[href^="#"]').forEach(a=>a.addEventListener('click',()=>{contents.hidden=true;toggle.setAttribute('aria-expanded','false');}));const observer=new IntersectionObserver(entries=>{for(const e of entries)if(e.isIntersecting){state.view=e.target.id;const stage=({overview:'representation',concepts:'representation',dataset:'representation',single:'single',diagnosis:'diagnosis',library:'diagnosis',routines:'training',exam:'training',career:'history',agent:'history',teacher:'teaching',school:'teaching',modes:'teaching',mcp:'teaching',evolution:'feedback'})[state.view];document.querySelectorAll('#system-trail a').forEach(a=>{if(a.dataset.systemStage===stage)a.setAttribute('aria-current','step');else a.removeAttribute('aria-current');});document.querySelectorAll('#chapter-contents a').forEach(a=>a.setAttribute('aria-current',a.hash==='#'+state.view?'location':'false'));}},{rootMargin:'-12% 0px -65% 0px'});document.querySelectorAll('[data-chapter]').forEach(n=>observer.observe(n));addEventListener('hashchange',()=>{const id=location.hash.slice(1);if(singleModes[id]){state.mode=singleModes[id];renderSingle();}});}
+function navigation(){
+ const nav=document.querySelector('.primary-nav'),headerLinks=[...nav.querySelectorAll('a[href^="#"]')];
+ const toggle=$('contents-toggle'),contents=$('chapter-contents');
+ function currentChapter(id){
+  for(const a of headerLinks){if(a.hash==='#'+id)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');}
+  for(const a of contents.querySelectorAll('a')){if(a.hash==='#'+id)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');}
+  const selected=headerLinks.find(a=>a.hash==='#'+id);
+  if(selected&&nav.clientWidth){const item=selected.getBoundingClientRect(),box=nav.getBoundingClientRect();let dx=0;if(item.left<box.left+8)dx=item.left-box.left-12;else if(item.right>box.right-8)dx=item.right-box.right+12;if(dx)nav.scrollBy({left:dx,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}
+ }
+ document.addEventListener('click',event=>{
+  const trigger=event.target.closest?.('[data-annotation]');if(trigger)openAnnotation(trigger.dataset.annotation,trigger);
+  const link=event.target.closest?.('a[href^="#"]');if(link&&singleModes[link.hash.slice(1)]){state.mode=singleModes[link.hash.slice(1)];renderSingle();}
+ });
+ $('annotation-close').onclick=closeAnnotation;
+ document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('annotation-panel').hidden)closeAnnotation();});
+ toggle.onclick=()=>{contents.hidden=!contents.hidden;toggle.setAttribute('aria-expanded',String(!contents.hidden));};
+ document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!contents.hidden){contents.hidden=true;toggle.setAttribute('aria-expanded','false');toggle.focus();}});
+ for(const a of document.querySelectorAll('a[href^="#"]'))a.addEventListener('click',()=>{contents.hidden=true;toggle.setAttribute('aria-expanded','false');});
+ const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){state.view=entry.target.id;currentChapter(state.view);}},{rootMargin:'-12% 0px -65% 0px'});
+ for(const chapter of document.querySelectorAll('[data-chapter]'))observer.observe(chapter);
+ const hash=location.hash.slice(1);currentChapter(aliases[hash]||hash||'overview');
+ addEventListener('hashchange',()=>{const id=location.hash.slice(1);if(singleModes[id]){state.mode=singleModes[id];renderSingle();}});
+}
 function showOpening(force=false){
  const dialog=$('opening-dialog');if(!dialog||(!force&&(entered||(location.hash&&location.hash!=='#overview')))){entered=true;return Promise.resolve();}
  if(dialog.open)return Promise.resolve();

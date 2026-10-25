@@ -34,6 +34,7 @@ ASSET_PATHS = {
     "/showcase/research-content.json", "/showcase/recordings.json", "/showcase/launch-lettering.svg",
     "/showcase/dataset.html", "/showcase/dataset.css", "/showcase/dataset-data.json",
     "/showcase/transitions.js", "/showcase/transitions.css",
+    "/showcase/handwriting.js", "/showcase/handwriting.css",
     "/showcase/fonts/studyagent-handwriting.woff2", "/showcase/fonts/OFL.txt",
     "/showcase/fonts/coverage.json", "/showcase/fonts/README.md",
     "/showcase/question-bank/manifest.json", "/showcase/question-bank/index.json",
