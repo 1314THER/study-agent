@@ -3,7 +3,7 @@
  'use strict';
  const chapters=[...document.querySelectorAll('[data-chapter]')];
  if(!chapters.length)return;
- const shortNames={overview:'项目总览',concepts:'基础表示',single:'单题能力',diagnosis:'过程诊断',library:'错题与题库',routines:'套路训练',exam:'整卷分析',career:'长期学习',agent:'教学协同 Agent',teacher:'教师教学',school:'学校教研',modes:'教学模式',mcp:'MCP 与宿主',evolution:'系统演进'};
+ const shortNames={overview:'项目总览',concepts:'基础表示',dataset:'数据集',single:'单题能力',diagnosis:'过程诊断',library:'错题与题库',routines:'套路训练',exam:'整卷分析',career:'长期学习',agent:'教学协同 Agent',teacher:'教师教学',school:'学校教研',modes:'教学模式',mcp:'MCP 与宿主',evolution:'系统演进'};
  const aliases={solution:'single',grading:'single',teaching:'single',generation:'single',geometry:'single',graph:'routines',pool:'library',progress:'evolution',research:'evolution'};
  const chapterMap=new Map(chapters.map(chapter=>[chapter.id,chapter]));
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');

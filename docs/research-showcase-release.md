@@ -38,7 +38,7 @@ python3 scripts/build_research_release.py --extract-archive <本次发布包路�
 python3 scripts/build_research_release.py --verify-directory /tmp/study-research-release-check
 ```
 
-校验器检查完整公开白名单、逐文件摘要、14 章内容、两道全国卷与四位老师的完整管线记录、六类案例的三种实际输出、教学状态和实际生成结果。生成器真实拒绝候选是合法结果，不能为了通过发布检查补写一份成功答案。检查只确认记录和已核对答案的基本完整性，不替代全部数学证明或学习效果评测。
+校验器检查完整公开白名单、逐文件摘要、15 章内容、两道全国卷与四位老师的完整管线记录、六类案例的三种实际输出、教学状态和实际生成结果。生成器真实拒绝候选是合法结果，不能为了通过发布检查补写一份成功答案。检查只确认记录和已核对答案的基本完整性，不替代全部数学证明或学习效果评测。
 
 ## GitHub 与 Workbench 的衔接
 

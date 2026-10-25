@@ -13,7 +13,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / 'frontend/showcase'
-IDS = ['overview', 'concepts', 'single', 'diagnosis', 'library', 'routines',
+IDS = ['overview', 'concepts', 'dataset', 'single', 'diagnosis', 'library', 'routines',
        'exam', 'career', 'agent', 'teacher', 'school', 'modes', 'mcp', 'evolution']
 STATUS = {'implemented': '已有实现', 'prototype': '设计方案', 'research': '研究方向', 'mixed': '已有基础'}
 
@@ -26,7 +26,7 @@ def validate_source_map(content, mapping):
     """Fail closed if any chapter no longer matches its fully read sources."""
     rows = mapping.get('chapters', [])
     if [row.get('id') for row in rows] != IDS:
-        raise ValueError('Source map must cover all fourteen chapters in order')
+        raise ValueError('Source map must cover all fifteen chapters in order')
     if len({source['file'] for row in rows for source in row.get('sources', [])}) != mapping.get('source_count'):
         raise ValueError('Source map source_count does not match unique source files')
     docs_root = (ROOT / 'docs').resolve()
@@ -45,6 +45,11 @@ def validate_source_map(content, mapping):
                      for row in chapter.get('research', [])]
         if mapped.get('research_resources') != resources:
             raise ValueError(f"Research website/document mapping differs for {chapter['id']}")
+        if chapter['id'] == 'dataset':
+            snapshot = mapped.get('aggregate_snapshot', {})
+            raw = (PUBLIC / 'dataset-data.json').read_bytes()
+            if snapshot.get('file') != 'frontend/showcase/dataset-data.json' or hashlib.sha256(raw).hexdigest() != snapshot.get('sha256'):
+                raise ValueError('Dataset aggregate snapshot changed; re-audit before rebuilding')
         for source in sources:
             if source.get('read_completeness') != 'full':
                 raise ValueError(f"Source was not marked as fully read: {source.get('file')}")
@@ -155,11 +160,22 @@ def references(chapter):
     return ''.join(out)
 
 
+def dataset_markup():
+    data = json.loads((PUBLIC / 'dataset-data.json').read_text())
+    metrics = ''.join('<div class="dataset-metric"><dt>' + esc(row['unit']) + '</dt><dd>' + format(row['value'], ',') + '<p>' + esc(row['label']) + '</p></dd></div>' for row in data['headline_metrics'])
+    flow = ''.join('<article><span>' + str(i + 1).zfill(2) + '</span><h3>' + title + '</h3><p>' + text + '</p></article>' for i, (title, text) in enumerate([
+        ('整理题目素材', f"{data['pool']['count']:,}道题，保留{data['pool']['occurrences']:,}条出处记录，来自{data['pool']['sources']}个来源。"),
+        ('连接方法结构', f"{data['matching']['high_confidence']:,}道高置信主套路候选，涉及{data['matching']['covered_routines']}项套路目录，进入人工确认环节。"),
+        ('支持教学应用', '题目经结构化解析与核验，连接步骤批改、分步教学、变式与练习组织。')]))
+    goals = ''.join('<article><header><span>规划测算</span><h4>' + esc(row['name']) + '</h4></header><strong>' + format(row['base'] * row['multiplier'], ',') + '<small>' + esc(row['unit']) + '</small></strong><p>' + format(row['base'], ',') + ' × ' + str(row['multiplier']) + '。' + esc(row['assumption']) + '</p></article>' for row in data['scenarios'])
+    return '<div class="inline-dataset"><dl class="inline-dataset-metrics">' + metrics + '</dl><div class="inline-dataset-flow">' + flow + '</div><div class="inline-dataset-target"><h3>全量贯通后的数据图景</h3><p>以当前题池和目录为基数，按以下假设测算建设规模。</p><div class="inline-dataset-goals">' + goals + '</div></div><div class="inline-dataset-footer"><span>建设快照 · ' + esc(data['audit']['date']) + '</span><a href="/showcase/dataset.html">查看详细统计 ↗</a></div></div>'
+
+
 def build(content):
     chapters = content['chapters']
     if [c['id'] for c in chapters] != IDS:
-        raise ValueError('All fourteen reviewed chapters must retain their order')
-    nav = ''.join('<a href="#' + c['id'] + '"><span>' + str(i + 1).zfill(2) + '</span>' + esc(c['title']) + '</a>' + ('<a class="dataset-menu-link" href="/showcase/dataset.html"><span aria-hidden="true">↗</span>数据集</a>' if c['id'] == 'concepts' else '') for i, c in enumerate(chapters))
+        raise ValueError('All fifteen reviewed chapters must retain their order')
+    nav = ''.join('<a href="#' + c['id'] + '"><span>' + str(i + 1).zfill(2) + '</span>' + ('数据集' if c['id'] == 'dataset' else esc(c['title'])) + '</a>' for i, c in enumerate(chapters))
     trail = ''.join('<a href="#' + target + '" data-system-stage="' + key + '"><span class="trail-full">' + title + '</span><span class="trail-short">' + short + '</span></a>'
                     for key, target, title, short in [
                         ('representation', 'concepts', '统一表示', '表示'),
@@ -180,14 +196,12 @@ def build(content):
         out.append('<h' + ('1' if i == 0 else '2') + ' id="heading-' + key + '">' + esc(chapter['title']) + '</h' + ('1' if i == 0 else '2') + '><p class="chapter-thesis">' + esc(chapter['thesis']) + '</p></header>')
         if chapter.get('pain'):
             out.append('<div class="pain-point"><span>现实痛点</span><h3>' + esc(chapter['pain']['title']) + '</h3>' + paragraphs(chapter['pain']['text']) + '</div>')
-        scene = '<div id="scene-' + key + '" class="chapter-scene" aria-label="' + esc(chapter['title']) + '图解与演示">' + (bank_markup() if key == 'library' else '<p class="scene-loading">正在准备交互图解…</p>') + '</div>'
+        scene = '<div id="scene-' + key + '" class="chapter-scene" aria-label="' + esc(chapter['title']) + '图解与演示">' + (bank_markup() if key == 'library' else dataset_markup() if key == 'dataset' else '<p class="scene-loading">正在准备交互图解…</p>') + '</div>'
         if key == 'overview':
             out.append(scene)
         out.append('<div class="chapter-copy-grid"><div class="chapter-main"><div class="chapter-prose">' + paragraphs(chapter.get('body', [])) + '</div>')
         if key != 'overview':
             out.append(scene)
-        if key == 'concepts':
-            out.append('<a class="dataset-entry" href="/showcase/dataset.html"><div><strong>数据集</strong><span>查看课时、知识点、步骤、套路与题库规模，以及全量贯通后的数据图景。</span></div><span aria-hidden="true">↗</span></a>')
         out.append('</div>')
         if chapter.get('details'):
             out.append('<aside class="chapter-marginalia" aria-label="设计批注">')
@@ -205,13 +219,13 @@ def build(content):
     return '''<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="StudyAgent 科研项目：以全国卷真实案例，讨论步骤诊断、方法迁移、长期学习证据与教学协同。">
-<meta name="theme-color" content="#ffffff"><title>步骤诊断与方法迁移 · StudyAgent 科研展示</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23164991'/%3E%3Ctext x='7' y='24' fill='white' font-size='25'%3EΣ%3C/text%3E%3C/svg%3E">
+<meta name="theme-color" content="#080808"><meta name="color-scheme" content="dark"><title>步骤诊断与方法迁移 · StudyAgent 科研展示</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23242424'/%3E%3Ctext x='7' y='24' fill='white' font-size='25'%3EΣ%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/vendor/katex/katex.min.css"><link rel="stylesheet" href="/showcase/style.css"><link rel="stylesheet" href="/showcase/transitions.css">
 <script defer src="/vendor/katex/katex.min.js"></script><script defer src="/dimchart.js"></script><script defer src="/radar.js"></script><script defer src="/showcase/bank.js"></script><script defer src="/showcase/app.js"></script><script defer src="/showcase/transitions.js"></script>
 </head><body class="research-showcase"><a class="skip-link" href="#main-content">跳到项目内容</a>
 <header class="site-header"><a class="research-brand" href="#overview"><span class="brand-symbol" aria-hidden="true">∑</span><span>成为数学高手<small>StudyAgent 科研项目</small></span></a>
-<nav class="primary-nav" aria-label="主要章节"><a href="#concepts">表示与诊断</a><a href="/showcase/dataset.html">数据集</a><a href="#routines">训练与评价</a><a href="#agent">教学协同</a><a href="#evolution">研究路线</a></nav>
+<nav class="primary-nav" aria-label="主要章节"><a href="#concepts">表示与诊断</a><a href="#dataset">数据集</a><a href="#routines">训练与评价</a><a href="#agent">教学协同</a><a href="#evolution">研究路线</a></nav>
 <button id="contents-toggle" type="button" aria-expanded="false" aria-controls="chapter-contents">章节目录<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 7 5 5 5-5"/></svg></button></header>
 <nav id="system-trail" class="system-trail" aria-label="系统主线与当前环节">''' + trail + '''</nav>
 <nav id="chapter-contents" class="chapter-contents" aria-label="完整章节目录" hidden>''' + nav + '''</nav>
@@ -219,10 +233,10 @@ def build(content):
 <p id="demo-status" class="page-status" role="alert" hidden></p>''' + ''.join(sections) + '''</main>
 <footer class="site-footer"><div><strong>StudyAgent</strong><p>让每次作答，成为下一步学习的依据。</p></div><div><a href="https://150.chat/" target="_blank" rel="noopener noreferrer">正式站首页</a><a href="https://150.chat/home.html" target="_blank" rel="noopener noreferrer">学习系统</a><a href="https://github.com/1314THER/study-agent" target="_blank" rel="noopener noreferrer">代码与研究文档</a><a href="#overview">回到系统总览</a></div><p class="site-registration"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">渝ICP备2026024246号-1</a></p></footer>
 <dialog id="opening-dialog" class="opening-dialog" aria-labelledby="opening-title">
-<svg class="opening-space" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><radialGradient id="opening-haze"><stop stop-color="#286a83" stop-opacity=".3"/><stop offset=".5" stop-color="#164057" stop-opacity=".15"/><stop offset="1" stop-color="#030812" stop-opacity="0"/></radialGradient><linearGradient id="opening-grid-fade" x2="0" y2="1"><stop stop-color="white" stop-opacity="0"/><stop offset=".4" stop-color="white" stop-opacity=".7"/><stop offset="1" stop-color="white" stop-opacity=".15"/></linearGradient><mask id="opening-grid-mask"><rect width="1600" height="1000" fill="url(#opening-grid-fade)"/></mask><linearGradient id="opening-orbit-light"><stop stop-color="#71c8df" stop-opacity="0"/><stop offset=".5" stop-color="#71c8df" stop-opacity=".35"/><stop offset="1" stop-color="#71c8df" stop-opacity="0"/></linearGradient></defs><ellipse cx="700" cy="480" rx="920" ry="590" fill="url(#opening-haze)"/><g class="opening-coordinate-grid" mask="url(#opening-grid-mask)" fill="none" stroke="#69b6ce" stroke-width="1"><path d="M-800 1000L1060 470M-450 1000L1060 470M-100 1000L1060 470M250 1000L1060 470M600 1000L1060 470M950 1000L1060 470M1300 1000L1060 470M1650 1000L1060 470M2000 1000L1060 470M2350 1000L1060 470M2700 1000L1060 470M0 498H1600M0 523H1600M0 559H1600M0 611H1600M0 685H1600M0 791H1600M0 943H1600"/></g><g class="opening-orbits" transform="rotate(-18 1000 510)" fill="none"><ellipse cx="1000" cy="510" rx="720" ry="230" stroke="url(#opening-orbit-light)"/><ellipse cx="1000" cy="510" rx="780" ry="270" stroke="#477e98" stroke-opacity=".1"/><path class="opening-signal" d="M280 510a720 230 0 0 1 1440 0" stroke="#77d6ed" stroke-opacity=".65" stroke-width="1.5" pathLength="1"/><circle cx="1720" cy="510" r="3" fill="#9de7f5" fill-opacity=".7"/></g></svg>
+<svg class="opening-space" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><radialGradient id="opening-haze"><stop stop-color="#565656" stop-opacity=".3"/><stop offset=".5" stop-color="#303030" stop-opacity=".15"/><stop offset="1" stop-color="#080808" stop-opacity="0"/></radialGradient><linearGradient id="opening-grid-fade" x2="0" y2="1"><stop stop-color="white" stop-opacity="0"/><stop offset=".4" stop-color="white" stop-opacity=".7"/><stop offset="1" stop-color="white" stop-opacity=".15"/></linearGradient><mask id="opening-grid-mask"><rect width="1600" height="1000" fill="url(#opening-grid-fade)"/></mask><linearGradient id="opening-orbit-light"><stop stop-color="#aaaaaa" stop-opacity="0"/><stop offset=".5" stop-color="#aaaaaa" stop-opacity=".35"/><stop offset="1" stop-color="#aaaaaa" stop-opacity="0"/></linearGradient></defs><ellipse cx="700" cy="480" rx="920" ry="590" fill="url(#opening-haze)"/><g class="opening-coordinate-grid" mask="url(#opening-grid-mask)" fill="none" stroke="#b8b8b8" stroke-width="1"><path d="M-800 1000L1060 470M-450 1000L1060 470M-100 1000L1060 470M250 1000L1060 470M600 1000L1060 470M950 1000L1060 470M1300 1000L1060 470M1650 1000L1060 470M2000 1000L1060 470M2350 1000L1060 470M2700 1000L1060 470M0 498H1600M0 523H1600M0 559H1600M0 611H1600M0 685H1600M0 791H1600M0 943H1600"/></g><g class="opening-orbits" transform="rotate(-18 1000 510)" fill="none"><ellipse cx="1000" cy="510" rx="720" ry="230" stroke="url(#opening-orbit-light)"/><ellipse cx="1000" cy="510" rx="780" ry="270" stroke="#808080" stroke-opacity=".1"/><path class="opening-signal" d="M280 510a720 230 0 0 1 1440 0" stroke="#d0d0d0" stroke-opacity=".65" stroke-width="1.5" pathLength="1"/><circle cx="1720" cy="510" r="3" fill="#e0e0e0" fill-opacity=".7"/></g></svg>
 <div id="opening-animation"><header class="opening-masthead"><h2 id="opening-title" class="opening-title" tabindex="-1">study-agent项目介绍页面</h2></header><div class="opening-artwork"><img src="/showcase/launch-lettering.svg" width="685" height="355" alt="数学 · love"></div><div class="opening-entry"><button id="opening-enter" type="button"><span>点击进入预览</span><span class="opening-enter-icon" aria-hidden="true"><svg viewBox="0 0 32 24" fill="none"><path d="M2 12h27M22 5l7 7-7 7"/></svg></span></button></div><nav class="opening-related-links" aria-label="相关网站与备案"><a href="https://150.chat/" target="_blank" rel="noopener noreferrer">StudyAgent 正式站</a><a href="https://150.chat/home.html" target="_blank" rel="noopener noreferrer">学习系统</a><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">渝ICP备2026024246号-1</a></nav></div></dialog>
 <aside id="annotation-panel" class="annotation-panel" aria-label="补充批注" hidden><header><h2 id="annotation-title"></h2><button id="annotation-close" type="button" aria-label="关闭批注">×</button></header><div id="annotation-body"></div></aside>
-<noscript><style>.chapter-scene:not(:has(.native-workbench)){display:none}</style><p class="noscript-note">正文、逻辑图与研究对照可直接阅读。</p></noscript>
+<noscript><style>.chapter-scene:not(:has(.native-workbench)):not(#scene-dataset){display:none}</style><p class="noscript-note">正文、逻辑图、数据集与研究对照可直接阅读。</p></noscript>
 </body></html>'''
 
 
@@ -240,7 +254,7 @@ def main():
             raise SystemExit('Showcase HTML does not match reviewed chapter content')
     else:
         target.write_text(result)
-    print('Verified fourteen research chapters' if args.check else 'Built fourteen research chapters')
+    print('Verified fifteen research chapters' if args.check else 'Built fifteen research chapters')
 
 
 if __name__ == '__main__':

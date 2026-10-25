@@ -3,6 +3,7 @@
 > 此文件由 `scripts/build_showcase_dataset.py` 根据公开聚合JSON生成。
 
 页面：`/showcase/dataset.html`。输入：`frontend/showcase/dataset-data.json`。
+页面定位为数据集详细统计；主体数据集嵌入项目介绍的`#dataset`章节，详情页的返回入口均指向该章节。
 生成器仅使用Python标准库，不打开数据库、不调用模型、不导出题干或个人记录。
 
 ## 核对范围

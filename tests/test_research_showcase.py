@@ -23,17 +23,22 @@ class ResearchShowcaseBuildTests(unittest.TestCase):
 
     def test_all_chapters_are_readable_without_client_rendering(self):
         page = build(self.content)
-        self.assertEqual(page.count('class="chapter chapter-'), 14)
+        self.assertEqual(page.count('class="chapter chapter-'), 15)
         self.assertIn('同一份解析，连接四种能力', page)
         self.assertIn('论文原文', page)
-        self.assertEqual(page.count('class="chapter-transition"'), 14)
-        self.assertEqual(page.count('class="chapter-bridge"'), 14)
-        self.assertEqual(page.count('class="pain-point"'), 14)
+        self.assertEqual(page.count('class="chapter-transition"'), 15)
+        self.assertEqual(page.count('class="chapter-bridge"'), 15)
+        self.assertEqual(page.count('class="pain-point"'), 15)
         self.assertEqual(page.count('class="research-logic"'), 14)
         self.assertNotIn('id="opening-skip"', page)
         self.assertNotIn('id="reading-progress"', page)
         self.assertIn('id="opening-enter"', page)
         self.assertIn('study-agent项目介绍页面', page)
+        self.assertLess(page.index('id="concepts"'), page.index('id="dataset"'))
+        self.assertLess(page.index('id="dataset"'), page.index('id="single"'))
+        self.assertIn('href="#dataset">数据集</a>', page)
+        self.assertIn('查看详细统计', page)
+        self.assertEqual(page.count('class="dataset-metric"'), 5)
 
     def test_page_content_does_not_select_a_shanghai_exam(self):
         page = build(self.content)

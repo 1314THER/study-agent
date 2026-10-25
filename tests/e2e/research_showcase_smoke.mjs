@@ -9,7 +9,7 @@ import {tmpdir} from 'node:os';
 const require=createRequire(import.meta.url);
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const root=new URL('../../',import.meta.url);
-const chapters=['overview','concepts','single','diagnosis','library','routines','exam','career','agent','teacher','school','modes','mcp','evolution'];
+const chapters=['overview','concepts','dataset','single','diagnosis','library','routines','exam','career','agent','teacher','school','modes','mcp','evolution'];
 const records=JSON.parse(await readFile(new URL('frontend/showcase/recordings.json',root),'utf8'));
 const pipeline=JSON.parse(await readFile(new URL('frontend/showcase/pipeline.json',root),'utf8'));
 const shots=process.env.RESEARCH_SHOTS||tmpdir()+'/research-showcase-shots';
@@ -55,10 +55,14 @@ try{
  assert.deepEqual(await page.locator('[data-chapter]').evaluateAll(nodes=>nodes.map(n=>n.id)),chapters);
  assert(!/上海|shanghai/i.test(await page.locator('body').innerText()),'Retired regional example is visible');
  assert.equal(await page.locator('h1').count(),1);
+ assert.equal(await page.locator('.primary-nav a[href="#dataset"]').innerText(),'数据集');
+ assert.equal(await page.locator('#dataset .dataset-metric').count(),5,'The dataset should be embedded between concepts and single-question workflows');
+ assert.equal(await page.locator('#dataset .inline-dataset-goals article').count(),4);
+ assert.deepEqual(await page.locator('body').evaluate(n=>({background:getComputedStyle(n).backgroundColor,color:getComputedStyle(n).color})),{background:'rgb(8, 8, 8)',color:'rgb(245, 245, 245)'});
  assert.equal(await page.locator('details').count(),0,'Reader-facing content should use notes and the annotation panel');
  assert.equal(await page.locator('.source-reading').count(),0,'Internal source-document lists should not appear in the public story');
- assert.equal(await page.locator('.chapter-bridge').count(),14,'Each chapter must pass a specific output to its successor');
- assert.equal(await page.locator('.pain-point').count(),14,'Each module must explain a practical problem');
+ assert.equal(await page.locator('.chapter-bridge').count(),15,'Each chapter must pass a specific output to its successor');
+ assert.equal(await page.locator('.pain-point').count(),15,'Each module must explain a practical problem');
  assert.equal(await page.locator('.research-logic').count(),14,'Related work must have a presentation-style logic diagram');
  assert.equal(await page.locator('.research-source-links a').count(),28,'Each related work needs a website and a primary document link');
  assert.equal(await page.locator('#reading-progress,#opening-skip').count(),0);
@@ -175,7 +179,7 @@ try{
  await page.goto(base+'/#overview',{waitUntil:'networkidle'});await ready(page);await page.screenshot({path:shots+'/mobile-overview.png'});
  // The separate dataset page exposes audited aggregates and explicitly labeled scale scenarios.
  await page.setViewportSize({width:1440,height:1000});await page.goto(base+'/showcase/dataset.html',{waitUntil:'networkidle'});
- assert.equal(await page.locator('h1').innerText(),'数据集');assert.equal(await page.locator('.atlas-node').count(),5);
+ assert.equal(await page.locator('h1').innerText(),'数据集详细统计');assert.equal(await page.locator('.atlas-node').count(),5);
  assert.deepEqual(await page.locator('.scenario-equation strong').allTextContents(),['116,305','93,044','69,783','4,076']);
  assert.equal(await page.locator('.scenario .status-target').count(),4,'Projected quantities need visible planning labels');
  assert.equal(await page.locator('details,.source-list,.source-hash').count(),0,'The public dataset page should not expose internal audit lists');
@@ -187,7 +191,7 @@ try{
  await checkAudits(context);await context.close();
  // The scientific text and citations remain available without any JavaScript.
  const plain=await browser.newContext({javaScriptEnabled:false,viewport:{width:390,height:844}});const nojs=await plain.newPage();audit(nojs);
- await nojs.goto(base+'/',{waitUntil:'networkidle'});assert.equal(await nojs.locator('[data-chapter]').count(),14);
+ await nojs.goto(base+'/',{waitUntil:'networkidle'});assert.equal(await nojs.locator('[data-chapter]').count(),15);
  for(const id of chapters){const text=await nojs.locator('#'+id+' .chapter-prose').innerText();assert(text.length>80,'Missing no-JS chapter text: '+id);}
  assert((await nojs.locator('.research-notes a[href^="https://"]').count())>=6,'Research sources unavailable without JS');
  assert(!/上海|shanghai/i.test(await nojs.locator('body').innerText()));await fit(nojs,'no JavaScript');await checkAudits(plain);await plain.close();
@@ -201,7 +205,7 @@ try{
  assert.equal(await animated.evaluate(()=>document.activeElement.id),'opening-title','Initial focus should identify the cover rather than highlight the entry');
  await animated.screenshot({path:shots+'/opening-home.png'});await animated.locator('#opening-enter').click();
  await animated.waitForFunction(()=>!document.getElementById('opening-dialog').open,{timeout:1000});await ready(animated);
- assert.equal(await animated.locator('.chapter-bridge.has-handoff').count(),14,'All chapter handoffs should be enhanced');
+ assert.equal(await animated.locator('.chapter-bridge.has-handoff').count(),15,'All chapter handoffs should be enhanced');
  const handoff=animated.locator('#single .chapter-bridge');
  await handoff.evaluate(n=>scrollTo({top:n.getBoundingClientRect().top+scrollY-500,behavior:'instant'}));
  await animated.waitForFunction(()=>Number(document.querySelector('#single .chapter-bridge').dataset.handoffProgress)>0);
@@ -218,5 +222,5 @@ try{
  await animated.waitForFunction(()=>document.querySelector('.chapter-transit-overlay').hidden);
  await checkAudits(motion);await motion.close();
  const recorded=records.cases.reduce((n,c)=>n+['basic','same_information','system'].filter(k=>c[k]?.status==='recorded').length,0);
- console.log(JSON.stringify({ok:true,chapters:14,nationalQuestions:2,savedPipelineRuns:8,diagnosticInputs:6,recordedResponses:recorded,conditions:2,viewports:[1440,390,320],noJavaScript:true,network:'same-origin GET only, no cookies',screenshots:shots}));
+ console.log(JSON.stringify({ok:true,chapters:15,nationalQuestions:2,savedPipelineRuns:8,diagnosticInputs:6,recordedResponses:recorded,conditions:2,viewports:[1440,390,320],noJavaScript:true,network:'same-origin GET only, no cookies',screenshots:shots}));
 }finally{if(browser)await browser.close();server.kill('SIGTERM');}

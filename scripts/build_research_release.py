@@ -20,7 +20,7 @@ import tarfile
 import tempfile
 
 ROOT = Path(__file__).resolve().parents[1]
-CHAPTERS = ['overview', 'concepts', 'single', 'diagnosis', 'library', 'routines',
+CHAPTERS = ['overview', 'concepts', 'dataset', 'single', 'diagnosis', 'library', 'routines',
             'exam', 'career', 'agent', 'teacher', 'school', 'modes', 'mcp', 'evolution']
 EXAMPLES = {'national-2023-q17', 'national-2025-q16'}
 TEACHERS = {'liangliang', 'taotao', 'xuefeng', 'ji'}
@@ -126,7 +126,7 @@ def validate_content(root: Path) -> None:
     read = lambda name: json.loads(checked_file(root, 'frontend/showcase/' + name).read_text())
     content = read('research-content.json')
     if [c.get('id') for c in content.get('chapters', [])] != CHAPTERS:
-        raise ValueError('All 14 research chapters must exist in order')
+        raise ValueError('All 15 research chapters must exist in order')
     for chapter in content['chapters']:
         if not chapter.get('body') or not chapter.get('source_docs'):
             raise ValueError('Chapter body/source mapping missing: ' + chapter['id'])

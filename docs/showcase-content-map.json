@@ -2,7 +2,7 @@
   "schema_version": 1,
   "reviewed_at": "2026-10-25",
   "read_policy": "每章设计前完整阅读其 source_docs，保留原始文件 SHA256 和参考章节；不能仅以标题、摘要或计划替代全文。",
-  "implementation_snapshot": "数量为2026-10-24快照；能力补充截至2026-10-25，不是线上部署验收。",
+  "implementation_snapshot": "原实现数量为2026-10-24快照；数据集聚合数量核对截至2026-10-25；能力状态按原文核对日期。",
   "source_count": 15,
   "chapters": [
     {
@@ -93,6 +93,39 @@
           "paper_or_document": "https://aclanthology.org/2024.findings-emnlp.323.pdf"
         }
       ]
+    },
+    {
+      "id": "dataset",
+      "title": "数据集：让每道题找到知识与方法坐标",
+      "design_basis": "完整重读定义与实现文档后设计；核心规模与规划测算来自已核对的2026-10-25聚合快照。",
+      "sources": [
+        {
+          "file": "docs/项目名词与教学关系定义.md",
+          "sha256": "90a0ebb08a2c9cbe1d4aaae8cc2e111cc038a417cefa070d3615cf00e921065e",
+          "line_count": 95,
+          "read_completeness": "full",
+          "reference_sections": [
+            "全文：概念、统计口径、步骤实例与当前能力；本次完整重读"
+          ]
+        },
+        {
+          "file": "docs/当前实现能力与名词数量.md",
+          "sha256": "c918966c3792ce5ce227c826ca1248ff89707c0a690ca429034e906f8057c26c",
+          "line_count": 149,
+          "read_completeness": "full",
+          "reference_sections": [
+            "全文：概念、统计口径、步骤实例与当前能力；本次完整重读"
+          ]
+        }
+      ],
+      "research_urls": [],
+      "research_resources": [],
+      "aggregate_snapshot": {
+        "file": "frontend/showcase/dataset-data.json",
+        "sha256": "4eb8aaa7dbd5a62f72a2fa534fe4311880833eedc470bb026c82181dbb31c03c",
+        "checked_at": "2026-10-25",
+        "scope": "公开聚合规模和明确假设的规划测算；不发布内部原题或个人记录。"
+      }
     },
     {
       "id": "single",
