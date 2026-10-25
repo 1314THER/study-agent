@@ -355,7 +355,7 @@ def prepare_geometry(question, answer, teacher=None, asset_refs=None):
             message = json.dumps(payload,ensure_ascii=False) + ("\n上次校验失败，请修复完整 JSON："+feedback if feedback else "")
             if refs:
                 from backend.question_assets import image_messages
-                content, usage = call_deepseek(prompt,message,model="deepseek-flash",image_content=image_messages(refs))
+                content, usage = call_deepseek(prompt,message,model=cfg["model"],reasoning_effort=cfg.get("reasoning_effort"),image_content=image_messages(refs))
             else:
                 content, usage = call_deepseek(prompt,message,model=cfg["model"],reasoning_effort=cfg.get("reasoning_effort"),temperature=0.1)
             totals = answer.setdefault("token_usage",{})

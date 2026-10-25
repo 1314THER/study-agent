@@ -1341,8 +1341,8 @@ def _sanitize_settings_patch(patch):
 
     api = out.get("api")
     if api:
-        out["api"] = {"deepseek": api["deepseek"]} if isinstance(api.get("deepseek"), dict) else {}
-        for provider in ("deepseek",):
+        out["api"] = {provider: api[provider] for provider in runtime_settings.DEFAULTS["api"] if isinstance(api.get(provider), dict)}
+        for provider in runtime_settings.DEFAULTS["api"]:
             cfg = api.get(provider)
             if isinstance(cfg, dict) and not cfg.get("api_key"):
                 cfg.pop("api_key", None)
@@ -1372,7 +1372,7 @@ def _public_settings(data: dict) -> dict:
         out["teachers"] = copy.deepcopy(runtime_settings.get_teachers())
         out["limits"] = copy.deepcopy(runtime_settings.get_limits())
     api = out.get("api") or {}
-    for provider in ("deepseek",):
+    for provider in runtime_settings.DEFAULTS["api"]:
         cfg = api.get(provider)
         if not isinstance(cfg, dict):
             continue
@@ -1380,7 +1380,7 @@ def _public_settings(data: dict) -> dict:
         resolved = runtime_settings.get_api_key(provider)
         cfg["api_key"] = "" if identity is not None or runtime_settings.shared_ai_enabled() else runtime_settings.mask_key(resolved)
         cfg["has_key"] = bool(resolved)
-        cfg["key_source"] = "account" if resolved and identity and identity.get("role") != "guest" else ("demo" if resolved and runtime_settings.shared_ai_enabled() else ("settings" if stored else ("env" if resolved else "")))
+        cfg["key_source"] = "account" if provider == "deepseek" and resolved and identity and identity.get("role") != "guest" else ("demo" if resolved and runtime_settings.shared_ai_enabled() else ("settings" if stored else ("env" if resolved else "")))
     return out
 
 
@@ -1407,7 +1407,7 @@ def api_test_settings(req: SettingsTestRequest):
     """用当前保存的地址与密钥测试 API 连通性。"""
     import httpx
     from backend.jobs import provider_slot, request_timeout
-    if req.provider != "deepseek":
+    if req.provider not in runtime_settings.DEFAULTS["api"]:
         return {"ok": False, "error": "未知 provider"}
     api = runtime_settings.get_api()
     cfg = api.get(req.provider) or {}
@@ -1419,6 +1419,16 @@ def api_test_settings(req: SettingsTestRequest):
         return {"ok": False, "error": "未配置 API 地址"}
     try:
         with provider_slot(req.provider):
+            if req.provider == "zhipu":
+                # The GLM endpoint does not expose the DeepSeek /models probe.
+                resp = httpx.post(
+                    base_url + "/chat/completions",
+                    headers={"Authorization": f"Bearer {key}"},
+                    json={"model": "glm-4.7-flash", "messages": [{"role": "user", "content": "Hi"}],
+                          "thinking": {"type": "disabled"}, "max_tokens": 8},
+                    timeout=request_timeout(15),
+                )
+                return {"ok": True, "provider": req.provider} if resp.status_code == 200 else {"ok": False, "error": f"HTTP {resp.status_code}"}
             resp = httpx.get(
                 base_url + "/models",
                 headers={"Authorization": f"Bearer {key}"},

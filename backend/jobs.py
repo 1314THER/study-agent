@@ -41,7 +41,7 @@ PRESET_TIMEOUT_SECONDS = 300
 _CURRENT = ContextVar("study_background_job", default=None)
 PROVIDER_CONCURRENCY = 20
 _SHARED_PROVIDER_LIMIT = threading.BoundedSemaphore(PROVIDER_CONCURRENCY)
-_PROVIDERS = {name: _SHARED_PROVIDER_LIMIT for name in ("deepseek", "codex")}
+_PROVIDERS = {name: _SHARED_PROVIDER_LIMIT for name in ("deepseek", "zhipu", "codex")}
 _PROVIDER_LOCK = threading.Lock()
 _PROVIDER_ACTIVE = 0
 

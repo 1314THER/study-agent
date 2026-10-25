@@ -222,8 +222,9 @@ class QuestionAssetTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory,workspace(directory):
             ref=question_assets.store_image(self.png())
             with patch("backend.solver.call_deepseek",return_value=("是否数学题：[是]\n是否能做出来：[是]\n板块：立体几何\n解：略",{})) as ai:
-                step_solver_only("立体几何题",asset_refs=[ref])
-            self.assertEqual(ai.call_args.kwargs["model"],"deepseek-flash")
+                step_solver_only("立体几何题",teacher="xuefeng",asset_refs=[ref])
+            self.assertEqual(ai.call_args.kwargs["model"],"glm-5.3-flash")
+            self.assertEqual(ai.call_args.kwargs["reasoning_effort"],"medium")
             image=ai.call_args.kwargs["image_content"][0]
             self.assertTrue(image["image_url"]["url"].startswith("data:image/png;base64,"))
 

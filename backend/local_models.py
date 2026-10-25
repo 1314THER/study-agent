@@ -74,6 +74,33 @@ def current_caller():
     return _pipeline_caller.get()
 
 
+def call_teacher(system, user, *, model="gpt-6-astra", reasoning_effort="medium", image_content=None):
+    """Use the installed private CLI adapter and the saved ChatGPT login."""
+    from backend.identity import current_identity
+    identity = current_identity()
+    if identity and identity.get("role") != "owner":
+        raise HTTPException(503, UNAVAILABLE)
+    provider()  # Retain the local-only, non-proxied request boundary.
+    try:
+        from backend import routine_codex as codex
+    except ImportError:
+        raise HTTPException(503, UNAVAILABLE) from None
+    from backend.jobs import ensure_active, provider_slot, request_timeout
+    from backend.settings import get_limits
+    if reasoning_effort not in ("low", "medium", "high", "xhigh"):
+        raise ValueError("Codex 推理强度请选择低、中、高或极高")
+    try:
+        with provider_slot("codex"):
+            return codex.run_prompt(
+                system, user, task="数学老师", model=model, reasoning_effort=reasoning_effort,
+                image_content=image_content,
+                timeout=request_timeout(get_limits().get("api_timeout_seconds", 300)),
+                ensure_active=ensure_active,
+            )
+    except codex.CodexUnavailable:
+        raise HTTPException(503, "Codex CLI 暂不可用，请检查本机 ChatGPT 登录、模型权限及额度。") from None
+
+
 def routine_config():
     return provider().routine_config()
 

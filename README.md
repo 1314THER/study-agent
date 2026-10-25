@@ -98,14 +98,16 @@ macOS 双击「一键打开.command」会在后台启动服务并打开首页，
 
 | 老师 | Solver 模型 | Verifier 模型 | Formatter 模型 | UI 主题 | 描述 |
 |------|------------|--------------|---------------|---------|------|
-| 🫅 梁梁 | deepseek-flash | deepseek-flash (low) | deepseek-flash (low) | 黄色 | 快速，但是可能出错 |
-| 🎩 韬韬 | deepseek-v4-pro (low) | deepseek-flash (medium) | deepseek-flash (low) | 粉色 | 更慢但更聪明 |
-| 🏃 雪峰 | deepseek-v4-pro (high) | deepseek-flash (medium) | deepseek-flash (low) | 紫色 | 每一步考虑得更多 |
-| 🐔 鸡 | deepseek-v4-pro (high) | deepseek-flash (high) | deepseek-flash (high) | 绿色 | 每一步都要考虑半天 |
+| 🫅 梁梁 | glm-4.7-flash | glm-4.7-flash | glm-4.7-flash | 黄色 | 免费文本模型 |
+| 🎩 韬韬 | deepseek-flash | deepseek-flash | deepseek-flash | 粉色 | 使用原有 DS 密钥 |
+| 🏃 雪峰 | glm-5.3-flash | glm-5.3-flash | glm-5.3-flash | 紫色 | 智谱多模态模型 |
+| 🐔 鸡 | gpt-6-astra | gpt-6-astra | gpt-6-astra | 绿色 | 本机 Codex CLI 登录态 |
 
 老师选择通过 `teacher` 参数传给解题与教学接口，进度消息显示对应老师名称，前端主题色跟随老师切换。
 
-> 表格为默认配置；四老师的模型与思考强度可以在「系统设置」页热修改，保存后立即生效。
+> 解题、分块、评分和 AI 改卷均使用该老师的模型，推理默认「中」，可在「系统设置」热修改。智谱 Key 默认为空，在设置中填写，DS Key 保持原配置；鸡复用本机 Codex CLI 的 ChatGPT 登录，无需 API Key，云端不启用。
+>
+> [GLM-4.7-Flash](https://docs.bigmodel.cn/cn/guide/models/free/glm-4.7-flash) 仅支持文本和思考开关：低 / 中 / 高均开启，默认 / 关闭则禁用思考。[GLM-5.3-Flash](https://docs.bigmodel.cn/cn/guide/models/vlm/glm-5.3-flash) 始终思考，原生支持 low / high / max，界面低 / 中 / 高对应这三档。Codex CLI 使用 [非交互调用](https://learn.chatgpt.com/docs/non-interactive-mode)，沿用已有本机适配器。
 
 ---
 

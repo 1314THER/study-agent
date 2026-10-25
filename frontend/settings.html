@@ -249,7 +249,7 @@
                 <section class="settings-section" data-owner-only>
                     <div class="section-head">
                         <h2>老师模型</h2>
-                        <span class="section-hint">三阶段分别配置模型与思考强度，保存后立即生效</span>
+                        <span class="section-hint">解题、分块、评分与改卷分别配置，默认中等推理，保存后立即生效</span>
                     </div>
                     <div class="teacher-grid" id="teacherGrid"></div>
                 </section>
@@ -257,7 +257,7 @@
                 <section class="settings-section" data-owner-only>
                     <div class="section-head">
                         <h2>DeepSeek 接口</h2>
-                        <span class="section-hint">文字与图片共用 DeepSeek，账号密钥在上方单独保存</span>
+                        <span class="section-hint">韬韬与图片识别使用 DeepSeek，账号密钥在上方单独保存</span>
                     </div>
                     <div class="settings-grid">
                         <div class="settings-card">
@@ -276,6 +276,31 @@
                             <button class="settings-btn" onclick="testApi()">测试 DeepSeek 连接</button>
                             <a href="/deepseek-guide.html" target="_blank" rel="noopener" style="margin-left:12px;color:#0071e3;font-size:13px;text-decoration:none">注册与密钥教程 ↗</a>
                         </div>
+                    </div>
+                </section>
+
+                <section class="settings-section" data-owner-only>
+                    <div class="section-head">
+                        <h2>智谱 GLM 接口</h2>
+                        <span class="section-hint">梁梁与雪峰共用此密钥，请填写自己的 API Key</span>
+                    </div>
+                    <div class="settings-card">
+                        <div class="input-row">
+                            <label for="glmBase">接口地址</label>
+                            <input id="glmBase" type="url" spellcheck="false">
+                            <label for="glmKey">智谱 API Key</label>
+                            <input id="glmKey" type="password" placeholder="未配置" autocomplete="off">
+                            <span></span><span id="glmKeyStatus" class="key-status"></span>
+                        </div>
+                        <button class="settings-btn" onclick="testApi('zhipu')">测试智谱连接</button>
+                    </div>
+                </section>
+
+                <section class="settings-section" data-owner-only>
+                    <div class="section-head"><h2>Codex CLI</h2></div>
+                    <div class="settings-card">
+                        <p>鸡默认使用 gpt-6-astra，推理中等。使用本机 Codex CLI 的 ChatGPT 登录，无需 API Key。</p>
+                        <p id="codexStatus" role="status">正在检查本机接入…</p>
                     </div>
                 </section>
 
@@ -333,10 +358,10 @@
     <script src="nav.js?v=20261013graph"></script>
     <script>
         var TEACHER_META = {
-            liangliang: { name: "梁梁", desc: "快速，可能出错" },
-            taotao: { name: "韬韬", desc: "更慢但更聪明" },
-            xuefeng: { name: "雪峰", desc: "每一步考虑更多" },
-            ji: { name: "鸡", desc: "每一步都想半天" }
+            liangliang: { name: "梁梁", desc: "GLM-4.7-Flash · 免费模型" },
+            taotao: { name: "韬韬", desc: "DeepSeek Flash" },
+            xuefeng: { name: "雪峰", desc: "GLM-5.3-Flash" },
+            ji: { name: "鸡", desc: "GPT-6 Astra · Codex CLI" }
         };
         var STAGES = [
             ["solver", "Solver 解题"],
@@ -344,7 +369,7 @@
             ["formatter", "Formatter 评分"],
             ["grade", "AI 改卷"]
         ];
-        var EFFORT_OPTIONS = [["", "无"], ["low", "low"], ["medium", "medium"], ["high", "high"]];
+        var EFFORT_OPTIONS = [["", "默认 / 关闭（依模型）"], ["low", "低"], ["medium", "中"], ["high", "高"], ["xhigh", "极高（Codex）"], ["max", "最大（GLM 5.3）"]];
         var EXAMPLES = [
             { label: "全 0", vals: [0, 0, 0, 0, 0] },
             { label: "一个 1", vals: [1, 0, 0, 0, 0] },
@@ -460,6 +485,12 @@
                     wrap.appendChild(row);
                     card.appendChild(wrap);
                 });
+                var note = document.createElement("p");
+                note.className = "section-hint";
+                note.textContent = name === "liangliang" ? "GLM-4.7-Flash 仅支持文本和思考开关；低、中、高均开启思考，选默认则关闭。" :
+                    name === "xuefeng" ? "GLM-5.3-Flash 原生为 low / high / max；低 / 中 / 高分别映射到 low / high / max，始终开启思考。" :
+                    name === "ji" ? "仅本机可用；支持低、中、高、极高推理。" : "使用已配置的 DeepSeek 密钥。";
+                card.appendChild(note);
                 box.appendChild(card);
             });
         }
@@ -487,6 +518,11 @@
                 document.getElementById("dsKey").placeholder = ds.has_key ? "已配置（留空保留）" : "未配置";
                 document.getElementById("dsVisionModel").value = ds.vision_model || "deepseek-flash";
                 setKeyStatus("dsKeyStatus", ds);
+                var glm = api.zhipu || {};
+                document.getElementById("glmBase").value = glm.base_url || "";
+                document.getElementById("glmKey").value = "";
+                document.getElementById("glmKey").placeholder = glm.has_key ? "已配置（留空保留）" : "未配置，请填写";
+                setKeyStatus("glmKeyStatus", glm);
                 var lim = data.limits || {};
                 document.getElementById("limApiTimeout").value = lim.api_timeout_seconds || 300;
                 document.getElementById("limApiMaxTokens").value = lim.api_max_tokens || 32000;
@@ -530,7 +566,8 @@
                 },
                 teachers: {},
                 api: {
-                    deepseek: { base_url: val("dsBase"), vision_model: val("dsVisionModel") }
+                    deepseek: { base_url: val("dsBase"), vision_model: val("dsVisionModel") },
+                    zhipu: { base_url: val("glmBase") }
                 },
                 limits: {
                     api_timeout_seconds: limNum("limApiTimeout", 300),
@@ -554,6 +591,8 @@
             });
             var dsKey = val("dsKey");
             if (dsKey) payload.api.deepseek.api_key = dsKey;
+            var glmKey = val("glmKey");
+            if (glmKey) payload.api.zhipu.api_key = glmKey;
             return payload;
         }
 
@@ -571,8 +610,9 @@
                     return;
                 }
                 document.getElementById("dsKey").value = "";
+                document.getElementById("glmKey").value = "";
+                await loadSettings();
                 setStatus("设置已保存并热生效", "ok");
-                loadSettings();
             } catch (e) {
                 setStatus("保存失败：" + (e.message || e), "err");
             }
@@ -592,17 +632,19 @@
             }
         }
 
-        async function testApi() {
-            setStatus("正在测试 DeepSeek…", "busy");
+        async function testApi(provider) {
+            provider = provider || "deepseek";
+            var label = provider === "zhipu" ? "智谱" : "DeepSeek";
+            setStatus("正在测试" + label + "…", "busy");
             try {
                 var res = await fetch("/settings/test", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ provider: "deepseek" })
+                    body: JSON.stringify({ provider: provider })
                 });
                 var data = await res.json();
                 if (data.ok) {
-                    setStatus("DeepSeek 连接正常", "ok");
+                    setStatus(label + "连接正常", "ok");
                 } else {
                     setStatus("测试失败：" + (data.error || "未知错误"), "err");
                 }
@@ -627,7 +669,13 @@
                 }
             }
             document.getElementById('localKeyRow').hidden = state.enabled;
-            if (window.StudyAuth.isOwner()) await loadSettings();
+            if (window.StudyAuth.isOwner()) {
+                await loadSettings();
+                try {
+                    var capabilities = await (await fetch("/local-models/status")).json();
+                    document.getElementById("codexStatus").textContent = (capabilities.codex_cli || {}).detail || "本机 Codex CLI 暂不可用";
+                } catch (_) { document.getElementById("codexStatus").textContent = "本机 Codex CLI 暂不可用"; }
+            }
             else document.getElementById('statusBar').hidden = true;
         }
         document.getElementById('accountKeyForm').addEventListener('submit', async function (event) {
