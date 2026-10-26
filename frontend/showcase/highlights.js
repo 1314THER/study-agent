@@ -51,12 +51,7 @@
   const state=states.get(figure),group=figure.querySelector('[data-hx-radar-dots]');
   if(!group)return;
   const target=profiles[state.profile]||profiles.a;
-  const stem=group.querySelector('[data-hx-axis-stem]');
-  if(stem){
-   const activeIndex=Number(figure.dataset.hxDimensionActive||0),anchor=target[activeIndex]||target[0];
-   stem.setAttribute('x2',String(anchor[0]));stem.setAttribute('y2',String(anchor[1]));
-  }
-  group.replaceChildren(stem||'',...target.map((point,index)=>{
+  group.replaceChildren(...target.map((point,index)=>{
    const dot=document.createElementNS(ns,'circle');
    dot.setAttribute('cx',String(point[0]));dot.setAttribute('cy',String(point[1]));dot.setAttribute('r','5.5');
    dot.setAttribute('class','hx-radar-dot'+(String(index)===figure.dataset.hxDimensionActive?' is-selected':''));
