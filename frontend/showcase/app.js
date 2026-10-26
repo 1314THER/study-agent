@@ -123,7 +123,7 @@ function tabs(rows,active,change,label='切换图解'){const n=el('div','scene-t
 function flow(root,labels,active=0){
  const n=el('div','flow-strip'),track=el('div','flow-track');
  track.append(el('i','flow-fill'));n.append(track);
- const buttons=labels.map((t,i)=>{const b=el('button',i===active?'active':'',t);b.type='button';b.setAttribute('aria-pressed',String(i===active));b.addEventListener('click',()=>sync(i));n.append(b);return b;});
+ const buttons=labels.map((t,i)=>{const b=el('button',i===active?'active':'',t);b.type='button';b.setAttribute('aria-pressed',String(i===active));b.style.setProperty('--i',i);b.addEventListener('click',()=>sync(i));n.append(b);return b;});
  let scanTimer=0;
  // The track fills up to the current step and sweeps once, so the order of the
  // steps stays legible even though only text remains.
@@ -134,7 +134,14 @@ function flow(root,labels,active=0){
   void n.offsetWidth;n.classList.add('is-scanning');
   scanTimer=setTimeout(()=>n.classList.remove('is-scanning'),720);
  }
- sync(active);root.append(n);return n;
+ sync(active);root.append(n);
+ n.style.setProperty('--flow-count',labels.length);
+ // Steps read in from the left once, so the order is felt before it is read.
+ n.dataset.reveal='pending';
+ const reveal=()=>{n.classList.add('is-revealed');n.dataset.reveal='done';};
+ if(matchMedia('(prefers-reduced-motion: reduce)').matches||!('IntersectionObserver' in window))reveal();
+ else{const io=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)){reveal();io.disconnect();}},{threshold:.3});io.observe(n);}
+ return n;
 }
 function selectView(name){const id=aliases[name]||name;if(!$(id))return;recordOrigin(id);dispatchEvent(new CustomEvent('showcase:navigate',{detail:{from:state.view,to:id}}));state.view=id;if(singleModes[name]){state.mode=singleModes[name];renderSingle();}const url=new URL(location.href);url.hash=id;history.pushState(history.state,'',url);$(id)?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});}
 api.selectView=selectView;api.focusRoutine=id=>{const r=state.data?.catalog?.routines.find(x=>x.id===id);if(r)$('routine-selection').textContent=r.name;};
@@ -361,4 +368,40 @@ async function json(name){const r=await fetch('/showcase/'+name,{credentials:'om
 navigation();
 const openingFinished=window.ShowcaseHero?.open({skip:resumeReading||Boolean(location.hash)||savedReading?.entered===true})||Promise.resolve();
 api.ready=(async()=>{const results=await Promise.allSettled([json('data.json'),json('pipeline.json'),json('recordings.json')]);if(results[0].status==='rejected'||results[1].status==='rejected')throw Error('全国卷案例数据加载失败，请刷新重试。');state.data=results[0].value;state.pipelineData=results[1].value;state.recordings=results[2].status==='fulfilled'?results[2].value:{cases:[]};restoreChoices();for(const render of [renderConcepts,renderSingle,renderDiagnosis,renderRoutines,renderExam,renderCareer,renderAgent,renderTeacher,renderSchool,renderModes,renderMcp,renderEvolution])render();ShowcaseBank.init(api,{el,p,button,details,mathErratum});if(resumeReading&&savedReading.bank)await ShowcaseBank.restore(savedReading.bank);else await ShowcaseBank.show();$('exam-student').onclick=()=>ShowcaseBank.renderExam(false);$('exam-teacher').onclick=()=>ShowcaseBank.renderExam(true);$('exam-print').onclick=()=>window.print();const hash=location.hash.slice(1);if(aliases[hash]&&!resumeReading)selectView(hash);await openingFinished;entered=true;await restoreReadingPosition();setupMotion();return state.data;})().catch(error=>{state.loadError=error.message;$('demo-status').hidden=false;$('demo-status').textContent=error.message+' 正文仍可阅读。';console.error(error);return null;});
+})();
+
+/* Research comparisons stay one click away instead of stretching the technical column. */
+(()=>{
+ const sections=[...document.querySelectorAll('.research-notes')];
+ if(!sections.length)return;
+ const dialog=document.createElement('dialog');
+ dialog.className='research-modal';dialog.id='research-modal';
+ const head=document.createElement('div');head.className='research-modal-head';
+ const title=document.createElement('h3');title.id='research-modal-title';title.textContent='研究对照';
+ const close=document.createElement('button');
+ close.type='button';close.className='research-modal-close';
+ close.textContent='关闭';close.setAttribute('aria-label','关闭研究对照');
+ head.append(title,close);
+ const body=document.createElement('div');body.className='research-modal-body';
+ dialog.append(head,body);document.body.append(dialog);
+ const shut=()=>{if(dialog.open)dialog.close();};
+ close.addEventListener('click',shut);
+ dialog.addEventListener('click',event=>{if(event.target===dialog)shut();});
+ dialog.addEventListener('close',()=>body.replaceChildren());
+ for(const section of sections){
+  const count=section.querySelectorAll('.research-study').length;
+  const trigger=document.createElement('button');
+  trigger.type='button';trigger.className='research-notes-trigger';
+  const label=document.createElement('strong');label.textContent='研究对照';
+  const hint=document.createElement('span');hint.textContent=count+' 项研究与本项目的关系';
+  trigger.append(label,hint);
+  section.before(trigger);section.hidden=true;
+  trigger.addEventListener('click',()=>{
+   const heading=section.querySelector('h3');
+   title.textContent=heading?heading.textContent:'研究对照';
+   const clone=section.cloneNode(true);clone.hidden=false;
+   clone.querySelector('h3')?.remove();
+   body.replaceChildren(clone);dialog.showModal();
+  });
+ }
 })();

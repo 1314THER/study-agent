@@ -295,3 +295,38 @@
 @keyframes closing-breathe{0%,100%{box-shadow:0 0 30px rgb(255 110 132 / 15%),inset 0 1px 0 rgb(255 255 255 / 10%)}50%{box-shadow:0 0 48px rgb(255 132 142 / 27%),inset 0 1px 0 rgb(255 255 255 / 15%)}}
 @media(prefers-reduced-motion:reduce){.research-showcase .chapter-transition-closing{animation:none;box-shadow:0 0 36px rgb(255 120 138 / 20%)}}
 @media(max-width:640px){.research-showcase .chapter-transition-closing{display:flex;width:100%;padding:18px 20px;gap:12px;font-size:17px}}
+
+/* Steps arrive one after another from the left instead of appearing as a block. */
+.research-showcase .flow-strip[data-reveal=pending] button{opacity:0}
+.research-showcase .flow-strip[data-reveal=pending] .flow-track{opacity:0}
+.research-showcase .flow-strip.is-revealed button{animation:flow-in .55s cubic-bezier(.22,1,.36,1) both;animation-delay:calc(var(--i,0) * 85ms)}
+.research-showcase .flow-strip.is-revealed .flow-track{animation:flow-track-in .45s ease-out both;animation-delay:calc(var(--flow-count,5) * 85ms)}
+@keyframes flow-in{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:none}}
+@keyframes flow-track-in{from{opacity:0}to{opacity:1}}
+@media(prefers-reduced-motion:reduce){
+  .research-showcase .flow-strip[data-reveal=pending] button,
+  .research-showcase .flow-strip[data-reveal=pending] .flow-track{opacity:1}
+  .research-showcase .flow-strip.is-revealed button,
+  .research-showcase .flow-strip.is-revealed .flow-track{animation:none}
+}
+
+/* Research comparisons open in one dialog instead of stretching the technical column. */
+.research-notes[hidden]{display:none!important}
+.research-showcase .research-notes-trigger{display:flex;align-items:baseline;gap:10px;width:100%;margin:20px 0 0;padding:13px 16px;border:1px solid rgb(255 255 255 / 12%);border-radius:12px;background:rgb(255 255 255 / 3%);color:#dfe6f2;font:inherit;text-align:left;cursor:pointer;transition:border-color .2s,background .2s}
+.research-showcase .research-notes-trigger:hover{border-color:rgb(163 148 255 / 55%);background:rgb(163 148 255 / 8%)}
+.research-showcase .research-notes-trigger strong{font-size:13px;font-weight:650;letter-spacing:.01em}
+.research-showcase .research-notes-trigger span{color:#8b93a1;font-size:12px}
+.research-showcase .research-notes-trigger:after{content:'↗';margin-left:auto;color:#a394ff;font-size:13px}
+.research-modal{width:min(940px,92vw);max-height:86vh;padding:0;overflow:hidden;border:1px solid rgb(255 255 255 / 14%);border-radius:18px;background:#0c0d12;color:#e8eefb;box-shadow:0 40px 120px rgb(0 0 0 / 60%)}
+.research-modal::backdrop{background:rgb(0 0 0 / 74%);backdrop-filter:blur(3px)}
+.research-modal-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 24px;border-bottom:1px solid rgb(255 255 255 / 10%);background:#0c0d12}
+.research-modal-head h3{margin:0;color:#fff;font-size:16px;font-weight:650}
+.research-modal-close{padding:7px 14px;border:1px solid rgb(255 255 255 / 18%);border-radius:999px;background:none;color:#cfd7e6;font:inherit;font-size:12px;cursor:pointer;transition:border-color .2s,color .2s}
+.research-modal-close:hover{border-color:rgb(163 148 255 / 60%);color:#fff}
+.research-modal-body{max-height:calc(86vh - 62px);overflow:auto;padding:8px 24px 28px}
+.research-modal-body .research-notes{padding-top:0}
+@media(max-width:640px){
+  .research-modal{width:100vw;max-height:92vh;border-radius:14px}
+  .research-modal-body{max-height:calc(92vh - 58px);padding:4px 16px 22px}
+}
+@media print{.research-notes[hidden]{display:block!important}}
