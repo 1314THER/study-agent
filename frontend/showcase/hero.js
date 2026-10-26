@@ -24,10 +24,14 @@ function layout(){
  link.setAttribute('viewBox',`0 0 ${r.width} ${r.height}`);
  const reach=Math.max(1,endX-x),bend=Math.min(14,reach*.16);
  stroke.setAttribute('d',`M${x} ${y} C${x+reach*.34} ${y-bend} ${endX-reach*.28} ${endY+bend} ${endX} ${endY}`);
- // The red flourish must never cross the CTA: clip the lettering right of the
- // button's left edge so strokes visually stop at the collision boundary.
- const cut=Math.max(0,r.right-(b.left-8));
- artwork.style.clipPath=cut>0?`inset(0 ${cut}px 0 0)`:'';
+ // The red flourish must never run under the CTA: punch a hole exactly where
+ // the button sits, so strokes vanish at the collision boundary while the
+ // 数学 ink stays intact everywhere else.
+ const art=artwork.getBoundingClientRect();
+ const bx=b.left-art.left-6,by=b.top-art.top-6,bw=b.width+12,bh=b.height+12;
+ if(bx<art.width&&by<art.height&&bx+bw>0&&by+bh>0){
+  artwork.style.clipPath=`path(evenodd, "M0 0H${art.width.toFixed(1)}V${art.height.toFixed(1)}H0Z M${bx.toFixed(1)} ${by.toFixed(1)}H${(bx+bw).toFixed(1)}V${(by+bh).toFixed(1)}H${bx.toFixed(1)}Z")`;
+ }else artwork.style.clipPath='';
 }
 function restoreCopy(){for(const row of streaming){row.node.replaceChildren(...row.original);row.node.classList.remove('is-streaming','is-stream-current');}streaming=[];}
 function stop(){streamCancel?.();streamCancel=null;restoreCopy();for(const animation of animations)animation.cancel();animations=[];}

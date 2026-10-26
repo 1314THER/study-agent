@@ -103,7 +103,7 @@
   const positions=[...visible].map(state=>[state,layoutTop(state.bridge)]);
   const arrivalStart=innerHeight*1.08,arrivalEnd=Math.max(inset+70,innerHeight*.54);
   // Read layout before writing transforms. Perspective never changes the scroll geometry.
-  const measurements=new Map([...new Set([...waiting,...arriving.keys()])].map(topic=>{
+  const measurements=new Map([...new Set([...topics.slice(1),...arriving.keys()])].map(topic=>{
    const heading=topic.querySelector('.topic-heading')||topic,top=layoutTop(heading);
    return [topic,{top,bottom:top+heading.offsetHeight,sectionBottom:layoutTop(topic)+topic.offsetHeight}];
   }));
@@ -116,9 +116,27 @@
    // Keep the handoff legible even when the reader stops scrolling at its entrance.
    apply(state,Math.max((start-top)/(start-end),elapsed));
   }
+  // A topic scrolled fully out of the viewport (above or below) is re-armed,
+  // so its arrival plays again the next time the reader scrolls into it.
+  for(const topic of topics.slice(1)){
+   if(topic.dataset.arrivalState!=='complete')continue;
+   const m=measurements.get(topic);
+   if(m&&(m.sectionBottom<=inset-60||m.top>innerHeight+60)){
+    topic.dataset.arrivalState='settled';topic.dataset.arrivalProgress='1';topic.dataset.arrivalTarget='1';
+    topic.classList.add('is-arrival-pending');waiting.add(topic);
+   }
+  }
   for(const topic of [...waiting]){
    const heading=measurements.get(topic);
-   if(heading.sectionBottom<=inset||heading.bottom<inset)revealTopic(topic,false);
+   if(heading.sectionBottom<=inset||heading.bottom<inset){
+    // Settled topics above the viewport stay re-armed; nothing to do.
+    if(topic.dataset.arrivalState==='settled')continue;
+    revealTopic(topic,false);
+    if(topic.dataset.arrivalState==='complete'&&(heading.sectionBottom<=inset-60||heading.bottom<inset)){
+     topic.dataset.arrivalState='settled';topic.dataset.arrivalProgress='1';topic.dataset.arrivalTarget='1';
+     topic.classList.add('is-arrival-pending');waiting.add(topic);
+    }
+   }
    else if(heading.top<=arrivalStart){
     // An initially visible or directly restored chapter is readable without a delayed entrance.
     if(firstLayout&&heading.top>innerHeight*.92)continue;

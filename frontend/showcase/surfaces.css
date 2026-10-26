@@ -72,6 +72,10 @@
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
+  /* Stay glued to the panel while it tilts in perspective; otherwise the
+     masked glass edge lags behind the transformed content. */
+  transform: translateZ(0);
+  backface-visibility: hidden;
   pointer-events: none;
 }
 

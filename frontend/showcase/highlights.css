@@ -94,8 +94,9 @@
 #highlights .hx-radar-wrap{width:100%;max-width:640px;margin:-10px auto 0}
 #highlights .hx-radar{display:block;width:100%;height:auto;overflow:visible}
 #highlights .hx-radar-grid{stroke:#9bb9ed25;stroke-width:1}
-#highlights .hx-radar-axes{fill:none;stroke:#9bb9ed28;stroke-width:1;transition:stroke .3s}
-#highlights .hx-radar-axes path.is-selected{stroke:#b6cfff;stroke-width:1.8}
+#highlights .hx-radar-axes{fill:none;stroke:#9bb9ed28;stroke-width:1}
+/* The selected stem always stops at the data point, never past it. */
+#highlights [data-hx-axis-stem]{stroke:#d9e5ff;stroke-width:2;transition:opacity .3s,stroke .3s}
 #highlights .hx-radar-ghost{fill:#a9b4c107;stroke:#9faab888;stroke-width:1.5;stroke-dasharray:5 6;stroke-linejoin:round}
 #highlights .hx-radar-shape{fill:#79a3ff28;stroke:#a9c7ff;stroke-width:2;stroke-linejoin:round}
 #highlights .hx-radar-labels{fill:#bcc6d8;font-size:17px;font-family:inherit}
