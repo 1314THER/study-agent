@@ -8,11 +8,6 @@ const mathInk=artwork.querySelector('.math-ink'),outline=mathInk.cloneNode(false
 outline.setAttribute('class','math-outline');outline.setAttribute('pathLength','1');
 outline.style.fill='none';outline.setAttribute('aria-hidden','true');mathInk.before(outline);
 const link=stage.querySelector('.hero-ink-link'),stroke=document.getElementById('hero-ink-path');
-// A pure-black guard sits between the red strokes and the CTA: anything that
-// reaches the button box is covered, so red never paints over the button.
-const guard=document.createElement('i');
-guard.className='hero-cta-guard';
-stage.append(guard);
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
 let sequence=0,animations=[],resizeFrame=0,resolveEntry=null,entryPromise=null,leaving=false,glass=null,streamCancel=null;
 let streaming=[];
@@ -29,13 +24,8 @@ function layout(){
  link.setAttribute('viewBox',`0 0 ${r.width} ${r.height}`);
  const reach=Math.max(1,endX-x),bend=Math.min(14,reach*.16);
  stroke.setAttribute('d',`M${x} ${y} C${x+reach*.34} ${y-bend} ${endX-reach*.28} ${endY+bend} ${endX} ${endY}`);
- // The guard covers exactly the button box (plus its 1px border) so the cut
- // hides behind the button edge instead of leaving a visible gap.
- guard.style.left=(b.left-r.left-1)+'px';
- guard.style.top=(b.top-r.top-1)+'px';
- guard.style.width=(b.width+2)+'px';
- guard.style.height=(b.height+2)+'px';
 }
+function layoutSoon(){requestAnimationFrame(()=>requestAnimationFrame(layout));}
 function restoreCopy(){for(const row of streaming){row.node.replaceChildren(...row.original);row.node.classList.remove('is-streaming','is-stream-current');}streaming=[];}
 function stop(){streamCancel?.();streamCancel=null;restoreCopy();for(const animation of animations)animation.cancel();animations=[];}
 function finish(){
@@ -75,17 +65,17 @@ async function streamCopy(run){
 async function play(){
  const run=++sequence;stop();layout();cta.classList.remove('is-lit');
  if(reduced.matches||!pen.animate){finish();return;}
- stage.dataset.phase='typing';mathInk.style.fillOpacity='0';outline.style.opacity='0';pen.style.strokeDashoffset='1';stroke.style.strokeDashoffset='1';
+ stage.dataset.phase='typing';layoutSoon();mathInk.style.fillOpacity='0';outline.style.opacity='0';pen.style.strokeDashoffset='1';stroke.style.strokeDashoffset='1';
  try{
   await streamCopy(run);if(run!==sequence)return;
-  stage.dataset.phase='math-writing';outline.style.opacity='1';
+  stage.dataset.phase='math-writing';layoutSoon();outline.style.opacity='1';
   const whiteStroke=outline.animate([{strokeDashoffset:1},{strokeDashoffset:0}],{duration:820,easing:'cubic-bezier(.25,.5,.25,1)',fill:'forwards'});
   const whiteFill=mathInk.animate([{fillOpacity:0,offset:0},{fillOpacity:0,offset:.45},{fillOpacity:1,offset:1}],{duration:820,fill:'forwards'});
   animations.push(whiteStroke,whiteFill);await Promise.all([whiteStroke.finished,whiteFill.finished]);if(run!==sequence)return;
-  mathInk.style.fillOpacity='1';outline.style.opacity='0';whiteStroke.cancel();whiteFill.cancel();stage.dataset.phase='writing';
+  mathInk.style.fillOpacity='1';outline.style.opacity='0';whiteStroke.cancel();whiteFill.cancel();stage.dataset.phase='writing';layoutSoon();
   const lettering=pen.animate([{strokeDashoffset:1},{strokeDashoffset:0}],{duration:1500,easing:'cubic-bezier(.12,.75,.25,1)',fill:'forwards'});
   animations.push(lettering);await lettering.finished;if(run!==sequence)return;
-  pen.style.strokeDashoffset='0';lettering.cancel();stage.dataset.phase='connecting';
+  pen.style.strokeDashoffset='0';lettering.cancel();stage.dataset.phase='connecting';layoutSoon();
   const connection=stroke.animate([{strokeDashoffset:1},{strokeDashoffset:0}],{duration:600,easing:'cubic-bezier(.2,.65,.25,1)',fill:'forwards'});
   animations.push(connection);await connection.finished;if(run!==sequence)return;
   stroke.style.strokeDashoffset='0';connection.cancel();finish();
@@ -129,7 +119,7 @@ function open({skip=false,force=false}={}){
  if(skip&&!force){finish();return Promise.resolve();}
  entryPromise=new Promise(resolve=>{resolveEntry=resolve;});
  document.body.classList.add('is-launch-open');dialog.showModal();
- layout();
+ layout();layoutSoon();
  initGlass();
  void play();document.getElementById('launch-title')?.focus({preventScroll:true});
  return entryPromise;
@@ -144,7 +134,7 @@ document.fonts?.ready.then(()=>layout());
 // bootstrap); start its choreography right away instead of after data loads.
 if(dialog.open){
  document.body.classList.add('is-launch-open');
- layout();
+ layout();layoutSoon();
  initGlass();
  void play();
  document.getElementById('launch-title')?.focus({preventScroll:true});

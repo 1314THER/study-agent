@@ -11,7 +11,7 @@
 .hero-ink-link{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:2;opacity:0}
 .hero-art[data-phase=writing] .hero-ink-link,.hero-art[data-phase=connecting] .hero-ink-link,.hero-art[data-phase=ready] .hero-ink-link{opacity:1}
 .hero-ink-link path{fill:none;stroke:#ff555e;stroke-width:1.8;stroke-linecap:round;stroke-dasharray:1;stroke-dashoffset:1}
-.research-showcase .explore-start{position:absolute;z-index:6;left:0;top:0;display:flex;align-items:center;justify-content:space-between;gap:20px;min-width:212px;min-height:62px;padding:14px 22px;border:1px solid #383838;border-radius:19px;text-decoration:none;color:#b8b8b8;background:#ffffff03;isolation:isolate;transition:color .5s,border-color .5s,box-shadow .8s;outline-offset:6px}
+.research-showcase .explore-start{position:absolute;z-index:6;left:0;top:0;display:flex;align-items:center;justify-content:space-between;gap:20px;min-width:212px;min-height:62px;padding:14px 22px;border:1px solid #383838;border-radius:19px;text-decoration:none;color:#b8b8b8;background:#070707;isolation:isolate;transition:color .5s,border-color .5s,box-shadow .8s;outline-offset:6px}
 .research-showcase .explore-start strong{position:relative;z-index:2;font-size:16px;letter-spacing:.08em;font-weight:600}
 .research-showcase .explore-start .explore-icon{position:relative;z-index:2;font-size:24px;line-height:1;transition:transform .3s,color .5s}
 .explore-glass{position:absolute;inset:0;border-radius:inherit;z-index:0;background:linear-gradient(150deg,#ffffff0d,#ffffff02 45%,#ffffff08);box-shadow:inset 0 1px 1px #ffffff26,inset 0 -6px 15px #ffffff03;backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);pointer-events:none}
@@ -84,4 +84,3 @@ body.is-launch-open{overflow:hidden}
 .hero-art[data-phase=waiting] .math-ink,.hero-art[data-phase=waiting] .love-ink,.hero-art[data-phase=typing] .math-ink,.hero-art[data-phase=typing] .love-ink,.hero-art[data-phase=math-writing] .love-ink{opacity:0}
 @media(prefers-reduced-motion:reduce){.hero-love .math-ink{fill-opacity:1!important}.hero-love .math-outline{display:none}}
 /* Guard layer: the red strokes stop at the button box instead of painting over it. */
-.hero-cta-guard{position:absolute;z-index:3;display:block;background:#000;border-radius:20px;pointer-events:none}
