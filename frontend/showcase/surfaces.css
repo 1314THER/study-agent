@@ -341,3 +341,17 @@
 .research-showcase .solution-more{width:100%;margin:18px 0 0;padding:14px 18px;border:1px dashed rgb(255 255 255 / 22%);border-radius:12px;background:none;color:#cfd7e6;font:inherit;font-size:13px;cursor:pointer;transition:border-color .2s,color .2s}
 .research-showcase .solution-more:hover{border-color:rgb(163 148 255 / 60%);color:#fff}
 .research-modal-body .chunk h3{margin-top:6px}
+
+
+/* 现有研究: one narrow column of softly lit rows, brighter on hover. */
+.research-showcase .research-notes>h3{font-size:16px;line-height:1.4;letter-spacing:.02em}
+.research-showcase .research-list{max-width:560px}
+.research-showcase .research-notes-trigger{max-width:560px;border-color:rgb(163 148 255 / 22%);box-shadow:0 0 0 1px rgb(163 148 255 / 6%),0 0 20px rgb(163 148 255 / 7%);transition:border-color .25s,background .25s,box-shadow .25s}
+.research-showcase .research-notes-trigger:hover{border-color:rgb(163 148 255 / 62%);background:rgb(163 148 255 / 10%);box-shadow:0 0 0 1px rgb(163 148 255 / 38%),0 0 34px rgb(163 148 255 / 24%)}
+.research-showcase .research-notes-trigger:focus-visible{outline:2px solid rgb(163 148 255 / 70%);outline-offset:2px}
+.research-showcase .research-notes-trigger strong{font-size:14px}
+.research-showcase .research-notes-trigger span{font-size:12.5px}
+
+/* The beam always travels left to right; at the end it slides back quickly. */
+.research-showcase .flow-fill{transition:width var(--flow-speed,.55s) cubic-bezier(.22,1,.36,1)}
+.research-showcase .flow-strip.is-rewinding{--flow-speed:.26s}

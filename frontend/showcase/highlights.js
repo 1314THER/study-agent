@@ -99,22 +99,7 @@
  figures.forEach(figure=>{
   const state=states.get(figure);
   if(['system','method','time','ability','participation','evolution'].includes(figure.dataset.hxMotion)){
-   const caption=figure.querySelector('figcaption'),control=document.createElement('button');
-   control.type='button';control.className='hx-motion-toggle';control.dataset.hxMotionToggle='';
-   control.textContent='暂停动画';control.setAttribute('aria-pressed','false');
-   const title=caption?.querySelector('strong')?.textContent||'本图解';
-   control.setAttribute('aria-label','暂停动画：'+title);figure.dataset.hxPaused='false';
-   control.addEventListener('click',()=>{
-    state.paused=!state.paused;figure.dataset.hxPaused=String(state.paused);
-    if(!state.paused){
-     state.manual=false;
-     const intervals={method:3200,participation:3600,evolution:3000};
-     state.elapsed=figure.dataset.hxMotion==='ability'?(state.profile==='b'?6500:0):Math.max(0,state.lastStage)*(intervals[figure.dataset.hxMotion]||0);
-    }
-    control.textContent=state.paused?'继续动画':'暂停动画';control.setAttribute('aria-pressed',String(state.paused));
-    control.setAttribute('aria-label',control.textContent+'：'+title);updateMotion();
-   });
-   if(caption){caption.append(control);figure.classList.add('has-motion-control');}
+   figure.dataset.hxPaused='false';
   }
   figure.querySelectorAll('[data-hx-controls]').forEach(group=>{
    group.hidden=false;

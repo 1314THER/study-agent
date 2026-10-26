@@ -84,7 +84,7 @@ UNIT_LABELS = {
 }
 # Narrative units read better as one column; management units keep their key
 # technical points in view but fold the long-form details away.
-SINGLE_LANE = {'concepts', 'career', 'exam'}
+SINGLE_LANE = {'concepts', 'career', 'exam', 'diagnosis'}
 FOLDED_LANE = {'teacher', 'school', 'modes'}
 MERGED_UNITS = SINGLE_LANE | FOLDED_LANE
 RELATIONSHIPS = {    'concepts': ('同一道题中的教学对象', '稳定标识与前置关系', '统一定义与解法映射', '知识、步骤与套路判断'),
@@ -287,7 +287,7 @@ def references(chapter):
     rows = chapter.get('research', [])
     if not rows:
         return ''
-    out = ['<section class="research-notes" aria-label="相关研究与本项目的关系"><h3>研究对照</h3>']
+    out = ['<section class="research-notes" aria-label="现有研究与本项目的关系"><h3>现有研究</h3>']
     for row in rows:
         url = str(row.get('source_url') or row.get('url', ''))
         if not url.startswith('https://'):
@@ -369,7 +369,7 @@ def tech_points(chapter):
     if chapter.get('details'):
         groups.append(('重点细节', ''.join('<li>' + esc(detail['title']) + '</li>' for detail in chapter['details'])))
     if chapter.get('research'):
-        groups.append(('研究对照', ''.join('<li>' + esc(row['title']) + '</li>' for row in chapter['research'])))
+        groups.append(('现有研究', ''.join('<li>' + esc(row['title']) + '</li>' for row in chapter['research'])))
     out = ['<section class="unit-tech-points" aria-label="技术要点">']
     for label, items in groups:
         out.append('<h4>' + label + '</h4><ul>' + items + '</ul>')
@@ -421,10 +421,7 @@ def unit_markup(chapter, index):
         inner = []
         if source_id in FOLDED_LANE:
             inner.append(tech_points(chapter))
-            inner.append('<details class="unit-tech-fold"><summary>展开完整技术说明、细节与研究对照</summary>'
-                         + ''.join(technical + notes) + '</details>')
-        else:
-            inner.append(''.join(technical + notes))
+        inner.append(''.join(technical + notes))
         lane = ['<div class="unit-lane unit-tech" data-source-unit="' + source_id + '"><div class="cell-content">'
                 + ''.join(inner) + '</div></div>']
         out.append(''.join(lane))
@@ -540,7 +537,7 @@ def build(content):
 <p id="demo-status" class="page-status" role="alert" hidden></p>''' + sections + '''</main>
 <footer class="site-footer"><div><strong>StudyAgent</strong><p>让每次作答，成为下一步学习的依据。</p></div><div><a href="https://150.chat/" target="_blank" rel="noopener noreferrer">正式站（正在开发中）</a><a href="https://github.com/1314THER/study-agent" target="_blank" rel="noopener noreferrer">代码与研究文档</a><a href="#highlights">回到系统亮点</a></div><p class="site-registration"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">渝ICP备2026024246号-1</a></p><p class="site-author">项目负责人：施棋智<br>email：<a href="mailto:qzshi25@m.fudan.edu.cn">qzshi25@m.fudan.edu.cn</a></p></footer>
 <aside id="annotation-panel" class="annotation-panel" aria-label="补充批注" hidden><header><h2 id="annotation-title"></h2><button id="annotation-close" type="button" aria-label="关闭批注">×</button></header><div id="annotation-body"></div></aside>
-<noscript><style>.chapter-scene:not(:has(.native-workbench)):not(#scene-dataset){display:none}</style><p class="noscript-note">正文、逻辑图、数据集与研究对照可直接阅读。</p></noscript>
+<noscript><style>.chapter-scene:not(:has(.native-workbench)):not(#scene-dataset){display:none}</style><p class="noscript-note">正文、逻辑图、数据集与现有研究可直接阅读。</p></noscript>
 </body></html>'''
 
 

@@ -123,24 +123,32 @@ function tabs(rows,active,change,label='切换图解'){const n=el('div','scene-t
 function flow(root,labels,active=0){
  const n=el('div','flow-strip'),track=el('div','flow-track');
  track.append(el('i','flow-fill'));n.append(track);
- const buttons=labels.map((t,i)=>{const b=el('button',i===active?'active':'',t);b.type='button';b.setAttribute('aria-pressed',String(i===active));b.style.setProperty('--i',i);b.addEventListener('click',()=>sync(i));n.append(b);return b;});
- let scanTimer=0;
- // The track fills up to the current step and sweeps once, so the order of the
- // steps stays legible even though only text remains.
+ let current=active,timer=0,scanTimer=0;
+ const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const buttons=labels.map((t,i)=>{const b=el('button',i===active?'active':'',t);b.type='button';b.setAttribute('aria-pressed',String(i===active));b.style.setProperty('--i',i);b.addEventListener('click',()=>{stopLoop();sync(i);});n.append(b);return b;});
  function sync(index){
+  current=index;
   buttons.forEach((b,i)=>{b.classList.toggle('active',i===index);b.setAttribute('aria-pressed',String(i===index));});
   n.style.setProperty('--flow-progress',((index+.5)/labels.length*100).toFixed(2)+'%');
   clearTimeout(scanTimer);n.classList.remove('is-scanning');
   void n.offsetWidth;n.classList.add('is-scanning');
   scanTimer=setTimeout(()=>n.classList.remove('is-scanning'),720);
  }
+ function stopLoop(){if(timer){clearInterval(timer);timer=0;}}
+ function startLoop(){if(reduced||timer||labels.length<2)return;timer=setInterval(()=>{
+  const next=(current+1)%labels.length,wrap=next===0;
+  if(wrap)n.classList.add('is-rewinding');
+  sync(next);
+  if(wrap)setTimeout(()=>n.classList.remove('is-rewinding'),340);
+ },2400);}
  sync(active);root.append(n);
  n.style.setProperty('--flow-count',labels.length);
- // Steps read in from the left once, so the order is felt before it is read.
+ // Steps read in from the left once, then walk through the loop while in view.
  n.dataset.reveal='pending';
  const reveal=()=>{n.classList.add('is-revealed');n.dataset.reveal='done';};
- if(matchMedia('(prefers-reduced-motion: reduce)').matches||!('IntersectionObserver' in window))reveal();
- else{const io=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting)){reveal();io.disconnect();}},{threshold:.3});io.observe(n);}
+ const begin=()=>{reveal();startLoop();};
+ if(reduced||!('IntersectionObserver' in window))begin();
+ else{const io=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting))begin();else stopLoop();},{threshold:.3});io.observe(n);}
  return n;
 }
 function selectView(name){const id=aliases[name]||name;if(!$(id))return;recordOrigin(id);dispatchEvent(new CustomEvent('showcase:navigate',{detail:{from:state.view,to:id}}));state.view=id;if(singleModes[name]){state.mode=singleModes[name];renderSingle();}const url=new URL(location.href);url.hash=id;history.pushState(history.state,'',url);$(id)?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});}
@@ -180,7 +188,7 @@ function renderSolution(root){
  const pipeline=el('div','pipeline-map');for(const [i,key,title]of [[0,'solver','Solver · 完整解题'],[1,'verifier','Verifier · 校验与分步'],[2,'formatter','Formatter · 结构与难度']]){const record=run.stages?.[key]||{},body=el('div');body.append(p((record.model||'模型未记录')+' · '+(record.provider==='codex_cli'?'Codex CLI · ':'')+'推理 '+(record.reasoning_effort||'默认')),el('pre','raw-output',record.content||'无记录'));pipeline.append(details(title,body,'pipeline-stage'));if(i<2)pipeline.append(el('span','pipeline-arrow','→'));}root.append(pipeline);
  const chunks=answer.chunk_results||[];
  const drawChunk=c=>{const block=el('section','chunk');block.append(el('h3','','第 '+c.chunk_id+' 问'));for(const step of c.steps||[]){const card=el('article','step');card.append(el('span','step-number','步骤 '+step.step_number),el('h4','',step.title));const correction=mathErratum(step.standard_writing);if(correction)card.append(correction);card.append(p(step.standard_writing));if(step.detailed_writing)card.append(details('详细过程',p(step.detailed_writing)));if(step.step_difficulty?.dimensions&&window.renderDimBarsHtml){const d=el('div','dim-chart');d.innerHTML=renderDimBarsHtml(step.step_difficulty.dimensions);card.append(details('本步难度维度',d));}if(step.knowledge_point)card.append(p(step.knowledge_point,'step-kp'));block.append(card);}return block;};
- chunks.forEach((c,index)=>{if(index===0){root.append(drawChunk(c));return;}const more=el('button','solution-more','查看第 '+c.chunk_id+' 问完整解答');more.type='button';more.addEventListener('click',()=>{const box=el('div','solution-more-body');box.append(drawChunk(c));window.openShowcasePanel?.('第 '+c.chunk_id+' 问 · 完整解答',box);});root.append(more);});
+ chunks.forEach((c,index)=>{if(index===0){root.append(drawChunk(c));return;}const more=el('button','solution-more','查看第 '+c.chunk_id+' 问完整解答');more.type='button';more.addEventListener('click',()=>{const box=el('div','solution-more-body'),part=drawChunk(c);part.querySelector('h3')?.remove();box.append(part);window.openShowcasePanel?.('第 '+c.chunk_id+' 问 · 完整解答',box);});root.append(more);});
  root.append(apiCostSummary(run));
  const meta=el('div');meta.append(p('运行时间：'+run.run_at),el('pre','raw-output',JSON.stringify({teacher:state.teacher,recorded_at:run.run_at,execution_origin:run.execution_origin,source_commit:run.source_commit,models:Object.fromEntries(Object.entries(run.stages||{}).map(([key,value])=>[key,{model:value.model,resolved_model:value.resolved_model,provider:value.provider,reasoning_effort:value.reasoning_effort}])),fingerprint:run.fingerprint},null,2)));root.append(details('本次解析的运行信息',meta));
 }
@@ -377,7 +385,7 @@ api.ready=(async()=>{const results=await Promise.allSettled([json('data.json'),j
  const dialog=document.createElement('dialog');
  dialog.className='research-modal';dialog.id='research-modal';
  const head=document.createElement('div');head.className='research-modal-head';
- const title=document.createElement('h3');title.id='research-modal-title';title.textContent='研究对照';
+ const title=document.createElement('h3');title.id='research-modal-title';title.textContent='现有研究';
  const close=document.createElement('button');close.type='button';close.className='research-modal-close';
  close.textContent='关闭';close.setAttribute('aria-label','关闭');
  head.append(title,close);
