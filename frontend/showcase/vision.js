@@ -10,6 +10,7 @@
  const groups=[...chapter.querySelectorAll('[data-vision-group]')];
  const changes=[...chapter.querySelectorAll('.vision-change')];
  const outline=chapter.querySelector('.vision-outline');
+ const media=matchMedia('(prefers-reduced-motion: reduce)');
  const storageKey='studyagent.showcase.vision.v1',disclosures=new Map();
  let raf=0,saved=null;
  try{
@@ -43,6 +44,17 @@
   document.body.classList.toggle('has-vision-float',show);
  }
  function schedule(){if(!raf)raf=requestAnimationFrame(refresh);}
+ // Collapsing removes everything below the control, so a reader deep inside the
+ // list would be stranded. Bring the group's own control back under the sticky
+ // bars, which is the point the list started from.
+ function anchorAfterCollapse(row){
+  if(!row)return;
+  const bar=(chapter.querySelector('.vision-outline')?.getBoundingClientRect().bottom||0)+16;
+  const rect=row.button.getBoundingClientRect();
+  if(rect.top>=bar&&rect.top<=innerHeight*.55)return;
+  const top=Math.max(0,scrollY+rect.top-bar);
+  scrollTo({top,behavior:media.matches?'instant':'smooth'});
+ }
  function setExpanded(id,expanded,{save=true,notify=true}={}){
   const row=disclosures.get(id);if(!row)return false;
   const changed=row.more.hidden===expanded;
@@ -57,6 +69,7 @@
   row.button.setAttribute('aria-label',(expanded?'收起':'展开')+row.title+'的其余 '+row.remaining+' 项');
   row.button.querySelector('span').textContent=(expanded?'收起其余 ':'展开其余 ')+row.remaining+' 项';
   row.group.dataset.visionExpanded=String(expanded);
+  if(!expanded&&notify)anchorAfterCollapse(row);
   if(save)persist();
   if(notify&&changed){
    dispatchEvent(new CustomEvent('showcase:layout-changed',{detail:{source:'vision',group:id,expanded}}));
