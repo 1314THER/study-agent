@@ -1,0 +1,119 @@
+{
+  "schema_version": 1,
+  "case": {
+    "title": "2023 新课标全国Ⅰ卷 · 第 17 题 · 解三角形",
+    "question": "已知在 $\\triangle ABC$ 中，$A+B=3C$，$2\\sin(A-C)=\\sin B$。\n(1) 求 $\\sin A$；\n(2) 设 $AB=5$，求 $AB$ 边上的高。",
+    "student_answer": "由 A+B=3C 和 A+B+C=π，得 C=π/3。于是 B=2π/3-A。代入 2sin(A-C)=sinB，展开得 sinA-√3cosA=(sinA+√3cosA)/2，所以 tanA=3√3，sinA=3√21/14。",
+    "expected_answer": "$\\sin A=\\frac{3\\sqrt{10}}{10}$",
+    "source_kind": "构造的测试作答",
+    "execution_origin": "local_production_code",
+    "diagnosis": {
+      "is_correct": false,
+      "result_matched": false,
+      "steps": [
+        {
+          "step_number": 1,
+          "title": "三角恒等变换",
+          "status": "partial",
+          "comment": "内角和与代入展开的思路对，但由 $A+B=3C$ 且 $A+B+C=\\pi$ 应得 $4C=\\pi$，即 $C=\\frac{\\pi}{4}$，你写成了 $C=\\frac{\\pi}{3}$，后面 $\\tan A$ 也跟着算错。",
+          "error_detail": "由 $4C=\\pi$ 应得 $C=\\frac{\\pi}{4}$，不是 $\\frac{\\pi}{3}$；因此后续展开得到的 $\\tan A=3\\sqrt{3}$ 也与正确结果 $\\tan A=3$ 不符。",
+          "answer_evidence": "得 $C=\\frac{\\pi}{3}$；所以 $\\tan A=3\\sqrt{3}$",
+          "cause_confidence": "high"
+        },
+        {
+          "step_number": 2,
+          "title": "求具体角或边",
+          "status": "partial",
+          "comment": "你确实用平方关系由 $\\tan A$ 求 $\\sin A$，但代入的是错误的 $\\tan A=3\\sqrt{3}$，所以得到 $\\sin A=\\frac{3\\sqrt{21}}{14}$，不是标准结果。",
+          "error_detail": "这一步的平方关系用法本身没有明显问题，但依赖了上一步错误的 $\\tan A$，导致最终 $\\sin A$ 数值错误。",
+          "answer_evidence": "$\\tan A=3\\sqrt{3}$，$\\sin A=\\frac{3\\sqrt{21}}{14}$",
+          "cause_confidence": "unknown"
+        }
+      ]
+    },
+    "comparisons": [
+      {
+        "label": "常见使用方式",
+        "status": "recorded",
+        "content": "**批改结论：最终答案不正确。最早错误出现在求角 \\(C\\) 的第一步。**\n\n### 1. 最早错误位置\n\n学生写：\n\n> 由 \\(A+B=3C\\) 和 \\(A+B+C=\\pi\\)，得 \\(C=\\pi/3\\)。\n\n这里应改为：\n\n\\[\nA+B=3C,\\quad A+B+C=\\pi\n\\]\n\n两式相减得\n\n\\[\n(A+B+C)-(A+B)=C=\\pi-3C,\n\\]\n\n即\n\n\\[\n4C=\\pi,\\qquad C=\\frac{\\pi}{4}.\n\\]\n\n所以 **\\(C=\\pi/3\\) 是最早可确认的错误**。而且若 \\(C=\\pi/3\\)，则由内角和得 \\(A+B=2\\pi/3\\)，但原条件又要求 \\(A+B=3C=\\pi\\)，两者矛盾，因此 \\(C=\\pi/3\\) 不可能成立。\n\n### 2. 后续受影响的步骤\n\n由于 \\(C\\) 算错，学生后续写\n\n\\[\nB=\\frac{2\\pi}{3}-A\n\\]\n\n也受到影响。正确应为\n\n\\[\nB=\\pi-A-C=\\pi-A-\\frac{\\pi}{4}=\\frac{3\\pi}{4}-A.\n\\]\n\n因此代入 \\(2\\sin(A-C)=\\sin B\\) 后得到的展开式\n\n\\[\n\\sin A-\\sqrt3\\cos A=\\frac{\\sin A+\\sqrt3\\cos A}{2}\n\\]\n\n以及后面的\n\n\\[\n\\tan A=3\\sqrt3,\\qquad \\sin A=\\frac{3\\sqrt{21}}{14}\n\\]\n\n都是建立在错误角 \\(C=\\pi/3\\) 之上的，不能作为本题答案。\n\n### 3. 可确认与不能确认的部分\n\n**可确认：**\n\n- \\(C=\\pi/3\\) 计算错误，正确为 \\(C=\\pi/4\\)；\n- 由错误 \\(C\\) 推出的 \\(B=2\\pi/3-A\\) 不符合原条件；\n- 最终答案 \\(\\sin A=\\frac{3\\sqrt{21}}{14}\\) 错误。\n\n**不能确认：**\n\n- 学生后面在“\\(C=\\pi/3\\)”这一错误前提下，三角展开和由 \\(\\tan A=3\\sqrt3\\) 求 \\(\\sin A\\) 的代数过程本身基本正确，说明其可能具备一定的三角恒等变形能力；\n- 但学生没有展示正确角 \\(C=\\pi/4\\) 下的展开过程，因此不能确认其在正确条件下能否独立完成；\n- 不能因为这一次关键错误就推断学生必然不会三角恒等变换或解三角方程。\n\n### 4. 正确解法要点\n\n由\n\n\\[\nC=\\frac{\\pi}{4},\\qquad B=\\frac{3\\pi}{4}-A\n\\]\n\n代入：\n\n\\[\n2\\sin\\left(A-\\frac{\\pi}{4}\\right)\n=\\sin\\left(\\frac{3\\pi}{4}-A\\right).\n\\]\n\n展开化简：\n\n\\[\n\\sqrt2(\\sin A-\\cos A)\n=\\frac{\\sqrt2}{2}(\\sin A+\\cos A),\n\\]\n\n即\n\n\\[\n\\sin A-\\cos A=\\frac{\\sin A+\\cos A}{2}.\n\\]\n\n整理得\n\n\\[\n\\sin A=3\\cos A,\n\\]\n\n所以\n\n\\[\n\\tan A=3.\n\\]\n\n由 \\(A\\in(0,\\frac{3\\pi}{4})\\) 且 \\(\\tan A>0\\)，取锐角，得\n\n\\[\n\\sin A=\\frac{3}{\\sqrt{10}}=\\frac{3\\sqrt{10}}{10}.\n\\]\n\n### 5. 下一步学习建议\n\n1. **先用两个条件联立求角**：遇到 \\(A+B=3C\\) 与 \\(A+B+C=\\pi\\)，应先把 \\(A+B\\) 整体消去，得到 \\(4C=\\pi\\)，不要凭感觉写 \\(C=\\pi/3\\)。\n2. **每得到一个角，立即回代检验**：例如 \\(C=\\pi/3\\) 会导致 \\(A+B=2\\pi/3\\)，但原条件要求 \\(A+B=\\pi\\)，马上能发现矛盾。\n3. **解三角方程后限定角的范围**：得到 \\(\\tan A=3\\) 后，要结合三角形内角范围确定 \\(A\\) 的取值，再求 \\(\\sin A\\)。\n4. **保留展开过程**：把 \\(2\\sin(A-\\pi/4)=\\sin(3\\pi/4-A)\\) 的展开写清楚，便于检查和避免跳步。"
+      },
+      {
+        "label": "同信息条件",
+        "status": "recorded",
+        "content": "**批改结果**\n\n**1. 最早错误位置与原文依据**\n\n最早错误在求 $C$ 的联立步骤。学生原文写：\n\n> “由 $A+B=3C$ 和 $A+B+C=\\pi$，得 $C=\\frac{\\pi}{3}$。”\n\n这一步不正确。正确应为：\n由 $A+B=3C$，代入 $A+B+C=\\pi$，得\n$$3C+C=\\pi,$$\n所以\n$$4C=\\pi,\\quad C=\\frac{\\pi}{4}.$$\n也可以检验：若 $C=\\frac{\\pi}{3}$，则 $A+B=3C=\\pi$，又 $A+B+C=\\pi$，会推出 $C=0$，与 $C=\\frac{\\pi}{3}$ 矛盾。因此可确认此处是首个错误。\n\n**2. 后续受影响的步骤**\n\n由于 $C$ 求错，后续均受影响：\n\n- 学生写 $B=\\frac{2\\pi}{3}-A$，正确应为 $B=\\frac{3\\pi}{4}-A$；\n- 学生展开得到\n$$\\sin A-\\sqrt{3}\\cos A=\\frac{\\sin A+\\sqrt{3}\\cos A}{2},$$\n这是在错误前提 $C=\\frac{\\pi}{3}$ 下自洽的展开；正确应围绕 $C=\\frac{\\pi}{4}$ 展开；\n- 学生得 $\\tan A=3\\sqrt{3}$，正确应为 $\\tan A=3$；\n- 学生最终得 $\\sin A=\\frac{3\\sqrt{21}}{14}$，正确应为 $\\sin A=\\frac{3\\sqrt{10}}{10}$。\n\n需要说明：学生在 $C=\\frac{\\pi}{3}$ 这个错误前提下，后面的展开和由 $\\tan A$ 求 $\\sin A$ 的计算是内部自洽的，没有看到另起的新错误；主要是首个 $C$ 值错误传播导致最终答案错误。\n\n**3. 可确认与不能确认的原因**\n\n可确认：由 $A+B=3C$ 与 $A+B+C=\\pi$ 联立，$C$ 应为 $\\frac{\\pi}{4}$，学生写成 $\\frac{\\pi}{3}$ 与条件矛盾；最终答案因此错误。\n\n不能确认：仅凭这一处错误，不能断定学生不会和差角公式、同角三角函数关系或整体代换。后续展开在错误角度下是自洽的，说明不能简单归因于“不会公式”。也不能确认这是审题失误、口算失误，还是把 $3C+C$ 算错；学生没有写出中间代入过程，证据不足，需保留判断。\n\n**4. 下一步学习建议**\n\n1. 先专项练“整体代换”：把 $A+B=3C$ 中的 $A+B$ 整体代入 $A+B+C=\\pi$，写出 $3C+C=\\pi$，得 $C=\\frac{\\pi}{4}$。每次求角后都用内角和或原条件验算。\n2. 按正确 $C=\\frac{\\pi}{4}$ 重做本题：$B=\\frac{3\\pi}{4}-A$，展开\n$$2\\sin\\left(A-\\frac{\\pi}{4}\\right)=\\sqrt{2}(\\sin A-\\cos A),$$\n$$\\sin\\left(\\frac{3\\pi}{4}-A\\right)=\\frac{\\sqrt{2}}{2}(\\sin A+\\cos A),$$\n化简得 $\\sin A=3\\cos A$，即 $\\tan A=3$。再由 $A\\in\\left(0,\\frac{3\\pi}{4}\\right)$ 且 $\\tan A>0$，得 $A$ 为锐角，所以\n$$\\sin A=\\frac{3}{\\sqrt{10}}=\\frac{3\\sqrt{10}}{10}.$$\n3. 重点复习 $\\sin\\left(\\frac{3\\pi}{4}-A\\right)$ 的展开，注意 $\\cos\\frac{3\\pi}{4}=-\\frac{\\sqrt{2}}{2}$ 的符号。\n4. 做 2—3 道“内角和 + 角关系”同类题，专门练先求角、再代入、再写范围。你的“把 $B$ 用 $A$ 表示后代入”的路线是合理的，不需要改成别的解法；问题只在 $C$ 的值。\n5. 如果提示后能改对，建议隔天再独立重做一道同类题，检验是否真正掌握；提示后答对不等于长期独立掌握。"
+      }
+    ],
+    "teaching": {
+      "frames": [
+        {
+          "index": 1,
+          "input": null,
+          "output": "请由 $A+B=3C$ 和 $A+B+C=\\pi$ 求出角 $C$，并将 $B$ 用 $A$ 表示后代入 $2\\sin(A-C)=\\sin B$，利用两角和与差的正弦、余弦公式展开并化简，最终求出 $\\tan A$ 的值。",
+          "action": "guide",
+          "current_step": 1,
+          "total_steps": 2
+        },
+        {
+          "index": 2,
+          "input": "C=π/3",
+          "output": "这里 $C$ 求错了。由 $A+B=3C$ 与 $A+B+C=\\pi$ 联立，应得 $3C+C=\\pi$，即 $4C=\\pi$，所以 $C=\\frac{\\pi}{4}$，而不是 $C=\\frac{\\pi}{3}$。另外本步还要求继续往下做：把 $B=\\pi-(A+C)=\\frac{3\\pi}{4}-A$ 代入 $2\\sin(A-C)=\\sin B$，即 $2\\sin\\left(A-\\frac{\\pi}{4}\\right)=\\sin\\left(\\frac{3\\pi}{4}-A\\right)$，用两角和差公式展开化简，最终求出 $\\tan A=3$。请把这两步的具体式子补完整。",
+          "action": "guide",
+          "current_step": 1,
+          "total_steps": 2
+        },
+        {
+          "index": 3,
+          "input": "请给我提示",
+          "output": "给你一点提示：$C=\\frac{\\pi}{4},\\ \\tan\n\n再想想看？",
+          "action": "guide",
+          "current_step": 1,
+          "total_steps": 2
+        },
+        {
+          "index": 4,
+          "input": "A+B+C=π，且A+B=3C，所以4C=π，C=π/4。",
+          "output": "你求 $C$ 这一步是正确的：由 $A+B+C=\\pi$ 与 $A+B=3C$ 得 $4C=\\pi$，即 $C=\\frac{\\pi}{4}$。但本步骤还要求你继续往下算：由 $A+B=3C=\\frac{3\\pi}{4}$ 得 $B=\\frac{3\\pi}{4}-A$，把它代入 $2\\sin(A-C)=\\sin B$，得 $2\\sin\\left(A-\\frac{\\pi}{4}\\right)=\\sin\\left(\\frac{3\\pi}{4}-A\\right)$，再用两角和差公式展开、化简，最终应得到 $\\tan A=3$。请把这一步补充完整。",
+          "action": "guide",
+          "current_step": 1,
+          "total_steps": 2
+        },
+        {
+          "index": 5,
+          "input": "A+B+C=π，A+B=3C，所以C=π/4，B=3π/4-A。将其代入2sin(A-C)=sinB，展开后约去√2/2，得2(sinA-cosA)=sinA+cosA，即sinA=3cosA。A为三角形内角，sinA>0，故cosA>0，可以相除得到tanA=3。",
+          "output": "完全正确！由 $A+B+C=\\pi$ 与 $A+B=3C$ 得 $4C=\\pi$，即 $C=\\frac{\\pi}{4}$；于是 $B=3C-A=\\frac{3\\pi}{4}-A$。代入 $2\\sin(A-C)=\\sin B$ 得 $$2\\sin\\left(A-\\frac{\\pi}{4}\\right)=\\sin\\left(\\frac{3\\pi}{4}-A\\right),$$ 展开为 $$2\\cdot\\frac{\\sqrt{2}}{2}(\\sin A-\\cos A)=\\frac{\\sqrt{2}}{2}(\\sin A+\\cos A),$$ 约去 $\\frac{\\sqrt{2}}{2}$ 后得 $2(\\sin A-\\cos A)=\\sin A+\\cos A$，即 $\\sin A=3\\cos A$。由 $\\sin A>0$ 知 $\\cos A>0$，可同除得 $\\tan A=3$。思路清晰、展开与约分准确，符号处理也没问题。继续保持这种“先定角、再代换、再展开”的规范书写。",
+          "action": "advance",
+          "current_step": 2,
+          "total_steps": 2
+        }
+      ],
+      "hint_incomplete": true,
+      "stop_step": [
+        2,
+        2
+      ]
+    },
+    "generation": {
+      "question": "在 $\\triangle ABC$ 中，已知 $A+B=2C$，且 $2\\sin(A-C)=\\sin(A+C)$。\n(1) 求 $\\sin A$。",
+      "accepted": true,
+      "reference_question": "已知在 $\\triangle ABC$ 中，$A+B=3C$，$2\\sin(A-C)=\\sin B$。\n(1) 求 $\\sin A$；",
+      "steps": [
+        {
+          "title": "求具体角或边",
+          "writing": "由三角形内角和得\n$$A+B+C=\\pi.$$\n又 $A+B=2C$，代入得\n$$2C+C=\\pi,$$\n即\n$$3C=\\pi,\\quad C=\\frac{\\pi}{3}.$$\n由 $A+B+C=\\pi$ 且 $C=\\frac{\\pi}{3}$，得\n$$A+B=\\frac{2\\pi}{3}.$$\n因 $B\\gt 0$，故\n$$0\\lt A\\lt \\frac{2\\pi}{3}.$$"
+        },
+        {
+          "title": "三角恒等变换",
+          "writing": "已知 $2\\sin(A-C)=\\sin(A+C)$，代入 $C=\\frac{\\pi}{3}$，得\n$$2\\sin\\left(A-\\frac{\\pi}{3}\\right)=\\sin\\left(A+\\frac{\\pi}{3}\\right).$$\n由两角和差公式\n$$\\sin\\left(A-\\frac{\\pi}{3}\\right)=\\sin A\\cos\\frac{\\pi}{3}-\\cos A\\sin\\frac{\\pi}{3}\n=\\frac12\\sin A-\\frac{\\sqrt3}{2}\\cos A,$$\n$$\\sin\\left(A+\\frac{\\pi}{3}\\right)=\\sin A\\cos\\frac{\\pi}{3}+\\cos A\\sin\\frac{\\pi}{3}\n=\\frac12\\sin A+\\frac{\\sqrt3}{2}\\cos A.$$\n代回得\n$$2\\left(\\frac12\\sin A-\\frac{\\sqrt3}{2}\\cos A\\right)\n=\\frac12\\sin A+\\frac{\\sqrt3}{2}\\cos A.$$\n化简为\n$$\\sin A-\\sqrt3\\cos A=\\frac12\\sin A+\\frac{\\sqrt3}{2}\\cos A,$$\n即\n$$\\frac12\\sin A=\\frac{3\\sqrt3}{2}\\cos A,$$\n所以\n$$\\sin A=3\\sqrt3\\cos A.$$\n设 $\\cos A=t$，则 $\\sin A=3\\sqrt3 t$。由\n$$\\sin^2A+\\cos^2A=1$$\n得\n$$(3\\sqrt3t)^2+t^2=1,$$\n即\n$$28t^2=1,\\quad t^2=\\frac1{28}.$$\n由 $0\\lt A\\lt \\frac{2\\pi}{3}$ 且 $\\sin A=3\\sqrt3\\cos A\\gt 0$，知 $\\cos A\\gt 0$，故\n$$t=\\cos A=\\frac1{2\\sqrt7}.$$\n于是\n$$\\sin A=3\\sqrt3\\cdot\\frac1{2\\sqrt7}\n=\\frac{3\\sqrt3}{2\\sqrt7}\n=\\frac{3\\sqrt{21}}{14}.$$"
+        }
+      ],
+      "candidate_count": 1,
+      "source_did_not_use_student_errors": true
+    }
+  },
+  "provenance": {
+    "recorded": "2026-10-25T05:43:46.973429+08:00",
+    "source_commit": "952641d01b66b4a72582ffefd03063d5e8cc7582",
+    "input_is_constructed": true,
+    "does_not_establish_learning_gain": true
+  }
+}
