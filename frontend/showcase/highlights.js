@@ -76,6 +76,7 @@
   figure.querySelectorAll('[data-hx-evidence]').forEach(row=>row.classList.toggle('is-selected',Number(row.dataset.hxEvidence)===index));
   figure.querySelectorAll('[data-hx-axis]').forEach(axis=>axis.classList.toggle('is-selected',Number(axis.dataset.hxAxis)===index));
   figure.querySelectorAll('[data-hx-radar-dots] .hx-radar-dot').forEach(dot=>dot.classList.toggle('is-selected',Number(dot.dataset.hxDotDimension)===index));
+  figure.querySelectorAll('[data-hx-dim-label]').forEach(label=>label.classList.toggle('is-active',Number(label.dataset.hxDimLabel)===index));
  }
  function keyboardGroup(group,selector,activate){
   group.addEventListener('keydown',event=>{

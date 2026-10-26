@@ -98,6 +98,8 @@
 #highlights .hx-radar-ghost{fill:#a9b4c107;stroke:#9faab888;stroke-width:1.5;stroke-dasharray:5 6;stroke-linejoin:round}
 #highlights .hx-radar-shape{fill:#79a3ff28;stroke:#a9c7ff;stroke-width:2;stroke-linejoin:round}
 #highlights .hx-radar-labels{fill:#bcc6d8;font-size:17px;font-family:inherit}
+#highlights .hx-radar-labels text{transition:fill .22s ease,font-weight .22s ease}
+#highlights .hx-radar-labels text.is-active{fill:#fff;font-weight:650}
 #highlights .hx-radar-vertices{color:#7593c3}
 #highlights .hx-radar-dot{fill:#8ab8ff;stroke:#0b0e14;stroke-width:1.5;cursor:pointer;transform-box:fill-box;transform-origin:center;transition:transform .2s ease,fill .2s ease}
 #highlights .hx-radar-dot:hover{transform:scale(1.45)}
