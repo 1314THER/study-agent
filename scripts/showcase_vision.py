@@ -117,8 +117,7 @@ def vision_section(content):
     groups = content['groups']
     skip = '<a class="vision-skip" data-vision-skip href="#highlights">跳过愿景，查看项目亮点 <span aria-hidden="true">↗</span></a>'
     out = ['<section class="topic-section vision-topic" id="vision" data-chapter="vision" aria-labelledby="heading-vision">',
-           '<header class="topic-heading vision-heading"><div class="vision-heading-top">'
-           '<span class="vision-status">教学愿景</span>' + skip + '</div>'
+           '<header class="topic-heading vision-heading">' + skip +
            '<h1 id="heading-vision" tabindex="-1"><span class="vision-chapter-name">教学愿景</span>'
            + esc(content['headline']) + '</h1><p class="vision-lead">' + esc(content['subtitle'])
            + '</p><p class="vision-outlook">以下对照描述系统融入日常教学后希望带来的变化。各项支撑功能的现状见对应章节。</p></header>',
@@ -136,7 +135,7 @@ def vision_section(content):
     for group in groups:
         out.append('<a href="#vision-' + group['id'] + '" data-vision-nav="' + group['id'] + '">'
                    + esc(group['title']) + '</a>')
-    out.extend(['</div>' + skip + '</nav><div class="vision-comparisons">'])
+    out.extend(['</div></nav><div class="vision-comparisons">'])
     connections = {
         'students': ('学生的困难，成为教师下一次教学的依据。', '个人作答与复测汇成班级问题分布，教师据此决定个别辅导、小组讲解或全班重讲。'),
         'teachers': ('教学调整的结果，成为学校教研的材料。', '将采用了什么教学行动、学生随后有何变化放在一起，学校才能找到值得推广的做法和需要补充的资源。'),

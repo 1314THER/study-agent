@@ -2,6 +2,11 @@
 (function(){
  'use strict';
  const chapter=document.getElementById('vision');if(!chapter)return;
+ // The top-left skip pill belongs to this chapter only.
+ if('IntersectionObserver'in window){
+  const activeObserver=new IntersectionObserver(entries=>{for(const entry of entries)document.body.classList.toggle('is-vision-active',entry.isIntersecting);},{rootMargin:'-8% 0px -12% 0px'});
+  activeObserver.observe(chapter);
+ }
  const groups=[...chapter.querySelectorAll('[data-vision-group]')];
  const changes=[...chapter.querySelectorAll('.vision-change')];
  const outline=chapter.querySelector('.vision-outline');

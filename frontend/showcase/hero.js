@@ -114,18 +114,31 @@ function enter(event){
  const exit=dialog.animate([{transform:'translate3d(0,0,0)'},{transform:'translate3d(0,-100%,0)'}],{duration:560,easing:'cubic-bezier(.22,.7,.22,1)',fill:'forwards'});
  exit.finished.then(()=>{close();exit.cancel();},close);
 }
+function initGlass(){
+ if(!glass&&window.liquidGlass)glass=window.liquidGlass(cta.querySelector('.explore-glass'),{scale:-55,chroma:2,border:.12,mapBlur:10,blur:2,saturate:1.2,fallbackBlur:14});
+ glass?.refresh();
+}
 function open({skip=false,force=false}={}){
  if(dialog.open)return entryPromise||Promise.resolve();
  if(skip&&!force){finish();return Promise.resolve();}
  entryPromise=new Promise(resolve=>{resolveEntry=resolve;});
  document.body.classList.add('is-launch-open');dialog.showModal();
  layout();
- if(!glass&&window.liquidGlass)glass=window.liquidGlass(cta.querySelector('.explore-glass'),{scale:-55,chroma:2,border:.12,mapBlur:10,blur:2,saturate:1.2,fallbackBlur:14});
- glass?.refresh();void play();document.getElementById('launch-title')?.focus({preventScroll:true});
+ initGlass();
+ void play();document.getElementById('launch-title')?.focus({preventScroll:true});
  return entryPromise;
 }
 cta.addEventListener('click',enter);
 dialog.addEventListener('cancel',enter);
 dialog.addEventListener('close',completeEntry);
 window.ShowcaseHero={open,enter,replay:play,layout};
+// The welcome screen opens while the document is still parsing (inline
+// bootstrap); start its choreography right away instead of after data loads.
+if(dialog.open){
+ document.body.classList.add('is-launch-open');
+ layout();
+ initGlass();
+ void play();
+ document.getElementById('launch-title')?.focus({preventScroll:true});
+}
 })();

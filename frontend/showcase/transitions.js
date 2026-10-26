@@ -103,9 +103,10 @@
   const positions=[...visible].map(state=>[state,layoutTop(state.bridge)]);
   const arrivalStart=innerHeight*1.08,arrivalEnd=Math.max(inset+70,innerHeight*.54);
   // Read layout before writing transforms. Perspective never changes the scroll geometry.
-  const measurements=new Map([...new Set([...topics.slice(1),...arriving.keys()])].map(topic=>{
-   const heading=topic.querySelector('.topic-heading')||topic,top=layoutTop(heading);
-   return [topic,{top,bottom:top+heading.offsetHeight,sectionBottom:layoutTop(topic)+topic.offsetHeight}];
+  // One batched pass of viewport rects keeps fast scrolling free of forced layout.
+  const measurements=new Map(topics.slice(1).map(topic=>{
+   const section=topic.getBoundingClientRect(),heading=(topic.querySelector('.topic-heading')||topic).getBoundingClientRect();
+   return [topic,{top:heading.top,bottom:heading.bottom,sectionBottom:section.bottom}];
   }));
   let playing=false;
   for(const [state,top]of positions){
@@ -148,10 +149,11 @@
    const heading=measurements.get(topic);
    if(jumped||heading.sectionBottom<=inset||heading.bottom<inset){finishTopic(topic);continue;}
    arrival.target=clamp((arrivalStart-heading.top)/(arrivalStart-arrivalEnd));
-   // A 210 ms time constant feels weighted at every display refresh rate. Pausing the
-   // scroll converges only to its current target; it never runs the rest of the entrance.
+   // A 210 ms time constant feels weighted at rest; fast scrolling shortens it so
+   // the panel tracks the reader instead of lagging behind and stuttering.
    const elapsed=Math.max(0,now-arrival.lastAt);arrival.lastAt=now;
-   arrival.progress+=(arrival.target-arrival.progress)*(1-Math.exp(-elapsed/210));
+   const speed=Math.abs(scrollDelta),tau=speed>160?55:speed>60?110:210;
+   arrival.progress+=(arrival.target-arrival.progress)*(1-Math.exp(-elapsed/tau));
    if(Math.abs(arrival.target-arrival.progress)<.001)arrival.progress=arrival.target;
    if(arrival.target===1&&arrival.progress>=.999){finishTopic(topic);continue;}
    paintArrival(arrival);playing=playing||Math.abs(arrival.target-arrival.progress)>=.001;
