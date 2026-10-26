@@ -25,6 +25,8 @@ ASSETS = {
     "/math-render.js": MATH / "math-render.js",
     "/topics.js": MATH / "topics.js",
     "/math-mark.svg": MATH / "math-mark.svg",
+    "/assets/fudan-favicon.png": MATH / "assets" / "fudan-favicon.png",
+    "/assets/fudan-favicon-180.png": MATH / "assets" / "fudan-favicon-180.png",
     "/math-case.json": MATH / "math-case.json",
     "/math-topics.json": MATH / "math-topics.json",
     "/vendor/katex/katex.min.css": FRONTEND / "vendor/katex/katex.min.css",
@@ -50,7 +52,7 @@ def safe_target(path: str) -> Path | None:
         if target.is_symlink() or not resolved.is_file():
             return None
         # Resolved targets remain inside the explicit static roots.
-        if path in PAGES or path in {"/math.css", "/math.js", "/math-render.js", "/topics.js", "/math-mark.svg", "/math-case.json", "/math-topics.json"}:
+        if path in PAGES or path in {"/math.css", "/math.js", "/math-render.js", "/topics.js", "/math-mark.svg", "/math-case.json", "/math-topics.json", "/assets/fudan-favicon.png", "/assets/fudan-favicon-180.png"}:
             resolved.relative_to(MATH.resolve(strict=True))
         elif path.startswith("/vendor/katex/"):
             resolved.relative_to((FRONTEND / "vendor/katex").resolve(strict=True))

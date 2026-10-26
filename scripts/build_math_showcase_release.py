@@ -29,6 +29,8 @@ FILES = [
     'frontend/math-showcase/math-mark.svg',
     'frontend/math-showcase/math-case.json',
     'frontend/math-showcase/math-topics.json',
+    'frontend/math-showcase/assets/fudan-favicon.png',
+    'frontend/math-showcase/assets/fudan-favicon-180.png',
     'frontend/vendor/katex/LICENSE',
     'frontend/vendor/katex/katex.min.css',
     'frontend/vendor/katex/katex.min.js',
