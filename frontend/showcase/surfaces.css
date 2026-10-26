@@ -247,3 +247,14 @@
 .research-showcase .unit-tech-fold{margin:18px 0 0;border:1px solid rgb(255 255 255 / 10%);border-radius:6px;padding:10px 16px;background:rgb(255 255 255 / 2%)}
 .research-showcase .unit-tech-fold>summary{cursor:pointer;color:#9db9ff;font-size:13px;line-height:1.8}
 .research-showcase .unit-tech-fold[open]>summary{margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgb(255 255 255 / 8%)}
+
+/* Chrome cleanup: keep the glass panel and the dividers, drop decorative bars,
+   label chips and state lines that add no reading value. */
+.research-showcase .perspective-headings{display:none!important}
+.research-showcase{--perspective-bar:0px}
+.research-showcase.reader-ready .lane-divider{background:none}
+.research-showcase .topic-unit-key:before{display:none}
+.research-showcase .topic-unit-key>span:first-child,
+.research-showcase .topic-unit-key strong,
+.research-showcase .unit-key-action{background:none;padding-inline:0}
+.research-showcase .topic-unit-grid:not(.topic-unit-shared)> .perspective-cell[data-current="true"]{box-shadow:none}
