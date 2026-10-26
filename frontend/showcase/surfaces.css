@@ -284,3 +284,12 @@
 .research-showcase .flow-strip.is-scanning:before{content:'';position:absolute;inset:0 0 14px;pointer-events:none;background:linear-gradient(90deg,transparent,rgb(255 255 255 / 7%) 45%,transparent 62%);animation:flow-scan .72s ease-out both}
 @keyframes flow-scan{from{transform:translateX(-70%);opacity:0}35%{opacity:1}to{transform:translateX(70%);opacity:0}}
 @media(prefers-reduced-motion:reduce){.research-showcase .flow-fill{transition:none}.research-showcase .flow-strip.is-scanning:before{animation:none;display:none}}
+
+/* A skipped vision leaves a glowing invitation at the end of the story. */
+.research-showcase .chapter-transition.is-return-highlight{position:relative;color:#fff;border-top-color:rgb(255 255 255 / 40%);text-shadow:0 0 18px rgb(255 255 255 / 30%)}
+.research-showcase .chapter-transition.is-return-highlight:before{content:'';flex:none;width:7px;height:7px;border-radius:50%;margin-right:2px;background:#fff;box-shadow:0 0 10px 3px rgb(255 255 255 / 55%);animation:return-breathe 2.6s ease-in-out infinite}
+.research-showcase .chapter-transition.is-return-highlight:after{content:'';position:absolute;left:-14px;right:-14px;top:-12px;bottom:-12px;border-radius:8px;pointer-events:none;background:radial-gradient(ellipse at 22% 50%,rgb(255 255 255 / 15%),transparent 64%);animation:return-breathe 2.6s ease-in-out infinite}
+.research-showcase .chapter-transition.is-return-highlight svg{stroke:#fff;filter:drop-shadow(0 0 6px rgb(255 255 255 / 55%))}
+.research-showcase .chapter-transition.is-return-highlight>span{color:#d6dbe4}
+@keyframes return-breathe{0%,100%{opacity:.4}50%{opacity:1}}
+@media(prefers-reduced-motion:reduce){.research-showcase .chapter-transition.is-return-highlight:before,.research-showcase .chapter-transition.is-return-highlight:after{animation:none;opacity:.8}}
