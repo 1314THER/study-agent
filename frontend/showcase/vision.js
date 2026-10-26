@@ -11,27 +11,6 @@
  const changes=[...chapter.querySelectorAll('.vision-change')];
  const outline=chapter.querySelector('.vision-outline');
  const media=matchMedia('(prefers-reduced-motion: reduce)');
- // If a visitor skips the vision, the closing "回到愿景" entry glows until seen.
- const skipKey='studyagent.showcase.vision.skipped';
- const closingLink=document.querySelector('#evolution .chapter-transition[href="#vision"]');
- function markClosing(active){
-  if(!closingLink)return;
-  closingLink.classList.toggle('is-return-highlight',active);
-  if(active)closingLink.setAttribute('aria-label','你跳过了教学愿景：回到愿景查看');
-  else closingLink.removeAttribute('aria-label');
- }
- const markSkipped=()=>{try{sessionStorage.setItem(skipKey,'1');}catch{}markClosing(true);};
- const markSeen=()=>{try{sessionStorage.removeItem(skipKey);}catch{}markClosing(false);};
- try{if(sessionStorage.getItem(skipKey)==='1')markClosing(true);}catch{}
- document.addEventListener('click',event=>{
-  const target=event.target;
-  if(target.closest?.('[data-vision-skip]'))markSkipped();
-  if(target.closest?.('a[href="#vision"]'))markSeen();
- },true);
- if('IntersectionObserver'in window){
-  const seenObserver=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting&&entry.intersectionRatio>.35)markSeen();},{threshold:[0,.35,.6]});
-  seenObserver.observe(chapter);
- }
  const storageKey='studyagent.showcase.vision.v1',disclosures=new Map();
  let raf=0,saved=null;
  try{

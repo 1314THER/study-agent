@@ -453,14 +453,13 @@ def topic_section(topic, topic_index, chapters):
     next_id = TOPIC_IDS[topic_index] if topic_index < len(TOPIC_IDS) else ''
     if next_id:
         next_title = NAV_LABELS[next_id]
-        input_label, transition_label, transition_span = '下一个主题要回答', '继续：' + next_title, next_question
-        transition_href = '#' + next_id
+        out.append('<div class="chapter-bridge"><div class="bridge-flow"><div class="bridge-output"><span>本主题形成共同产物</span><strong>' + esc(output) + '</strong></div><div class="bridge-track" aria-hidden="true"><svg viewBox="0 0 180 32"><path d="M5 16H173m-7-6 7 6-7 6"/></svg><i class="bridge-packet"></i></div><div class="bridge-input"><span>下一个主题要回答</span><strong>' + esc(next_question) + '</strong></div></div>')
+        out.append('<a class="chapter-transition" href="#' + next_id + '">继续：' + esc(next_title) + ' <span>' + esc(next_question) + '</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></a></div>')
     else:
-        input_label, transition_label = '回到问题的起点', '回到愿景'
-        transition_span = '这些能力构成了可验证的起点；是否真正实现，由后续每一次独立作答回答。'
-        transition_href = '#vision'
-    out.append('<div class="chapter-bridge"><div class="bridge-flow"><div class="bridge-output"><span>本主题形成共同产物</span><strong>' + esc(output) + '</strong></div><div class="bridge-track" aria-hidden="true"><svg viewBox="0 0 180 32"><path d="M5 16H173m-7-6 7 6-7 6"/></svg><i class="bridge-packet"></i></div><div class="bridge-input"><span>' + esc(input_label) + '</span><strong>' + esc(next_question if next_id else '教学愿景') + '</strong></div></div>')
-    out.append('<a class="chapter-transition" href="' + transition_href + '">' + esc(transition_label) + ' <span>' + esc(transition_span) + '</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></a></div>')
+        # The last topic closes with one prominent invitation back to the vision.
+        out.append('<div class="chapter-bridge chapter-bridge-closing"><a class="chapter-transition chapter-transition-closing" href="#vision">'
+                   '<strong>读完了方案和技术路线，再回去看看愿景。</strong>'
+                   '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></a></div>')
     out.append('</section>')
     return ''.join(out)
 

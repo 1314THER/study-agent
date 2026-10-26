@@ -285,11 +285,13 @@
 @keyframes flow-scan{from{transform:translateX(-70%);opacity:0}35%{opacity:1}to{transform:translateX(70%);opacity:0}}
 @media(prefers-reduced-motion:reduce){.research-showcase .flow-fill{transition:none}.research-showcase .flow-strip.is-scanning:before{animation:none;display:none}}
 
-/* A skipped vision leaves a glowing invitation at the end of the story. */
-.research-showcase .chapter-transition.is-return-highlight{position:relative;color:#fff;border-top-color:rgb(255 255 255 / 40%);text-shadow:0 0 18px rgb(255 255 255 / 30%)}
-.research-showcase .chapter-transition.is-return-highlight:before{content:'';flex:none;width:7px;height:7px;border-radius:50%;margin-right:2px;background:#fff;box-shadow:0 0 10px 3px rgb(255 255 255 / 55%);animation:return-breathe 2.6s ease-in-out infinite}
-.research-showcase .chapter-transition.is-return-highlight:after{content:'';position:absolute;left:-14px;right:-14px;top:-12px;bottom:-12px;border-radius:8px;pointer-events:none;background:radial-gradient(ellipse at 22% 50%,rgb(255 255 255 / 15%),transparent 64%);animation:return-breathe 2.6s ease-in-out infinite}
-.research-showcase .chapter-transition.is-return-highlight svg{stroke:#fff;filter:drop-shadow(0 0 6px rgb(255 255 255 / 55%))}
-.research-showcase .chapter-transition.is-return-highlight>span{color:#d6dbe4}
-@keyframes return-breathe{0%,100%{opacity:.4}50%{opacity:1}}
-@media(prefers-reduced-motion:reduce){.research-showcase .chapter-transition.is-return-highlight:before,.research-showcase .chapter-transition.is-return-highlight:after{animation:none;opacity:.8}}
+
+/* Closing invitation: one large, centred control with a warm glow. */
+.research-showcase .chapter-bridge-closing{display:flex;justify-content:center;margin:38px 0 6px;padding:0;border:0}
+.research-showcase .chapter-transition-closing{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:20px;margin:0;padding:24px 38px;border:1px solid rgb(255 154 98 / 42%);border-radius:20px;background:radial-gradient(ellipse at 50% 20%,rgb(255 126 148 / 12%),transparent 72%),rgb(20 13 13 / 96%);color:#fff;font-size:clamp(19px,2vw,26px);line-height:1.65;letter-spacing:.01em;text-align:center;animation:closing-breathe 4.4s ease-in-out infinite;transition:border-color .25s,transform .25s,box-shadow .25s}
+.research-showcase .chapter-transition-closing strong{font-weight:600;color:#fff}
+.research-showcase .chapter-transition-closing svg{width:25px;height:25px;flex:none;stroke:#ffb383;filter:drop-shadow(0 0 9px rgb(255 140 110 / 55%))}
+.research-showcase .chapter-transition-closing:hover{border-color:rgb(255 176 126 / 72%);transform:translateY(-1px);color:#fff}
+@keyframes closing-breathe{0%,100%{box-shadow:0 0 30px rgb(255 110 132 / 15%),inset 0 1px 0 rgb(255 255 255 / 10%)}50%{box-shadow:0 0 48px rgb(255 132 142 / 27%),inset 0 1px 0 rgb(255 255 255 / 15%)}}
+@media(prefers-reduced-motion:reduce){.research-showcase .chapter-transition-closing{animation:none;box-shadow:0 0 36px rgb(255 120 138 / 20%)}}
+@media(max-width:640px){.research-showcase .chapter-transition-closing{display:flex;width:100%;padding:18px 20px;gap:12px;font-size:17px}}
