@@ -178,7 +178,9 @@ function renderSolution(root){
  const run=state.pipelineData?.examples?.[state.example]?.[state.teacher];if(!run){root.append(note('解析记录正在准备。'));return;}
  const answer=run.answer_json,example=state.data.examples.find(e=>e.id===state.example);root.append(bar('三阶段解题 → 一份结构化参考',teachers[state.teacher]+' · '+(run.stages?.solver?.model||'已保存解析')),p(example.question,'sample-question'));
  const pipeline=el('div','pipeline-map');for(const [i,key,title]of [[0,'solver','Solver · 完整解题'],[1,'verifier','Verifier · 校验与分步'],[2,'formatter','Formatter · 结构与难度']]){const record=run.stages?.[key]||{},body=el('div');body.append(p((record.model||'模型未记录')+' · '+(record.provider==='codex_cli'?'Codex CLI · ':'')+'推理 '+(record.reasoning_effort||'默认')),el('pre','raw-output',record.content||'无记录'));pipeline.append(details(title,body,'pipeline-stage'));if(i<2)pipeline.append(el('span','pipeline-arrow','→'));}root.append(pipeline);
- for(const c of answer.chunk_results||[]){const block=el('section','chunk');block.append(el('h3','','第 '+c.chunk_id+' 问'));for(const step of c.steps||[]){const card=el('article','step');card.append(el('span','step-number','步骤 '+step.step_number),el('h4','',step.title));const correction=mathErratum(step.standard_writing);if(correction)card.append(correction);card.append(p(step.standard_writing));if(step.detailed_writing)card.append(details('详细过程',p(step.detailed_writing)));if(step.step_difficulty?.dimensions&&window.renderDimBarsHtml){const d=el('div','dim-chart');d.innerHTML=renderDimBarsHtml(step.step_difficulty.dimensions);card.append(details('本步难度维度',d));}if(step.knowledge_point)card.append(p(step.knowledge_point,'step-kp'));block.append(card);}root.append(block);}
+ const chunks=answer.chunk_results||[];
+ const drawChunk=c=>{const block=el('section','chunk');block.append(el('h3','','第 '+c.chunk_id+' 问'));for(const step of c.steps||[]){const card=el('article','step');card.append(el('span','step-number','步骤 '+step.step_number),el('h4','',step.title));const correction=mathErratum(step.standard_writing);if(correction)card.append(correction);card.append(p(step.standard_writing));if(step.detailed_writing)card.append(details('详细过程',p(step.detailed_writing)));if(step.step_difficulty?.dimensions&&window.renderDimBarsHtml){const d=el('div','dim-chart');d.innerHTML=renderDimBarsHtml(step.step_difficulty.dimensions);card.append(details('本步难度维度',d));}if(step.knowledge_point)card.append(p(step.knowledge_point,'step-kp'));block.append(card);}return block;};
+ chunks.forEach((c,index)=>{if(index===0){root.append(drawChunk(c));return;}const more=el('button','solution-more','查看第 '+c.chunk_id+' 问完整解答');more.type='button';more.addEventListener('click',()=>{const box=el('div','solution-more-body');box.append(drawChunk(c));window.openShowcasePanel?.('第 '+c.chunk_id+' 问 · 完整解答',box);});root.append(more);});
  root.append(apiCostSummary(run));
  const meta=el('div');meta.append(p('运行时间：'+run.run_at),el('pre','raw-output',JSON.stringify({teacher:state.teacher,recorded_at:run.run_at,execution_origin:run.execution_origin,source_commit:run.source_commit,models:Object.fromEntries(Object.entries(run.stages||{}).map(([key,value])=>[key,{model:value.model,resolved_model:value.resolved_model,provider:value.provider,reasoning_effort:value.reasoning_effort}])),fingerprint:run.fingerprint},null,2)));root.append(details('本次解析的运行信息',meta));
 }
@@ -370,17 +372,14 @@ const openingFinished=window.ShowcaseHero?.open({skip:resumeReading||Boolean(loc
 api.ready=(async()=>{const results=await Promise.allSettled([json('data.json'),json('pipeline.json'),json('recordings.json')]);if(results[0].status==='rejected'||results[1].status==='rejected')throw Error('全国卷案例数据加载失败，请刷新重试。');state.data=results[0].value;state.pipelineData=results[1].value;state.recordings=results[2].status==='fulfilled'?results[2].value:{cases:[]};restoreChoices();for(const render of [renderConcepts,renderSingle,renderDiagnosis,renderRoutines,renderExam,renderCareer,renderAgent,renderTeacher,renderSchool,renderModes,renderMcp,renderEvolution])render();ShowcaseBank.init(api,{el,p,button,details,mathErratum});if(resumeReading&&savedReading.bank)await ShowcaseBank.restore(savedReading.bank);else await ShowcaseBank.show();$('exam-student').onclick=()=>ShowcaseBank.renderExam(false);$('exam-teacher').onclick=()=>ShowcaseBank.renderExam(true);$('exam-print').onclick=()=>window.print();const hash=location.hash.slice(1);if(aliases[hash]&&!resumeReading)selectView(hash);await openingFinished;entered=true;await restoreReadingPosition();setupMotion();return state.data;})().catch(error=>{state.loadError=error.message;$('demo-status').hidden=false;$('demo-status').textContent=error.message+' 正文仍可阅读。';console.error(error);return null;});
 })();
 
-/* Research comparisons stay one click away instead of stretching the technical column. */
+/* Research comparisons and the second part of a solution open in one shared panel. */
 (()=>{
- const sections=[...document.querySelectorAll('.research-notes')];
- if(!sections.length)return;
  const dialog=document.createElement('dialog');
  dialog.className='research-modal';dialog.id='research-modal';
  const head=document.createElement('div');head.className='research-modal-head';
  const title=document.createElement('h3');title.id='research-modal-title';title.textContent='研究对照';
- const close=document.createElement('button');
- close.type='button';close.className='research-modal-close';
- close.textContent='关闭';close.setAttribute('aria-label','关闭研究对照');
+ const close=document.createElement('button');close.type='button';close.className='research-modal-close';
+ close.textContent='关闭';close.setAttribute('aria-label','关闭');
  head.append(title,close);
  const body=document.createElement('div');body.className='research-modal-body';
  dialog.append(head,body);document.body.append(dialog);
@@ -388,20 +387,28 @@ api.ready=(async()=>{const results=await Promise.allSettled([json('data.json'),j
  close.addEventListener('click',shut);
  dialog.addEventListener('click',event=>{if(event.target===dialog)shut();});
  dialog.addEventListener('close',()=>body.replaceChildren());
- for(const section of sections){
-  const count=section.querySelectorAll('.research-study').length;
-  const trigger=document.createElement('button');
-  trigger.type='button';trigger.className='research-notes-trigger';
-  const label=document.createElement('strong');label.textContent='研究对照';
-  const hint=document.createElement('span');hint.textContent=count+' 项研究与本项目的关系';
-  trigger.append(label,hint);
-  section.before(trigger);section.hidden=true;
-  trigger.addEventListener('click',()=>{
-   const heading=section.querySelector('h3');
-   title.textContent=heading?heading.textContent:'研究对照';
-   const clone=section.cloneNode(true);clone.hidden=false;
-   clone.querySelector('h3')?.remove();
-   body.replaceChildren(clone);dialog.showModal();
-  });
+ window.openShowcasePanel=(heading,node)=>{title.textContent=heading;body.replaceChildren(node);dialog.showModal();};
+ for(const section of [...document.querySelectorAll('.research-notes')]){
+  const studies=[...section.querySelectorAll('.research-study')];
+  if(!studies.length)continue;
+  const list=document.createElement('div');list.className='research-list';
+  for(const study of studies){
+   const studyTitle=study.querySelector('h4');
+   const brief=study.querySelector('.research-prior p')||study.querySelector('p');
+   const name=studyTitle?studyTitle.textContent.trim():'这项研究';
+   const trigger=document.createElement('button');
+   trigger.type='button';trigger.className='research-notes-trigger';
+   const strong=document.createElement('strong');strong.textContent=name;
+   const text=(brief?brief.textContent.trim():'').replace(/\s+/g,' ');
+   const hint=document.createElement('span');
+   hint.textContent=text?(text.length>64?text.slice(0,64)+'…':text):'查看研究任务、方法与差异';
+   trigger.append(strong,hint);
+   trigger.addEventListener('click',()=>{
+    const clone=study.cloneNode(true);clone.hidden=false;
+    window.openShowcasePanel(name,clone);
+   });
+   list.append(trigger);study.hidden=true;
+  }
+  section.append(list);
  }
 })();

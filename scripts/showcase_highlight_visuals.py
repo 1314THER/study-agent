@@ -31,7 +31,12 @@ def system_visual():
     def card(key, title, body, icon):
         return ('<a class="architecture-node hx-system-node" href="#' + key + '">'
                 + _icon(icon) + '<div><strong>' + title + '</strong><small>' + body + '</small></div></a>')
-    representation = card('terms', '四个名词，各管一件事', '课时 · 一元一次方程（这节课教什么）<br>知识点 · 等式性质（为什么成立）<br>步骤 · 两边减 3（具体操作）<br>套路 · 一元一次方程求解方法（组合与适用条件）', 'learn')
+    representation = ''.join([
+        card('terms', '课时', '一元一次方程<br>这节课教什么', 'archive'),
+        card('terms', '知识点', '等式性质<br>为什么成立', 'target'),
+        card('terms', '步骤', '两边减 3<br>具体操作', 'steps'),
+        card('terms', '套路', '一元一次方程求解方法<br>组合与适用条件', 'learn'),
+    ])
     learning = ''.join([
         card('single', '单题能力', '解题 · 批改 · 教学 · 出题', 'steps'),
         card('time', '时间维度', '笔迹 · 单题 · 整卷 · 生涯', 'archive'),

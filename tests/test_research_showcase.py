@@ -146,10 +146,13 @@ class ResearchShowcaseBuildTests(unittest.TestCase):
         self.assertEqual(page.count('class="dataset-metric"'), 4)
         for value in ('541', '359', '1,019', '23,261'):
             self.assertIn('>' + value + '</dd>', page)
-        self.assertEqual(len(re.findall(r'<a class="[^"]*\barchitecture-node\b[^"]*"', page)), 10)
+        self.assertEqual(len(re.findall(r'<a class="[^"]*\barchitecture-node\b[^"]*"', page)), 13)
         self.assertEqual(re.findall(r'<a class="architecture-node hx-system-node" href="([^"]+)"', page),
-                         ['#terms', '#single', '#time', '#library', '#exam', '#longterm',
+                         ['#terms', '#terms', '#terms', '#terms',
+                          '#single', '#time', '#library', '#exam', '#longterm',
                           '#teacher', '#school', '#agent', '#evolution'])
+        for word in ('课时', '知识点', '步骤', '套路'):
+            self.assertIn('<strong>' + word + '</strong>', page)
         self.assertEqual(re.findall(r'data-hx-motion="([^"]+)"', page),
                          ['system', 'method', 'time', 'ability', 'data', 'participation', 'evolution'])
         self.assertIn('data-hx-dimension="5"', page)

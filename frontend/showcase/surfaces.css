@@ -317,7 +317,7 @@
 .research-showcase .research-notes-trigger strong{font-size:13px;font-weight:650;letter-spacing:.01em}
 .research-showcase .research-notes-trigger span{color:#8b93a1;font-size:12px}
 .research-showcase .research-notes-trigger:after{content:'↗';margin-left:auto;color:#a394ff;font-size:13px}
-.research-modal{width:min(940px,92vw);max-height:86vh;padding:0;overflow:hidden;border:1px solid rgb(255 255 255 / 14%);border-radius:18px;background:#0c0d12;color:#e8eefb;box-shadow:0 40px 120px rgb(0 0 0 / 60%)}
+.research-modal{position:fixed;inset:0;margin:auto;width:min(940px,92vw);height:fit-content;max-height:86vh;padding:0;overflow:hidden;border:1px solid rgb(255 255 255 / 14%);border-radius:18px;background:#0c0d12;color:#e8eefb;box-shadow:0 40px 120px rgb(0 0 0 / 60%)}
 .research-modal::backdrop{background:rgb(0 0 0 / 74%);backdrop-filter:blur(3px)}
 .research-modal-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:18px;padding:18px 24px;border-bottom:1px solid rgb(255 255 255 / 10%);background:#0c0d12}
 .research-modal-head h3{margin:0;color:#fff;font-size:16px;font-weight:650}
@@ -330,3 +330,14 @@
   .research-modal-body{max-height:calc(92vh - 58px);padding:4px 16px 22px}
 }
 @media print{.research-notes[hidden]{display:block!important}}
+
+/* One line per study: name plus the question it asks, details on demand. */
+.research-study[hidden]{display:none!important}
+.research-list{display:grid;gap:8px;margin:14px 0 0}
+.research-showcase .research-notes-trigger{display:block;position:relative;padding:14px 42px 14px 16px}
+.research-showcase .research-notes-trigger strong{display:block;font-size:13px;line-height:1.5}
+.research-showcase .research-notes-trigger span{display:block;margin-top:5px;line-height:1.55}
+.research-showcase .research-notes-trigger:after{position:absolute;top:14px;right:15px;margin-left:0}
+.research-showcase .solution-more{width:100%;margin:18px 0 0;padding:14px 18px;border:1px dashed rgb(255 255 255 / 22%);border-radius:12px;background:none;color:#cfd7e6;font:inherit;font-size:13px;cursor:pointer;transition:border-color .2s,color .2s}
+.research-showcase .solution-more:hover{border-color:rgb(163 148 255 / 60%);color:#fff}
+.research-modal-body .chunk h3{margin-top:6px}
