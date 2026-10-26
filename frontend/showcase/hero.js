@@ -29,11 +29,12 @@ function layout(){
  link.setAttribute('viewBox',`0 0 ${r.width} ${r.height}`);
  const reach=Math.max(1,endX-x),bend=Math.min(14,reach*.16);
  stroke.setAttribute('d',`M${x} ${y} C${x+reach*.34} ${y-bend} ${endX-reach*.28} ${endY+bend} ${endX} ${endY}`);
- // The guard covers the button box plus a hair of breathing room.
- guard.style.left=(b.left-r.left-8)+'px';
- guard.style.top=(b.top-r.top-8)+'px';
- guard.style.width=(b.width+16)+'px';
- guard.style.height=(b.height+16)+'px';
+ // The guard covers exactly the button box (plus its 1px border) so the cut
+ // hides behind the button edge instead of leaving a visible gap.
+ guard.style.left=(b.left-r.left-1)+'px';
+ guard.style.top=(b.top-r.top-1)+'px';
+ guard.style.width=(b.width+2)+'px';
+ guard.style.height=(b.height+2)+'px';
 }
 function restoreCopy(){for(const row of streaming){row.node.replaceChildren(...row.original);row.node.classList.remove('is-streaming','is-stream-current');}streaming=[];}
 function stop(){streamCancel?.();streamCancel=null;restoreCopy();for(const animation of animations)animation.cancel();animations=[];}

@@ -84,4 +84,4 @@ body.is-launch-open{overflow:hidden}
 .hero-art[data-phase=waiting] .math-ink,.hero-art[data-phase=waiting] .love-ink,.hero-art[data-phase=typing] .math-ink,.hero-art[data-phase=typing] .love-ink,.hero-art[data-phase=math-writing] .love-ink{opacity:0}
 @media(prefers-reduced-motion:reduce){.hero-love .math-ink{fill-opacity:1!important}.hero-love .math-outline{display:none}}
 /* Guard layer: the red strokes stop at the button box instead of painting over it. */
-.hero-cta-guard{position:absolute;z-index:3;display:block;background:#000;border-radius:26px;pointer-events:none}
+.hero-cta-guard{position:absolute;z-index:3;display:block;background:#000;border-radius:20px;pointer-events:none}
