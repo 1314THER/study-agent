@@ -1,0 +1,228 @@
+/* Quiet glass surfaces for the research showcase. Keep long reading areas calm. */
+.research-showcase {
+  --glass-edge: rgb(255 255 255 / 9%);
+  --glass-fill: rgb(18 19 22 / 88%);
+  --glass-blue: rgb(92 141 255 / 24%);
+  --glass-shadow: 0 26px 68px rgb(0 0 0 / 52%), 0 5px 18px rgb(0 0 0 / 32%);
+  overflow-x: clip;
+}
+
+.research-showcase .site-header {
+  background: rgb(13 14 16 / 82%);
+  border-bottom-color: rgb(255 255 255 / 9%);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  backdrop-filter: blur(18px) saturate(125%);
+}
+
+.research-showcase .primary-nav a[aria-current="location"] {
+  border-bottom-color: var(--accent, #5c8dff);
+  text-shadow: 0 0 16px rgb(92 141 255 / 30%);
+}
+
+.research-showcase .chapter-contents,
+.research-showcase .perspective-switch,
+.research-showcase .perspective-headings {
+  background-color: rgb(15 16 19 / 84%);
+  border-color: rgb(255 255 255 / 10%);
+  -webkit-backdrop-filter: blur(18px) saturate(125%);
+  backdrop-filter: blur(18px) saturate(125%);
+}
+
+.research-showcase .chapter-contents {
+  box-shadow: 0 18px 48px rgb(0 0 0 / 45%), inset 0 1px rgb(255 255 255 / 5%);
+}
+
+.research-showcase .perspective-tabs button[aria-selected="true"] {
+  border-color: rgb(115 160 255 / 48%);
+  box-shadow: inset 0 1px rgb(255 255 255 / 8%), 0 0 18px rgb(92 141 255 / 12%);
+}
+
+/* Each chapter reads as one substantial panel; the shared opening spans its full row. */
+.research-showcase .topic-section {
+  position: relative;
+  isolation: isolate;
+  margin: 0 0 clamp(24px, 3.2vw, 42px);
+  padding: clamp(34px, 4vw, 58px) clamp(22px, 3.2vw, 44px) clamp(32px, 3.8vw, 52px);
+  border: 1px solid rgb(255 255 255 / 8%);
+  border-radius: clamp(14px, 1.7vw, 22px);
+  background:
+    radial-gradient(ellipse 78% 190px at 50% 0%, rgb(255 255 255 / 4.2%), transparent 78%),
+    linear-gradient(145deg, rgb(255 255 255 / 3.8%), transparent 30%),
+    linear-gradient(180deg, rgb(24 25 29 / 97%), rgb(12 13 16 / 98%));
+  box-shadow:
+    var(--glass-shadow),
+    inset 0 1px 0 rgb(255 255 255 / 13%),
+    inset 0 0 0 1px rgb(255 255 255 / 2.5%);
+  scroll-margin-top: calc(var(--header) + var(--perspective-bar) + 18px);
+}
+
+.research-showcase .topic-section::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(132deg,
+    rgb(255 255 255 / 30%),
+    rgb(255 255 255 / 8%) 16%,
+    transparent 36%,
+    transparent 66%,
+    rgb(255 255 255 / 5%) 82%,
+    rgb(255 255 255 / 18%));
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
+.research-showcase .topic-section:first-of-type {
+  padding-top: clamp(30px, 3.5vw, 46px);
+}
+
+.research-showcase .topic-heading {
+  margin-bottom: clamp(24px, 3vw, 36px);
+}
+
+.research-showcase .topic-heading .chapter-position > span:first-child {
+  border-color: var(--accent, #5c8dff);
+}
+
+.research-showcase .topic-heading h1,
+.research-showcase .topic-heading h2 {
+  color: #fff;
+  text-shadow: 0 2px 22px rgb(255 255 255 / 5%);
+}
+
+/* Individual reading structures stay quiet inside the larger chapter surface. */
+.research-showcase .cell-content .chapter-scene,
+.research-showcase .native-workbench,
+.research-showcase .record-output,
+.research-showcase .research-notes,
+.research-showcase .chapter-bridge .handoff-stage {
+  border-color: rgb(255 255 255 / 10%);
+  box-shadow: inset 0 1px rgb(255 255 255 / 4%), 0 10px 28px rgb(0 0 0 / 20%);
+}
+
+.research-showcase .cell-content .chapter-scene {
+  background: linear-gradient(145deg, rgb(255 255 255 / 2.4%), transparent 40%), rgb(12 13 16 / 76%);
+  border-radius: 10px;
+}
+
+.research-showcase .topic-unit-grid:not(.topic-unit-shared) {
+  border-color: rgb(255 255 255 / 11%);
+  border-radius: 11px;
+  overflow: visible;
+}
+
+.research-showcase .topic-unit-grid:not(.topic-unit-shared) > .perspective-cell {
+  background: rgb(11 12 15 / 62%);
+}
+
+.research-showcase .topic-unit-grid:not(.topic-unit-shared) > .perspective-cell[data-current="true"] {
+  box-shadow: inset 0 2px rgb(92 141 255 / 50%);
+}
+
+.research-showcase .topic-unit.is-linked .topic-unit-grid {
+  border-color: rgb(115 160 255 / 42%);
+  box-shadow: 0 0 24px rgb(92 141 255 / 8%);
+}
+
+.research-showcase .topic-unit.is-linked .perspective-cell {
+  background: rgb(22 25 32 / 82%);
+  box-shadow: inset 0 2px rgb(92 141 255 / 58%);
+}
+
+.research-showcase .chapter-scene .native-workbench,
+.research-showcase .cell-content .chapter-scene .native-workbench {
+  border-radius: 9px;
+}
+
+.research-showcase .topic-unit-key[aria-pressed="true"] {
+  color: #fff;
+}
+
+.research-showcase .topic-unit-key[aria-pressed="true"] strong {
+  text-shadow: 0 0 14px rgb(92 141 255 / 25%);
+}
+
+.research-showcase .lane-divider:focus-visible .lane-divider-control {
+  outline: 1px solid var(--accent, #5c8dff);
+  outline-offset: -12px;
+}
+
+@media (max-width: 820px) {
+  .research-showcase .topic-section {
+    margin-bottom: 22px;
+    padding: 30px 22px 32px;
+  }
+}
+
+@media (max-width: 640px) {
+  .research-showcase .topic-section {
+    margin-bottom: 18px;
+    padding: 26px 16px 28px;
+    border-radius: 14px;
+  }
+
+  .research-showcase .topic-section:first-of-type {
+    padding-top: 25px;
+  }
+
+  .research-showcase .topic-heading {
+    margin-bottom: 20px;
+  }
+}
+
+@media (max-width: 360px) {
+  .research-showcase .topic-section {
+    padding-inline: 12px;
+    border-radius: 12px;
+  }
+
+  .research-showcase .topic-unit-grid:not(.topic-unit-shared) {
+    border-radius: 8px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .research-showcase .primary-nav a[aria-current="location"] {
+    text-shadow: none;
+  }
+}
+
+@media print {
+  .research-showcase {
+    overflow: visible;
+  }
+
+  .research-showcase .site-header,
+  .research-showcase .chapter-contents,
+  .research-showcase .perspective-switch,
+  .research-showcase .perspective-headings {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+
+  .research-showcase .topic-section {
+    margin: 0 0 18px;
+    padding: 28px 24px;
+    border: 1px solid #555;
+    border-radius: 10px;
+    background: #111;
+    color: #f5f5f5;
+    box-shadow: none;
+  }
+
+  .research-showcase .topic-section::before {
+    display: none;
+  }
+}
+
+/* A light red wash makes the problem statement distinct from the proposed mechanism. */
+.research-showcase .pain-point,.research-showcase #highlights .highlight-pain{
+ background:linear-gradient(110deg,rgba(255,128,146,.12),rgba(255,128,146,.055));
+ border:1px solid rgba(255,146,156,.14);border-left:3px solid #ff929c;
+ border-radius:0 10px 10px 0;padding:16px 18px;color:#ffb6bf;
+}
+.research-showcase .pain-point>span,.research-showcase #highlights .highlight-pain>span{color:#ff929c}
+.research-showcase .topic-unit-key{gap:14px}.research-showcase .topic-unit-key .unit-key-action{margin-left:auto;font-size:10px;white-space:nowrap;color:#a8b7ce}

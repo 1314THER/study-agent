@@ -1,0 +1,33 @@
+<svg class="launch-geometry" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+  <title>数学坐标与轨道几何背景</title>
+  <defs>
+    <radialGradient id="launch-geo-haze"><stop stop-color="#aaa" stop-opacity=".10"/><stop offset=".55" stop-color="#777" stop-opacity=".035"/><stop offset="1" stop-color="#080808" stop-opacity="0"/></radialGradient>
+    <linearGradient id="launch-geo-fade" x2="0" y2="1"><stop stop-color="#fff" stop-opacity="0"/><stop offset=".38" stop-color="#fff" stop-opacity=".62"/><stop offset="1" stop-color="#fff" stop-opacity=".13"/></linearGradient>
+    <mask id="launch-geo-grid-mask"><rect width="1600" height="1000" fill="url(#launch-geo-fade)"/></mask>
+    <linearGradient id="launch-geo-orbit"><stop stop-color="#ddd" stop-opacity="0"/><stop offset=".5" stop-color="#ddd" stop-opacity=".32"/><stop offset="1" stop-color="#ddd" stop-opacity="0"/></linearGradient>
+  </defs>
+  <ellipse cx="800" cy="500" rx="940" ry="610" fill="url(#launch-geo-haze)"/>
+  <g class="launch-geo-grid" fill="none" stroke="#c7c7c7" stroke-width="1" opacity=".19" mask="url(#launch-geo-grid-mask)">
+    <path d="M-350 1000 800 510M-50 1000 800 510M250 1000 800 510M550 1000 800 510M850 1000 800 510M1150 1000 800 510M1450 1000 800 510M1750 1000 800 510M2050 1000 800 510"/>
+    <path d="M0 548H1600M0 588H1600M0 642H1600M0 714H1600M0 810H1600M0 938H1600"/>
+  </g>
+  <g class="launch-geo-curves" fill="none" stroke="#c7c7c7" stroke-width="1.15" opacity=".19">
+    <path d="M-80 210Q360 60 800 210T1680 210"/><path d="M-80 250Q360 100 800 250T1680 250"/>
+    <path d="M180 0Q400 270 180 500T180 1000M1420 0Q1200 270 1420 500T1420 1000"/>
+  </g>
+  <g class="launch-geo-orbits" transform="rotate(-17 800 500)" fill="none">
+    <ellipse cx="800" cy="500" rx="720" ry="268" stroke="url(#launch-geo-orbit)"/>
+    <ellipse cx="800" cy="500" rx="790" ry="326" stroke="#aaa" stroke-opacity=".11"/>
+    <path class="launch-geo-signal" d="M80 500a720 268 0 0 1 1440 0" pathLength="1" stroke="#ddd" stroke-opacity=".43" stroke-width="1.5"/>
+    <circle cx="1520" cy="500" r="3" fill="#a8c4ff" fill-opacity=".68"/>
+  </g>
+  <g class="launch-geo-solid" fill="none" stroke="#dedede" stroke-opacity=".18" stroke-width="1">
+    <path d="M1260 115 1430 188 1298 302Z M1260 115 1355 207 1430 188 M1355 207 1298 302"/>
+    <ellipse cx="1350" cy="210" rx="132" ry="132" stroke-opacity=".08"/>
+  </g>
+  <g fill="none" stroke="#bcbcbc" stroke-opacity=".15" stroke-width="1">
+    <path d="M54 821H382 M104 700V885 M72 832C112 832 132 748 174 748S236 866 278 866 336 780 378 780"/>
+  </g>
+  <g fill="#ccc" fill-opacity=".15" font-family="Georgia,serif" font-size="17"><text x="118" y="724">y = sin x</text><text x="1240" y="340">x² + y² = r²</text></g>
+  <g class="launch-geo-points" fill="#d8d8d8" opacity=".34"><circle cx="286" cy="328" r="2"/><circle cx="1315" cy="694" r="2"/><circle cx="1230" cy="238" r="1.7"/></g>
+</svg>

@@ -23,7 +23,11 @@ try{const raw=sessionStorage.getItem(readingKey);if(raw&&raw.length<32768){const
 entered=savedReading?.entered===true;
 const navigationType=performance.getEntriesByType('navigation')[0]?.type;
 const resumeReading=Boolean(savedReading&&['reload','back_forward'].includes(navigationType)&&savedReading.path===location.pathname&&savedReading.hash===initialHash);
-if(resumeReading&&'scrollRestoration'in history)history.scrollRestoration='manual';
+if(resumeReading){
+ if('scrollRestoration'in history)history.scrollRestoration='manual';
+ // Rebuilding the saved workbenches must not also trigger browser scroll anchoring.
+ document.documentElement.style.overflowAnchor='none';
+}
 const requestedPerspectiveRaw=new URLSearchParams(location.search).get('perspective');
 const requestedPerspective=requestedPerspectiveRaw==='mechanism'?'technical':requestedPerspectiveRaw;
 if(perspectives.includes(requestedPerspective))state.perspective=requestedPerspective;
@@ -47,17 +51,20 @@ function restoreChoices(){
  if(choice.sceneTabs&&typeof choice.sceneTabs==='object'&&!Array.isArray(choice.sceneTabs))for(const id of ['routines','exam','career','agent','teacher','school','mcp','evolution'])state.sceneTabs[id]=indexValue(choice.sceneTabs[id],10);
  setPerspective(state.perspective,false);
 }
+function readingChapter(){
+ const chapters=[...document.querySelectorAll('[data-chapter]')],root=getComputedStyle(document.body);
+ const line=Math.max(Number.parseFloat(root.getPropertyValue('--header'))+Number.parseFloat(root.getPropertyValue('--perspective-bar'))+24,innerHeight*.3);
+ return chapters.filter(node=>node.getBoundingClientRect().top<=line).at(-1)||chapters[0];
+}
 function saveReading(){
- if(!uiReady||!entered||$('opening-dialog')?.open)return;
- const chapters=[...document.querySelectorAll('[data-chapter]')],root=getComputedStyle(document.body),readingLine=Number.parseFloat(root.getPropertyValue('--header'))+Number.parseFloat(root.getPropertyValue('--perspective-bar'))+24;
- const chapter=chapters.filter(node=>node.getBoundingClientRect().top<=readingLine).at(-1)||chapters[0];
+ if(!uiReady||!entered||document.body.classList.contains('is-launch-open'))return;
+ const chapter=readingChapter();
  document.body.dataset.currentTopic=chapter?.id||'highlights';
  const record={version:2,entered:true,path:location.pathname,hash:location.hash,position:{topic:chapter?.id||'highlights',offset:chapter?-chapter.getBoundingClientRect().top:0,y:scrollY},choices:{perspective:state.perspective,teacher:state.teacher,example:state.example,mode:state.mode,caseIndex:state.caseIndex,condition:state.condition,sceneTabs:state.sceneTabs,teachingIndex:state.teachingIndex,geometryStage:state.geometryStage,timestampEvent:state.timestampEvent,routineHidden:state.routineHidden,completeMode:state.completeMode},bank:window.ShowcaseBank?.snapshot?.()};
  try{sessionStorage.setItem(readingKey,JSON.stringify(record));}catch{}
 }
 function scheduleReadingSave(){clearTimeout(saveTimer);if(uiReady)saveTimer=setTimeout(saveReading,160);}
-function syncCurrentTopic(){if(topicFrame)return;topicFrame=requestAnimationFrame(()=>{topicFrame=0;const chapters=[...document.querySelectorAll('[data-chapter]')],root=getComputedStyle(document.body),readingLine=Number.parseFloat(root.getPropertyValue('--header'))+Number.parseFloat(root.getPropertyValue('--perspective-bar'))+24,chapter=chapters.filter(node=>node.getBoundingClientRect().top<=readingLine).at(-1)||chapters[0];document.body.dataset.currentTopic=chapter?.id||'highlights';});}
-function markEntered(){entered=true;if(uiReady){saveReading();return;}try{sessionStorage.setItem(readingKey,JSON.stringify({...savedReading,version:2,entered:true,path:location.pathname,hash:location.hash}));}catch{}}
+function syncCurrentTopic(){if(topicFrame)return;topicFrame=requestAnimationFrame(()=>{topicFrame=0;document.body.dataset.currentTopic=readingChapter()?.id||'highlights';});}
 async function restoreReadingPosition(){
  if(document.fonts)await document.fonts.ready;
  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
@@ -65,10 +72,16 @@ async function restoreReadingPosition(){
   const position=savedReading.position||{},savedTopic=position.topic||aliases[position.chapter]||position.chapter,chapter=typeof savedTopic==='string'?$(savedTopic):null;
   const top=chapter?.matches('[data-chapter]')&&Number.isFinite(position.offset)?chapter.getBoundingClientRect().top+scrollY+position.offset:Number.isFinite(position.y)?position.y:0;
   scrollTo({top:Math.max(0,Math.min(top,document.documentElement.scrollHeight-innerHeight)),behavior:'instant'});
+ }else if(!resumeReading&&initialHash&&initialHash===location.hash){
+  // Native fragment positioning ran before saved math and diagrams filled their containers.
+  ($(initialHash.slice(1))||$(aliases[initialHash.slice(1)]))?.scrollIntoView({behavior:'instant',block:'start'});
  }
- uiReady=true;saveReading();
+ await new Promise(resolve=>requestAnimationFrame(resolve));
+ document.documentElement.style.removeProperty('overflow-anchor');
+ uiReady=true;dispatchEvent(new CustomEvent('showcase:reading-ready'));saveReading();
 }
 api.readingKey=readingKey;
+api.saveReading=saveReading;
 api.clearReadingState=()=>{entered=false;uiReady=false;clearTimeout(saveTimer);try{sessionStorage.removeItem(readingKey);}catch{}};
 addEventListener('scroll',()=>{syncCurrentTopic();scheduleReadingSave();},{passive:true});addEventListener('resize',syncCurrentTopic,{passive:true});addEventListener('pagehide',saveReading);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveReading();});
@@ -91,21 +104,6 @@ api.selectView=selectView;api.focusRoutine=id=>{const r=state.data?.catalog?.rou
 function svg(tag,attrs,text){const n=document.createElementNS(NS,tag);Object.entries(attrs||{}).forEach(([k,v])=>n.setAttribute(k,String(v)));if(text!=null)n.textContent=text;return n;}
 function triangle(stage=0){const s=svg('svg',{viewBox:'0 0 440 390',role:'img','aria-label':'全国卷三角形 ABC，AB长5，高为6，辅助线由步骤控制',class:'triangle-figure'});s.append(svg('path',{d:'M90 330 L340 330 L190 30 Z',fill:'#151515',stroke:'#aaa','stroke-width':2.5}));if(stage>=1)s.append(svg('path',{d:'M190 30 V330 M190 316 H204 V330',fill:'none',stroke:'#bbb','stroke-width':2,'stroke-dasharray':'6 5',class:'construction-line'}));[['A',72,352],['B',348,352],['C',185,20],['AB = 5',180,370],['C = π/4',212,85]].forEach(([t,x,y])=>s.append(svg('text',{x,y},t)));if(stage>=1){s.append(svg('text',{x:174,y:351},'D'));s.append(svg('text',{x:204,y:195,fill:'#ddd'},stage>=2?'h = 6':'h'));}if(stage>=2)s.append(svg('text',{x:36,y:184,transform:'rotate(-72 36 184)'},'AC = 2√10'));return s;}
 function handwriting(text){if(window.ShowcaseHandwriting)return window.ShowcaseHandwriting.render(text);const source=String(text||''),paper=el('div','handwriting-sheet'),ink=el('div','paper-ink'),re=/_\(([^)]+)\)|_([A-Za-z0-9]+)|\^\(([^)]+)\)|\^([A-Za-z0-9]+)/g;paper.dataset.source=source;let end=0;for(const m of source.matchAll(re)){ink.append(document.createTextNode(source.slice(end,m.index)));ink.append(el(m[1]||m[2]?'sub':'sup','',m[1]||m[2]||m[3]||m[4]));end=m.index+m[0].length;}ink.append(document.createTextNode(source.slice(end)));paper.append(ink);return paper;}
-function architectureDiagram(){
- const figure=el('figure','project-architecture'),caption=el('figcaption');caption.append(el('h3','','系统怎样连成一个整体'),p('底层定义形成共同语言；单题能力产生证据；学习记录支持后续训练与教学。'));figure.append(caption);
- const layers=[
-  ['服务谁',[['学生','学习 · 训练 · 复盘','single','ready'],['教师','备课 · 作业 · 讲评','teacher','planned'],['学校','教研 · 评价 · 定制','school','planned']]],
-  ['怎样使用',[['教学协同 Agent','理解请求，查询证据，调用业务能力','agent','planned'],['MCP 与外部宿主','内置入口 / 官方 DSH / WorkBuddy','mcp','planned']]],
-  ['留下什么',[['作答与过程证据','原始作答 · 步骤表现 · 提示与修改','diagnosis','ready'],['长期状态与学习任务','知识 / 套路记录 · 训练 · 独立复测','career','planned']]],
-  ['共用能力',[['AI 解题','建立结构化参考','solution','ready'],['步骤批改','对应作答与错误','diagnosis','ready'],['分步教学','检查回答并推进','teaching','ready'],['变式生成','训练目标转成新题','generation','ready'],['错题与题库','查找 · 题单 · 组卷','library','ready'],['套路与试卷','专项训练 · 整卷检验','routines','mixed']]],
-  ['共同表示',[['课时','组织教学内容','concepts','ready'],['知识点','描述知识理解','concepts','ready'],['步骤','可引用的解题操作','concepts','ready'],['套路','步骤组合与适用条件','concepts','ready']]]
- ];
- layers.forEach(([label,nodes],index)=>{const layer=el('div','architecture-layer');layer.append(el('span','architecture-label',label));const body=el('div','architecture-nodes');body.style.setProperty('--nodes',nodes.length===6?3:nodes.length);for(const [title,desc,target,status]of nodes){const a=el('a','architecture-node architecture-'+status);a.href='#'+target;a.append(el('strong','',title),el('span','',desc));body.append(a);}layer.append(body);figure.append(layer);if(index<layers.length-1)figure.append(el('div','architecture-edge','↑'));});
- const foot=el('div','architecture-legend');foot.append(el('span','legend-ready','已有能力基础'),el('span','legend-planned','规划协同'),el('a','','反馈与新证据 → 更新内容、规则与模型'));foot.lastChild.href='#evolution';figure.append(foot);return figure;
-}
-function renderOverview(){
- const root=$('scene-overview');root.replaceChildren(architectureDiagram(),note('数据结构、单题能力、学习记录与多端入口共用同一套步骤和教学对象。'));
-}
 function renderConcepts(){
  const root=$('scene-concepts'),rows=[['课时','教学内容的组织单位','课时讲授知识点，按前置安排；与知识点不要求一一对应。','三角恒等变换、正弦定理分布在相应教学课时中。'],['知识点','知识理解与运用的评价对象','知识点支撑步骤；一次套路通过不证明全部知识理解。','三角形内角和、两角和差公式、正弦定理与面积。'],['步骤','可以引用和分析的操作','可复用操作与本题实例分开，兼容不同正确解法。','由角关系求 $C$；三角恒等变换；求边长；将面积转为高。'],['套路','适用条件与步骤组合','保存触发条件、关键步骤、排除条件和易混淆方法。','解三角形：先确定角的关系，再联系边长、面积与目标。']];let active=0;
  const draw=()=>{const chain=el('div','concept-chain');chain.setAttribute('aria-label','课时、知识点、步骤与套路的关系');rows.forEach((row,index)=>{const b=button('',()=>{active=index;draw();},'concept-node');b.append(el('strong','',row[0]),el('span','',['教什么','理解什么','怎样操作','怎样组合'][index]));b.setAttribute('aria-pressed',String(index===active));chain.append(b);if(index<3)chain.append(el('span','concept-edge',['讲授','支撑','组合'][index]));});root.replaceChildren(bar('一份共同表示，贯穿不同功能','点选查看全国卷中的对应关系'),chain);const row=rows[active],d=el('div','concept-explanation');d.append(el('h3','',row[1]),p(row[2]),p(row[3],'example-line'));root.append(d);};draw();
@@ -224,7 +222,7 @@ function navigation(){
  const nav=document.querySelector('.primary-nav'),headerLinks=[...nav.querySelectorAll('a[href^="#"]')],quickJump=$('topic-quick-jump');
  function currentTopic(id){
   const topic=aliases[id]||id;state.view=topic;
-  if($(topic)&&location.hash!=='#'+topic){const url=new URL(location.href);url.hash=topic;history.replaceState(history.state,'',url);}
+  if(uiReady&&$(topic)&&location.hash!=='#'+topic){const url=new URL(location.href);url.hash=topic;history.replaceState(history.state,'',url);}
   for(const a of headerLinks){if(a.hash==='#'+topic)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');}
   if(quickJump&&quickJump.value!==topic)quickJump.value=topic;
   const selected=headerLinks.find(a=>a.hash==='#'+topic);
@@ -278,8 +276,10 @@ function navigation(){
   if(Math.abs(dx)<58||Math.abs(dx)<Math.abs(dy)*1.35)return;
   const next=(perspectives.indexOf(state.perspective)+(dx<0?1:-1)+perspectives.length)%perspectives.length;setPerspective(perspectives[next]);
  },{passive:true});
- const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting)currentTopic(entry.target.id);},{rootMargin:'-16% 0px -66% 0px'});
+ const updateTopic=()=>{const chapter=readingChapter();if(chapter)currentTopic(chapter.id);};
+ const observer=new IntersectionObserver(updateTopic,{rootMargin:'-16% 0px -66% 0px'});
  for(const chapter of document.querySelectorAll('[data-chapter]'))observer.observe(chapter);
+ addEventListener('showcase:reading-ready',updateTopic);
  const hash=location.hash.slice(1);currentTopic(aliases[hash]||hash||'highlights');
  addEventListener('hashchange',()=>{const id=location.hash.slice(1);if(singleModes[id]){state.mode=singleModes[id];renderSingle();}const topic=aliases[id]||id;if($(topic))currentTopic(topic);});
 }
@@ -293,8 +293,8 @@ returnButton.append(el('span','','回到原处'));
 document.body.append(returnButton);
 function currentChapterId(){return [...document.querySelectorAll('[data-chapter]')].find(node=>{const r=node.getBoundingClientRect();return r.top<=innerHeight*.45&&r.bottom>innerHeight*.45})?.id||null;}
 function recordOrigin(targetId){
- if(!uiReady||!entered)return;
- const target=aliases[targetId]||targetId,current=currentChapterId();
+ if(!uiReady||!entered||document.body.classList.contains('is-launch-open'))return;
+ const resolved=aliases[targetId]||targetId,target=$(resolved)?.closest('[data-chapter]')?.id||resolved,current=currentChapterId();
  if(!current||target===current)return;
  originState.y=scrollY;returnButton.hidden=false;
 }
@@ -308,12 +308,7 @@ document.addEventListener('click',event=>{
  const link=event.target.closest?.('a[href^="#"]');if(!link||link.target==='_blank'||link.hasAttribute('download'))return;
  recordOrigin(link.hash.slice(1));
 },true);
-function showOpening(force=false){
- const dialog=$('opening-dialog');if(!dialog||(!force&&(entered||(location.hash&&!['#overview','#highlights'].includes(location.hash))))){entered=true;return Promise.resolve();}
- if(dialog.open)return Promise.resolve();
- return new Promise(resolve=>{let fadeTimer,entering=false;const enter=()=>{if(entering)return;entering=true;markEntered();dialog.classList.add('is-closing');fadeTimer=setTimeout(()=>{if(dialog.open)dialog.close();},matchMedia('(prefers-reduced-motion: reduce)').matches?0:160);};$('opening-enter').onclick=enter;dialog.addEventListener('close',()=>{clearTimeout(fadeTimer);markEntered();resolve();},{once:true});dialog.classList.remove('is-closing');dialog.querySelector('img').src='/showcase/launch-lettering.svg?entry='+Date.now();dialog.showModal();requestAnimationFrame(()=>$('opening-title').focus({preventScroll:true}));});
-}
-api.replayOpening=()=>showOpening(true);
+api.replayOpening=()=>window.ShowcaseHero?.open({force:true});
 function setupMotion(){
  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
  const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('is-inview');observer.unobserve(entry.target);}},{rootMargin:'0px 0px -8% 0px',threshold:0});
@@ -321,6 +316,6 @@ function setupMotion(){
 }
 async function json(name){const r=await fetch('/showcase/'+name,{credentials:'omit'});if(!r.ok)throw Error(name+' 加载失败');return r.json();}
 navigation();
-const openingFinished=showOpening();
-api.ready=(async()=>{const results=await Promise.allSettled([json('data.json'),json('pipeline.json'),json('recordings.json')]);if(results[0].status==='rejected'||results[1].status==='rejected')throw Error('全国卷案例数据加载失败，请刷新重试。');state.data=results[0].value;state.pipelineData=results[1].value;state.recordings=results[2].status==='fulfilled'?results[2].value:{cases:[]};restoreChoices();for(const render of [renderOverview,renderConcepts,renderSingle,renderDiagnosis,renderRoutines,renderExam,renderCareer,renderAgent,renderTeacher,renderSchool,renderModes,renderMcp,renderEvolution])render();ShowcaseBank.init(api,{el,p,button,details});if(resumeReading&&savedReading.bank)await ShowcaseBank.restore(savedReading.bank);else await ShowcaseBank.show();document.querySelectorAll('[data-library-tab]').forEach(b=>b.onclick=()=>ShowcaseBank.tab(b.dataset.libraryTab));$('exam-student').onclick=()=>ShowcaseBank.renderExam(false);$('exam-teacher').onclick=()=>ShowcaseBank.renderExam(true);$('exam-print').onclick=()=>window.print();const hash=location.hash.slice(1);if(aliases[hash]&&!resumeReading)selectView(hash);await openingFinished;await restoreReadingPosition();setupMotion();return state.data;})().catch(error=>{state.loadError=error.message;$('demo-status').hidden=false;$('demo-status').textContent=error.message+' 正文仍可阅读。';console.error(error);return null;});
+const openingFinished=window.ShowcaseHero?.open({skip:resumeReading||Boolean(location.hash&&!['#overview','#highlights'].includes(location.hash))})||Promise.resolve();
+api.ready=(async()=>{const results=await Promise.allSettled([json('data.json'),json('pipeline.json'),json('recordings.json')]);if(results[0].status==='rejected'||results[1].status==='rejected')throw Error('全国卷案例数据加载失败，请刷新重试。');state.data=results[0].value;state.pipelineData=results[1].value;state.recordings=results[2].status==='fulfilled'?results[2].value:{cases:[]};restoreChoices();for(const render of [renderConcepts,renderSingle,renderDiagnosis,renderRoutines,renderExam,renderCareer,renderAgent,renderTeacher,renderSchool,renderModes,renderMcp,renderEvolution])render();ShowcaseBank.init(api,{el,p,button,details});if(resumeReading&&savedReading.bank)await ShowcaseBank.restore(savedReading.bank);else await ShowcaseBank.show();document.querySelectorAll('[data-library-tab]').forEach(b=>b.onclick=()=>ShowcaseBank.tab(b.dataset.libraryTab));$('exam-student').onclick=()=>ShowcaseBank.renderExam(false);$('exam-teacher').onclick=()=>ShowcaseBank.renderExam(true);$('exam-print').onclick=()=>window.print();const hash=location.hash.slice(1);if(aliases[hash]&&!resumeReading)selectView(hash);await openingFinished;entered=true;await restoreReadingPosition();setupMotion();return state.data;})().catch(error=>{state.loadError=error.message;$('demo-status').hidden=false;$('demo-status').textContent=error.message+' 正文仍可阅读。';console.error(error);return null;});
 })();

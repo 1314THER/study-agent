@@ -12,14 +12,21 @@ import json
 import re
 from pathlib import Path
 
+if __package__:
+    from .showcase_highlight_visuals import (system_visual, method_visual, time_visual,
+                                            ability_visual, data_visual, participation_visual, evolution_visual)
+else:
+    from showcase_highlight_visuals import (system_visual, method_visual, time_visual,
+                                          ability_visual, data_visual, participation_visual, evolution_visual)
+
 ROOT = Path(__file__).resolve().parents[1]
 PUBLIC = ROOT / 'frontend/showcase'
 CHAPTER_IDS = ['overview', 'concepts', 'dataset', 'single', 'diagnosis', 'library', 'routines',
                'exam', 'career', 'agent', 'teacher', 'school', 'modes', 'mcp', 'evolution']
 TOPICS = [
     {'id': 'highlights', 'title': '亮点', 'sources': ['overview', 'dataset'],
-     'thesis': '以时间、步骤与套路、共编数据和自进化，把一次作答接到下一步学习。',
-     'bridge': ('结构化底座与题目坐标', '解题、批改、教学与出题共用一套步骤')},
+     'thesis': '让 AI 参与学习全过程，推动每一次教学。',
+     'bridge': ('方法、时间、能力图谱与持续改进', '课时、知识点、步骤与套路怎样连接教学')},
     {'id': 'terms', 'title': '四个名词介绍', 'sources': ['concepts'],
      'thesis': '课时组织教学，知识点衡量理解，步骤描述操作，套路组织方法。',
      'bridge': ('统一的教学对象与前置关系', '同一道题的结构化解题与分步反馈')},
@@ -294,40 +301,17 @@ def references(chapter):
     return ''.join(out)
 
 
-def dataset_markup():
-    data = json.loads((PUBLIC / 'dataset-data.json').read_text())
-    metrics = ''.join('<div class="dataset-metric"><dt>' + esc(row['unit']) + '</dt><dd>' + format(row['value'], ',') + '<p>' + esc(row['label']) + '</p></dd></div>' for row in data['headline_metrics'])
-    flow = ''.join('<article><span>' + str(i + 1).zfill(2) + '</span><h3>' + title + '</h3><p>' + text + '</p></article>' for i, (title, text) in enumerate([
-        ('整理题目素材', f"{data['pool']['count']:,}道题，保留{data['pool']['occurrences']:,}条出处记录，来自{data['pool']['sources']}个来源。"),
-        ('连接方法结构', f"{data['matching']['high_confidence']:,}道高置信主套路候选，涉及{data['matching']['covered_routines']}项套路目录，进入人工确认环节。"),
-        ('支持教学应用', '题目经结构化解析与核验，连接步骤批改、分步教学、变式与练习组织。')]))
-    goals = ''.join('<article><header><span>规划测算</span><h4>' + esc(row['name']) + '</h4></header><strong>' + format(row['base'] * row['multiplier'], ',') + '<small>' + esc(row['unit']) + '</small></strong><p>' + format(row['base'], ',') + ' × ' + str(row['multiplier']) + '。' + esc(row['assumption']) + '</p></article>' for row in data['scenarios'])
-    return '<div class="inline-dataset"><dl class="inline-dataset-metrics">' + metrics + '</dl><div class="inline-dataset-flow">' + flow + '</div><div class="inline-dataset-target"><h3>全量贯通后的数据图景</h3><p>以当前题池和目录为基数，按以下假设测算建设规模。</p><div class="inline-dataset-goals">' + goals + '</div></div><div class="inline-dataset-footer"><span>建设快照 · ' + esc(data['audit']['date']) + '</span><a href="/showcase/dataset.html">查看详细统计 ↗</a></div></div>'
-
-
 def scene_markup(chapter):
     key = chapter['id']
-    content = bank_markup() if key == 'library' else dataset_markup() if key == 'dataset' else '<p class="scene-loading">正在准备交互图解…</p>'
+    content = bank_markup() if key == 'library' else '<p class="scene-loading">正在准备交互图解…</p>'
     return '<div id="scene-' + key + '" class="chapter-scene" aria-label="' + esc(chapter['title']) + '图解与演示">' + content + '</div>'
 
 
-def perspective_cell(perspective, body, source_id, heading, shared=False):
-    labels = dict(PERSPECTIVES)
-    label = '共同内容' if shared else labels[perspective]
-    classes = 'perspective-cell shared-cell' if shared else 'perspective-cell'
-    return ('<article class="' + classes + '" data-perspective-cell="' + perspective + '" data-perspective-label="' +
+def perspective_cell(perspective, body, source_id, heading):
+    label = dict(PERSPECTIVES)[perspective]
+    return ('<article class="perspective-cell" data-perspective-cell="' + perspective + '" data-perspective-label="' +
             esc(label) + '" data-source-unit="' + source_id + '"><h3 class="cell-kicker">' +
             esc(heading) + '</h3>' + body + '</article>')
-
-
-def highlight_cards():
-    rows = [
-        ('时间进入作答证据', '笔迹停顿、返回与修改连到步骤顺序，帮助定位值得核实的环节。'),
-        ('步骤与套路成为中间量', '从一次作答连接知识、方法、批改、训练与推荐。'),
-        ('三方共同编订数据', '高考数学教师、AI 与学校教师共同整理题目、步骤和方法映射。'),
-        ('反馈驱动多场景改进', '教师反馈、数据维护、教材更新和跨学科评测进入不同演进路线。'),
-    ]
-    return '<div class="highlight-cards">' + ''.join('<article><span>' + str(i + 1).zfill(2) + '</span><h4>' + esc(title) + '</h4><p>' + esc(text) + '</p></article>' for i, (title, text) in enumerate(rows)) + '</div>'
 
 
 def legacy_anchors(source_id):
@@ -344,7 +328,7 @@ def legacy_anchors(source_id):
     return ''.join('<span id="' + esc(anchor) + '" class="anchor-alias" aria-hidden="true"></span>' for anchor in anchors)
 
 
-def unit_markup(chapter, index, shared=False):
+def unit_markup(chapter, index):
     source_id = chapter['id']
     key = 'unit-' + source_id
     label = UNIT_LABELS[source_id]
@@ -353,17 +337,14 @@ def unit_markup(chapter, index, shared=False):
     if chapter.get('pain'):
         pain = chapter['pain']
         teaching.append('<div class="pain-point"><span>现实痛点</span><h4>' + esc(pain['title']) + '</h4>' + paragraphs(pain['text']) + '</div>')
-    if source_id == 'overview':
-        teaching.append('<div class="opening-case"><span class="small-label">2023 新课标全国Ⅰ卷 · 第17题</span><h4>角关系的错误，怎样影响后面的推导？</h4><div class="handwriting-sheet"><div class="paper-ink">由 A+B=3C 和 A+B+C=π，\n得 C=π/3。</div></div><p>从学生作答开始：先定位错误步骤，再核实原因、安排补练，并用独立新题复测。</p></div>')
-    elif source_id != 'overview':
-        teaching.append(scene_markup(chapter))
+    teaching.append(scene_markup(chapter))
     teaching.append('<div class="chapter-prose">' + paragraphs(chapter.get('body', []), KEY_PHRASES.get(source_id, ())) + '</div>')
 
     notes = []
     if chapter.get('details'):
         notes.append('<div class="mechanism-notes">')
         for number, detail in enumerate(chapter['details'], 1):
-            notes.append('<aside class="margin-note"><span class="note-number">' + str(number).zfill(2) + '</span><h4>' + esc(detail['title']) + '</h4>' + paragraphs(detail['body']) + '</aside>')
+            notes.append('<aside class="margin-note"><h4>' + esc(detail['title']) + '</h4>' + paragraphs(detail['body']) + '</aside>')
         notes.append('</div>')
     notes.append(references(chapter))
 
@@ -374,29 +355,18 @@ def unit_markup(chapter, index, shared=False):
     if chapter.get('mechanism'):
         technical.append('<ol class="mechanism-list">' + ''.join('<li>' + esc(item) + '</li>' for item in chapter['mechanism']) + '</ol>')
     technical.append('<div class="acceptance-note"><strong>验证重点</strong><p>' + esc(acceptance) + '</p></div>')
-    if source_id == 'overview':
-        technical.append(scene_markup(chapter))
 
     linked = source_id in {'overview', 'concepts', 'single', 'diagnosis', 'library', 'routines', 'exam', 'career', 'teacher', 'school', 'agent', 'mcp', 'evolution'}
     out = ['<section class="topic-unit" data-link-unit="' + key + '" data-source-id="' + source_id + '" data-related-processing="' + esc(RELATIONSHIPS.get(source_id, ('', '', '', ''))[1]) + '" id="unit-anchor-' + source_id + '">']
     out.append(legacy_anchors(source_id))
-    if linked and not shared:
-        out.append('<button class="topic-unit-key" type="button" data-link-focus="' + key + '" aria-pressed="false"><span>U' + str(index).zfill(2) + '</span><strong>' + esc(label) + '</strong><span class="unit-key-action">联动两栏</span></button>')
+    if linked:
+        out.append('<button class="topic-unit-key" type="button" data-link-focus="' + key + '" aria-pressed="false"><strong>' + esc(label) + '</strong><span class="unit-key-action">对应技术</span></button>')
     else:
-        out.append('<div class="topic-unit-key"><span>U' + str(index).zfill(2) + '</span><strong>' + esc(label) + '</strong></div>')
-    out.append('<div class="topic-unit-grid' + (' topic-unit-shared' if shared else '') + '">')
-    if shared:
-        shared_parts = []
-        if source_id == 'overview':
-            shared_parts.append(highlight_cards())
-        shared_parts.extend(teaching)
-        shared_parts.extend(technical)
-        shared_parts.extend(notes)
-        out.append(perspective_cell('shared', '<div class="cell-content">' + ''.join(shared_parts) + '</div>', source_id, '项目亮点与系统总图', shared=True))
-    else:
-        out.append(perspective_cell('teaching', '<div class="cell-content">' + ''.join(teaching) + '</div>', source_id, '课堂与学生作答'))
-        out.append('<div class="lane-divider" data-lane-divider><div class="lane-divider-control" data-split-control role="separator" tabindex="0" aria-label="调整教学应用与技术实现的宽度" aria-orientation="vertical" aria-valuemin="35" aria-valuemax="75" aria-valuenow="60" aria-valuetext="教学应用 60%，技术实现 40%"></div></div>')
-        out.append(perspective_cell('technical', '<div class="cell-content">' + ''.join(technical + notes) + '</div>', source_id, '机制、研究与技术实现'))
+        out.append('<div class="topic-unit-key"><strong>' + esc(label) + '</strong></div>')
+    out.append('<div class="topic-unit-grid">')
+    out.append(perspective_cell('teaching', '<div class="cell-content">' + ''.join(teaching) + '</div>', source_id, '课堂与学生作答'))
+    out.append('<div class="lane-divider" data-lane-divider><div class="lane-divider-control" data-split-control role="separator" tabindex="0" aria-label="调整教学应用与技术实现的宽度" aria-orientation="vertical" aria-valuemin="35" aria-valuemax="75" aria-valuenow="60" aria-valuetext="教学应用 60%，技术实现 40%"></div></div>')
+    out.append(perspective_cell('technical', '<div class="cell-content">' + ''.join(technical + notes) + '</div>', source_id, '机制、研究与技术实现'))
     out.append('</div></section>')
     return ''.join(out)
 
@@ -405,19 +375,64 @@ def topic_section(topic, topic_index, chapters):
     key = topic['id']
     first_heading = 'h1' if topic_index == 1 else 'h2'
     out = ['<section class="topic-section" id="' + key + '" data-chapter="' + key + '" aria-labelledby="heading-' + key + '">']
-    out.append('<header class="topic-heading"><div class="chapter-position"><span>' + str(topic_index).zfill(2) + '</span><span class="chapter-topic">' + esc(topic['title']) + '</span></div>')
+    out.append('<header class="topic-heading">')
     out.append('<' + first_heading + ' id="heading-' + key + '">' + esc(topic['title']) + '</' + first_heading + '><p class="chapter-thesis">' + esc(topic['thesis']) + '</p></header>')
-    is_shared = key == 'highlights'
-    if not is_shared:
-        out.append('<div class="perspective-headings" aria-hidden="true">' + ''.join('<h3>' + esc(label) + '</h3>' for _, label in PERSPECTIVES) + '</div>')
+    out.append('<div class="perspective-headings" aria-hidden="true">' + ''.join('<h3>' + esc(label) + '</h3>' for _, label in PERSPECTIVES) + '</div>')
     for unit_index, source_id in enumerate(topic['sources'], 1):
-        out.append(unit_markup(chapters[source_id], unit_index, shared=is_shared))
+        out.append(unit_markup(chapters[source_id], unit_index))
     output, next_question = topic['bridge']
     next_id = TOPIC_IDS[topic_index] if topic_index < len(TOPIC_IDS) else ''
     next_title = NAV_LABELS[next_id] if next_id else '亮点'
     out.append('<div class="chapter-bridge"><div class="bridge-flow"><div class="bridge-output"><span>本主题形成共同产物</span><strong>' + esc(output) + '</strong></div><div class="bridge-track" aria-hidden="true"><svg viewBox="0 0 180 32"><path d="M5 16H173m-7-6 7 6-7 6"/></svg><i class="bridge-packet"></i></div><div class="bridge-input"><span>下一个主题要回答</span><strong>' + esc(next_question) + '</strong></div></div>')
     out.append('<a class="chapter-transition" href="#' + (next_id or 'highlights') + '">继续：' + esc(next_title) + ' <span>' + esc(next_question) + '</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></a></div>')
     out.append('</section>')
+    return ''.join(out)
+
+
+def launch_screen(copy):
+    """A separate first-visit screen; the full story stays in the document."""
+    lettering = (PUBLIC / 'launch-lettering.svg').read_text()
+    lettering = lettering.replace('<svg ', '<svg class="hero-love" aria-hidden="true" ', 1)
+    return ''.join(['<dialog class="launch-screen" id="launch-screen" aria-labelledby="launch-title">' + (PUBLIC / 'launch-geometry.svg').read_text() + '<div class="launch-layout">',
+           '<header class="launch-brand"><img src="/showcase/assets/fudan-emblem-white.png" width="40" height="40" alt="复旦大学校徽"><span><strong>StudyAgent</strong><small>成为数学高手 · 项目介绍</small></span></header>',
+           '<div class="highlights-hero launch-hero"><div class="hero-copy"><h2 id="launch-title" tabindex="-1">' + ''.join('<span>' + esc(part + ('，' if i == 0 else '')) + '</span>' for i, part in enumerate(copy['title'].split('，', 1))) + '</h2><p class="hero-subtitle">' + esc(copy['subtitle']) + '</p></div>',
+           '<div class="hero-art" id="hero-art" data-phase="waiting" aria-label="数学 love 书写与探索入口">' + lettering,
+           '<svg class="hero-ink-link" aria-hidden="true"><path id="hero-ink-path" pathLength="1"/></svg>',
+           '<a id="explore-start" class="explore-start" href="#highlights"><span class="explore-glass" aria-hidden="true"></span><strong>开始探索</strong><span class="explore-icon" aria-hidden="true">↗</span></a></div>',
+           '<div class="hero-manifesto"><p>' + esc(copy['manifesto']) + '</p><p lang="en">' + esc(copy['manifesto_en']) + '</p></div></div>',
+           '<footer class="launch-footer"><div class="launch-contact"><span>项目负责人：施棋智</span><a href="mailto:qzshi25@m.fudan.edu.cn">email：qzshi25@m.fudan.edu.cn</a></div><nav aria-label="正式站与备案"><a href="https://150.chat/" target="_blank" rel="noopener noreferrer">正式站（正在开发中）</a><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">渝ICP备2026024246号-1</a></nav></footer></div></dialog>'])
+
+
+def highlights_section(copy):
+    """A visual story for each argument, with one compact map of all ten modules."""
+    visuals = {'system': system_visual, 'methods': method_visual, 'time': time_visual,
+               'ability': ability_visual, 'data': data_visual, 'participation': participation_visual,
+               'evolution': evolution_visual}
+    out = ['<section class="topic-section highlights-topic" id="highlights" data-chapter="highlights" aria-labelledby="heading-highlights">',
+           '<span id="overview" class="anchor-alias" aria-hidden="true"></span>',
+           '<header class="topic-heading"><h1 id="heading-highlights" tabindex="-1">' + esc(copy['label']) + '</h1></header>',
+           '<div class="highlights-body">']
+    metrics = json.loads((PUBLIC / 'dataset-data.json').read_text())['headline_metrics']
+    for point in copy['points']:
+        key = point['id']
+        out.append('<article class="highlight-point highlight-feature highlight-' + key + '" id="highlight-' + key + '" aria-labelledby="highlight-title-' + key + '"><div class="highlight-narrative"><header><span class="highlight-index">' + esc(point['label']) + '</span><h2 id="highlight-title-' + key + '">' + esc(point['title']) + '</h2></header>')
+        if point.get('pain'):
+            out.append('<p class="highlight-pain"><span>现实痛点</span>' + esc(point['pain']) + '</p>')
+        if point.get('score'):
+            out.append('<div class="full-score"><strong>2<span>×</span>150</strong><span>' + esc(point['score_caption']) + '</span></div>')
+        if point.get('intro'):
+            out.append('<p>' + esc(point['intro']) + '</p>')
+        out.append('<p class="highlight-body">' + esc(point['body']) + '</p>')
+        out.append('<p class="highlight-key"><strong>' + esc(point['key']) + '</strong></p>')
+        if point.get('bridge'):
+            out.append('<p class="highlight-connection">' + esc(point['bridge']) + '</p>')
+        out.append('</div><div class="highlight-visual-slot">' + visuals[key]() + '</div>')
+        if key == 'data':
+            out.append('<div id="scene-dataset" class="highlight-data-foot"><span id="dataset" class="anchor-alias" aria-hidden="true"></span><dl class="highlight-metrics">' + ''.join('<div class="dataset-metric"><dt>' + esc(row['unit']) + '</dt><dd>' + format(row['value'], ',') + '</dd></div>' for row in metrics if row['key'] in {'knowledge', 'steps', 'routines', 'pool'}) + '</dl><a class="highlight-dataset-link" href="/showcase/dataset.html">查看数据集规模 ↗</a></div>')
+        if point.get('comparison'):
+            out.append('<div class="openness-comparison"><table><thead><tr><th scope="col">封闭题库的常见形态</th><th scope="col">StudyAgent 的设计方向</th></tr></thead><tbody>' + ''.join('<tr><td>' + esc(a) + '</td><td>' + esc(b) + '</td></tr>' for a, b in point['comparison']) + '</tbody></table></div>')
+        out.append('</article>')
+    out.append('</div><div class="highlight-closing"><p>' + esc(copy['closing']) + '</p></div><div class="chapter-bridge"><div class="bridge-flow"><div class="bridge-output"><span>这套系统连接起</span><strong>方法 · 时间 · 能力 · 教学行动</strong></div><div class="bridge-track" aria-hidden="true"><svg viewBox="0 0 180 32"><path d="M5 16H173m-7-6 7 6-7 6"/></svg><i class="bridge-packet"></i></div><div class="bridge-input"><span>先认识共同使用的</span><strong>课时 · 知识点 · 步骤 · 套路</strong></div></div><a class="chapter-transition" href="#terms">继续：四个名词介绍 <span>' + esc(copy['next']) + '</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></a></div></section>')
     return ''.join(out)
 
 
@@ -428,9 +443,9 @@ def build(content):
     chapter_map = {chapter['id']: chapter for chapter in source_chapters}
     if set(CHAPTER_TO_TOPIC) != set(CHAPTER_IDS):
         raise ValueError('Each reviewed source unit must map to exactly one topic')
-    primary_nav = ''.join('<a href="#' + topic['id'] + '" title="' + esc(topic['thesis']) + '"><span>' + str(i + 1).zfill(2) + '</span>' + esc(topic['title']) + '</a>' for i, topic in enumerate(TOPICS))
-    mobile_options = ''.join('<option value="' + topic['id'] + '">' + str(i + 1).zfill(2) + ' · ' + esc(topic['title']) + '</option>' for i, topic in enumerate(TOPICS))
-    sections = ''.join(topic_section(topic, index + 1, chapter_map) for index, topic in enumerate(TOPICS))
+    primary_nav = ''.join('<a href="#' + topic['id'] + '" title="' + esc(topic['thesis']) + '">' + esc(topic['title']) + '</a>' for i, topic in enumerate(TOPICS))
+    mobile_options = ''.join('<option value="' + topic['id'] + '">' + esc(topic['title']) + '</option>' for i, topic in enumerate(TOPICS))
+    sections = ''.join(highlights_section(content['highlights']) if topic['id'] == 'highlights' else topic_section(topic, index + 1, chapter_map) for index, topic in enumerate(TOPICS))
     perspective_controls = ''.join('<button type="button" role="tab" aria-selected="' + ('true' if key == 'teaching' else 'false') + '" data-perspective="' + key + '">' + esc(label) + '</button>' for key, label in PERSPECTIVES)
     return '''<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -438,19 +453,16 @@ def build(content):
 <meta name="theme-color" content="#080808"><meta name="color-scheme" content="dark"><title>步骤诊断与方法迁移 · StudyAgent 科研展示</title>
 <link rel="icon" type="image/png" sizes="64x64" href="/showcase/assets/fudan-favicon-white.png">
 <link rel="apple-touch-icon" href="/showcase/assets/fudan-emblem-white.png">
-<link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/vendor/katex/katex.min.css"><link rel="stylesheet" href="/showcase/style.css"><link rel="stylesheet" href="/showcase/handwriting.css"><link rel="stylesheet" href="/showcase/transitions.css">
-<script defer src="/vendor/katex/katex.min.js"></script><script defer src="/dimchart.js"></script><script defer src="/radar.js"></script><script defer src="/showcase/handwriting.js"></script><script defer src="/showcase/bank.js"></script><script defer src="/showcase/app.js"></script><script defer src="/showcase/splitter.js"></script><script defer src="/showcase/transitions.js"></script>
-</head><body class="research-showcase"><a class="skip-link" href="#main-content">跳到项目内容</a>
+<link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/vendor/katex/katex.min.css"><link rel="stylesheet" href="/showcase/style.css"><link rel="stylesheet" href="/showcase/handwriting.css"><link rel="stylesheet" href="/showcase/transitions.css"><link rel="stylesheet" href="/showcase/hero.css"><link rel="stylesheet" href="/showcase/surfaces.css"><link rel="stylesheet" href="/showcase/launch-geometry.css"><link rel="stylesheet" href="/showcase/highlights.css"><link rel="stylesheet" href="/showcase/highlights-layout.css">
+<script defer src="/vendor/katex/katex.min.js"></script><script defer src="/dimchart.js"></script><script defer src="/radar.js"></script><script defer src="/showcase/handwriting.js"></script><script defer src="/showcase/bank.js"></script><script defer src="/showcase/liquid-glass.js"></script><script defer src="/showcase/hero.js"></script><script defer src="/showcase/app.js"></script><script defer src="/showcase/splitter.js"></script><script defer src="/showcase/transitions.js"></script><script defer src="/showcase/highlights.js"></script>
+</head><body class="research-showcase">''' + launch_screen(content['highlights']) + '''<a class="skip-link" href="#main-content">跳到项目内容</a>
 <header class="site-header"><a class="research-brand" href="#highlights"><img class="brand-emblem" src="/showcase/assets/fudan-emblem-white.png" width="44" height="44" alt="复旦大学校徽"><span>成为数学高手<small>StudyAgent 科研项目</small></span></a>
 <nav class="primary-nav" aria-label="章节导航">''' + primary_nav + '''</nav>
 <label class="topic-quick-jump"><span class="sr-only">跳转到主题</span><select id="topic-quick-jump" aria-label="跳转到主题">''' + mobile_options + '''</select></label></header>
 <main id="main-content"><div class="page-intro"><span>高中数学 / 过程诊断 / 方法迁移</span><span>全国卷案例 · 从作答到教学</span></div>
 <nav class="perspective-switch" aria-label="选择阅读视角"><div class="perspective-switch-label"><strong>阅读视角</strong><span class="swipe-hint">左右滑动切换</span></div><div class="perspective-tabs" role="tablist" aria-label="教学应用与技术实现">''' + perspective_controls + '''</div></nav>
 <p id="demo-status" class="page-status" role="alert" hidden></p>''' + sections + '''</main>
-<footer class="site-footer"><div><strong>StudyAgent</strong><p>让每次作答，成为下一步学习的依据。</p></div><div><a href="https://150.chat/" target="_blank" rel="noopener noreferrer">正式站首页</a><a href="https://150.chat/home.html" target="_blank" rel="noopener noreferrer">学习系统</a><a href="https://github.com/1314THER/study-agent" target="_blank" rel="noopener noreferrer">代码与研究文档</a><a href="#highlights">回到系统亮点</a></div><p class="site-registration"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">渝ICP备2026024246号-1</a></p><p class="site-author">项目负责人：施棋智<br>email：<a href="mailto:qzshi25@m.fudan.edu.cn">qzshi25@m.fudan.edu.cn</a></p></footer>
-<dialog id="opening-dialog" class="opening-dialog" aria-labelledby="opening-title">
-<svg class="opening-space" viewBox="0 0 1600 1000" preserveAspectRatio="xMidYMid slice" aria-hidden="true"><defs><radialGradient id="opening-haze"><stop stop-color="#565656" stop-opacity=".3"/><stop offset=".5" stop-color="#303030" stop-opacity=".15"/><stop offset="1" stop-color="#080808" stop-opacity="0"/></radialGradient><linearGradient id="opening-grid-fade" x2="0" y2="1"><stop stop-color="white" stop-opacity="0"/><stop offset=".4" stop-color="white" stop-opacity=".7"/><stop offset="1" stop-color="white" stop-opacity=".15"/></linearGradient><mask id="opening-grid-mask"><rect width="1600" height="1000" fill="url(#opening-grid-fade)"/></mask><linearGradient id="opening-orbit-light"><stop stop-color="#aaaaaa" stop-opacity="0"/><stop offset=".5" stop-color="#aaaaaa" stop-opacity=".35"/><stop offset="1" stop-color="#aaaaaa" stop-opacity="0"/></linearGradient></defs><ellipse cx="700" cy="480" rx="920" ry="590" fill="url(#opening-haze)"/><g class="opening-coordinate-grid" mask="url(#opening-grid-mask)" fill="none" stroke="#b8b8b8" stroke-width="1"><path d="M-800 1000L1060 470M-450 1000L1060 470M-100 1000L1060 470M250 1000L1060 470M600 1000L1060 470M950 1000L1060 470M1300 1000L1060 470M1650 1000L1060 470M2000 1000L1060 470M2350 1000L1060 470M2700 1000L1060 470M0 498H1600M0 523H1600M0 559H1600M0 611H1600M0 685H1600M0 791H1600M0 943H1600"/></g><g class="opening-orbits" transform="rotate(-18 1000 510)" fill="none"><ellipse cx="1000" cy="510" rx="720" ry="230" stroke="url(#opening-orbit-light)"/><ellipse cx="1000" cy="510" rx="780" ry="270" stroke="#808080" stroke-opacity=".1"/><path class="opening-signal" d="M280 510a720 230 0 0 1 1440 0" stroke="#d0d0d0" stroke-opacity=".65" stroke-width="1.5" pathLength="1"/><circle cx="1720" cy="510" r="3" fill="#e0e0e0" fill-opacity=".7"/></g></svg>
-<div id="opening-animation"><header class="opening-masthead"><h2 id="opening-title" class="opening-title" tabindex="-1">study-agent项目介绍页面</h2></header><div class="opening-artwork"><img src="/showcase/launch-lettering.svg" width="685" height="355" alt="数学 · love"></div><div class="opening-entry"><button id="opening-enter" type="button"><span>点击进入预览</span><span class="opening-enter-icon" aria-hidden="true"><svg viewBox="0 0 32 24" fill="none"><path d="M2 12h27M22 5l7 7-7 7"/></svg></span></button></div><nav class="opening-related-links" aria-label="相关网站与备案"><a href="https://150.chat/" target="_blank" rel="noopener noreferrer">StudyAgent 正式站</a><a href="https://150.chat/home.html" target="_blank" rel="noopener noreferrer">学习系统</a><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">渝ICP备2026024246号-1</a></nav><div class="opening-author"><span>项目负责人：施棋智</span><span>email：<a href="mailto:qzshi25@m.fudan.edu.cn">qzshi25@m.fudan.edu.cn</a></span></div></div></dialog>
+<footer class="site-footer"><div><strong>StudyAgent</strong><p>让每次作答，成为下一步学习的依据。</p></div><div><a href="https://150.chat/" target="_blank" rel="noopener noreferrer">正式站（正在开发中）</a><a href="https://github.com/1314THER/study-agent" target="_blank" rel="noopener noreferrer">代码与研究文档</a><a href="#highlights">回到系统亮点</a></div><p class="site-registration"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">渝ICP备2026024246号-1</a></p><p class="site-author">项目负责人：施棋智<br>email：<a href="mailto:qzshi25@m.fudan.edu.cn">qzshi25@m.fudan.edu.cn</a></p></footer>
 <aside id="annotation-panel" class="annotation-panel" aria-label="补充批注" hidden><header><h2 id="annotation-title"></h2><button id="annotation-close" type="button" aria-label="关闭批注">×</button></header><div id="annotation-body"></div></aside>
 <noscript><style>.chapter-scene:not(:has(.native-workbench)):not(#scene-dataset){display:none}</style><p class="noscript-note">正文、逻辑图、数据集与研究对照可直接阅读。</p></noscript>
 </body></html>'''

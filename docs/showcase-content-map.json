@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
-  "reviewed_at": "2026-10-25",
+  "reviewed_at": "2026-10-26",
   "read_policy": "每章设计前完整阅读其 source_docs，保留原始文件 SHA256 和参考章节；不能仅以标题、摘要或计划替代全文。",
   "implementation_snapshot": "原实现数量为2026-10-24快照；数据集聚合数量核对截至2026-10-25；能力状态按原文核对日期。",
-  "source_count": 15,
+  "source_count": 16,
   "chapters": [
     {
       "id": "overview",
@@ -35,6 +35,15 @@
           "read_completeness": "full",
           "reference_sections": [
             "2–11：已有基础与差距"
+          ]
+        },
+        {
+          "file": "docs/第一章亮点文案-20261026.md",
+          "sha256": "37961b7db31c3398164f90a3f9216092853885516ce1841ec5499a5a0eb8a2cf",
+          "line_count": 119,
+          "read_completeness": "full",
+          "reference_sections": [
+            "全文：用户确认的七点文案、首屏动画与下一章过渡"
           ]
         }
       ],
@@ -116,13 +125,22 @@
           "reference_sections": [
             "全文：概念、统计口径、步骤实例与当前能力；本次完整重读"
           ]
+        },
+        {
+          "file": "docs/第一章亮点文案-20261026.md",
+          "sha256": "37961b7db31c3398164f90a3f9216092853885516ce1841ec5499a5a0eb8a2cf",
+          "line_count": 119,
+          "read_completeness": "full",
+          "reference_sections": [
+            "全文：用户确认的七点文案、首屏动画与下一章过渡"
+          ]
         }
       ],
       "research_urls": [],
       "research_resources": [],
       "aggregate_snapshot": {
         "file": "frontend/showcase/dataset-data.json",
-        "sha256": "bb49152cfca71a937f7c074f382a5327a77899ad40f99ae3f48df985d66017b1",
+        "sha256": "76cec584caca4e76a3d9375a0f5e2ce9b9e76c332ace3ba983bfe8c4e76b60a4",
         "checked_at": "2026-10-26",
         "scope": "公开聚合规模和明确假设的规划测算；内部规模仍为2026-10-25快照，2026-10-26仅复核公开两题清单及其资源摘要。"
       }
@@ -771,5 +789,6 @@
         }
       ]
     }
-  ]
+  ],
+  "editorial_revision": "亮点七块动态图解、覆盖十功能的分层结构总图、自然直连开屏按钮、浅红痛点与二级步骤称谓；统计口径及真实录制输出保持原状。"
 }
