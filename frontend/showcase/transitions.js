@@ -1,110 +1,93 @@
-/* Chapter handoffs follow native scroll; this layer never controls navigation. */
+/* Shared topic handoffs follow native scroll; they never control navigation. */
 (function(){
  'use strict';
- const chapters=[...document.querySelectorAll('[data-chapter]')];
- if(!chapters.length)return;
- const shortNames={overview:'项目总览',concepts:'基础表示',dataset:'数据集',single:'单题能力',diagnosis:'过程诊断',library:'错题与题库',routines:'套路训练',exam:'整卷分析',career:'长期学习',agent:'教学协同 Agent',teacher:'教师教学',school:'学校教研',modes:'教学模式',mcp:'MCP 与宿主',evolution:'系统演进'};
- const aliases={solution:'single',grading:'single',teaching:'single',generation:'single',geometry:'single',graph:'routines',pool:'library',progress:'evolution',research:'evolution'};
- const chapterMap=new Map(chapters.map(chapter=>[chapter.id,chapter]));
+ const topics=[...document.querySelectorAll('[data-chapter]')];
+ if(!topics.length)return;
+ const topicNames={highlights:'亮点',terms:'四个名词介绍',single:'单题能力',time:'时间维度',library:'题库与错题',exam:'考试与复盘',longterm:'长期陪伴',teacher:'教师工作流',school:'学校与教学采用方式',agent:'MCP与Agent能力',evolution:'自进化'};
+ const aliases={overview:'highlights',dataset:'highlights',concepts:'terms',diagnosis:'time',routines:'library',career:'longterm',modes:'school',mcp:'agent',solution:'single',grading:'single',teaching:'single',generation:'single',geometry:'single',graph:'library',pool:'library',progress:'evolution',research:'evolution'};
+ const byId=new Map(topics.map(topic=>[topic.id,topic]));
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');
- const items=[],visible=new Set();
- let active=null,frame=0,ready=false,overlayTimer=0,lastRoute='',lastRouteAt=0;
+ const states=[],visible=new Set(),waiting=new Set();let raf=0;
  const clamp=value=>Math.max(0,Math.min(1,value));
  const smooth=value=>{const p=clamp(value);return p*p*(3-2*p);};
  function node(tag,cls,text){const result=document.createElement(tag);if(cls)result.className=cls;if(text)result.textContent=text;return result;}
  function arrow(cls){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 56 24');svg.setAttribute('aria-hidden','true');svg.classList.add(cls);const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d','M2 12h50m-8-8 8 8-8 8');svg.append(path);return svg;}
- function resolveId(value){const clean=String(value||'').replace(/^#/,'');const id=aliases[clean]||clean;return chapterMap.has(id)?id:null;}
- function label(id){return shortNames[id]||chapterMap.get(id)?.querySelector('h1,h2')?.textContent||'';}
- function currentId(){const saved=resolveId(window.Showcase?.state?.view);if(saved)return saved;return chapters.find(chapter=>{const r=chapter.getBoundingClientRect();return r.top<=innerHeight*.45&&r.bottom>innerHeight*.45;})?.id||chapters[0].id;}
-
- for(let index=0;index<chapters.length;index++){
-  const chapter=chapters[index],bridge=chapter.querySelector('.chapter-bridge');
-  if(!bridge)continue;
-  const flow=bridge.querySelector('.bridge-flow'),link=bridge.querySelector('.chapter-transition');
-  if(!flow||!link)continue;
-  const nextId=resolveId(link.hash)||chapters[(index+1)%chapters.length].id;
-  const stage=node('div','handoff-stage'),context=node('div','handoff-context');
-  const from=node('div','handoff-chapter'),to=node('div','handoff-chapter handoff-next');
-  from.append(node('span','handoff-label','从这一章'),node('strong','',label(chapter.id)));
-  to.append(node('span','handoff-label',index===chapters.length-1?'回到起点':'走向下一章'),node('strong','',label(nextId)));
+ function resolve(value){const id=String(value||'').replace(/^#/,'');const mapped=aliases[id]||id;return byId.has(mapped)?mapped:null;}
+ function label(id){return topicNames[id]||byId.get(id)?.querySelector('h1,h2')?.textContent||'';}
+ for(let index=0;index<topics.length;index++){
+  const topic=topics[index],bridge=topic.querySelector('.chapter-bridge'),flow=bridge?.querySelector('.bridge-flow'),link=bridge?.querySelector('.chapter-transition');
+  if(!bridge||!flow||!link)continue;
+  const nextId=resolve(link.hash)||topics[index+1]?.id||topics[0].id;
+  const stage=node('div','handoff-stage'),context=node('div','handoff-context'),from=node('div','handoff-chapter'),to=node('div','handoff-chapter handoff-next');
+  from.append(node('span','handoff-label','本主题形成'),node('strong','',label(topic.id)));
+  to.append(node('span','handoff-label',index===topics.length-1?'回到问题起点':'接下来进入'),node('strong','',label(nextId)));
   context.append(from,arrow('handoff-context-arrow'),to);
-  const arrivalTitle=node('p','handoff-arrival-title',chapterMap.get(nextId)?.querySelector('h1,h2')?.textContent||label(nextId));
-  arrivalTitle.setAttribute('aria-hidden','true');
-  stage.append(context,flow,arrivalTitle,link);bridge.append(stage);bridge.classList.add('has-handoff');
+  stage.append(context,flow,link);bridge.append(stage);bridge.classList.add('has-handoff');
   const path=flow.querySelector('.bridge-track path');
   if(path){const base=path.cloneNode(true);base.classList.add('handoff-line-base');path.before(base);path.classList.add('handoff-line-motion');path.setAttribute('pathLength','1');}
-  const item={id:chapter.id,nextId,bridge,stage,ratio:0,stageHeight:0};
-  bridge.dataset.handoffFrom=chapter.id;bridge.dataset.handoffTo=nextId;items.push(item);
+  const state={id:topic.id,nextId,bridge,stage,progress:null,startedAt:null};
+  bridge.dataset.handoffFrom=topic.id;bridge.dataset.handoffTo=nextId;states.push(state);
  }
-
- // All measurements happen before style writes; only the active bridge is read on scroll.
- function applyProgress(item,progress){
-  const p=clamp(progress),delivery=smooth((p-.2)/.5),arrival=smooth((p-.48)/.43),departure=smooth((p-.6)/.4);
-  const style=item.bridge.style;
+ for(const topic of topics.slice(1)){
+  topic.dataset.arrivalFrom=states.find(state=>state.nextId===topic.id)?.id||'';
+  topic.dataset.arrivalState=reduced.matches?'complete':'pending';
+  if(!reduced.matches){topic.classList.add('is-arrival-pending');waiting.add(topic);}
+ }
+ function revealTopic(topic,animate){
+  if(!waiting.has(topic))return;waiting.delete(topic);
+  const previous=states.find(state=>state.nextId===topic.id);
+  if(previous&&previous.progress<.8)apply(previous,1);
+  topic.classList.remove('is-arrival-pending');topic.dataset.arrivalState=animate?'arriving':'complete';
+  if(animate){topic.classList.add('is-arriving');const finish=event=>{if(event.target!==topic||event.animationName!=='topic-arrival')return;topic.removeEventListener('animationend',finish);topic.classList.remove('is-arriving');topic.dataset.arrivalState='complete';};topic.addEventListener('animationend',finish);}
+ }
+ function apply(state,progress){
+  const p=clamp(progress);if(state.progress===p)return;state.progress=p;
+  const delivery=smooth(p/.72),arrival=smooth((p-.12)/.68),style=state.bridge.style;
   style.setProperty('--handoff-progress',p.toFixed(4));
   style.setProperty('--handoff-line-offset',(1-delivery).toFixed(4));
   style.setProperty('--handoff-marker-position',(delivery*100).toFixed(2)+'%');
-  style.setProperty('--handoff-marker-opacity',p>.15&&p<.86?'1':'0');
-  style.setProperty('--handoff-source-opacity',(1-.25*departure).toFixed(3));
-  style.setProperty('--handoff-source-y',(-5*departure).toFixed(2)+'px');
-  style.setProperty('--handoff-source-scale',(1-.025*departure).toFixed(4));
-  style.setProperty('--handoff-target-opacity',(.74+.26*arrival).toFixed(3));
-  style.setProperty('--handoff-target-y',(16*(1-arrival)).toFixed(2)+'px');
-  style.setProperty('--handoff-target-scale',(.97+.03*arrival).toFixed(4));
+  style.setProperty('--handoff-marker-opacity',p>.02&&p<.72?'1':'0');
+  style.setProperty('--handoff-target-opacity',(.82+.18*arrival).toFixed(3));
+  style.setProperty('--handoff-target-y',(6*(1-arrival)).toFixed(2)+'px');
   style.setProperty('--handoff-arrival-opacity',arrival.toFixed(3));
-  style.setProperty('--handoff-title-opacity',smooth((p-.6)/.36).toFixed(3));
-  style.setProperty('--handoff-title-y',(14*(1-smooth((p-.6)/.36))).toFixed(2)+'px');
-  item.bridge.dataset.handoffProgress=p.toFixed(3);
-  item.bridge.classList.toggle('is-bridging',p>.01&&p<.99);
-  item.bridge.classList.toggle('is-delivered',p>=.94);
+  state.bridge.dataset.handoffProgress=p.toFixed(3);
+  state.bridge.classList.toggle('is-bridging',p>.01&&p<.99);
+  state.bridge.classList.toggle('is-delivered',p>=.8);
  }
  function draw(){
-  frame=0;if(reduced.matches||!active)return;
-  const item=active,rect=item.bridge.getBoundingClientRect();
-  const stageHeight=item.stageHeight||280;
-  const start=innerHeight*.62;
-  const stickyTop=Math.min(150,Math.max(100,innerHeight*.16));
-  const end=stickyTop+stageHeight-rect.height;
-  const progress=(start-rect.top)/Math.max(180,start-end);
-  applyProgress(item,progress);
+  raf=0;if(reduced.matches)return;
+  // Deliver while the card is fully readable, using actual navigation geometry.
+  const header=document.querySelector('.site-header')?.getBoundingClientRect().bottom||0;
+  const switcher=document.querySelector('.perspective-switch');
+  const inset=switcher&&getComputedStyle(switcher).display!=='none'?switcher.getBoundingClientRect().bottom:header;
+  const start=innerHeight*.96,end=Math.min(start-100,Math.max(inset+24,innerHeight*.5));
+  const positions=[...visible].map(state=>[state,state.bridge.getBoundingClientRect().top]);
+  const arrivals=[...waiting].map(topic=>({topic,heading:topic.querySelector('.topic-heading').getBoundingClientRect(),section:topic.getBoundingClientRect()}));
+  let playing=false;
+  for(const [state,top]of positions){
+   if(top<=start&&state.startedAt===null)state.startedAt=performance.now();
+   const elapsed=state.startedAt===null?0:clamp((performance.now()-state.startedAt)/1150);
+   const inMotion=state.startedAt!==null&&elapsed<1;
+   state.bridge.classList.toggle('is-playing',inMotion);playing=playing||inMotion;
+   // Keep the handoff legible even when the reader stops scrolling at its entrance.
+   apply(state,Math.max((start-top)/(start-end),elapsed));
+  }
+  for(const {topic,heading,section}of arrivals){
+   if(section.bottom<=inset||heading.bottom<inset)revealTopic(topic,false);
+   else if(heading.top<=innerHeight*.92)revealTopic(topic,true);
+  }
+  if(playing)schedule();
  }
- function schedule(){if(!frame&&!reduced.matches)frame=requestAnimationFrame(draw);}
+ function schedule(){if(!raf&&!reduced.matches)raf=requestAnimationFrame(draw);}
  const observer=new IntersectionObserver(entries=>{
-  for(const entry of entries){const item=items.find(value=>value.bridge===entry.target);if(!item)continue;item.ratio=entry.intersectionRatio;if(entry.isIntersecting)visible.add(item);else visible.delete(item);}
-  const next=[...visible].sort((a,b)=>b.ratio-a.ratio)[0]||null;
-  if(next!==active)active=next;schedule();
- },{threshold:[0,.1,.25,.4,.5,.65,.8,1]});
- for(const item of items){applyProgress(item,reduced.matches?1:0);observer.observe(item.bridge);}
- if('ResizeObserver'in window){const resize=new ResizeObserver(entries=>{for(const entry of entries){const item=items.find(value=>value.stage===entry.target);if(item)item.stageHeight=entry.borderBoxSize?.[0]?.blockSize||entry.contentRect.height;}schedule();});for(const item of items)resize.observe(item.stage);}
+  for(const entry of entries){const state=states.find(item=>item.bridge===entry.target);if(!state)continue;if(entry.isIntersecting)visible.add(state);else{visible.delete(state);state.bridge.classList.remove('is-playing');if(entry.boundingClientRect.top>0)state.startedAt=null;apply(state,reduced.matches||entry.boundingClientRect.top<0?1:0);}}
+  schedule();
+ },{rootMargin:'0px 0px 12% 0px',threshold:0});
+ for(const state of states){apply(state,reduced.matches?1:0);observer.observe(state.bridge);}
+ if('ResizeObserver'in window){const resize=new ResizeObserver(schedule);states.forEach(state=>resize.observe(state.stage));}
  addEventListener('scroll',schedule,{passive:true});addEventListener('resize',schedule,{passive:true});
-
- const overlay=node('div','chapter-transit-overlay');overlay.hidden=true;overlay.setAttribute('aria-hidden','true');
- const transit=node('div','chapter-transit-card'),route=node('div','chapter-transit-route'),fromText=node('span','chapter-transit-from'),toText=node('strong','chapter-transit-to'),relation=node('div','chapter-transit-relation');
- route.append(fromText,arrow('chapter-transit-arrow'),toText);transit.append(route,relation);overlay.append(transit);document.body.append(overlay);
- function hideOverlay(){clearTimeout(overlayTimer);overlay.hidden=true;overlay.classList.remove('is-crossing');overlay.getAnimations().forEach(animation=>animation.cancel());}
- function navigate(detail){
-  if(!ready||reduced.matches||document.getElementById('opening-dialog')?.open)return;
-  const from=resolveId(detail?.from)||currentId(),to=resolveId(detail?.to);if(!from||!to||from===to)return;
-  const key=from+'>'+to,now=performance.now();if(key===lastRoute&&now-lastRouteAt<220)return;
-  lastRoute=key;lastRouteAt=now;clearTimeout(overlayTimer);
-  fromText.textContent=label(from);toText.textContent=label(to);relation.replaceChildren();
-  const item=items.find(value=>value.id===from);
-  if(item?.nextId===to){relation.append(node('span','',item.bridge.querySelector('.bridge-output strong')?.textContent||''),arrow('chapter-transit-evidence-arrow'),node('span','',item.bridge.querySelector('.bridge-input strong')?.textContent||''));}
-  else relation.append(node('span','',chapterMap.get(to).querySelector('.chapter-thesis')?.textContent||''));
-  overlay.dataset.from=from;overlay.dataset.to=to;overlay.hidden=false;
-  // A fresh animation object restarts fast repeated navigation without a forced layout read.
-  overlay.getAnimations().forEach(animation=>animation.cancel());
-  overlay.classList.add('is-crossing');
-  if(overlay.animate)overlay.animate([{opacity:0},{opacity:1,offset:.16},{opacity:1,offset:.64},{opacity:0}],{duration:900,easing:'linear',fill:'forwards'});
-  overlayTimer=setTimeout(hideOverlay,910);
- }
- document.addEventListener('click',event=>{
-  if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
-  const link=event.target.closest?.('a[href^="#"]');if(!link||link.target==='_blank'||link.hasAttribute('download'))return;
-  const to=resolveId(link.hash);if(to)navigate({from:currentId(),to});
- },true);
- addEventListener('showcase:navigate',event=>navigate(event.detail));
- reduced.addEventListener?.('change',()=>{hideOverlay();if(reduced.matches){if(frame)cancelAnimationFrame(frame);frame=0;for(const item of items)applyProgress(item,1);}else schedule();});
- Promise.resolve(window.Showcase?.ready).then(()=>{ready=true;schedule();});
- window.ShowcaseTransitions={navigate,refresh:schedule};
+ document.addEventListener('focusin',event=>{const topic=event.target.closest?.('[data-chapter]');if(topic)revealTopic(topic,false);});
+ reduced.addEventListener?.('change',()=>{if(reduced.matches){if(raf)cancelAnimationFrame(raf);raf=0;for(const state of states){state.bridge.classList.remove('is-playing');apply(state,1);}for(const topic of [...waiting])revealTopic(topic,false);document.querySelectorAll('.is-arriving').forEach(topic=>{topic.classList.remove('is-arriving');topic.dataset.arrivalState='complete';});}else schedule();});
+ schedule();
+ window.ShowcaseTransitions={refresh:schedule,resolveTopic:resolve};
 })();

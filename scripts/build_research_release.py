@@ -151,7 +151,10 @@ def validate_content(root: Path) -> None:
             for stage in ('solver', 'verifier', 'formatter'):
                 if not run.get('stages', {}).get(stage, {}).get('content'):
                     raise ValueError('Missing production stage output')
-            answer = re.sub(r'\s+', '', result['final_answer'])
+            # Some authorized recordings put the exact answers in chunk_results
+            # and use a summary label at the top. Validate both saved answer fields.
+            answer = re.sub(r'\s+', '', result['final_answer'] + ''.join(
+                chunk.get('final_answer', '') for chunk in chunks)).replace('\\\\', '\\')
             if example == 'national-2023-q17' and not ('3\\sqrt{10}' in answer and '6' in answer):
                 raise ValueError('Triangle final answer no longer matches the reviewed case')
             if example == 'national-2025-q16' and '7-(3m+7)(-2)^m' not in answer:

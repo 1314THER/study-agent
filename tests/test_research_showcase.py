@@ -1,6 +1,7 @@
 import copy
 import hashlib
 import json
+import re
 import unittest
 
 from scripts.build_research_showcase import PUBLIC, ROOT, build, validate_source_map
@@ -23,20 +24,34 @@ class ResearchShowcaseBuildTests(unittest.TestCase):
 
     def test_all_chapters_are_readable_without_client_rendering(self):
         page = build(self.content)
-        self.assertEqual(page.count('class="chapter chapter-'), 15)
+        self.assertEqual(page.count('class="topic-section"'), 11)
+        self.assertEqual(page.count('class="topic-unit"'), 15)
+        self.assertEqual(len(re.findall(r'<article class="perspective-cell(?: shared-cell)?"', page)), 28)
+        self.assertEqual(page.count('class="perspective-cell shared-cell"'), 2)
+        self.assertEqual(page.count('data-perspective="'), 2)
+        self.assertIn('data-perspective="teaching"', page)
+        self.assertIn('data-perspective="technical"', page)
+        self.assertNotIn('data-perspective="mechanism"', page)
+        self.assertEqual(page.count('class="topic-unit-grid topic-unit-shared"'), 2)
+        self.assertIn('项目亮点与系统总图', page)
+        self.assertIn('机制、研究与技术实现', page)
+        self.assertIn('联动两栏', page)
+        self.assertIn('class="research-scope"', page)
+        self.assertIn('/showcase/assets/fudan-emblem-white.png', page)
         self.assertIn('同一份解析，连接四种能力', page)
         self.assertIn('论文原文', page)
-        self.assertEqual(page.count('class="chapter-transition"'), 15)
-        self.assertEqual(page.count('class="chapter-bridge"'), 15)
+        self.assertEqual(page.count('class="chapter-transition"'), 11)
+        self.assertEqual(page.count('class="chapter-bridge"'), 11)
         self.assertEqual(page.count('class="pain-point"'), 15)
-        self.assertEqual(page.count('class="research-logic"'), 14)
+        self.assertEqual(page.count('class="research-logic"'), 18)
         self.assertNotIn('id="opening-skip"', page)
         self.assertNotIn('id="reading-progress"', page)
         self.assertIn('id="opening-enter"', page)
         self.assertIn('study-agent项目介绍页面', page)
-        self.assertLess(page.index('id="concepts"'), page.index('id="dataset"'))
-        self.assertLess(page.index('id="dataset"'), page.index('id="single"'))
-        self.assertIn('href="#dataset"', page)
+        self.assertLess(page.index('id="highlights"'), page.index('id="terms"'))
+        self.assertLess(page.index('id="terms"'), page.index('id="single"'))
+        self.assertIn('id="scene-dataset"', page)
+        self.assertIn('href="#highlights"', page)
         self.assertIn('查看详细统计', page)
         self.assertEqual(page.count('class="dataset-metric"'), 5)
 

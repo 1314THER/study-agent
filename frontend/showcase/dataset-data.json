@@ -867,8 +867,8 @@
       "title": "公开展示题目清单",
       "path": "frontend/showcase/question-bank/manifest.json",
       "kind": "repository",
-      "sha256": "e471e279f2978d4b9708e15182385aa1ace6430a7ccf212a02b7c0dd70c3c315",
-      "note": "仅公开两道全国卷及其展示资料，与内部题池不同。",
+      "sha256": "4bd87091a01566360099af8c0c4ddc0bf11ee4152c91d778b0c91f3ddb60e230",
+      "note": "仅公开两道全国卷及其展示资料，与内部题池不同。2026-10-26 复核：题目、来源和数量不变，解析资源更新后同步清单摘要。",
       "url": "https://github.com/1314THER/study-agent/blob/main/frontend/showcase/question-bank/manifest.json"
     },
     {

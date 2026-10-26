@@ -122,9 +122,9 @@
       "research_resources": [],
       "aggregate_snapshot": {
         "file": "frontend/showcase/dataset-data.json",
-        "sha256": "4eb8aaa7dbd5a62f72a2fa534fe4311880833eedc470bb026c82181dbb31c03c",
-        "checked_at": "2026-10-25",
-        "scope": "公开聚合规模和明确假设的规划测算；不发布内部原题或个人记录。"
+        "sha256": "bb49152cfca71a937f7c074f382a5327a77899ad40f99ae3f48df985d66017b1",
+        "checked_at": "2026-10-26",
+        "scope": "公开聚合规模和明确假设的规划测算；内部规模仍为2026-10-25快照，2026-10-26仅复核公开两题清单及其资源摘要。"
       }
     },
     {

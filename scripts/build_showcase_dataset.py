@@ -168,12 +168,13 @@ def render(data: dict[str, Any]) -> str:
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#080808">
 <title>数据集详细统计 · StudyAgent</title>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext x='5' y='25' fill='%23f5f5f5' font-size='27'%3EΣ%3C/text%3E%3C/svg%3E">
+<link rel="icon" type="image/png" sizes="64x64" href="/showcase/assets/fudan-favicon-white.png">
+<link rel="apple-touch-icon" href="/showcase/assets/fudan-emblem-white.png">
 <link rel="stylesheet" href="/showcase/dataset.css">
 </head>
 <body class="dataset-page">
 <a class="skip-link" href="#main-content">跳到数据集内容</a>
-<header class="dataset-header"><a class="dataset-brand" href="/home.html#dataset"><span aria-hidden="true">∑</span><span>StudyAgent<small>数据集详细统计</small></span></a><nav aria-label="数据集统计导航"><a href="#inventory">完整规模</a><a href="#matching">匹配状态</a><a href="#target">全量图景</a><a href="/home.html#dataset">返回数据集</a></nav></header>
+<header class="dataset-header"><a class="dataset-brand" href="/home.html#dataset"><img src="/showcase/assets/fudan-emblem-white.png" width="44" height="44" alt="复旦大学校徽"><span>StudyAgent<small>数据集详细统计</small></span></a><nav aria-label="数据集统计导航"><a href="#inventory">完整规模</a><a href="#matching">匹配状态</a><a href="#target">全量图景</a><a href="/home.html#dataset">返回数据集</a></nav></header>
 <main id="main-content">
 <header class="dataset-intro"><p class="breadcrumb"><a href="/home.html#dataset">数据集</a><span aria-hidden="true"> / </span> 详细统计</p><h1>数据集详细统计</h1><p class="intro-thesis">按教学词表、课时图谱、题目素材与匹配进度展开完整统计，保留各类数据的建设阶段与全量测算条件。</p><div class="audit-strip"><span>建设快照 <time datetime="{esc(audit['date'])}">{esc(audit['date'])}</time></span><span>高中数学</span><a href="/showcase/dataset-data.json">下载规模快照</a></div></header>
 <section class="atlas-section" id="concepts" aria-labelledby="concepts-title"><div class="section-heading"><h2 id="concepts-title">先分清对象，再看数量</h2><p>前置关系与实例应用，共用一套教学语言。</p></div><figure class="concept-atlas"><div class="atlas-flow">{''.join(nodes)}</div><figcaption>前三条箭头表示概念上的教学前置与组合，最后一条表示方法应用。它们不是一一对应关系，也不代表数据库已完成全量映射。题池数字表示已收集素材。</figcaption></figure><div class="concept-definitions">{concepts}</div><aside class="semantic-note"><strong>标准步骤 ≠ 实例步骤；母题类 ≠ 母题示例题。</strong><p>359条具体步骤是可复用的操作词表。一道题实际用了哪些操作、怎样推导和计算，需要另存为本题的实例步骤；1,019个套路目录项描述方法结构，不等于1,019道题。</p><a href="/home.html#single">继续看这些结构如何支持单题功能</a></aside></section>
@@ -186,7 +187,7 @@ def render(data: dict[str, Any]) -> str:
 <section id="coverage" aria-labelledby="coverage-title"><div class="section-heading"><h2 id="coverage-title">全量贯通，还需要完成哪些连接</h2><p>已有数量提供起点，关系对齐、人工核验和版本维护决定这些数据能否被可靠复用。</p></div>{coverage}</section>
 <section class="data-scope" aria-labelledby="scope-title"><div class="section-heading"><h2 id="scope-title">数据口径</h2></div><ul><li>本页按2026-10-25的词表、目录和本地聚合快照展示数量。</li><li>目录描述方法，题池收集素材，候选等待确认，可训练内容按正式训练角色统计。</li><li>标准步骤是可复用操作；实例步骤是操作在一道具体题中的应用。</li><li>规划测算保留乘数假设，参考解析版本、步骤实例和训练题位分别计数。</li></ul></section>
 </main>
-<footer class="dataset-footer"><div><strong>StudyAgent</strong><p>让每次作答，成为下一步学习的依据。</p></div><nav aria-label="相关网站"><a href="https://150.chat/" target="_blank" rel="noopener noreferrer">正式站首页</a><a href="https://150.chat/home.html" target="_blank" rel="noopener noreferrer">学习系统</a><a href="https://github.com/1314THER/study-agent" target="_blank" rel="noopener noreferrer">代码与研究文档</a><a href="/home.html#dataset">返回数据集</a></nav><p class="site-registration"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">渝ICP备2026024246号-1</a></p></footer>
+<footer class="dataset-footer"><div class="dataset-footer-brand"><img src="/showcase/assets/fudan-emblem-white.png" width="44" height="44" alt=""><div><strong>StudyAgent</strong><p>让每次作答，成为下一步学习的依据。</p></div></div><nav aria-label="相关网站"><a href="https://150.chat/" target="_blank" rel="noopener noreferrer">正式站首页</a><a href="https://150.chat/home.html" target="_blank" rel="noopener noreferrer">学习系统</a><a href="https://github.com/1314THER/study-agent" target="_blank" rel="noopener noreferrer">代码与研究文档</a><a href="/home.html#dataset">返回数据集</a></nav><p class="site-registration"><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">渝ICP备2026024246号-1</a></p></footer>
 </body></html>
 '''
 

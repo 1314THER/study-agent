@@ -15,11 +15,12 @@ class ShowcasePipelineTests(unittest.TestCase):
     def test_national_questions_have_four_distinct_completed_runs(self):
         data=json.loads((ROOT/'frontend/showcase/pipeline.json').read_text())
         self.assertEqual(set(data['examples']),{'national-2025-q16','national-2023-q17'})
-        # Locked before removing the retired local-paper example. These checks
-        # protect the complete real responses, usage, timestamps and metadata.
+        # Re-locked to the authorized teacher/model refresh at 6e6e8c1 (2026-10-26).
+        # The complete current payload was compared with that committed recording.
+        # Protect real responses, usage, timestamps and metadata from presentation edits.
         expected = {
-            'national-2025-q16': '8b8117212eb419b51a9d8dbd8a6fe8046b551d04b527ce6d0dedbe6b32a728fa',
-            'national-2023-q17': '7c5233bda18c28fdd3243fb35e2eed7343f92a59c5f0cb20c94995e7d4dde9e5',
+            'national-2025-q16': '0833702aa6d0cc7adeb857a056ee7907e9fe6a948af91064f7f624b73613f077',
+            'national-2023-q17': 'b5e7b5f53bab232c62da3299fcd5b471278b6854c4e95622de979eea13e1cb5e',
         }
         for example,runs in data['examples'].items():
             digest = hashlib.sha256(json.dumps(runs, ensure_ascii=False, sort_keys=True, separators=(',', ':')).encode()).hexdigest()

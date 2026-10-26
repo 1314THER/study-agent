@@ -9,7 +9,7 @@ import {tmpdir} from 'node:os';
 const require=createRequire(import.meta.url);
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const root=new URL('../../',import.meta.url);
-const chapters=['overview','concepts','dataset','single','diagnosis','library','routines','exam','career','agent','teacher','school','modes','mcp','evolution'];
+const chapters=['highlights','terms','single','time','library','exam','longterm','teacher','school','agent','evolution'];
 const records=JSON.parse(await readFile(new URL('frontend/showcase/recordings.json',root),'utf8'));
 const pipeline=JSON.parse(await readFile(new URL('frontend/showcase/pipeline.json',root),'utf8'));
 const shots=process.env.RESEARCH_SHOTS||tmpdir()+'/research-showcase-shots';
@@ -55,30 +55,58 @@ try{
  assert.deepEqual(await page.locator('[data-chapter]').evaluateAll(nodes=>nodes.map(n=>n.id)),chapters);
  assert(!/上海|shanghai/i.test(await page.locator('body').innerText()),'Retired regional example is visible');
  assert.equal(await page.locator('h1').count(),1);
- assert.equal(await page.locator('.primary-nav a[href="#dataset"]').innerText(),'数据集');
- assert.equal(await page.locator('#dataset .dataset-metric').count(),5,'The dataset should be embedded between concepts and single-question workflows');
- assert.equal(await page.locator('#dataset .inline-dataset-goals article').count(),4);
+ assert((await page.locator('.primary-nav a[href="#highlights"]').innerText()).includes('亮点'));
+ assert.equal(await page.locator('#highlights #scene-dataset .dataset-metric').count(),5,'The dataset should be embedded in the highlights topic');
+ assert.equal(await page.locator('#highlights #scene-dataset .inline-dataset-goals article').count(),4);
  assert.deepEqual(await page.locator('body').evaluate(n=>({background:getComputedStyle(n).backgroundColor,color:getComputedStyle(n).color})),{background:'rgb(8, 8, 8)',color:'rgb(245, 245, 245)'});
+ assert.equal(await page.locator('.brand-emblem').getAttribute('src'),'/showcase/assets/fudan-emblem-white.png');
+ assert(await page.locator('.brand-emblem').evaluate(img=>img.complete&&img.naturalWidth>0),'The Fudan emblem should load as a local asset');
+ assert.equal(await page.locator('.perspective-switch').isVisible(),false,'The reading-view switch belongs only on narrow screens');
  assert.equal(await page.locator('details').count(),0,'Reader-facing content should use notes and the annotation panel');
  assert.equal(await page.locator('.source-reading').count(),0,'Internal source-document lists should not appear in the public story');
- assert.equal(await page.locator('.chapter-bridge').count(),15,'Each chapter must pass a specific output to its successor');
+ assert.equal(await page.locator('.perspective-cell').count(),28,'Two reading lanes and shared highlight content should cover every unit');
+ assert.equal(await page.locator('.shared-cell').count(),2,'The highlights topic should use a single shared lane');
+ assert.equal(await page.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),28,'Desktop should show two perspectives in parallel');
+ assert.equal(await page.locator('.perspective-headings').count(),10,'Only topics with distinct reading lanes need column headings');
+ assert((await page.locator('.research-scope').count())>0,'Research limitations should be visibly identified');
+ assert((await page.locator('.pain-point').first().evaluate(n=>getComputedStyle(n).borderLeftColor)).includes('255, 146, 156'),'Real-world pain points should use the red accent');
+ assert.equal(await page.locator('.brand-emblem').evaluate(n=>getComputedStyle(n).backgroundColor),'rgba(0, 0, 0, 0)','The white emblem should retain the black page background');
+ assert((await page.locator('.research-gap').count())>10,'Only concrete research limitations should carry caution emphasis');
+ // A medium desktop must keep both lanes, with the same usable connection as a wide desktop.
+ await page.setViewportSize({width:980,height:900});
+ assert.equal(await page.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),28);
+ assert.equal(await page.locator('.perspective-switch').isVisible(),false);await fit(page,'980px two lanes');
+ await page.setViewportSize({width:1440,height:1000});
+ assert.equal(await page.locator('.chapter-bridge').count(),11,'Each topic must pass a specific output to its successor');
  assert.equal(await page.locator('.pain-point').count(),15,'Each module must explain a practical problem');
- assert.equal(await page.locator('.research-logic').count(),14,'Related work must have a presentation-style logic diagram');
- assert.equal(await page.locator('.research-source-links a').count(),28,'Each related work needs a website and a primary document link');
+ assert.equal(await page.locator('.research-logic').count(),18,'Related work must have a presentation-style logic diagram');
+ assert.equal(await page.locator('.research-source-links a').count(),36,'Each related work needs a website and a primary document link');
  assert.equal(await page.locator('#reading-progress,#opening-skip').count(),0);
  assert((await page.locator('.project-architecture .architecture-node').count())>=12,'A connected project structure must be visible in the introduction');
  await page.evaluate(()=>document.fonts.ready);
  assert(await page.evaluate(()=>document.fonts.check('22px "StudyAgent Handwriting"')),'The local handwriting webfont did not load');
  await fit(page,'desktop overview');await page.screenshot({path:shots+'/desktop-overview.png'});
  await page.locator('.project-architecture').screenshot({path:shots+'/system-architecture.png'});
- // The chapter menu works from the keyboard, and Escape restores focus.
- const contents=page.locator('#contents-toggle');await contents.focus();await page.keyboard.press('Enter');
- assert.equal(await contents.getAttribute('aria-expanded'),'true');assert.equal(await page.locator('#chapter-contents a').count(),15);
- await page.keyboard.press('Escape');assert.equal(await contents.getAttribute('aria-expanded'),'false');
- assert.equal(await contents.evaluate(n=>n===document.activeElement),true);
+ // One adjustable gutter controls all topics and preserves a single vertical reading surface.
+ await page.locator('#single').scrollIntoViewIfNeeded();
+ const divider=page.locator('#single [data-split-control]');await divider.scrollIntoViewIfNeeded();
+ assert.equal(await divider.getAttribute('aria-valuenow'),'60','Teaching should receive the larger default share');
+ await divider.focus();await page.keyboard.press('ArrowLeft');assert.equal(await divider.getAttribute('aria-valuenow'),'58');
+ await page.keyboard.press('Enter');assert.equal(await divider.getAttribute('aria-valuenow'),'60');
+ const grip=await divider.boundingBox(),gripY=Math.min(850,Math.max(170,grip.y+25));await page.mouse.move(grip.x+grip.width/2,gripY);await page.mouse.down();
+ await page.mouse.move(grip.x+grip.width/2+100,gripY,{steps:8});await page.mouse.up();
+ assert(Number(await divider.getAttribute('aria-valuenow'))>60,'Dragging should enlarge the teaching lane');
+ assert.equal(await page.locator('#exam [data-split-control]').getAttribute('aria-valuenow'),await divider.getAttribute('aria-valuenow'),'The ratio should be common to every topic');
+ await divider.focus();await page.keyboard.press('Enter');
+ const sizes=await page.locator('#single .perspective-cell').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().width));
+ assert(sizes[0]>sizes[1]*1.4,'Content should have more horizontal space than technical notes');
+ // The single header navigation maps directly to the shared 11-topic sequence.
+ assert.equal(await page.locator('.primary-nav a').count(),11);
+ await page.locator('.primary-nav a[href="#terms"]').focus();await page.keyboard.press('Enter');
+ await page.waitForFunction(()=>location.hash==='#terms');
  for(const id of chapters){await page.locator('#'+id).scrollIntoViewIfNeeded();assert(await page.locator('#heading-'+id).isVisible());await fit(page,'chapter '+id);}
  assert.equal(await page.locator('#system-trail,.system-trail').count(),0,'The redundant second navigation row should be removed');
- assert.deepEqual(await page.locator('.primary-nav a').evaluateAll(nodes=>nodes.map(n=>n.hash.slice(1))),chapters,'The single header must map directly to all chapters');
+ assert.deepEqual(await page.locator('.primary-nav a').evaluateAll(nodes=>nodes.map(n=>n.hash.slice(1))),chapters,'The single header must map directly to all topics');
  // Both questions and all four genuine saved runs must be selectable.
  await choose(page,'single','结构化解题');assert.equal(await page.locator('#example-select option').count(),2);assert.equal(await page.locator('#teacher-select option').count(),4);
  for(const example of ['national-2023-q17','national-2025-q16'])for(const teacher of ['liangliang','taotao','xuefeng','ji']){
@@ -86,10 +114,18 @@ try{
   const run=pipeline.examples[example][teacher];
   assert.equal(await page.locator('#scene-single .step').count(),run.answer_json.chunk_results.reduce((n,c)=>n+c.steps.length,0));
   assert.equal(await page.locator('#scene-single .step h4').first().innerText(),run.answer_json.chunk_results[0].steps[0].title);
+  const model=run.stages.solver.model,tier={'glm-4.7-flash':'免费','deepseek-flash':'便宜','glm-5.3-flash':'便宜','gpt-6-astra':'昂贵'}[model];
+  assert((await page.locator('#teacher-select option:checked').innerText()).includes(model),'Teacher selector should identify the model used for the current saved answer');
+  assert((await page.locator('.teacher-model-note').innerText()).includes(tier),'The selected model should show its price tier');
+  assert((await page.locator('.api-cost-total').innerText()).startsWith('约 ¥'),'Each answer should show a three-stage API cost estimate');
+  assert((await page.locator('.api-cost-usage').innerText()).includes('输入'),'The estimate should expose its saved token basis');
   assert((await page.locator('#scene-single .annotation-source').allTextContents()).join(' ').includes(run.run_at),'The original run timestamp should remain in the source panel');
   assert((await page.locator('#scene-single .katex').count())>0,'Math rendering missing');await fit(page,example+' '+teacher);
  }
  await page.locator('#single').scrollIntoViewIfNeeded();await page.screenshot({path:shots+'/desktop-solution.png'});
+ await page.locator('#single .step').first().click();
+ assert(await page.locator('#single .technical-summary').evaluate(n=>n.classList.contains('is-relation-target')),'Selecting a step should identify its actual technical target');
+ assert((await page.locator('#single .relation-focus').innerText()).includes('三阶段解析与步骤对齐'));
  const explanation=page.locator('#scene-single .step .annotation-button').first();await explanation.click();
  assert(await page.locator('#annotation-panel').isVisible());
  assert((await page.locator('#annotation-body').innerText()).length>50,'Detailed solution did not open in the side panel');
@@ -120,7 +156,7 @@ try{
    await fit(page,'diagnosis '+i+' '+condition);
   }
  }
- await page.locator('#diagnosis').scrollIntoViewIfNeeded();await page.screenshot({path:shots+'/desktop-comparison.png'});
+ await page.locator('#time').scrollIntoViewIfNeeded();await page.screenshot({path:shots+'/desktop-comparison.png'});
  await choose(page,'diagnosis','返回修改');
  assert((await page.locator('#scene-diagnosis .timestamp-evidence').innerText()).includes('返回前面的区域'));
  // Saved teaching frames and generated result are navigable when actually recorded.
@@ -154,12 +190,17 @@ try{
  // Reload resumes the public presentation, its selected examples, and the reading position.
  await choose(page,'single','结构化解题');await page.locator('#example-select').selectOption('national-2025-q16');await page.locator('#teacher-select').selectOption('liangliang');
  await page.locator('[data-library-tab="library"]').click();await page.locator('#bank-search').fill('数列');await page.waitForFunction(()=>window.ShowcaseBank.state.rows.length===1);
- await page.evaluate(()=>window.Showcase.selectView('career'));await page.evaluate(()=>window.scrollBy(0,180));
- const beforeReload=await page.evaluate(()=>({y:scrollY,caseIndex:Showcase.state.caseIndex,condition:Showcase.state.condition}));
+ await page.evaluate(()=>{window.Showcase.selectView('longterm');const topic=document.querySelector('#longterm');window.scrollTo({top:topic.getBoundingClientRect().top+scrollY-110,behavior:'instant'});});
+ await page.evaluate(()=>{document.querySelector('[data-perspective="technical"]').click();window.scrollBy({top:180,behavior:'instant'});});await page.waitForTimeout(220);
+ await page.locator('#longterm [data-split-control]').focus();await page.keyboard.press('ArrowRight');
+ const savedSplit=await page.evaluate(()=>ShowcaseSplit.ratio);
+ const beforeReload=await page.evaluate(()=>({y:scrollY,caseIndex:Showcase.state.caseIndex,condition:Showcase.state.condition,perspective:Showcase.state.perspective}));
  await page.reload({waitUntil:'networkidle'});assert(!(await page.locator('#opening-dialog').isVisible()),'Reload must not replay the welcome');await ready(page);
- const restored=await page.evaluate(()=>({y:scrollY,caseIndex:Showcase.state.caseIndex,condition:Showcase.state.condition,example:Showcase.state.example,teacher:Showcase.state.teacher,career:Showcase.state.sceneTabs.career,selected:ShowcaseBank.state.selected.size}));
+ const restored=await page.evaluate(()=>({y:scrollY,caseIndex:Showcase.state.caseIndex,condition:Showcase.state.condition,perspective:Showcase.state.perspective,example:Showcase.state.example,teacher:Showcase.state.teacher,career:Showcase.state.sceneTabs.career,selected:ShowcaseBank.state.selected.size}));
  assert(Math.abs(restored.y-beforeReload.y)<8,'Reading position changed after reload: '+JSON.stringify({beforeReload,restored}));
- assert.equal(restored.caseIndex,beforeReload.caseIndex);assert.equal(restored.condition,beforeReload.condition);assert.equal(restored.example,'national-2025-q16');assert.equal(restored.teacher,'liangliang');assert.equal(restored.career,2);assert.equal(restored.selected,2);assert.equal(await page.locator('#bank-search').inputValue(),'数列');
+ assert(Math.abs((await page.evaluate(()=>ShowcaseSplit.ratio))-savedSplit)<.001,'The chosen column width should survive refresh');
+ assert.equal(restored.caseIndex,beforeReload.caseIndex);assert.equal(restored.condition,beforeReload.condition);assert.equal(restored.perspective,'technical');assert.equal(restored.example,'national-2025-q16');assert.equal(restored.teacher,'liangliang');assert.equal(restored.career,2);assert.equal(restored.selected,2);assert.equal(await page.locator('#bank-search').inputValue(),'数列');
+ await page.goto(base+'/?perspective=mechanism#single',{waitUntil:'networkidle'});await ready(page);assert.equal(await page.evaluate(()=>Showcase.state.perspective),'technical','Legacy mechanism-view links should map to technical implementation');
  assert.equal(await page.locator('.site-registration a').innerText(),'渝ICP备2026024246号-1');assert.equal(await page.locator('.site-registration a').getAttribute('href'),'https://beian.miit.gov.cn/');
  await checkAudits(context);
  // Phone widths remain within the viewport.
@@ -171,10 +212,21 @@ try{
  await page.screenshot({path:shots+'/opening-mobile.png'});await page.keyboard.press('Tab');
  assert.equal(await page.evaluate(()=>document.activeElement.id),'opening-enter');await page.keyboard.press('Enter');
  await page.waitForFunction(()=>!document.getElementById('opening-dialog').open);await ready(page);
+ assert.equal(await page.evaluate(()=>Showcase.state.perspective),'teaching','Phone should default to the teaching view');
+ assert.equal(await page.locator('.perspective-switch').isVisible(),false,'Shared highlights do not need a perspective switch');
+ await page.locator('#single').scrollIntoViewIfNeeded();
+ await page.waitForFunction(()=>document.body.dataset.currentTopic==='single'&&document.body.classList.contains('reader-ready'));
+ assert.equal(await page.locator('.perspective-switch').isVisible(),true,'Narrow screens should expose the view switch for two-lane topics');
+ assert.equal(await page.locator('#single [data-split-control]').isVisible(),false,'Phone reading should not expose an unusable two-column drag handle');
+ assert.equal(await page.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),15,'Phone should show only one perspective per content unit');
+ await page.locator('[data-perspective="technical"]').click();assert.equal(await page.evaluate(()=>Showcase.state.perspective),'technical');assert.match(page.url(),/perspective=technical/);
+ const touchSection=page.locator('#single');await touchSection.evaluate(node=>{const start=new Touch({identifier:1,target:node,clientX:320,clientY:350});node.dispatchEvent(new TouchEvent('touchstart',{bubbles:true,touches:[start],changedTouches:[start]}));const end=new Touch({identifier:1,target:node,clientX:220,clientY:350});node.dispatchEvent(new TouchEvent('touchend',{bubbles:true,touches:[],changedTouches:[end]}));});
+ assert.equal(await page.evaluate(()=>Showcase.state.perspective),'teaching','A horizontal swipe should advance between the two phone perspectives');
+ await page.locator('[data-perspective="teaching"]').click();
  for(const id of chapters){await page.locator('#'+id).scrollIntoViewIfNeeded();await fit(page,'mobile '+id);}
  await choose(page,'single','辅助线与推理');await choose(page,'single','显示辅助线');
  await choose(page,'diagnosis','同信息条件');await fit(page,'mobile comparison');
- await page.locator('#diagnosis').scrollIntoViewIfNeeded();await page.screenshot({path:shots+'/mobile-comparison.png'});
+ await page.locator('#time').scrollIntoViewIfNeeded();await page.screenshot({path:shots+'/mobile-comparison.png'});
  await choose(page,'single','结构化解题');await page.locator('#scene-single .step .annotation-button').first().click();
  await fit(page,'mobile annotation panel');await page.screenshot({path:shots+'/mobile-annotation.png'});
  await page.keyboard.press('Escape');
@@ -194,11 +246,13 @@ try{
  await checkAudits(context);await context.close();
  // The scientific text and citations remain available without any JavaScript.
  const plain=await browser.newContext({javaScriptEnabled:false,viewport:{width:390,height:844}});const nojs=await plain.newPage();audit(nojs);
- await nojs.goto(base+'/',{waitUntil:'networkidle'});assert.equal(await nojs.locator('[data-chapter]').count(),15);
- for(const id of chapters){const text=await nojs.locator('#'+id+' .chapter-prose').innerText();assert(text.length>80,'Missing no-JS chapter text: '+id);}
+ await nojs.goto(base+'/',{waitUntil:'networkidle'});assert.equal(await nojs.locator('[data-chapter]').count(),11);
+ for(const id of chapters){const text=(await nojs.locator('#'+id+' .chapter-prose').allTextContents()).join(' ');assert(text.length>80,'Missing no-JS chapter text: '+id);}
+ assert.equal(await nojs.locator('.perspective-cell').count(),28,'No-JS reading should expose both perspectives and shared content');
+ assert.equal(await nojs.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),28,'No-JS reading should expose all content');
  assert((await nojs.locator('.research-notes a[href^="https://"]').count())>=6,'Research sources unavailable without JS');
  assert(!/上海|shanghai/i.test(await nojs.locator('body').innerText()));await fit(nojs,'no JavaScript');await checkAudits(plain);await plain.close();
- // The decelerating welcome page remains until entry; chapter bridges animate once as they enter view.
+ // The decelerating welcome page remains until entry; topic handoffs finish while fully readable.
  const motion=await browser.newContext({viewport:{width:1440,height:950},reducedMotion:'no-preference'});
  const animated=await motion.newPage();audit(animated);await animated.goto(base+'/',{waitUntil:'domcontentloaded'});
  await animated.locator('#opening-dialog').waitFor({state:'visible',timeout:1500});
@@ -208,22 +262,40 @@ try{
  assert.equal(await animated.evaluate(()=>document.activeElement.id),'opening-title','Initial focus should identify the cover rather than highlight the entry');
  await animated.screenshot({path:shots+'/opening-home.png'});await animated.locator('#opening-enter').click();
  await animated.waitForFunction(()=>!document.getElementById('opening-dialog').open,{timeout:1000});await ready(animated);
- assert.equal(await animated.locator('.chapter-bridge.has-handoff').count(),15,'All chapter handoffs should be enhanced');
+ await animated.locator('#terms .topic-heading').evaluate(n=>scrollTo({top:n.getBoundingClientRect().top+scrollY-innerHeight*.82,behavior:'instant'}));
+ await animated.waitForFunction(()=>document.querySelector('#terms').dataset.arrivalState!=='pending');
+ assert.equal(await animated.locator('#terms').getAttribute('data-arrival-from'),'highlights','The whole-topic reveal should be linked to the preceding handoff');
+ assert(Number(await animated.locator('#highlights .chapter-bridge').getAttribute('data-handoff-progress'))>=.8);
+ await animated.screenshot({path:shots+'/topic-arrival.png'});
+ await animated.waitForFunction(()=>document.querySelector('#terms').dataset.arrivalState==='complete');
+ assert.equal(await animated.locator('#terms').evaluate(n=>getComputedStyle(n).opacity),'1');
+ assert.equal(await animated.locator('.chapter-bridge.has-handoff').count(),11,'All topic handoffs should be enhanced');
  const handoff=animated.locator('#single .chapter-bridge');
- await handoff.evaluate(n=>scrollTo({top:n.getBoundingClientRect().top+scrollY-500,behavior:'instant'}));
+ await handoff.evaluate(n=>scrollTo({top:n.getBoundingClientRect().top+scrollY-innerHeight*.88,behavior:'instant'}));
  await animated.waitForFunction(()=>Number(document.querySelector('#single .chapter-bridge').dataset.handoffProgress)>0);
  const early=Number(await handoff.getAttribute('data-handoff-progress'));
- await handoff.evaluate(n=>scrollTo({top:n.getBoundingClientRect().top+scrollY-160,behavior:'instant'}));
+ assert(await handoff.evaluate(n=>n.classList.contains('is-playing')),'Entering the handoff should start a visible transfer');
+ await animated.screenshot({path:shots+'/transition-in-motion.png'});
+ await handoff.evaluate(n=>scrollTo({top:n.getBoundingClientRect().top+scrollY-innerHeight*.5,behavior:'instant'}));
  await animated.waitForFunction(p=>Number(document.querySelector('#single .chapter-bridge').dataset.handoffProgress)>p+.15,early);
- assert(await handoff.evaluate(n=>n.classList.contains('is-bridging')),'Native scroll should visibly advance the handoff');
+ assert(await handoff.evaluate(n=>n.classList.contains('is-delivered')),'The handoff should arrive by the viewport midpoint, before the reader passes it');
  assert(Number.parseFloat(await animated.locator('#single .handoff-line-motion').evaluate(n=>getComputedStyle(n).strokeDashoffset))<1);
  await animated.screenshot({path:shots+'/chapter-transition.png'});
- await animated.locator('.primary-nav a[href="#concepts"]').click();
- await animated.waitForFunction(()=>!document.querySelector('.chapter-transit-overlay').hidden);
- assert.equal(await animated.locator('.chapter-transit-overlay').getAttribute('data-to'),'concepts');
+ for(const width of [1440,390]){
+  await animated.setViewportSize({width,height:950});
+  for(const id of chapters){
+   await animated.locator('#'+id+' .chapter-bridge').evaluate(n=>scrollTo({top:n.getBoundingClientRect().top+scrollY-innerHeight*.5,behavior:'instant'}));
+   await animated.waitForFunction(id=>document.querySelector('#'+id+' .chapter-bridge').classList.contains('is-delivered'),id);
+   assert.equal(await animated.locator('#'+id).evaluate(n=>getComputedStyle(n).opacity),'1','A deep-linked or passed topic must remain readable');
+   await fit(animated,'handoff '+id+' '+width);
+  }
+ }
+ await animated.setViewportSize({width:1440,height:950});
+ await animated.locator('.primary-nav a[href="#terms"]').click();
+ await animated.waitForFunction(()=>location.hash==='#terms');
  await animated.screenshot({path:shots+'/chapter-navigation.png'});
- await animated.waitForFunction(()=>document.querySelector('.chapter-transit-overlay').hidden);
+ assert.equal(await animated.locator('.chapter-transit-overlay').count(),0,'Topic navigation should use natural scrolling without a blocking overlay');
  await checkAudits(motion);await motion.close();
  const recorded=records.cases.reduce((n,c)=>n+['basic','same_information','system'].filter(k=>c[k]?.status==='recorded').length,0);
- console.log(JSON.stringify({ok:true,chapters:15,nationalQuestions:2,savedPipelineRuns:8,diagnosticInputs:6,recordedResponses:recorded,conditions:2,viewports:[1440,390,320],noJavaScript:true,network:'same-origin GET only, no cookies',screenshots:shots}));
+ console.log(JSON.stringify({ok:true,topics:11,contentUnits:15,nationalQuestions:2,savedPipelineRuns:8,diagnosticInputs:6,recordedResponses:recorded,conditions:2,viewports:[1440,980,390,320],resizableLanes:true,allTopicHandoffs:true,noJavaScript:true,network:'same-origin GET only, no cookies',screenshots:shots}));
 }finally{if(browser)await browser.close();server.kill('SIGTERM');}

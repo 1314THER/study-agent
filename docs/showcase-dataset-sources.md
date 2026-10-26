@@ -26,7 +26,7 @@
 | 预定义步骤词表 | `backend/steps.yaml` | da5c7423f605c5e7f3afdafe9ae81e2567c23ed30dbd11dcb9b6ba9f94418714 |
 | 套路参考目录 | `backend/routine_catalog.json` | 1c29678d43394ab8128638d44f6837a652b79310cd48464cdea6107c33745777 |
 | 正式训练定义 | `backend/patterns.yaml` | c40ed1318ebb8755a98a45fcae9cbc751d11389f35564bf7bd6f18c70a67fe25 |
-| 公开展示题目清单 | `frontend/showcase/question-bank/manifest.json` | e471e279f2978d4b9708e15182385aa1ace6430a7ccf212a02b7c0dd70c3c315 |
+| 公开展示题目清单 | `frontend/showcase/question-bank/manifest.json` | 4bd87091a01566360099af8c0c4ddc0bf11ee4152c91d778b0c91f3ddb60e230 |
 | 课时图谱只读聚合 | `.runtime/curriculum-wiki.sqlite3` | 仅聚合，不分发数据库 |
 | 原题池只读聚合 | `.runtime/question_pool.db` | 仅聚合，不分发数据库 |
 | 当前匹配批次只读聚合 | `.runtime/routine-review.sqlite3` | 仅聚合，不分发数据库 |

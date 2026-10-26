@@ -2,24 +2,40 @@
 (function(){
 'use strict';
 const $=id=>document.getElementById(id),NS='http://www.w3.org/2000/svg';
-const state={data:null,pipelineData:null,recordings:null,view:'overview',teacher:'xuefeng',example:'national-2023-q17',mode:'solution',caseIndex:0,condition:'basic',sceneTabs:{},teachingIndex:0,geometryStage:0,timestampEvent:0,routineHidden:false,completeMode:true,loadError:null};
+const state={data:null,pipelineData:null,recordings:null,view:'highlights',perspective:'teaching',teacher:'xuefeng',example:'national-2023-q17',mode:'solution',caseIndex:0,condition:'basic',sceneTabs:{},teachingIndex:0,geometryStage:0,timestampEvent:0,routineHidden:false,completeMode:true,loadError:null};
 const api=window.Showcase={state,ready:null};
 const annotations=new Map();let annotationSequence=0,annotationTrigger=null;
 const teachers={liangliang:'梁梁',taotao:'韬韬',xuefeng:'雪峰',ji:'鸡'};
+const modelPricing={
+ 'glm-4.7-flash':{tier:'免费',rates:'官方价目：免费',url:'https://docs.bigmodel.cn/cn/guide/start/pricing'},
+ 'deepseek-flash':{tier:'便宜',rates:'¥1–2 / 百万输入 Token；¥4–8 / 百万输出 Token',url:'https://api-docs.deepseek.com/zh-cn/quick_start/pricing/'},
+ 'glm-5.3-flash':{tier:'便宜',rates:'¥0.8 / 百万输入 Token；¥2.8 / 百万输出 Token',url:'https://docs.bigmodel.cn/cn/guide/start/pricing'},
+ 'gpt-6-astra':{tier:'昂贵',rates:'$10 / 百万输入 Token；$50 / 百万输出 Token',url:'https://developers.openai.com/api/docs/models/gpt-6-astra'}
+};
+const USD_TO_CNY=6.67;
 const singleModes={solution:'solution',grading:'grading',teaching:'teaching',generation:'generation',geometry:'geometry'};
-const aliases={solution:'single',grading:'single',teaching:'single',generation:'single',geometry:'single',graph:'routines',pool:'library',progress:'evolution',research:'evolution'};
+const perspectives=['teaching','technical'];
+const aliases={overview:'highlights',dataset:'highlights',concepts:'terms',diagnosis:'time',routines:'library',career:'longterm',modes:'school',mcp:'agent',solution:'single',grading:'single',teaching:'single',generation:'single',geometry:'single',graph:'library',pool:'library',progress:'evolution',research:'evolution'};
 // This tab stores only public presentation choices and a reading position.
 const readingKey='studyagent.showcase.reading.v1',initialHash=location.hash;
-let savedReading=null,entered=false,uiReady=false,saveTimer;
-try{const raw=sessionStorage.getItem(readingKey);if(raw&&raw.length<32768){const value=JSON.parse(raw);if(value?.version===1&&typeof value==='object'&&!Array.isArray(value))savedReading=value;}}catch{}
+let savedReading=null,entered=false,uiReady=false,saveTimer,topicFrame=0;
+try{const raw=sessionStorage.getItem(readingKey);if(raw&&raw.length<32768){const value=JSON.parse(raw);if([1,2].includes(value?.version)&&typeof value==='object'&&!Array.isArray(value))savedReading=value;}}catch{}
 entered=savedReading?.entered===true;
 const navigationType=performance.getEntriesByType('navigation')[0]?.type;
 const resumeReading=Boolean(savedReading&&['reload','back_forward'].includes(navigationType)&&savedReading.path===location.pathname&&savedReading.hash===initialHash);
 if(resumeReading&&'scrollRestoration'in history)history.scrollRestoration='manual';
+const requestedPerspectiveRaw=new URLSearchParams(location.search).get('perspective');
+const requestedPerspective=requestedPerspectiveRaw==='mechanism'?'technical':requestedPerspectiveRaw;
+if(perspectives.includes(requestedPerspective))state.perspective=requestedPerspective;
+const initialTopic=aliases[initialHash.slice(1)]||initialHash.slice(1);
+if(initialTopic&&document.getElementById(initialTopic))state.view=initialTopic;
+document.body.dataset.currentTopic=document.getElementById(initialTopic)?.matches('[data-chapter]')?initialTopic:'highlights';
 function indexValue(value,max,fallback=0){return Number.isInteger(value)&&value>=0&&value<max?value:fallback;}
 function restoreChoices(){
  if(!resumeReading)return;
  const choice=savedReading.choices||{};
+ const savedPerspective=choice.perspective==='mechanism'?'technical':choice.perspective;
+ if(!requestedPerspective&&perspectives.includes(savedPerspective))state.perspective=savedPerspective;
  if(Object.hasOwn(teachers,choice.teacher))state.teacher=choice.teacher;
  if(state.data.examples.some(row=>row.id===choice.example))state.example=choice.example;
  if(Object.hasOwn(singleModes,choice.mode))state.mode=choice.mode;
@@ -29,21 +45,24 @@ function restoreChoices(){
  state.geometryStage=indexValue(choice.geometryStage,3);state.timestampEvent=indexValue(choice.timestampEvent,4);
  state.routineHidden=choice.routineHidden===true;state.completeMode=choice.completeMode!==false;
  if(choice.sceneTabs&&typeof choice.sceneTabs==='object'&&!Array.isArray(choice.sceneTabs))for(const id of ['routines','exam','career','agent','teacher','school','mcp','evolution'])state.sceneTabs[id]=indexValue(choice.sceneTabs[id],10);
+ setPerspective(state.perspective,false);
 }
 function saveReading(){
  if(!uiReady||!entered||$('opening-dialog')?.open)return;
- const chapters=[...document.querySelectorAll('[data-chapter]')],readingLine=Number.parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--header'))+65;
+ const chapters=[...document.querySelectorAll('[data-chapter]')],root=getComputedStyle(document.body),readingLine=Number.parseFloat(root.getPropertyValue('--header'))+Number.parseFloat(root.getPropertyValue('--perspective-bar'))+24;
  const chapter=chapters.filter(node=>node.getBoundingClientRect().top<=readingLine).at(-1)||chapters[0];
- const record={version:1,entered:true,path:location.pathname,hash:location.hash,position:{chapter:chapter?.id||'overview',offset:chapter?-chapter.getBoundingClientRect().top:0,y:scrollY},choices:{teacher:state.teacher,example:state.example,mode:state.mode,caseIndex:state.caseIndex,condition:state.condition,sceneTabs:state.sceneTabs,teachingIndex:state.teachingIndex,geometryStage:state.geometryStage,timestampEvent:state.timestampEvent,routineHidden:state.routineHidden,completeMode:state.completeMode},bank:window.ShowcaseBank?.snapshot?.()};
+ document.body.dataset.currentTopic=chapter?.id||'highlights';
+ const record={version:2,entered:true,path:location.pathname,hash:location.hash,position:{topic:chapter?.id||'highlights',offset:chapter?-chapter.getBoundingClientRect().top:0,y:scrollY},choices:{perspective:state.perspective,teacher:state.teacher,example:state.example,mode:state.mode,caseIndex:state.caseIndex,condition:state.condition,sceneTabs:state.sceneTabs,teachingIndex:state.teachingIndex,geometryStage:state.geometryStage,timestampEvent:state.timestampEvent,routineHidden:state.routineHidden,completeMode:state.completeMode},bank:window.ShowcaseBank?.snapshot?.()};
  try{sessionStorage.setItem(readingKey,JSON.stringify(record));}catch{}
 }
 function scheduleReadingSave(){clearTimeout(saveTimer);if(uiReady)saveTimer=setTimeout(saveReading,160);}
-function markEntered(){entered=true;if(uiReady){saveReading();return;}try{sessionStorage.setItem(readingKey,JSON.stringify({...savedReading,version:1,entered:true,path:location.pathname,hash:location.hash}));}catch{}}
+function syncCurrentTopic(){if(topicFrame)return;topicFrame=requestAnimationFrame(()=>{topicFrame=0;const chapters=[...document.querySelectorAll('[data-chapter]')],root=getComputedStyle(document.body),readingLine=Number.parseFloat(root.getPropertyValue('--header'))+Number.parseFloat(root.getPropertyValue('--perspective-bar'))+24,chapter=chapters.filter(node=>node.getBoundingClientRect().top<=readingLine).at(-1)||chapters[0];document.body.dataset.currentTopic=chapter?.id||'highlights';});}
+function markEntered(){entered=true;if(uiReady){saveReading();return;}try{sessionStorage.setItem(readingKey,JSON.stringify({...savedReading,version:2,entered:true,path:location.pathname,hash:location.hash}));}catch{}}
 async function restoreReadingPosition(){
  if(document.fonts)await document.fonts.ready;
  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
  if(resumeReading&&initialHash===location.hash){
-  const position=savedReading.position||{},chapter=typeof position.chapter==='string'?$(position.chapter):null;
+  const position=savedReading.position||{},savedTopic=position.topic||aliases[position.chapter]||position.chapter,chapter=typeof savedTopic==='string'?$(savedTopic):null;
   const top=chapter?.matches('[data-chapter]')&&Number.isFinite(position.offset)?chapter.getBoundingClientRect().top+scrollY+position.offset:Number.isFinite(position.y)?position.y:0;
   scrollTo({top:Math.max(0,Math.min(top,document.documentElement.scrollHeight-innerHeight)),behavior:'instant'});
  }
@@ -51,10 +70,11 @@ async function restoreReadingPosition(){
 }
 api.readingKey=readingKey;
 api.clearReadingState=()=>{entered=false;uiReady=false;clearTimeout(saveTimer);try{sessionStorage.removeItem(readingKey);}catch{}};
-addEventListener('scroll',scheduleReadingSave,{passive:true});addEventListener('pagehide',saveReading);
+addEventListener('scroll',()=>{syncCurrentTopic();scheduleReadingSave();},{passive:true});addEventListener('resize',syncCurrentTopic,{passive:true});addEventListener('pagehide',saveReading);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveReading();});
 for(const event of ['click','change','input'])document.addEventListener(event,scheduleReadingSave);
 function el(tag,cls,text){const n=document.createElement(tag);if(cls)n.className=cls;if(text!=null)n.textContent=String(text);return n;}
+function setPerspective(name,updateUrl=true){if(name==='mechanism')name='technical';if(!perspectives.includes(name))return;state.perspective=name;document.body.classList.add('reader-ready');document.body.dataset.activePerspective=name;document.querySelectorAll('[data-perspective-cell]').forEach(node=>node.dataset.current=String(node.dataset.perspectiveCell===name));document.querySelectorAll('[data-perspective]').forEach(node=>{node.setAttribute('aria-selected',String(node.dataset.perspective===name));node.tabIndex=node.dataset.perspective===name?0:-1;});if(updateUrl){const url=new URL(location.href);url.searchParams.set('perspective',name);history.replaceState(history.state,'',url);}scheduleReadingSave();}
 // Decode a uniform extra JSON-escape layer only in the presentation. Saved raw text stays intact.
 function presentationText(text){const source=String(text||'');if(/\\\\(?:triangle|sin|cos|tan|pi|frac|sqrt|begin|end|left|right|quad|cdot|gt|lt)\b/.test(source)&&!/(?<!\\)\\(?:triangle|sin|cos|tan|pi|frac|sqrt|begin|end|left|right|quad|cdot|gt|lt)\b/.test(source))return source.replace(/\\\\/g,'\\').replace(/\\n(?![A-Za-z])/g,'\n');return source;}
 function math(node,text){const source=presentationText(text),re=/\$\$[\s\S]+?\$\$|\$[^$\n]+?\$|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\]/g;let end=0;for(const m of source.matchAll(re)){node.append(document.createTextNode(source.slice(end,m.index)));const block=m[0].startsWith('$$')||m[0].startsWith('\\['),size=m[0].startsWith('$')&&!block?1:2,n=el('span',block?'math-display':'math-inline');node.append(n);if(window.katex)katex.render(m[0].slice(size,-size),n,{displayMode:block,throwOnError:false,trust:false,strict:'ignore'});else n.textContent=m[0];end=m.index+m[0].length;}node.append(document.createTextNode(source.slice(end)));return node;}
@@ -66,10 +86,10 @@ function closeAnnotation(){$('annotation-panel').hidden=true;if(annotationTrigge
 function bar(title,subtitle){const n=el('div','workbench-bar');n.append(el('strong','',title));if(subtitle)n.append(el('span','',subtitle));return n;}
 function tabs(rows,active,change,label='切换图解'){const n=el('div','scene-tabs');n.setAttribute('role','group');n.setAttribute('aria-label',label);rows.forEach(([id,title])=>{const b=button(title,()=>change(id));b.setAttribute('aria-pressed',String(id===active));n.append(b);});return n;}
 function flow(root,labels,active=0){const n=el('div','flow-strip');labels.forEach((t,i)=>n.append(el('span',i===active?'active':'',t)));root.append(n);return n;}
-function selectView(name){const id=aliases[name]||name;recordOrigin(id);dispatchEvent(new CustomEvent('showcase:navigate',{detail:{from:state.view,to:id}}));state.view=id;if(singleModes[name]){state.mode=singleModes[name];renderSingle();}location.hash=name;$(id)?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});}
+function selectView(name){const id=aliases[name]||name;if(!$(id))return;recordOrigin(id);dispatchEvent(new CustomEvent('showcase:navigate',{detail:{from:state.view,to:id}}));state.view=id;if(singleModes[name]){state.mode=singleModes[name];renderSingle();}const url=new URL(location.href);url.hash=id;history.pushState(history.state,'',url);$(id)?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});}
 api.selectView=selectView;api.focusRoutine=id=>{const r=state.data?.catalog?.routines.find(x=>x.id===id);if(r)$('routine-selection').textContent=r.name;};
 function svg(tag,attrs,text){const n=document.createElementNS(NS,tag);Object.entries(attrs||{}).forEach(([k,v])=>n.setAttribute(k,String(v)));if(text!=null)n.textContent=text;return n;}
-function triangle(stage=0){const s=svg('svg',{viewBox:'0 0 440 390',role:'img','aria-label':'全国卷三角形 ABC，AB长5，高为6，辅助线由步骤控制',class:'triangle-figure'});s.append(svg('path',{d:'M90 330 L340 330 L190 30 Z',fill:'#f1f6fc',stroke:'#164991','stroke-width':2.5}));if(stage>=1)s.append(svg('path',{d:'M190 30 V330 M190 316 H204 V330',fill:'none',stroke:'#007f82','stroke-width':2,'stroke-dasharray':'6 5',class:'construction-line'}));[['A',72,352],['B',348,352],['C',185,20],['AB = 5',180,370],['C = π/4',212,85]].forEach(([t,x,y])=>s.append(svg('text',{x,y},t)));if(stage>=1){s.append(svg('text',{x:174,y:351},'D'));s.append(svg('text',{x:204,y:195,fill:'#006f72'},stage>=2?'h = 6':'h'));}if(stage>=2)s.append(svg('text',{x:36,y:184,transform:'rotate(-72 36 184)'},'AC = 2√10'));return s;}
+function triangle(stage=0){const s=svg('svg',{viewBox:'0 0 440 390',role:'img','aria-label':'全国卷三角形 ABC，AB长5，高为6，辅助线由步骤控制',class:'triangle-figure'});s.append(svg('path',{d:'M90 330 L340 330 L190 30 Z',fill:'#151515',stroke:'#aaa','stroke-width':2.5}));if(stage>=1)s.append(svg('path',{d:'M190 30 V330 M190 316 H204 V330',fill:'none',stroke:'#bbb','stroke-width':2,'stroke-dasharray':'6 5',class:'construction-line'}));[['A',72,352],['B',348,352],['C',185,20],['AB = 5',180,370],['C = π/4',212,85]].forEach(([t,x,y])=>s.append(svg('text',{x,y},t)));if(stage>=1){s.append(svg('text',{x:174,y:351},'D'));s.append(svg('text',{x:204,y:195,fill:'#ddd'},stage>=2?'h = 6':'h'));}if(stage>=2)s.append(svg('text',{x:36,y:184,transform:'rotate(-72 36 184)'},'AC = 2√10'));return s;}
 function handwriting(text){if(window.ShowcaseHandwriting)return window.ShowcaseHandwriting.render(text);const source=String(text||''),paper=el('div','handwriting-sheet'),ink=el('div','paper-ink'),re=/_\(([^)]+)\)|_([A-Za-z0-9]+)|\^\(([^)]+)\)|\^([A-Za-z0-9]+)/g;paper.dataset.source=source;let end=0;for(const m of source.matchAll(re)){ink.append(document.createTextNode(source.slice(end,m.index)));ink.append(el(m[1]||m[2]?'sub':'sup','',m[1]||m[2]||m[3]||m[4]));end=m.index+m[0].length;}ink.append(document.createTextNode(source.slice(end)));paper.append(ink);return paper;}
 function architectureDiagram(){
  const figure=el('figure','project-architecture'),caption=el('figcaption');caption.append(el('h3','','系统怎样连成一个整体'),p('底层定义形成共同语言；单题能力产生证据；学习记录支持后续训练与教学。'));figure.append(caption);
@@ -84,10 +104,7 @@ function architectureDiagram(){
  const foot=el('div','architecture-legend');foot.append(el('span','legend-ready','已有能力基础'),el('span','legend-planned','规划协同'),el('a','','反馈与新证据 → 更新内容、规则与模型'));foot.lastChild.href='#evolution';figure.append(foot);return figure;
 }
 function renderOverview(){
- const root=$('scene-overview');root.replaceChildren();const story=el('div','intro-story'),question=el('div','intro-question');question.append(el('span','small-label','2023 新课标全国Ⅰ卷 · 第17题'),triangle(0));
- const attempt=el('div','intro-attempt');attempt.append(el('span','small-label','学生作答'),handwriting('由 A+B=3C 和 A+B+C=π，\n得 C=π/3。'),p('角关系的错误，会怎样影响后面的推导？','intro-caption'));
- const next=el('div','intro-next');next.append(el('h3','','一次批改之后，还要发生什么'));for(const [title,text]of [['定位','哪一步、哪段作答出了问题'],['核实','是知识、方法，还是执行上的困难'],['训练','围绕具体困难安排教学与新题'],['复测','独立完成以后，再更新长期记录']]){const item=el('div');item.append(el('strong','',title),el('span','',text));next.append(item);}next.append(button('查看同题诊断对照',()=>selectView('diagnosis'),'primary-action'));
- story.append(question,attempt,next);root.append(story,architectureDiagram());
+ const root=$('scene-overview');root.replaceChildren(architectureDiagram(),note('数据结构、单题能力、学习记录与多端入口共用同一套步骤和教学对象。'));
 }
 function renderConcepts(){
  const root=$('scene-concepts'),rows=[['课时','教学内容的组织单位','课时讲授知识点，按前置安排；与知识点不要求一一对应。','三角恒等变换、正弦定理分布在相应教学课时中。'],['知识点','知识理解与运用的评价对象','知识点支撑步骤；一次套路通过不证明全部知识理解。','三角形内角和、两角和差公式、正弦定理与面积。'],['步骤','可以引用和分析的操作','可复用操作与本题实例分开，兼容不同正确解法。','由角关系求 $C$；三角恒等变换；求边长；将面积转为高。'],['套路','适用条件与步骤组合','保存触发条件、关键步骤、排除条件和易混淆方法。','解三角形：先确定角的关系，再联系边长、面积与目标。']];let active=0;
@@ -120,7 +137,28 @@ function renderSolution(root){
  const answer=run.answer_json,example=state.data.examples.find(e=>e.id===state.example);root.append(bar('三阶段解题 → 一份结构化参考',teachers[state.teacher]+' · '+(run.stages?.solver?.model||'已保存解析')),p(example.question,'sample-question'));
  const pipeline=el('div','pipeline-map');for(const [i,key,title]of [[0,'solver','Solver · 完整解题'],[1,'verifier','Verifier · 校验与分步'],[2,'formatter','Formatter · 结构与难度']]){const record=run.stages?.[key]||{},body=el('div');body.append(p((record.model||'模型未记录')+' · '+(record.provider==='codex_cli'?'Codex CLI · ':'')+'推理 '+(record.reasoning_effort||'默认')),el('pre','raw-output',record.content||'无记录'));pipeline.append(details(title,body,'pipeline-stage'));if(i<2)pipeline.append(el('span','pipeline-arrow','→'));}root.append(pipeline);
  for(const c of answer.chunk_results||[]){const block=el('section','chunk');block.append(el('h3','','第 '+c.chunk_id+' 问'));for(const step of c.steps||[]){const card=el('article','step');card.append(el('span','step-number','步骤 '+step.step_number),el('h4','',step.title),p(step.standard_writing));if(step.detailed_writing)card.append(details('详细过程',p(step.detailed_writing)));if(step.step_difficulty?.dimensions&&window.renderDimBarsHtml){const d=el('div','dim-chart');d.innerHTML=renderDimBarsHtml(step.step_difficulty.dimensions);card.append(details('本步难度维度',d));}if(step.knowledge_point)card.append(p(step.knowledge_point,'step-kp'));block.append(card);}root.append(block);}
+ root.append(apiCostSummary(run));
  const meta=el('div');meta.append(p('运行时间：'+run.run_at),el('pre','raw-output',JSON.stringify({teacher:state.teacher,recorded_at:run.run_at,execution_origin:run.execution_origin,source_commit:run.source_commit,models:Object.fromEntries(Object.entries(run.stages||{}).map(([key,value])=>[key,{model:value.model,resolved_model:value.resolved_model,provider:value.provider,reasoning_effort:value.reasoning_effort}])),fingerprint:run.fingerprint},null,2)));root.append(details('本次解析的运行信息',meta));
+}
+function apiCostSummary(run){
+ const stages=Object.values(run.stages||{}),usages=stages.map(stage=>stage.usage).filter(Boolean),aggregate=run.answer_json?.token_usage||{};
+ const input=usages.length?usages.reduce((sum,u)=>sum+(u.prompt_tokens||0),0):(aggregate.prompt_tokens||0),output=usages.length?usages.reduce((sum,u)=>sum+(u.completion_tokens||0),0):(aggregate.completion_tokens||0),cached=Math.min(input,Math.max(0,usages.reduce((sum,u)=>sum+(u.prompt_tokens_details?.cached_tokens??u.prompt_cache_hit_tokens??0),0))),model=run.stages?.solver?.model||'',provider=run.stages?.solver?.provider||'',profile=modelPricing[model];
+ if(!input&&!output)return note('本次记录没有可核对的 token 用量，暂不估算 API 成本。');
+ let amount=0,currency='CNY',basis='按该模型公开标准价估算';
+ if(model==='deepseek-flash'){
+  const parts=new Intl.DateTimeFormat('en-US',{timeZone:'Asia/Shanghai',weekday:'short',hour:'numeric',hourCycle:'h23'}).formatToParts(new Date(run.run_at||Date.now())),weekday=parts.find(x=>x.type==='weekday')?.value||'',hour=Number(parts.find(x=>x.type==='hour')?.value||0),peak=['Mon','Tue','Wed','Thu','Fri'].includes(weekday)&&((hour>=9&&hour<12)||(hour>=14&&hour<18)),inputRate=peak?2:1,cachedRate=peak ? .04 : .02,outputRate=peak?8:4;
+  amount=((input-cached)*inputRate+cached*cachedRate+output*outputRate)/1_000_000;basis='按该次保存时间对应的'+(peak?'高峰':'低峰')+'时段价估算';
+ }else if(model==='glm-5.3-flash')amount=((input-cached)*.8+cached*.23+output*2.8)/1_000_000;
+ else if(model==='gpt-6-astra'){currency='CNY';amount=(((input-cached)*10+cached*1+output*50)/1_000_000)*USD_TO_CNY;basis='按 OpenAI API 标准价折算；Codex CLI 执行记录不代表按此价实际扣款';}
+ else if(model==='glm-4.7-flash'){amount=0;basis='该模型官方价目当前标为免费';}
+ else return note('模型价格未配置，暂不估算本次 API 成本。');
+ const panel=el('aside','api-cost-summary');panel.append(el('div','api-cost-heading','本次结构化解答的 API 成本估算'));
+ const price=el('strong','api-cost-total',currency==='CNY'?'约 ¥'+amount.toFixed(2):'约 $'+amount.toFixed(4));panel.append(price);
+ panel.append(el('p','api-cost-usage','三阶段合计：输入 '+input.toLocaleString()+' · 输出 '+output.toLocaleString()+(cached?' · 缓存命中输入 '+cached.toLocaleString():'')+' Token。'));
+ const noteText='价目核对：2026-10-26。'+basis+'；计入三阶段保存用量与缓存命中。估算不等于历史账单，未含税费、缓存存储或供应商优惠。';panel.append(el('p','api-cost-caveat',noteText));
+ const link=el('a','api-price-source','官方价格说明 ↗');link.href=profile?.url||'#';link.target='_blank';link.rel='noopener noreferrer';panel.append(link);
+ if(model==='gpt-6-astra')panel.append(el('p','api-cost-caveat','折算假设：1 美元 ≈ '+USD_TO_CNY+' 元人民币。'));
+ return panel;
 }
 function renderTeaching(frame){
  const t=state.recordings?.teaching;
@@ -143,7 +181,8 @@ function renderSingle(){
  const frame=el('div','native-workbench single-workbench');root.append(frame);
  if(state.mode==='solution'){
   const controls=el('div','solution-controls'),label=el('label','','全国卷案例'),select=el('select');select.id='example-select';for(const e of state.data.examples)select.append(new Option(e.label||e.source?.paper||e.id,e.id));select.value=state.example;select.onchange=()=>{state.example=select.value;renderSingle();};label.append(select);
-  const tl=el('label','','运行记录'),ts=el('select');ts.id='teacher-select';for(const [k,n]of Object.entries(teachers)){const model=state.pipelineData?.examples?.[state.example]?.[k]?.stages?.solver?.model;ts.append(new Option(n+(model?' · '+model:''),k));}ts.value=state.teacher;ts.onchange=()=>{state.teacher=ts.value;renderSingle();};tl.append(ts);controls.append(label,tl);frame.append(controls);renderSolution(frame);
+  const tl=el('label','','解题模型 / 运行记录'),ts=el('select');ts.id='teacher-select';for(const [k,n]of Object.entries(teachers)){const model=state.pipelineData?.examples?.[state.example]?.[k]?.stages?.solver?.model,profile=modelPricing[model];ts.append(new Option(n+(model?' · '+model+' · '+(profile?.tier||'价格待核') :''),k));}ts.value=state.teacher;ts.onchange=()=>{state.teacher=ts.value;renderSingle();};
+  const currentModel=state.pipelineData?.examples?.[state.example]?.[state.teacher]?.stages?.solver?.model,profile=modelPricing[currentModel],modelNote=el('small','teacher-model-note');modelNote.append(document.createTextNode((currentModel||'模型未记录')+' · '+(profile?.tier||'价格待核')+(profile?' · '+profile.rates:'')));tl.append(ts,modelNote);controls.append(label,tl);frame.append(controls);renderSolution(frame);
  }else if(state.mode==='grading'){
   const c=state.recordings?.cases?.[0];if(c)frame.append(handwriting(c.student_answer),rawOutput(c.system,'正式批改流程实际输出'),button('比较不同诊断情境',()=>selectView('diagnosis')));else frame.append(note('真实批改记录尚未取得，不展示预制成功输出。'));
  }else if(state.mode==='teaching')renderTeaching(frame);
@@ -182,12 +221,13 @@ function renderModes(){
 function renderMcp(){const root=scenario('mcp','入口不同，教育规则与记录共用',['产品内置 Agent','DeepSeek 官方 DSH','WorkBuddy'],['已有内部搜索、解题、教学、批改、规划与学情查询基础。','计划通过 MCP 调用共用教育业务，宿主负责对话，系统维护领域结果。','计划通过连接器与技能调用工具；课件生成还需要实际可用的文档能力。']);const graph=el('div','mcp-topology');['课程 · 步骤 · 题库 · 作答 · 学习记录','共用教育业务与 MCP 适配','内置 Agent　 /　官方 DSH　 /　WorkBuddy'].forEach(x=>graph.append(el('div','',x)));root.append(graph,note('练习生成与课件素材等任务共用教育业务，宿主提供对话和相应文档能力。'));}
 function renderEvolution(){const root=scenario('evolution','改进经过验证，再回到系统',['教师反馈','人工维护','新试题与教材','跨学科扩展'],['经核实反馈用于知识库、记忆或模型改进，各技术路径分别验收。','修订数据、关系和参数，记录版本与受影响的历史。','新材料作为候选核对，再判断步骤、套路、知识点或课时变化。','复用基础设施，重建学科任务、评价与学习效果验证。']);flow(root,['获得反馈','核对来源','离线评价','发布版本','教学再验证'],2);root.append(note('每次改进都回到同一组任务检查，并保留内容与规则的历史版本。'));}
 function navigation(){
- const nav=document.querySelector('.primary-nav'),headerLinks=[...nav.querySelectorAll('a[href^="#"]')];
- const toggle=$('contents-toggle'),contents=$('chapter-contents');
- function currentChapter(id){
-  for(const a of headerLinks){if(a.hash==='#'+id)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');}
-  for(const a of contents.querySelectorAll('a')){if(a.hash==='#'+id)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');}
-  const selected=headerLinks.find(a=>a.hash==='#'+id);
+ const nav=document.querySelector('.primary-nav'),headerLinks=[...nav.querySelectorAll('a[href^="#"]')],quickJump=$('topic-quick-jump');
+ function currentTopic(id){
+  const topic=aliases[id]||id;state.view=topic;
+  if($(topic)&&location.hash!=='#'+topic){const url=new URL(location.href);url.hash=topic;history.replaceState(history.state,'',url);}
+  for(const a of headerLinks){if(a.hash==='#'+topic)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');}
+  if(quickJump&&quickJump.value!==topic)quickJump.value=topic;
+  const selected=headerLinks.find(a=>a.hash==='#'+topic);
   if(selected&&nav.clientWidth){const item=selected.getBoundingClientRect(),box=nav.getBoundingClientRect();let dx=0;if(item.left<box.left+8)dx=item.left-box.left-12;else if(item.right>box.right-8)dx=item.right-box.right+12;if(dx)nav.scrollBy({left:dx,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});}
  }
  document.addEventListener('click',event=>{
@@ -196,13 +236,52 @@ function navigation(){
  });
  $('annotation-close').onclick=closeAnnotation;
  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!$('annotation-panel').hidden)closeAnnotation();});
- toggle.onclick=()=>{contents.hidden=!contents.hidden;toggle.setAttribute('aria-expanded',String(!contents.hidden));};
- document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!contents.hidden){contents.hidden=true;toggle.setAttribute('aria-expanded','false');toggle.focus();}});
- for(const a of document.querySelectorAll('a[href^="#"]'))a.addEventListener('click',()=>{contents.hidden=true;toggle.setAttribute('aria-expanded','false');});
- const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){state.view=entry.target.id;currentChapter(state.view);}},{rootMargin:'-12% 0px -65% 0px'});
+ quickJump?.addEventListener('change',()=>selectView(quickJump.value));
+ document.querySelectorAll('[data-perspective]').forEach((tab,index)=>{
+  tab.addEventListener('click',()=>setPerspective(tab.dataset.perspective));
+  tab.addEventListener('keydown',event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const next=event.key==='Home'?0:event.key==='End'?perspectives.length-1:(index+(event.key==='ArrowRight'?1:-1)+perspectives.length)%perspectives.length;document.querySelector('[data-perspective="'+perspectives[next]+'"]')?.focus();setPerspective(perspectives[next]);});
+ });
+ setPerspective(state.perspective,false);
+ function relate(event){
+  const key=event.target.closest?.('[data-link-focus]');
+  const interactive=event.target.closest?.('.step,.grade-step,.concept-node,.bank-step,[data-routine-step],.scene-tabs button,.solution-controls select');
+  const unit=key?.closest('.topic-unit')||interactive?.closest('.topic-unit');
+  if(!unit||unit.querySelector('.shared-cell'))return;
+  const mobile=matchMedia('(max-width:820px)').matches;
+  const selected=!(key?.classList.contains('topic-unit-key')&&!mobile&&unit.classList.contains('is-linked'));
+  const label=interactive?.querySelector('h4,h5')?.textContent||interactive?.selectedOptions?.[0]?.textContent||interactive?.textContent.trim()||unit.querySelector('.topic-unit-key strong')?.textContent;
+  // Capture the unit before scene rendering replaces a clicked button's parent.
+  queueMicrotask(()=>{
+   document.querySelectorAll('.topic-unit').forEach(node=>{
+    const on=node===unit&&selected;node.classList.toggle('is-linked',on);
+    node.querySelectorAll('[data-link-focus]').forEach(trigger=>trigger.setAttribute('aria-pressed',String(on)));
+    node.querySelector('[data-relation-anchor]')?.classList.toggle('is-relation-target',on);
+    const note=node.querySelector('.relation-focus');if(note){note.hidden=!on;if(on)note.textContent='对应内容：'+label+'；技术依据：'+unit.dataset.relatedProcessing;}
+   });
+
+  });
+ }
+ document.addEventListener('click',relate,true);
+ document.addEventListener('change',relate,true);
+ let touchStart=null;
+ document.addEventListener('touchstart',event=>{
+  if(!matchMedia('(max-width: 820px)').matches||event.touches.length!==1)return;
+  const target=event.target,topic=target.closest?.('.topic-section');if(!topic||target.closest?.('button,a,input,select,textarea'))return;
+  if(topic.id==='highlights')return;
+  let horizontalScroll=false;
+  for(let node=target;node&&node!==topic;node=node.parentElement){if(node.scrollWidth>node.clientWidth+5&&/(auto|scroll|overlay)/.test(getComputedStyle(node).overflowX)){horizontalScroll=true;break;}}
+  if(!horizontalScroll)touchStart={x:event.touches[0].clientX,y:event.touches[0].clientY};
+ },{passive:true});
+ document.addEventListener('touchend',event=>{
+  if(!touchStart||!matchMedia('(max-width: 820px)').matches)return;
+  const dx=event.changedTouches[0].clientX-touchStart.x,dy=event.changedTouches[0].clientY-touchStart.y;touchStart=null;
+  if(Math.abs(dx)<58||Math.abs(dx)<Math.abs(dy)*1.35)return;
+  const next=(perspectives.indexOf(state.perspective)+(dx<0?1:-1)+perspectives.length)%perspectives.length;setPerspective(perspectives[next]);
+ },{passive:true});
+ const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting)currentTopic(entry.target.id);},{rootMargin:'-16% 0px -66% 0px'});
  for(const chapter of document.querySelectorAll('[data-chapter]'))observer.observe(chapter);
- const hash=location.hash.slice(1);currentChapter(aliases[hash]||hash||'overview');
- addEventListener('hashchange',()=>{const id=location.hash.slice(1);if(singleModes[id]){state.mode=singleModes[id];renderSingle();}});
+ const hash=location.hash.slice(1);currentTopic(aliases[hash]||hash||'highlights');
+ addEventListener('hashchange',()=>{const id=location.hash.slice(1);if(singleModes[id]){state.mode=singleModes[id];renderSingle();}const topic=aliases[id]||id;if($(topic))currentTopic(topic);});
 }
 // Cross-chapter jumps leave a floating companion for returning to the exact spot.
 const originState={y:0};
@@ -230,15 +309,15 @@ document.addEventListener('click',event=>{
  recordOrigin(link.hash.slice(1));
 },true);
 function showOpening(force=false){
- const dialog=$('opening-dialog');if(!dialog||(!force&&(entered||(location.hash&&location.hash!=='#overview')))){entered=true;return Promise.resolve();}
+ const dialog=$('opening-dialog');if(!dialog||(!force&&(entered||(location.hash&&!['#overview','#highlights'].includes(location.hash))))){entered=true;return Promise.resolve();}
  if(dialog.open)return Promise.resolve();
- return new Promise(resolve=>{let fadeTimer,entering=false;const enter=()=>{if(entering)return;entering=true;markEntered();dialog.classList.add('is-closing');fadeTimer=setTimeout(()=>{if(dialog.open)dialog.close();},matchMedia('(prefers-reduced-motion: reduce)').matches?0:160);};$('opening-enter').onclick=enter;dialog.addEventListener('close',()=>{clearTimeout(fadeTimer);markEntered();resolve();},{once:true});dialog.classList.remove('is-closing');dialog.querySelector('img').src='/showcase/launch-lettering.svg?entry='+Date.now();dialog.showModal();$('opening-title').focus({preventScroll:true});});
+ return new Promise(resolve=>{let fadeTimer,entering=false;const enter=()=>{if(entering)return;entering=true;markEntered();dialog.classList.add('is-closing');fadeTimer=setTimeout(()=>{if(dialog.open)dialog.close();},matchMedia('(prefers-reduced-motion: reduce)').matches?0:160);};$('opening-enter').onclick=enter;dialog.addEventListener('close',()=>{clearTimeout(fadeTimer);markEntered();resolve();},{once:true});dialog.classList.remove('is-closing');dialog.querySelector('img').src='/showcase/launch-lettering.svg?entry='+Date.now();dialog.showModal();requestAnimationFrame(()=>$('opening-title').focus({preventScroll:true}));});
 }
 api.replayOpening=()=>showOpening(true);
 function setupMotion(){
  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
  const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('is-inview');observer.unobserve(entry.target);}},{rootMargin:'0px 0px -8% 0px',threshold:0});
- document.querySelectorAll('.chapter-head,.pain-point,.intro-story,.project-architecture,.research-study,.chapter-bridge,.chapter-scene').forEach(node=>observer.observe(node));
+ document.querySelectorAll('.topic-heading,.pain-point,.opening-case,.project-architecture,.research-study,.chapter-scene').forEach(node=>observer.observe(node));
 }
 async function json(name){const r=await fetch('/showcase/'+name,{credentials:'omit'});if(!r.ok)throw Error(name+' 加载失败');return r.json();}
 navigation();

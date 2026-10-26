@@ -5,8 +5,9 @@ from pathlib import Path
 import tarfile
 import tempfile
 import unittest
+from unittest.mock import patch
 
-from scripts.build_research_release import ROOT, build, extract_archive, public_paths, verify_directory
+from scripts.build_research_release import ROOT, build, checked_file, extract_archive, public_paths, validate_content, verify_directory
 
 
 class ResearchReleaseTests(unittest.TestCase):
@@ -39,6 +40,20 @@ class ResearchReleaseTests(unittest.TestCase):
             output.write('\n// unexpected modification\n')
         with self.assertRaisesRegex(ValueError, 'checksum mismatch'):
             verify_directory(target)
+
+    def test_summary_label_cannot_hide_a_missing_sequence_answer(self):
+        data = json.loads((ROOT / 'frontend/showcase/pipeline.json').read_text())
+        result = data['examples']['national-2025-q16']['liangliang']['answer_json']
+        result['final_answer'] = '各块答案汇总'
+        for chunk in result['chunk_results']:
+            chunk['final_answer'] = '0'
+        path = self.directory / 'missing-sequence-answer.json'
+        path.write_text(json.dumps(data))
+        def source(root, name):
+            return path if name == 'frontend/showcase/pipeline.json' else checked_file(root, name)
+        with patch('scripts.build_research_release.checked_file', side_effect=source):
+            with self.assertRaisesRegex(ValueError, 'Sequence final answer'):
+                validate_content(ROOT)
 
     def test_archive_cannot_write_a_path_outside_its_destination(self):
         target = self.directory / 'unsafe'
