@@ -82,8 +82,12 @@ UNIT_LABELS = {
     'mcp': 'MCP接口适配，迎接AI Agent时代',
     'evolution': '反馈形成候选，经过评测再进入系统',
 }
-RELATIONSHIPS = {
-    'concepts': ('同一道题中的教学对象', '稳定标识与前置关系', '统一定义与解法映射', '知识、步骤与套路判断'),
+# Narrative units read better as one column; management units keep their key
+# technical points in view but fold the long-form details away.
+SINGLE_LANE = {'concepts', 'career', 'exam'}
+FOLDED_LANE = {'teacher', 'school', 'modes'}
+MERGED_UNITS = SINGLE_LANE | FOLDED_LANE
+RELATIONSHIPS = {    'concepts': ('同一道题中的教学对象', '稳定标识与前置关系', '统一定义与解法映射', '知识、步骤与套路判断'),
     'single': ('题目与学生作答', '三阶段解析与步骤对齐', '步骤判断与训练目标', '讲解与针对性练习'),
     'diagnosis': ('笔迹、停顿与返回修改', '时间对齐与步骤依赖', '首错、传播与待核实疑点', '追问、补测与自我复盘'),
     'library': ('错误步骤与复练目标', '题目索引与训练状态', '匹配题目与复查任务', '补一步、练套路、再复测'),
@@ -350,6 +354,29 @@ def legacy_anchors(source_id):
     return ''.join('<span id="' + esc(anchor) + '" class="anchor-alias" aria-hidden="true"></span>' for anchor in anchors)
 
 
+def sentence_bullets(text):
+    parts = [part.strip() for part in re.split(r'[；。]', text) if part.strip()]
+    return ''.join('<li>' + esc(part) + '</li>' for part in parts)
+
+
+def tech_points(chapter):
+    """Every key technical item stays visible; only the long-form detail folds."""
+    source_id = chapter['id']
+    summary, _ = TECHNICAL_ROUTES[source_id]
+    groups = [('技术路径', sentence_bullets(summary))]
+    if chapter.get('mechanism'):
+        groups.append(('处理机制', ''.join('<li>' + esc(item) + '</li>' for item in chapter['mechanism'])))
+    if chapter.get('details'):
+        groups.append(('重点细节', ''.join('<li>' + esc(detail['title']) + '</li>' for detail in chapter['details'])))
+    if chapter.get('research'):
+        groups.append(('研究对照', ''.join('<li>' + esc(row['title']) + '</li>' for row in chapter['research'])))
+    out = ['<section class="unit-tech-points" aria-label="技术要点">']
+    for label, items in groups:
+        out.append('<h4>' + label + '</h4><ul>' + items + '</ul>')
+    out.append('</section>')
+    return ''.join(out)
+
+
 def unit_markup(chapter, index):
     source_id = chapter['id']
     key = 'unit-' + source_id
@@ -379,17 +406,36 @@ def unit_markup(chapter, index):
     technical.append('<div class="acceptance-note"><strong>验证重点</strong><p>' + esc(acceptance) + '</p></div>')
 
     linked = source_id in {'overview', 'concepts', 'single', 'diagnosis', 'library', 'routines', 'exam', 'career', 'teacher', 'school', 'agent', 'mcp', 'evolution'}
-    out = ['<section class="topic-unit" data-link-unit="' + key + '" data-source-id="' + source_id + '" data-related-processing="' + esc(RELATIONSHIPS.get(source_id, ('', '', '', ''))[1]) + '" id="unit-anchor-' + source_id + '">']
+    merged_class = ' is-merged' if source_id in MERGED_UNITS else ''
+    out = ['<section class="topic-unit' + merged_class + '" data-link-unit="' + key + '" data-source-id="' + source_id + '" data-related-processing="' + esc(RELATIONSHIPS.get(source_id, ('', '', '', ''))[1]) + '" id="unit-anchor-' + source_id + '">']
     out.append(legacy_anchors(source_id))
     if linked:
         out.append('<button class="topic-unit-key" type="button" data-link-focus="' + key + '" aria-pressed="false"><strong>' + esc(label) + '</strong><span class="unit-key-action">对应技术</span></button>')
     else:
         out.append('<div class="topic-unit-key"><strong>' + esc(label) + '</strong></div>')
-    out.append('<div class="topic-unit-grid">')
-    out.append(perspective_cell('teaching', '<div class="cell-content">' + ''.join(teaching) + '</div>', source_id, '课堂与学生作答'))
-    out.append('<div class="lane-divider" data-lane-divider><div class="lane-divider-control" data-split-control role="separator" tabindex="0" aria-label="调整教学应用与技术实现的宽度" aria-orientation="vertical" aria-valuemin="35" aria-valuemax="75" aria-valuenow="60" aria-valuetext="教学应用 60%，技术实现 40%"></div></div>')
-    out.append(perspective_cell('technical', '<div class="cell-content">' + ''.join(technical + notes) + '</div>', source_id, '机制、研究与技术实现'))
-    out.append('</div></section>')
+    merged = source_id in MERGED_UNITS
+    if merged:
+        # One reading column: teaching first, then the technical lane below it.
+        out.append('<div class="topic-unit-grid is-single">')
+        out.append(perspective_cell('teaching', '<div class="cell-content">' + ''.join(teaching) + '</div>', source_id, '课堂与学生作答'))
+        inner = []
+        if source_id in FOLDED_LANE:
+            inner.append(tech_points(chapter))
+            inner.append('<details class="unit-tech-fold"><summary>展开完整技术说明、细节与研究对照</summary>'
+                         + ''.join(technical + notes) + '</details>')
+        else:
+            inner.append(''.join(technical + notes))
+        lane = ['<div class="unit-lane unit-tech" data-source-unit="' + source_id + '"><div class="cell-content">'
+                + ''.join(inner) + '</div></div>']
+        out.append(''.join(lane))
+        out.append('</div>')
+    else:
+        out.append('<div class="topic-unit-grid">')
+        out.append(perspective_cell('teaching', '<div class="cell-content">' + ''.join(teaching) + '</div>', source_id, '课堂与学生作答'))
+        out.append('<div class="lane-divider" data-lane-divider><div class="lane-divider-control" data-split-control role="separator" tabindex="0" aria-label="调整教学应用与技术实现的宽度" aria-orientation="vertical" aria-valuemin="35" aria-valuemax="75" aria-valuenow="60" aria-valuetext="教学应用 60%，技术实现 40%"></div></div>')
+        out.append(perspective_cell('technical', '<div class="cell-content">' + ''.join(technical + notes) + '</div>', source_id, '机制、研究与技术实现'))
+        out.append('</div>')
+    out.append('</section>')
     return ''.join(out)
 
 
@@ -399,7 +445,8 @@ def topic_section(topic, topic_index, chapters):
     out = ['<section class="topic-section" id="' + key + '" data-chapter="' + key + '" aria-labelledby="heading-' + key + '">']
     out.append('<header class="topic-heading">')
     out.append('<' + first_heading + ' id="heading-' + key + '">' + esc(topic['title']) + '</' + first_heading + '><p class="chapter-thesis">' + esc(topic['thesis']) + '</p></header>')
-    out.append('<div class="perspective-headings" aria-hidden="true">' + ''.join('<h3>' + esc(label) + '</h3>' for _, label in PERSPECTIVES) + '</div>')
+    if not all(source_id in MERGED_UNITS for source_id in topic['sources']):
+        out.append('<div class="perspective-headings" aria-hidden="true">' + ''.join('<h3>' + esc(label) + '</h3>' for _, label in PERSPECTIVES) + '</div>')
     for unit_index, source_id in enumerate(topic['sources'], 1):
         out.append(unit_markup(chapters[source_id], unit_index))
     output, next_question = topic['bridge']

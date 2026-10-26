@@ -8,7 +8,7 @@
  // text-heavy units lean slightly toward the technical side.
  const DEFAULTS={concepts:.55,single:.66,diagnosis:.66,library:.68,routines:.6,exam:.62,
                  career:.58,teacher:.56,school:.54,modes:.6,agent:.6,mcp:.56,evolution:.58};
- const grids=[...document.querySelectorAll('.topic-unit-grid:not(.topic-unit-shared)')]
+ const grids=[...document.querySelectorAll('.topic-unit-grid:not(.topic-unit-shared):not(.is-single)')]
    .map(grid=>({grid,unit:grid.closest('[data-source-id]')?.dataset.sourceId||''}));
  let saved={};
  try{const raw=sessionStorage.getItem(key);if(raw){const value=JSON.parse(raw);if(value&&typeof value==='object'&&!Array.isArray(value))saved=value;}}catch{}

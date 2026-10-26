@@ -236,3 +236,14 @@
 }
 .research-showcase .pain-point>span,.research-showcase #highlights .highlight-pain>span{color:#ff929c}
 .research-showcase .topic-unit-key{gap:14px}.research-showcase .topic-unit-key .unit-key-action{margin-left:auto;font-size:10px;white-space:nowrap;color:#a8b7ce}
+
+/* Merged units read top-down: teaching first, then the technical lane. */
+.research-showcase .topic-unit-grid.is-single{display:block!important;grid-template-columns:none!important;column-gap:0!important;row-gap:0;border:0;background:none}
+.research-showcase .topic-unit-grid.is-single>.perspective-cell{border:0;padding:0;background:none}
+.research-showcase .topic-unit-grid.is-single>.unit-lane{margin-top:30px;padding-top:26px;border-top:1px solid rgb(255 255 255 / 9%)}
+.unit-tech-points h4{font-size:12px;font-weight:600;letter-spacing:.05em;color:#9db9ff;margin:16px 0 6px}
+.unit-tech-points h4:first-child{margin-top:0}
+.unit-tech-points ul{margin:0 0 4px;padding-left:18px;color:#c9d1dd;font-size:13px;line-height:1.95}
+.research-showcase .unit-tech-fold{margin:18px 0 0;border:1px solid rgb(255 255 255 / 10%);border-radius:6px;padding:10px 16px;background:rgb(255 255 255 / 2%)}
+.research-showcase .unit-tech-fold>summary{cursor:pointer;color:#9db9ff;font-size:13px;line-height:1.8}
+.research-showcase .unit-tech-fold[open]>summary{margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid rgb(255 255 255 / 8%)}
