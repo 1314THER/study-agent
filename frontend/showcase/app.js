@@ -314,15 +314,10 @@ document.addEventListener('click',event=>{
 api.replayOpening=()=>window.ShowcaseHero?.open({force:true});
 function setupMotion(){
  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
- document.body.classList.add('motion-ready');
- const observer=new IntersectionObserver(entries=>{for(const entry of entries){
-  // Unit cards re-run their entrance every time they scroll back into view;
-  // other blocks animate once and stay.
-  if(entry.target.classList.contains('topic-unit')){
-   entry.target.classList.toggle('is-inview',entry.isIntersecting);
-  }else if(entry.isIntersecting){entry.target.classList.add('is-inview');observer.unobserve(entry.target);}
- }},{rootMargin:'0px 0px -8% 0px',threshold:0});
- document.querySelectorAll('.topic-heading,.pain-point,.topic-unit,.opening-case,.project-architecture,.research-study,.chapter-scene').forEach(node=>observer.observe(node));
+ const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('is-inview');observer.unobserve(entry.target);}},{rootMargin:'0px 0px -8% 0px',threshold:0});
+ // The whole topic panel owns the entrance motion (transitions.js); units stay
+ // inside that single layer so sub-blocks never detach from the glass panel.
+ document.querySelectorAll('.topic-heading,.pain-point,.opening-case,.project-architecture,.research-study,.chapter-scene').forEach(node=>observer.observe(node));
 }
 async function json(name){const r=await fetch('/showcase/'+name,{credentials:'omit'});if(!r.ok)throw Error(name+' 加载失败');return r.json();}
 navigation();

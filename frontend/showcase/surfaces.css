@@ -112,28 +112,34 @@
   border-radius: 10px;
 }
 
+/* Sub-blocks live on the same surface as the panel: one body, no nested cards. */
+.research-showcase .topic-section {
+  contain: paint;
+}
+
 .research-showcase .topic-unit-grid:not(.topic-unit-shared) {
-  border-color: rgb(255 255 255 / 11%);
-  border-radius: 11px;
-  overflow: visible;
+  border: 0;
+  border-block: 1px solid rgb(255 255 255 / 9%);
+  border-radius: 0;
+  background: none;
 }
 
 .research-showcase .topic-unit-grid:not(.topic-unit-shared) > .perspective-cell {
-  background: rgb(11 12 15 / 62%);
+  background: none;
 }
 
 .research-showcase .topic-unit-grid:not(.topic-unit-shared) > .perspective-cell[data-current="true"] {
-  box-shadow: inset 0 2px rgb(92 141 255 / 50%);
+  box-shadow: inset 0 2px rgb(92 141 255 / 45%);
 }
 
 .research-showcase .topic-unit.is-linked .topic-unit-grid {
-  border-color: rgb(115 160 255 / 42%);
-  box-shadow: 0 0 24px rgb(92 141 255 / 8%);
+  border-block-color: rgb(115 160 255 / 42%);
+  box-shadow: inset 0 0 0 1px rgb(92 141 255 / 16%);
 }
 
 .research-showcase .topic-unit.is-linked .perspective-cell {
-  background: rgb(22 25 32 / 82%);
-  box-shadow: inset 0 2px rgb(92 141 255 / 58%);
+  background: rgb(255 255 255 / 2.5%);
+  box-shadow: inset 0 2px rgb(92 141 255 / 55%);
 }
 
 .research-showcase .chapter-scene .native-workbench,

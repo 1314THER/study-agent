@@ -1,6 +1,6 @@
 /* One native-scroll handoff. White carries meaning; blue carries the connection. */
 .research-showcase .chapter-bridge.has-handoff{--handoff-line-offset:1;--handoff-marker-position:0%;--handoff-marker-opacity:0;--handoff-target-opacity:.82;--handoff-target-y:6px;--handoff-arrival-opacity:0;position:relative;min-height:0;margin:28px 0 0;padding:0;border:0;isolation:isolate}
-.research-showcase .has-handoff .handoff-stage{position:relative;top:auto;padding:24px 26px;background:var(--surface,#101114);color:var(--ink);border:1px solid #353a43;border-radius:7px;overflow:hidden}
+.research-showcase .has-handoff .handoff-stage{position:relative;top:auto;padding:22px 0 0;background:none;color:var(--ink);border:0;border-top:1px solid #2c333d;border-radius:0;overflow:visible}
 .handoff-context{display:grid;grid-template-columns:minmax(0,1fr) 80px minmax(0,1fr);align-items:center;gap:20px;margin-bottom:18px}
 .handoff-chapter{display:flex;flex-direction:column;gap:4px;min-width:0}.handoff-label{font-size:11px;line-height:1.6;color:var(--muted)}
 .handoff-chapter strong{font-size:19px;font-weight:700;line-height:1.5;color:var(--ink);overflow-wrap:anywhere}
