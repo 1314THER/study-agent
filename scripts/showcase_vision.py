@@ -18,8 +18,8 @@ def validate_vision(content):
     groups = content.get('groups', [])
     if [row.get('id') for row in groups] != list(GROUP_COUNTS):
         raise ValueError('Vision must retain its four ordered perspectives')
-    if content.get('status') != '长期愿景':
-        raise ValueError('Vision must be identified as a long-term vision')
+    if content.get('status') != '教学愿景':
+        raise ValueError('Vision must be identified as the teaching vision')
     for group in groups:
         if len(group.get('rows', [])) != GROUP_COUNTS[group['id']]:
             raise ValueError('Incomplete vision comparisons: ' + group['id'])
@@ -91,7 +91,7 @@ def cost_estimate(content):
             + format(price['output_tokens'], ',') + ' 输出 Token / 次</p><strong>¥'
             + format(total, '.4f') + '<small> / 次</small></strong><p>每天 '
             + str(price['daily_interactions']) + ' 次，连续 ' + str(price['days'])
-            + ' 天：<b>约 ¥' + format(monthly, '.2f') + ' / 人</b></p>'
+            + ' 天（一周）：<b>约 ¥' + format(monthly, '.2f') + ' / 周 / 人</b></p>'
             '<p class="vision-cost-scope">这是示例用量的模型 API 费用。完整服务预算还需计入设备、服务器、内容审核与实际调用量。</p>'
             '<a href="' + esc(price['source']) + '" target="_blank" rel="noopener noreferrer">智谱官方价格</a>'
             '<span class="vision-price-date">核对于 ' + esc(price['checked_at']) + '</span></div></aside>')
@@ -118,13 +118,13 @@ def vision_section(content):
     skip = '<a class="vision-skip" data-vision-skip href="#highlights">跳过愿景，查看项目亮点 <span aria-hidden="true">↗</span></a>'
     out = ['<section class="topic-section vision-topic" id="vision" data-chapter="vision" aria-labelledby="heading-vision">',
            '<header class="topic-heading vision-heading"><div class="vision-heading-top">'
-           '<span class="vision-status">长期愿景</span>' + skip + '</div>'
+           '<span class="vision-status">教学愿景</span>' + skip + '</div>'
            '<h1 id="heading-vision" tabindex="-1"><span class="vision-chapter-name">教学愿景</span>'
            + esc(content['headline']) + '</h1><p class="vision-lead">' + esc(content['subtitle'])
            + '</p><p class="vision-outlook">以下对照描述系统融入日常教学后希望带来的变化。各项支撑功能的现状见对应章节。</p></header>',
            '<figure class="vision-map" aria-labelledby="vision-map-title">'
            '<figcaption id="vision-map-title">我们希望教学发生什么变化</figcaption>'
-           '<div class="vision-map-root"><span>共同的学习目标</span><strong>适合每个人的支持</strong></div>'
+           '<div class="vision-map-root"><span>系统基于 LLM 提供</span><strong>适合每个人的支持</strong></div>'
            '<div class="vision-map-branches">']
     for group in groups:
         out.append('<a class="vision-map-branch" href="#vision-' + group['id'] + '"><strong>'

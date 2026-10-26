@@ -99,7 +99,7 @@ function openAnnotation(id,trigger){const value=annotations.get(id);if(!value)re
 function closeAnnotation(){$('annotation-panel').hidden=true;if(annotationTrigger?.isConnected)annotationTrigger.focus();}
 function bar(title,subtitle){const n=el('div','workbench-bar');n.append(el('strong','',title));if(subtitle)n.append(el('span','',subtitle));return n;}
 function tabs(rows,active,change,label='切换图解'){const n=el('div','scene-tabs');n.setAttribute('role','group');n.setAttribute('aria-label',label);rows.forEach(([id,title])=>{const b=button(title,()=>change(id));b.setAttribute('aria-pressed',String(id===active));n.append(b);});return n;}
-function flow(root,labels,active=0){const n=el('div','flow-strip');labels.forEach((t,i)=>n.append(el('span',i===active?'active':'',t)));root.append(n);return n;}
+function flow(root,labels,active=0){const n=el('div','flow-strip');labels.forEach((t,i)=>{const b=el('button',i===active?'active':'',t);b.type='button';b.addEventListener('click',()=>{n.querySelectorAll('button').forEach(x=>x.classList.remove('active'));b.classList.add('active');});n.append(b);});root.append(n);return n;}
 function selectView(name){const id=aliases[name]||name;if(!$(id))return;recordOrigin(id);dispatchEvent(new CustomEvent('showcase:navigate',{detail:{from:state.view,to:id}}));state.view=id;if(singleModes[name]){state.mode=singleModes[name];renderSingle();}const url=new URL(location.href);url.hash=id;history.pushState(history.state,'',url);$(id)?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});}
 api.selectView=selectView;api.focusRoutine=id=>{const r=state.data?.catalog?.routines.find(x=>x.id===id);if(r)$('routine-selection').textContent=r.name;};
 function svg(tag,attrs,text){const n=document.createElementNS(NS,tag);Object.entries(attrs||{}).forEach(([k,v])=>n.setAttribute(k,String(v)));if(text!=null)n.textContent=text;return n;}
@@ -314,8 +314,15 @@ document.addEventListener('click',event=>{
 api.replayOpening=()=>window.ShowcaseHero?.open({force:true});
 function setupMotion(){
  if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
- const observer=new IntersectionObserver(entries=>{for(const entry of entries)if(entry.isIntersecting){entry.target.classList.add('is-inview');observer.unobserve(entry.target);}},{rootMargin:'0px 0px -8% 0px',threshold:0});
- document.querySelectorAll('.topic-heading,.pain-point,.opening-case,.project-architecture,.research-study,.chapter-scene').forEach(node=>observer.observe(node));
+ document.body.classList.add('motion-ready');
+ const observer=new IntersectionObserver(entries=>{for(const entry of entries){
+  // Unit cards re-run their entrance every time they scroll back into view;
+  // other blocks animate once and stay.
+  if(entry.target.classList.contains('topic-unit')){
+   entry.target.classList.toggle('is-inview',entry.isIntersecting);
+  }else if(entry.isIntersecting){entry.target.classList.add('is-inview');observer.unobserve(entry.target);}
+ }},{rootMargin:'0px 0px -8% 0px',threshold:0});
+ document.querySelectorAll('.topic-heading,.pain-point,.topic-unit,.opening-case,.project-architecture,.research-study,.chapter-scene').forEach(node=>observer.observe(node));
 }
 async function json(name){const r=await fetch('/showcase/'+name,{credentials:'omit'});if(!r.ok)throw Error(name+' 加载失败');return r.json();}
 navigation();

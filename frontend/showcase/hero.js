@@ -24,6 +24,10 @@ function layout(){
  link.setAttribute('viewBox',`0 0 ${r.width} ${r.height}`);
  const reach=Math.max(1,endX-x),bend=Math.min(14,reach*.16);
  stroke.setAttribute('d',`M${x} ${y} C${x+reach*.34} ${y-bend} ${endX-reach*.28} ${endY+bend} ${endX} ${endY}`);
+ // The red flourish must never cross the CTA: clip the lettering right of the
+ // button's left edge so strokes visually stop at the collision boundary.
+ const cut=Math.max(0,r.right-(b.left-8));
+ artwork.style.clipPath=cut>0?`inset(0 ${cut}px 0 0)`:'';
 }
 function restoreCopy(){for(const row of streaming){row.node.replaceChildren(...row.original);row.node.classList.remove('is-streaming','is-stream-current');}streaming=[];}
 function stop(){streamCancel?.();streamCancel=null;restoreCopy();for(const animation of animations)animation.cancel();animations=[];}

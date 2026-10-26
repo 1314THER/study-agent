@@ -11,8 +11,8 @@
  const active=new Set();
  const states=new Map(figures.map(figure=>[figure,{elapsed:0,manual:false,lastStage:-1,profile:'a',morph:null}]));
  const profiles={
-  a:[[300,100],[370,175],[403,274],[300,279],[211,266],[250,186]],
-  b:[[300,138],[396,160],[355,247],[300,307],[238,251],[204,160]],
+  a:[[300,81],[410,152],[414,281],[300,250],[274,230],[264,194]],
+  b:[[300,139],[360,181],[360,250],[300,284],[234,253],[186,150]],
  };
  let frame=0,lastTime=0,layoutFrame=0,ticking=false;
  const points=value=>value.map(pair=>pair.map(n=>Math.round(n*100)/100).join(',')).join(' ');
@@ -45,12 +45,37 @@
    state.morph=null;
    shape.setAttribute('points',points(profiles[key]));
   }
+  syncRadarDots(figure);
+ }
+ function syncRadarDots(figure){
+  const state=states.get(figure),group=figure.querySelector('[data-hx-radar-dots]');
+  if(!group)return;
+  const target=profiles[state.profile]||profiles.a;
+  group.replaceChildren(...target.map((point,index)=>{
+   const dot=document.createElementNS(ns,'circle');
+   dot.setAttribute('cx',String(point[0]));dot.setAttribute('cy',String(point[1]));dot.setAttribute('r','5.5');
+   dot.setAttribute('class','hx-radar-dot'+(String(index)===figure.dataset.hxDimensionActive?' is-selected':''));
+   dot.dataset.hxDotDimension=String(index);
+   dot.setAttribute('tabindex','0');dot.setAttribute('role','button');
+   dot.setAttribute('aria-label','第'+(index+1)+'个维度，点击查看判断依据');
+   return dot;
+  }));
+ }
+ function flashRadarDot(dot){
+  if(media.matches||!dot.animate)return;
+  dot.animate([{transform:'scale(1)'},{transform:'scale(2.1)'},{transform:'scale(1)'}],{duration:480,easing:'cubic-bezier(.22,1,.36,1)'});
+  const ripple=document.createElementNS(ns,'circle');
+  ripple.setAttribute('cx',dot.getAttribute('cx'));ripple.setAttribute('cy',dot.getAttribute('cy'));ripple.setAttribute('r','6');
+  ripple.setAttribute('class','hx-radar-ripple');
+  dot.after(ripple);
+  ripple.animate([{transform:'scale(1)',opacity:.75},{transform:'scale(3.6)',opacity:0}],{duration:640,easing:'ease-out'}).finished.then(()=>ripple.remove()).catch(()=>ripple.remove());
  }
  function selectDimension(figure,index){
   figure.dataset.hxDimensionActive=String(index);
   pressed(figure,'[data-hx-dimension]',figure.querySelector('[data-hx-dimension="'+index+'"]'));
   figure.querySelectorAll('[data-hx-evidence]').forEach(row=>row.classList.toggle('is-selected',Number(row.dataset.hxEvidence)===index));
   figure.querySelectorAll('[data-hx-axis]').forEach(axis=>axis.classList.toggle('is-selected',Number(axis.dataset.hxAxis)===index));
+  figure.querySelectorAll('[data-hx-radar-dots] .hx-radar-dot').forEach(dot=>dot.classList.toggle('is-selected',Number(dot.dataset.hxDotDimension)===index));
  }
  function keyboardGroup(group,selector,activate){
   group.addEventListener('keydown',event=>{
@@ -87,6 +112,14 @@
    const dimensionsGroup=figure.querySelector('.hx-dimension-controls');
    if(dimensionsGroup)keyboardGroup(dimensionsGroup,'[data-hx-dimension]',chooseDimension);
    selectDimension(figure,0);
+   syncRadarDots(figure);
+   const dotsGroup=figure.querySelector('[data-hx-radar-dots]');
+   dotsGroup?.addEventListener('click',event=>{
+    const dot=event.target.closest?.('.hx-radar-dot');
+    if(!dot)return;
+    selectDimension(figure,Number(dot.dataset.hxDotDimension));
+    flashRadarDot(dot);
+   });
   }
  });
  function hasWork(){

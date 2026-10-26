@@ -5,7 +5,7 @@
 #highlights .hx-visual figcaption{display:grid;gap:7px;margin:0 0 25px;line-height:1.65;text-align:left}
 #highlights .hx-visual figcaption>strong{color:var(--hx-white);font-size:clamp(17px,1.6vw,23px);font-weight:650;letter-spacing:-.025em}
 #highlights .hx-visual figcaption>span{font-size:12px;color:var(--hx-muted)}
-#highlights .hx-figure-note{font-size:12px;line-height:1.9;margin:22px 0 0;color:var(--hx-muted)}
+#highlights .hx-figure-note{font-size:13px;line-height:1.9;margin:22px 0 0;color:var(--hx-muted)}
 #highlights .hx-icon{width:29px;height:29px;flex:none;color:var(--hx-blue)}
 #highlights .hx-wires{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:0;color:var(--hx-line)}
 #highlights .hx-wire{fill:none;stroke:var(--hx-line);stroke-width:1.3;opacity:.45;vector-effect:non-scaling-stroke}
@@ -100,7 +100,14 @@
 #highlights .hx-radar-shape{fill:#79a3ff28;stroke:#a9c7ff;stroke-width:2;stroke-linejoin:round}
 #highlights .hx-radar-labels{fill:#bcc6d8;font-size:17px;font-family:inherit}
 #highlights .hx-radar-vertices{color:#7593c3}
-#highlights .hx-radar-legend{display:flex;justify-content:center;gap:22px;margin-top:-4px;color:#aebcd0;font-size:10px}
+#highlights .hx-radar-dot{fill:#8ab8ff;stroke:#0b0e14;stroke-width:1.5;cursor:pointer;transform-box:fill-box;transform-origin:center;transition:transform .2s ease,fill .2s ease}
+#highlights .hx-radar-dot:hover{transform:scale(1.45)}
+#highlights .hx-radar-dot.is-selected{fill:#ffffff}
+#highlights .hx-radar-ripple{fill:none;stroke:#8ab8ff;stroke-width:2;transform-box:fill-box;transform-origin:center;pointer-events:none}
+/* The active profile expands outward from the center when it first appears. */
+#highlights .hx-radar-shape{transform-box:view-box;transform-origin:300px 215px;transform:scale(.04);opacity:.55;transition:transform .95s cubic-bezier(.22,1,.36,1) .12s,opacity .55s ease .12s}
+#highlights .hx-ability-visual.is-hx-revealed .hx-radar-shape{transform:scale(1);opacity:1}
+#highlights .hx-radar-legend{display:flex;justify-content:center;gap:22px;margin-top:-4px;color:#b9c4d6;font-size:12.5px}
 #highlights .hx-radar-legend>span{display:flex;align-items:center;gap:7px}
 #highlights .hx-radar-legend i{display:block;width:18px;height:2px;background:#aac8ff}
 #highlights .hx-radar-legend>span+span i{height:0;background:none;border-top:1px dashed #a5afb9}

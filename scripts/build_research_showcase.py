@@ -32,7 +32,7 @@ TOPICS = [
     {'id': 'highlights', 'title': '亮点', 'sources': ['overview', 'dataset'],
      'thesis': '让 AI 参与学习全过程，推动每一次教学。',
      'bridge': ('方法、时间、能力图谱与持续改进', '课时、知识点、步骤与套路怎样连接教学')},
-    {'id': 'terms', 'title': '四个名词介绍', 'sources': ['concepts'],
+    {'id': 'terms', 'title': '系统底层名词的定义与作用', 'sources': ['concepts'],
      'thesis': '课时组织教学，知识点衡量理解，步骤描述操作，套路组织方法。',
      'bridge': ('统一的教学对象与前置关系', '同一道题的结构化解题与分步反馈')},
     {'id': 'single', 'title': '单题能力', 'sources': ['single'],
@@ -79,7 +79,7 @@ UNIT_LABELS = {
     'school': '学校评价与底层体系维护',
     'modes': '完整采用与传统教学增强',
     'agent': '不同角色的教学协同任务',
-    'mcp': 'MCP、DSH与WorkBuddy共用业务能力',
+    'mcp': 'MCP接口适配，迎接AI Agent时代',
     'evolution': '反馈形成候选，经过评测再进入系统',
 }
 RELATIONSHIPS = {
@@ -404,9 +404,16 @@ def topic_section(topic, topic_index, chapters):
         out.append(unit_markup(chapters[source_id], unit_index))
     output, next_question = topic['bridge']
     next_id = TOPIC_IDS[topic_index] if topic_index < len(TOPIC_IDS) else ''
-    next_title = NAV_LABELS[next_id] if next_id else '亮点'
-    out.append('<div class="chapter-bridge"><div class="bridge-flow"><div class="bridge-output"><span>本主题形成共同产物</span><strong>' + esc(output) + '</strong></div><div class="bridge-track" aria-hidden="true"><svg viewBox="0 0 180 32"><path d="M5 16H173m-7-6 7 6-7 6"/></svg><i class="bridge-packet"></i></div><div class="bridge-input"><span>下一个主题要回答</span><strong>' + esc(next_question) + '</strong></div></div>')
-    out.append('<a class="chapter-transition" href="#' + (next_id or 'highlights') + '">继续：' + esc(next_title) + ' <span>' + esc(next_question) + '</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></a></div>')
+    if next_id:
+        next_title = NAV_LABELS[next_id]
+        input_label, transition_label, transition_span = '下一个主题要回答', '继续：' + next_title, next_question
+        transition_href = '#' + next_id
+    else:
+        input_label, transition_label = '回到问题的起点', '回到愿景'
+        transition_span = '这些能力构成了可验证的起点；是否真正实现，由后续每一次独立作答回答。'
+        transition_href = '#vision'
+    out.append('<div class="chapter-bridge"><div class="bridge-flow"><div class="bridge-output"><span>本主题形成共同产物</span><strong>' + esc(output) + '</strong></div><div class="bridge-track" aria-hidden="true"><svg viewBox="0 0 180 32"><path d="M5 16H173m-7-6 7 6-7 6"/></svg><i class="bridge-packet"></i></div><div class="bridge-input"><span>' + esc(input_label) + '</span><strong>' + esc(next_question if next_id else '教学愿景') + '</strong></div></div>')
+    out.append('<a class="chapter-transition" href="' + transition_href + '">' + esc(transition_label) + ' <span>' + esc(transition_span) + '</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 12h15m-6-6 6 6-6 6"/></svg></a></div>')
     out.append('</section>')
     return ''.join(out)
 
@@ -416,7 +423,7 @@ def launch_screen(copy):
     lettering = (PUBLIC / 'launch-lettering.svg').read_text()
     lettering = lettering.replace('<svg ', '<svg class="hero-love" aria-hidden="true" ', 1)
     return ''.join(['<dialog class="launch-screen" id="launch-screen" aria-labelledby="launch-title">' + (PUBLIC / 'launch-geometry.svg').read_text() + '<div class="launch-layout">',
-           '<header class="launch-brand"><img src="/showcase/assets/fudan-emblem-white.png" width="40" height="40" alt="复旦大学校徽"><span><strong>StudyAgent</strong><small>成为数学高手 · 项目介绍</small></span></header>',
+           '<header class="launch-brand"><img src="/showcase/assets/fudan-emblem-white.png" width="40" height="40" alt="复旦大学校徽"><span><strong>StudyAgent</strong><small>步骤级诊断与方法迁移训练系统 · 项目介绍</small></span></header>',
            '<div class="highlights-hero launch-hero"><div class="hero-copy"><h2 id="launch-title" tabindex="-1">' + ''.join('<span>' + esc(part + ('，' if i == 0 else '')) + '</span>' for i, part in enumerate(copy['title'].split('，', 1))) + '</h2><p class="hero-subtitle">' + esc(copy['subtitle']) + '</p></div>',
            '<div class="hero-art" id="hero-art" data-phase="waiting" aria-label="数学 love 书写与探索入口">' + lettering,
            '<svg class="hero-ink-link" aria-hidden="true"><path id="hero-ink-path" pathLength="1"/></svg>',
@@ -473,13 +480,13 @@ def build(content):
     return '''<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="StudyAgent：从学生、教师、学校到社会，探索针对性教学与普惠学习支持。通过全国卷案例了解步骤诊断、方法训练与长期陪伴。">
-<meta name="theme-color" content="#080808"><meta name="color-scheme" content="dark"><title>步骤诊断与方法迁移 · StudyAgent 科研展示</title>
+<meta name="theme-color" content="#080808"><meta name="color-scheme" content="dark"><title>步骤级诊断与方法迁移训练系统 · StudyAgent</title>
 <link rel="icon" type="image/png" sizes="64x64" href="/showcase/assets/fudan-favicon-white.png">
 <link rel="apple-touch-icon" href="/showcase/assets/fudan-emblem-white.png">
 <link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/vendor/katex/katex.min.css"><link rel="stylesheet" href="/showcase/style.css"><link rel="stylesheet" href="/showcase/handwriting.css"><link rel="stylesheet" href="/showcase/transitions.css"><link rel="stylesheet" href="/showcase/hero.css"><link rel="stylesheet" href="/showcase/surfaces.css"><link rel="stylesheet" href="/showcase/launch-geometry.css"><link rel="stylesheet" href="/showcase/highlights.css"><link rel="stylesheet" href="/showcase/highlights-layout.css"><link rel="stylesheet" href="/showcase/vision.css">
 <script defer src="/vendor/katex/katex.min.js"></script><script defer src="/dimchart.js"></script><script defer src="/radar.js"></script><script defer src="/showcase/handwriting.js"></script><script defer src="/showcase/bank.js"></script><script defer src="/showcase/liquid-glass.js"></script><script defer src="/showcase/hero.js"></script><script defer src="/showcase/vision.js"></script><script defer src="/showcase/app.js"></script><script defer src="/showcase/splitter.js"></script><script defer src="/showcase/transitions.js"></script><script defer src="/showcase/highlights.js"></script>
 </head><body class="research-showcase">''' + launch_screen(content['highlights']) + '''<a class="skip-link" href="#main-content">跳到项目内容</a>
-<header class="site-header"><a class="research-brand" href="#vision"><img class="brand-emblem" src="/showcase/assets/fudan-emblem-white.png" width="44" height="44" alt="复旦大学校徽"><span>成为数学高手<small>StudyAgent 科研项目</small></span></a>
+<header class="site-header"><a class="research-brand" href="#vision"><img class="brand-emblem" src="/showcase/assets/fudan-emblem-white.png" width="44" height="44" alt="复旦大学校徽"><span>步骤级诊断与方法迁移训练系统<small>StudyAgent 科研项目</small></span></a>
 <nav class="primary-nav" aria-label="章节导航">''' + primary_nav + '''</nav>
 <label class="topic-quick-jump"><span class="sr-only">跳转到主题</span><select id="topic-quick-jump" aria-label="跳转到主题">''' + mobile_options + '''</select></label></header>
 <main id="main-content"><div class="page-intro"><span>高中数学 / 过程诊断 / 方法迁移</span><span>全国卷案例 · 从作答到教学</span></div>

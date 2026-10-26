@@ -22,6 +22,20 @@
   chapter.querySelectorAll('[data-vision-nav]').forEach(link=>{if(link.dataset.visionNav===active?.dataset.visionGroup)link.setAttribute('aria-current','location');else link.removeAttribute('aria-current');});
   const current=changes.filter(change=>{const bounds=change.getBoundingClientRect();return bounds.top<innerHeight*.58&&bounds.bottom>line;}).at(-1);
   changes.forEach(change=>change.classList.toggle('is-current',change===current));
+  // Floating collapse: only while the active group is expanded and its inline
+  // control has scrolled out of the viewport.
+  const row=active?disclosures.get(active.dataset.visionGroup):null;
+  let show=false;
+  if(row&&!row.more.hidden){
+   const bounds=row.button.getBoundingClientRect();
+   show=bounds.bottom<0||bounds.top>innerHeight;
+  }
+  floatButton.hidden=!show;
+  if(show){
+   floatButton.dataset.visionGroup=row.group.dataset.visionGroup;
+   floatButton.querySelector('span').textContent='收起'+row.title+'的其余 '+row.remaining+' 项';
+  }
+  document.body.classList.toggle('has-vision-float',show);
  }
  function schedule(){if(!raf)raf=requestAnimationFrame(refresh);}
  function setExpanded(id,expanded,{save=true,notify=true}={}){
@@ -53,6 +67,14 @@
   button.hidden=false;
   button.addEventListener('click',()=>setExpanded(id,button.getAttribute('aria-expanded')!=='true'));
  }
+ // Once a group is expanded, a bottom-right companion keeps the collapse
+ // control reachable; it hides when the inline control or the group leaves.
+ const floatButton=document.createElement('button');
+ floatButton.type='button';floatButton.className='vision-float';floatButton.hidden=true;
+ floatButton.setAttribute('aria-label','收起当前展开的对照列表');
+ floatButton.innerHTML='<span></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>';
+ floatButton.addEventListener('click',()=>{const id=floatButton.dataset.visionGroup;if(id)setExpanded(id,false);});
+ document.body.append(floatButton);
  function revealAnchor(hash){
   const target=document.getElementById(String(hash||'').replace(/^#/,''));
   const more=target?.closest('[data-vision-more]');

@@ -3,7 +3,7 @@
  'use strict';
  const topics=[...document.querySelectorAll('[data-chapter]')];
  if(!topics.length)return;
- const topicNames={vision:'教学愿景',highlights:'亮点',terms:'四个名词介绍',single:'单题能力',time:'时间维度',library:'题库与错题',exam:'考试与复盘',longterm:'长期陪伴',teacher:'教师工作流',school:'学校与教学采用方式',agent:'MCP与Agent能力',evolution:'自进化'};
+ const topicNames={vision:'教学愿景',highlights:'亮点',terms:'系统底层名词的定义与作用',single:'单题能力',time:'时间维度',library:'题库与错题',exam:'考试与复盘',longterm:'长期陪伴',teacher:'教师工作流',school:'学校与教学采用方式',agent:'MCP与Agent能力',evolution:'自进化'};
  const aliases={overview:'highlights',dataset:'highlights',concepts:'terms',diagnosis:'time',routines:'library',career:'longterm',modes:'school',mcp:'agent',solution:'single',grading:'single',teaching:'single',generation:'single',geometry:'single',graph:'library',pool:'library',progress:'evolution',research:'evolution'};
  const byId=new Map(topics.map(topic=>[topic.id,topic]));
  const reduced=matchMedia('(prefers-reduced-motion: reduce)');

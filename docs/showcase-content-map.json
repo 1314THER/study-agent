@@ -794,7 +794,7 @@
   "vision": {
     "id": "vision",
     "title": "教学愿景",
-    "status": "长期愿景",
+    "status": "教学愿景",
     "sources": [
       {
         "file": "docs/教学愿景与社会价值.md",
@@ -870,7 +870,7 @@
       }
     ],
     "content_file": "frontend/showcase/vision-content.json",
-    "content_sha256": "a7ff2d126164c6a05cc30d5c477d75925f487e985f13fc2a074db5c5ec81be9d",
+    "content_sha256": "d24fd9d890310645705c5f117653b5118d71e56465de7ca753591c3e50965b98",
     "source_note": "用户2026-10-26正式方案；全文63项按教学用途关联现有章节，功能状态核对代码与设计文档；成本与政策另核对官方原文。",
     "counts": {
       "students": 21,
