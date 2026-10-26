@@ -1,0 +1,29 @@
+[Unit]
+Description=StudyAgent math.150.chat static showcase
+After=network.target
+
+[Service]
+Type=simple
+User=studymath
+Group=studymath
+WorkingDirectory=/opt/study-agent-math-showcase/current
+ExecStart=/usr/bin/python3 -m backend.math_showcase --host 127.0.0.1 --port 8002
+Restart=on-failure
+RestartSec=2s
+UMask=0027
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+ReadOnlyPaths=/opt/study-agent-math-showcase
+
+[Install]
+WantedBy=multi-user.target

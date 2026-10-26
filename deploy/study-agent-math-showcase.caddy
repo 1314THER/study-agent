@@ -1,0 +1,6 @@
+# Separate vhost for math.150.chat. The legacy demo remains on demo.150.chat.
+math.150.chat {
+	reverse_proxy 127.0.0.1:8002 {
+		header_up -Authorization
+	}
+}

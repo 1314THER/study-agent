@@ -1,0 +1,168 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f6f7">
+  <meta name="color-scheme" content="light">
+  <meta name="description" content="StudyAgent math.150.chat：从一道高中数学题的错误步骤，查看批改、教学和后续练习记录。">
+  <title>一道题，接下来怎样学｜StudyAgent math</title>
+  <link rel="icon" href="/math-mark.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/vendor/katex/katex.min.css">
+  <link rel="stylesheet" href="/math.css">
+  <script src="/vendor/katex/katex.min.js" defer></script>
+  <script src="/math-render.js" defer></script>
+  <script src="/math.js" defer></script>
+</head>
+<body class="math-home">
+  <a class="skip-link" href="#main">跳到案例正文</a>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="math.150.chat 首页">
+      <span class="brand-mark" aria-hidden="true">m</span>
+      <span><strong>StudyAgent</strong><small>math.150.chat · 解题轨迹</small></span>
+    </a>
+    <nav aria-label="主要导航">
+      <a href="#case">看一道题</a>
+      <a href="#teaching">教学扩展</a>
+      <a href="#research">实现与研究</a>
+      <a href="#progress">当前进展</a>
+      <a class="nav-library" href="/topics.html">完整专题目录</a>
+    </nav>
+  </header>
+
+  <main id="main">
+    <section class="hero" id="overview" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <p class="hero-kicker">高中数学 · 学习过程</p>
+        <h1 id="hero-title">一道题，<br><span>接下来怎样学？</span></h1>
+        <p class="hero-lead">从一处错误开始，看它怎样被批改、怎样进入分步教学，以及现有记录能支持哪些结论。</p>
+        <p class="hero-context">StudyAgent 用解题步骤连接参考解析、学生作答和教学任务；新作答与复测是长期学习判断仍需补足的证据。</p>
+        <div class="hero-actions">
+          <a class="button-primary" href="#case">从这份作答开始</a>
+          <a class="button-quiet" href="/topics.html">浏览完整项目资料</a>
+        </div>
+        <p class="source-note">展示包含真实保存的模型运行记录；学生作答是构造的测试情境。本页不会实时调用模型。</p>
+      </div>
+      <figure class="hero-equation" aria-label="一道解题步骤中的条件关系">
+        <span class="equation-cap">条件转化</span>
+        <div class="equation-line">A + B = 3C</div>
+        <div class="equation-line">A + B + C = π</div>
+        <div class="equation-result"><span>因此</span><strong>4C = π</strong></div>
+        <figcaption>错误常出现在这一步如何转化</figcaption>
+      </figure>
+    </section>
+
+    <section class="case-section section-wrap" id="case" aria-labelledby="case-title">
+      <header class="section-heading">
+        <div>
+          <p class="section-label">一份构造作答 · 多个处理环节</p>
+          <h2 id="case-title">先看错误，<br class="small-break">再看下一步怎么教</h2>
+        </div>
+        <a class="text-link" href="/topics.html#single">深入看单题能力</a>
+      </header>
+      <p class="case-provenance">下列批改、教学与变式来自围绕同一道题分别保存的运行记录。它们展示各环节的做法，不代表同一名学生经历了一次连续会话。</p>
+      <div class="case-body">
+        <div class="case-rail" aria-hidden="true"><span></span></div>
+        <div class="case-stages">
+          <article class="case-stage" id="answer-stage">
+            <div class="stage-marker"><span>作答</span></div>
+            <div class="stage-content">
+              <div class="stage-title-row"><h3>错误从哪里开始？</h3><span class="evidence-tag tag-constructed">构造测试输入</span></div>
+              <p class="stage-intro">2023 年新课标全国Ⅰ卷第 17 题，第（1）问。作答在计算角 <span class="math-inline">C</span> 时出错，并将这个结果带入了后续推导。</p>
+              <div class="problem-sheet"><div class="sheet-heading"><span>题目</span><span>2023 · 全国Ⅰ卷 · 第 17 题</span></div><p id="question-text">正在载入题目…</p><div class="answer-margin"><span>学生作答</span><pre id="student-answer">正在载入作答…</pre></div></div>
+              <p class="reader-note">第一处应核对 <span class="math-inline">A+B=3C</span> 与三角形内角和的联立。后续用错这个角，可能形成连带错误。</p>
+            </div>
+          </article>
+
+          <article class="case-stage" id="diagnosis-stage">
+            <div class="stage-marker"><span>批改</span></div>
+            <div class="stage-content">
+              <div class="stage-title-row"><h3>批改依据落在哪一步？</h3><span class="evidence-tag tag-recorded">批改流程实际输出</span></div>
+              <p class="stage-intro">正式批改流程保留学生原文，逐步指出公式转化错误，并把后续错误标记为依赖上一步。</p>
+              <div class="diagnosis-result" id="diagnosis-result"><p>正在载入结构化批改结果…</p></div>
+              <div class="comparison-fold" id="comparison-results"></div>
+              <a class="text-link" href="/topics.html#diagnosis">查看其他诊断情境与对照记录</a>
+            </div>
+          </article>
+
+          <article class="case-stage" id="teaching-stage">
+            <div class="stage-marker"><span>教学</span></div>
+            <div class="stage-content">
+              <div class="stage-title-row"><h3>同一个卡点，怎样继续？</h3><span class="evidence-tag tag-recorded">教学会话实际回放</span></div>
+              <p class="stage-intro">教学记录从错误角度开始，检查学生能否修正并继续推导。当前录制推进到第 2/2 步，没有记录完成整道题或独立复测。</p>
+              <div id="teaching-record"><p>正在载入教学记录…</p></div>
+              <p class="quality-note"><strong>也保留待改进项。</strong> 一轮提示的实际输出不完整；页面会按原记录展示这一点。</p>
+              <a class="text-link" href="/topics.html#single">了解分步教学如何与作答关联</a>
+            </div>
+          </article>
+
+          <article class="case-stage" id="variant-stage">
+            <div class="stage-marker"><span>变式</span></div>
+            <div class="stage-content">
+              <div class="stage-title-row"><h3>怎样检查题目经过改编仍可解？</h3><span class="evidence-tag tag-recorded">候选题与校验记录</span></div>
+              <p class="stage-intro">下面的候选题基于参考题的步骤结构生成，并经过三阶段解题校验。生成请求没有传入上方的学生错因，因此这是同题相关的另一段记录。</p>
+              <div id="variant-record"><p>正在载入变式记录…</p></div>
+            </div>
+          </article>
+
+          <article class="case-stage case-conclusion" id="evidence-stage">
+            <div class="stage-marker"><span>证据边界</span></div>
+            <div class="stage-content">
+              <h3>这段演示能说明什么？</h3>
+              <div class="evidence-columns">
+                <div><h4>已展示</h4><p>步骤参考、批改实际返回、教学反馈和变式校验，说明几个能力可以围绕同一道题组织。</p></div>
+                <div><h4>还需验证</h4><p>同一会话中的自动衔接、错因驱动的个性化补练、无提示新题表现、延迟复测和实际学习效果。</p></div>
+              </div>
+              <a class="button-secondary" href="#teaching">回看教学记录</a>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="teaching-section section-wrap" id="teaching" aria-labelledby="teaching-title">
+      <div class="split-heading">
+        <div><p class="section-label">从单题走向日常教学</p><h2 id="teaching-title">一次作答，<br>连到接下来的安排</h2></div>
+        <p>单题能力是起点。错题复练、考试分析、长期记录和教师行动构成进一步的设计方向，当前状态按环节标出。</p>
+      </div>
+      <div class="learning-path" aria-label="学习信息的计划流向">
+        <a href="/topics.html#library"><span>作答与步骤判断</span><strong>错题 · 补练</strong><em>已有基础</em></a>
+        <a href="/topics.html#career"><span>跨题与复测</span><strong>长期记录</strong><em>部分实现</em></a>
+        <a href="/topics.html#teacher"><span>班级与个人学情</span><strong>教师调整教学</strong><em>设计方案</em></a>
+        <a href="/topics.html#school"><span>教研与课程规则</span><strong>学校持续改进</strong><em>设计方案</em></a>
+      </div>
+      <p class="path-caption">连线表达设计中的信息关系。每个节点的功能状态和证据入口在专题中说明。</p>
+    </section>
+
+    <section class="research-section section-wrap" id="research" aria-labelledby="research-title">
+      <div class="split-heading research-heading">
+        <div><p class="section-label">实现与研究</p><h2 id="research-title">哪些结果可以核对？</h2></div>
+        <a class="text-link" href="/topics.html#research">打开完整研究与运行资料</a>
+      </div>
+      <div class="research-ledger">
+        <article><span class="ledger-rule" aria-hidden="true"></span><h3>三阶段参考解析</h3><p>Solver 给出解法，Verifier 检查并分步，Formatter 整理结构。批改、教学与出题复用参考步骤。</p><a href="/topics.html#single">查看实现细节</a></article>
+        <article><span class="ledger-rule" aria-hidden="true"></span><h3>公开运行记录</h3><p>原始响应、构造输入和比较条件可追溯。少量示例解释机制，不作为整体准确率结论。</p><a href="/topics.html#diagnosis">查看比较边界</a></article>
+        <article><span class="ledger-rule" aria-hidden="true"></span><h3>关键研究问题</h3><p>判断是否引用了学生作答、补练是否对应困难，以及新题能否检验独立迁移。</p><a href="/topics.html#research">查看论文与验证设计</a></article>
+      </div>
+    </section>
+
+    <section class="progress-section section-wrap" id="progress" aria-labelledby="progress-title">
+      <div class="progress-heading"><p class="section-label">项目状态</p><h2 id="progress-title">把已有基础与下一步分开看</h2></div>
+      <div class="status-list">
+        <div><span class="status-dot dot-blue"></span><strong>已有基础</strong><p>三阶段解析、步骤批改、分步教学和参考题变式；页面展示已保存的运行记录。</p></div>
+        <div><span class="status-dot dot-amber"></span><strong>仍需接通</strong><p>单题诊断结果与个性化变式、跨次作答和长期状态需要明确的数据链路。</p></div>
+        <div><span class="status-dot dot-gray"></span><strong>仍需验证</strong><p>独立迁移、间隔后的保持情况，以及教师教学行动是否产生学习收益。</p></div>
+      </div>
+      <a class="button-primary" href="/topics.html#vision">查看完整项目愿景</a>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <a class="brand footer-brand" href="/" aria-label="math.150.chat 首页"><span class="brand-mark" aria-hidden="true">m</span><span><strong>StudyAgent</strong><small>math.150.chat</small></span></a>
+    <p>从作答证据，走向下一步教学。</p>
+    <a href="https://demo.150.chat/home.html" target="_blank" rel="noopener noreferrer">查看原 demo.150.chat</a>
+    <span class="footer-distinction">独立展示站 · math.150.chat</span>
+  </footer>
+  <noscript><p class="noscript">启用 JavaScript 以查看已保存的批改、教学和变式记录；本页不会调用 AI。</p></noscript>
+</body>
+</html>
