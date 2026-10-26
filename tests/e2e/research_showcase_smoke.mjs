@@ -9,7 +9,7 @@ import {tmpdir} from 'node:os';
 const require=createRequire(import.meta.url);
 const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const root=new URL('../../',import.meta.url);
-const chapters=['highlights','terms','single','time','library','exam','longterm','teacher','school','agent','evolution'];
+const chapters=['vision','highlights','terms','single','time','library','exam','longterm','teacher','school','agent','evolution'];
 const records=JSON.parse(await readFile(new URL('frontend/showcase/recordings.json',root),'utf8'));
 const pipeline=JSON.parse(await readFile(new URL('frontend/showcase/pipeline.json',root),'utf8'));
 const shots=process.env.RESEARCH_SHOTS||tmpdir()+'/research-showcase-shots';
@@ -61,25 +61,70 @@ try{
  assert.equal(await launch.locator('.launch-contact a[href="mailto:qzshi25@m.fudan.edu.cn"]').count(),1);
  assert.equal(await launch.locator('.launch-footer a[href="https://150.chat/"]').count(),1);
  assert.equal(await launch.locator('.launch-footer a[href="https://150.chat/"]').innerText(),'正式站（正在开发中）');
- assert.equal(await page.locator('#heading-highlights').evaluate(n=>n.tagName),'H1');
+ assert.equal(await page.locator('#heading-highlights').evaluate(n=>n.tagName),'H2');
  assert.equal(await page.locator('h1').count(),1);
+ assert.equal(await page.locator('#heading-vision').evaluate(n=>n.tagName),'H1');
  assert.equal(await page.locator('.site-author').count(),1);
  assert((await page.locator('.site-author').innerText()).includes('施棋智'));
  assert.equal(await page.locator('.site-author a[href="mailto:qzshi25@m.fudan.edu.cn"]').count(),1);
  assert.equal(await page.locator('.site-footer a[href="https://150.chat/"]').count(),1);
  assert.equal(await page.locator('.site-footer a[href="https://150.chat/"]').innerText(),'正式站（正在开发中）');
- assert.equal(await cta.getAttribute('href'),'#highlights');assert(await cta.isVisible());assert(await cta.isEnabled());
+ assert.equal(await cta.getAttribute('href'),'#vision');assert(await cta.isVisible());assert(await cta.isEnabled());
  assert.equal(await hero.getAttribute('data-phase'),'ready','Reduced motion should complete the hero immediately');
  assert(await cta.evaluate(n=>n.classList.contains('is-lit')),'Reduced motion should finish the red glass edge immediately');
  const inkGeometry=await launch.evaluate(dialog=>{const button=dialog.querySelector('#explore-start'),path=dialog.querySelector('#hero-ink-path'),length=path.getTotalLength(),matrix=path.ownerSVGElement.getScreenCTM(),start=path.getPointAtLength(0),middle=path.getPointAtLength(length/2),end=path.getPointAtLength(length),b=button.getBoundingClientRect(),lineMid={x:(start.x+end.x)/2,y:(start.y+end.y)/2};return {start:{x:start.x,y:start.y},middle:{x:middle.x,y:middle.y},end:{x:end.x,y:end.y},button: new DOMPoint(b.left,b.top+b.height/2).matrixTransform(matrix.inverse()) ,bend:Math.hypot(middle.x-lineMid.x,middle.y-lineMid.y)};});
  assert(Math.abs(inkGeometry.end.x-inkGeometry.button.x)<2&&Math.abs(inkGeometry.end.y-inkGeometry.button.y)<2,'The final ink stroke should meet the CTA left edge at its vertical midpoint: '+JSON.stringify(inkGeometry));
  assert(inkGeometry.bend<15,'The CTA connector should use a very slight curve: '+JSON.stringify(inkGeometry));
  await page.evaluate(()=>{window.__entered=0;window.addEventListener('showcase:entered',()=>window.__entered++);});
- await cta.focus();await page.keyboard.press('Enter');await page.waitForFunction(()=>location.hash==='#highlights'&&!document.body.classList.contains('is-launch-open')&&window.__entered===1);
+ await cta.focus();await page.keyboard.press('Enter');await page.waitForFunction(()=>location.hash==='#vision'&&!document.body.classList.contains('is-launch-open')&&window.__entered===1);
  await ready(page);
  assert.equal(await launch.isVisible(),false,'The launch dialog should close on entry');
- await page.evaluate(()=>{void Showcase.replayOpening();});await page.waitForFunction(()=>document.body.classList.contains('is-launch-open'));
- await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.body.classList.contains('is-launch-open')&&window.__entered===2);
+ assert.equal(await page.locator('.vision-change').count(),63);
+ assert.deepEqual(await page.locator('[data-vision-group]').evaluateAll(nodes=>nodes.map(n=>n.querySelectorAll('.vision-change').length)),[21,17,17,8]);
+ assert.equal(await page.locator('#vision .perspective-cell').count(),0);
+ assert.equal(await page.locator('.vision-status').innerText(),'长期愿景');
+ assert.equal(await page.locator('.vision-change:visible').count(),8,'Each of four vision branches should show two changes initially');
+ assert.equal(await page.locator('[data-vision-toggle]').count(),4);
+ for(const [id,count] of [['students',21],['teachers',17],['schools',17],['society',8]]){
+  const group=page.locator('[data-vision-group="'+id+'"]'),toggle=group.locator('[data-vision-toggle]');
+  assert.equal(await group.locator('.vision-change:visible').count(),2);
+  assert.equal(await toggle.getAttribute('aria-expanded'),'false');
+  await toggle.focus();await page.keyboard.press('Enter');
+  assert.equal(await toggle.getAttribute('aria-expanded'),'true');
+  assert.equal(await group.locator('.vision-change:visible').count(),count);
+  const before=await toggle.boundingBox();await toggle.click();const after=await toggle.boundingBox();
+  assert(Math.abs(after.y-before.y)<3,'Collapsing should keep its button steady: '+id);
+  assert.equal(await group.locator('.vision-change:visible').count(),2);
+ }
+ await page.locator('[data-vision-toggle="teachers"]').click();
+ await page.locator('#vision-change-teachers-3 a').first().focus();
+ await page.evaluate(()=>Showcase.saveReading());const expandedY=await page.evaluate(()=>scrollY);
+ await page.reload({waitUntil:'networkidle'});await ready(page);
+ assert.equal(await page.locator('[data-vision-toggle="teachers"]').getAttribute('aria-expanded'),'true');
+ assert(Math.abs(await page.evaluate(()=>scrollY)-expandedY)<8,'Expanded vision reading should restore before layout is measured');
+ await page.evaluate(()=>ShowcaseVision.setExpanded('teachers',false));
+ await page.goto(base+'/#vision-change-students-3',{waitUntil:'networkidle'});await ready(page);
+ assert.equal(await page.locator('[data-vision-toggle="students"]').getAttribute('aria-expanded'),'true','A hidden change deep link should open its branch');
+ await page.locator('#vision-change-students-3 a').first().focus();
+ await page.evaluate(()=>ShowcaseVision.setExpanded('students',false));
+ assert.equal(await page.evaluate(()=>document.activeElement?.dataset.visionToggle),'students','Hiding a focused change should return focus to its disclosure control');
+ assert.equal(await page.evaluate(()=>location.hash),'#vision-students');
+
+ for(const branch of ['students','teachers','schools','society']){
+  await page.locator('.vision-map-branch[href="#vision-'+branch+'"]').click();
+  await page.waitForFunction(id=>document.activeElement?.id==='vision-title-'+id,branch);
+  assert.equal(await page.locator('#topic-quick-jump').inputValue(),'vision','A vision sub-anchor should keep the chapter selector selected');
+ }
+ await page.locator('.vision-outline [data-vision-skip]').focus();await page.keyboard.press('Enter');
+ await page.waitForFunction(()=>document.activeElement?.id==='heading-highlights'&&location.hash==='#highlights');
+ await page.goto(base+'/#vision',{waitUntil:'networkidle'});assert.equal(await page.locator('#launch-screen').isVisible(),false,'An explicit vision link should open its chapter directly');await ready(page);
+ await page.locator('.vision-heading [data-vision-skip]').focus();await page.keyboard.press('Enter');
+ await page.waitForFunction(()=>document.activeElement?.id==='heading-highlights'&&location.hash==='#highlights');
+ assert((await page.locator('.vision-cost-result').innerText()).includes('0.0136'));
+ assert((await page.locator('.vision-cost-result').innerText()).includes('4.08'));
+
+ await page.evaluate(()=>{window.__replayed=0;window.addEventListener('showcase:entered',()=>window.__replayed++,{once:true});void Showcase.replayOpening();});await page.waitForFunction(()=>document.body.classList.contains('is-launch-open'));
+ await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.body.classList.contains('is-launch-open')&&window.__replayed===1);
  assert.equal(await page.locator('.highlight-point').count(),7);assert.equal(await page.locator('#highlights .topic-unit').count(),0);
  assert.equal(await page.locator('#highlights .dataset-metric').count(),4);
  assert.deepEqual(await page.locator('#highlights .dataset-metric dd').allTextContents(),['541','359','1,019','23,261']);
@@ -133,7 +178,7 @@ try{
  assert.equal(await page.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),26);
  assert.equal(await page.locator('.perspective-switch').isVisible(),false);await fit(page,'980px two lanes');
  await page.setViewportSize({width:1440,height:1000});
- assert.equal(await page.locator('.chapter-bridge').count(),11,'Each topic must pass a specific output to its successor');
+ assert.equal(await page.locator('.chapter-bridge').count(),12,'Each topic must pass a specific output to its successor');
  assert.equal(await page.locator('.pain-point').count(),13,'Generic topic modules should explain practical problems');
  assert.equal(await page.locator('.research-logic').count(),18,'Related work must have a presentation-style logic diagram');
  assert.equal(await page.locator('.research-source-links a').count(),36,'Each related work needs a website and a primary document link');
@@ -156,8 +201,8 @@ try{
  await divider.focus();await page.keyboard.press('Enter');
  const sizes=await page.locator('#single .perspective-cell').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().width));
  assert(sizes[0]>sizes[1]*1.4,'Content should have more horizontal space than technical notes');
- // The single header navigation maps directly to the shared 11-topic sequence.
- assert.equal(await page.locator('.primary-nav a').count(),11);
+ // The single header navigation maps directly to the shared 12-topic sequence.
+ assert.equal(await page.locator('.primary-nav a').count(),12);
  await page.locator('.primary-nav a[href="#terms"]').focus();await page.keyboard.press('Enter');
  await page.waitForFunction(()=>location.hash==='#terms');
  for(const id of chapters){await page.locator('#'+id).scrollIntoViewIfNeeded();assert(await page.locator('#heading-'+id).isVisible());await fit(page,'chapter '+id);}
@@ -261,13 +306,36 @@ try{
  await page.goto(base+'/?perspective=mechanism#single',{waitUntil:'networkidle'});await ready(page);assert.equal(await page.locator('#launch-screen').isVisible(),false,'Deep links should skip the launch screen');assert.equal(await page.evaluate(()=>Showcase.state.perspective),'technical','Legacy mechanism-view links should map to technical implementation');
  assert.equal(await page.locator('.site-registration a').innerText(),'渝ICP备2026024246号-1');assert.equal(await page.locator('.site-registration a').getAttribute('href'),'https://beian.miit.gov.cn/');
  await checkAudits(context);
+
+ for(const width of [1440,980,390,320]){
+  await page.setViewportSize({width,height:1000});
+  await page.goto(base+'/#vision-students',{waitUntil:'networkidle'});await ready(page);
+  assert.equal(await page.locator('#topic-quick-jump').inputValue(),'vision');
+  await fit(page,'vision '+width);
+  const flow=await page.locator('.vision-change-flow').first().evaluate(n=>({display:getComputedStyle(n).display,columns:getComputedStyle(n).gridTemplateColumns.split(' ').length}));
+  assert.equal(flow.display,'grid');assert.equal(flow.columns,width<=640?1:3);
+  assert.equal(await page.locator('#vision table').count(),0,'The vision uses chains, not tables');
+  await page.locator('#vision').evaluate(n=>n.scrollIntoView({behavior:'instant'}));
+  await page.screenshot({path:shots+'/vision-'+width+'.png'});
+  await page.locator('.vision-map-branch').first().click();await page.waitForTimeout(120);
+  await page.screenshot({path:shots+'/vision-comparison-'+width+'.png'});
+ }
+ await page.locator('.vision-map-branch[href="#vision-teachers"]').click();
+ await page.evaluate(()=>{scrollBy({top:180,behavior:'instant'});Showcase.saveReading();});
+ const visionReading=await page.evaluate(()=>({y:scrollY,hash:location.hash}));
+ await page.reload({waitUntil:'networkidle'});await ready(page);
+ assert.equal(await page.locator('#launch-screen').isVisible(),false);
+ assert.equal(await page.locator('#topic-quick-jump').inputValue(),'vision');
+ const restoredVision=await page.evaluate(()=>({y:scrollY,hash:location.hash}));
+ assert.equal(restoredVision.hash,visionReading.hash);
+ assert(Math.abs(restoredVision.y-visionReading.y)<8,'Vision reading should survive refresh: '+JSON.stringify({visionReading,restoredVision}));
  // Phone widths remain within the viewport.
  await page.evaluate(()=>window.Showcase.clearReadingState());
  await page.setViewportSize({width:390,height:844});await page.goto(base+'/',{waitUntil:'networkidle'});
  assert(await page.locator('#launch-screen').isVisible(),'A cleared mobile session should show the launch dialog');
  assert.equal(await page.locator('#launch-screen #hero-art').getAttribute('data-phase'),'ready','Mobile reduced motion should complete the hero immediately');
  assert(await page.locator('#launch-screen #explore-start').isEnabled(),'The phone CTA should always be clickable');
- assert.equal(await page.locator('#launch-screen #explore-start').getAttribute('href'),'#highlights');
+ assert.equal(await page.locator('#launch-screen #explore-start').getAttribute('href'),'#vision');
  const mobileEntry=await page.locator('#launch-screen #explore-start').boundingBox();assert(mobileEntry.y+mobileEntry.height<=844,'The phone CTA should fit above the viewport edge');
  await page.screenshot({path:shots+'/hero-mobile.png'});
  await page.locator('#launch-screen #explore-start').click();await ready(page);
@@ -305,9 +373,9 @@ try{
  await checkAudits(context);await context.close();
  // The scientific text and citations remain available without any JavaScript.
  const plain=await browser.newContext({javaScriptEnabled:false,viewport:{width:390,height:844}});const nojs=await plain.newPage();audit(nojs);
- await nojs.goto(base+'/',{waitUntil:'networkidle'});assert.equal(await nojs.locator('[data-chapter]').count(),11);
- for(const id of chapters){const text=id==='highlights'?await nojs.locator('#highlights').innerText():(await nojs.locator('#'+id+' .chapter-prose').allTextContents()).join(' ');assert(text.length>80,'Missing no-JS chapter text: '+id);}
- assert.equal(await nojs.locator('#launch-screen #explore-start').getAttribute('href'),'#highlights');
+ await nojs.goto(base+'/',{waitUntil:'networkidle'});assert.equal(await nojs.locator('[data-chapter]').count(),12);
+ for(const id of chapters){const text=['vision','highlights'].includes(id)?await nojs.locator('#'+id).innerText():(await nojs.locator('#'+id+' .chapter-prose').allTextContents()).join(' ');assert(text.length>80,'Missing no-JS chapter text: '+id);}
+ assert.equal(await nojs.locator('#launch-screen #explore-start').getAttribute('href'),'#vision');
  assert.equal(await nojs.locator('.perspective-cell').count(),26,'No-JS reading should expose both perspectives for all generic units');
  assert.equal(await nojs.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),26,'No-JS reading should expose all generic content');
  assert((await nojs.locator('.research-notes a[href^="https://"]').count())>=6,'Research sources unavailable without JS');
@@ -340,32 +408,35 @@ try{
  // Readers can start before the writing finishes; no animation may gate entry.
  await animated.evaluate(()=>{void Showcase.replayOpening();});
  await animated.waitForFunction(()=>document.querySelector('#launch-screen')?.open&&document.body.classList.contains('is-launch-open'));
- await animatedCTA.click();await animated.waitForFunction(()=>location.hash==='#highlights'&&!document.body.classList.contains('is-launch-open'));
+ await animatedCTA.click();await animated.waitForFunction(()=>location.hash==='#vision'&&!document.body.classList.contains('is-launch-open'));
  await ready(animated);
  assert.equal(await animatedLaunch.locator('#hero-art').getAttribute('data-phase'),'ready');
  const animatedMethod=animated.locator('[data-hx-motion="method"]');await animatedMethod.scrollIntoViewIfNeeded();
  const animatedMethodButtons=animatedMethod.locator('[data-hx-method]');await animatedMethodButtons.nth(2).click();
  assert.equal(await animatedMethodButtons.nth(2).getAttribute('aria-pressed'),'true');
  await animated.waitForTimeout(3400);assert.equal(await animatedMethod.getAttribute('data-hx-stage'),'2','A manual method selection should stop automatic rotation');
- await animated.locator('#terms .topic-heading').evaluate(n=>scrollTo({top:n.getBoundingClientRect().top+scrollY-innerHeight*1.3,behavior:'instant'}));
+ await animated.locator('#terms').evaluate(n=>scrollTo({top:ShowcaseTransitions.measureTopic(n).top+scrollY+ n.querySelector('.topic-heading').offsetTop-innerHeight*1.3,behavior:'instant'}));
  await animated.waitForTimeout(1500);
- await animated.locator('#terms .topic-heading').evaluate(n=>{const offset=parseFloat(n.closest('[data-chapter]').style.getPropertyValue('--topic-arrival-y'))||0;scrollTo({top:n.getBoundingClientRect().top+scrollY-offset-innerHeight*.82,behavior:'instant'});});
+ await animated.locator('#terms').evaluate(n=>scrollTo({top:ShowcaseTransitions.measureTopic(n).top+scrollY+n.querySelector('.topic-heading').offsetTop-innerHeight*.82,behavior:'instant'}));
  await animated.waitForFunction(()=>document.querySelector('#terms').dataset.arrivalState==='arriving'&&Number(document.querySelector('#terms').dataset.arrivalTarget)>.4);
  assert.equal(await animated.locator('#terms').getAttribute('data-arrival-from'),'highlights','The whole-topic reveal should be linked to the preceding handoff');
  const arrivalMotion=await animated.locator('#terms').evaluate(n=>({progress:Number(n.dataset.arrivalProgress),target:Number(n.dataset.arrivalTarget),transform:getComputedStyle(n).transform}));
  assert(arrivalMotion.progress<arrivalMotion.target-.03,'The chapter surface should lag behind its scroll target: '+JSON.stringify(arrivalMotion));
- assert.notEqual(arrivalMotion.transform,'none','The chapter card should be visibly translated upward from below');
+ assert.match(arrivalMotion.transform,/^matrix3d\(/,'The complete chapter should use a perspective transform');
+ const panelDepth=await animated.locator('#terms').evaluate(n=>({depth:parseFloat(n.style.getPropertyValue('--topic-arrival-depth')),tilt:parseFloat(n.style.getPropertyValue('--topic-arrival-tilt')),heading:getComputedStyle(n.querySelector('.topic-heading')).transform,unit:getComputedStyle(n.querySelector('.topic-unit')).transform}));
+ assert(panelDepth.depth<0&&panelDepth.tilt<0,'The incoming panel should pull forward from a recessed tilted plane: '+JSON.stringify(panelDepth));
+ assert.equal(panelDepth.heading,'none');assert.equal(panelDepth.unit,'none','The card should move as a whole, without individual content transforms');
  assert(Number(await animated.locator('#highlights .chapter-bridge').getAttribute('data-handoff-progress'))>=.8);
  await animated.screenshot({path:shots+'/topic-arrival.png'});
  await animated.waitForTimeout(1300);
  const settledArrival=await animated.locator('#terms').evaluate(n=>({state:n.dataset.arrivalState,progress:Number(n.dataset.arrivalProgress),target:Number(n.dataset.arrivalTarget)}));
  assert.equal(settledArrival.state,'arriving','A paused reader should not finish the remaining entrance');
  assert(settledArrival.target<1&&Math.abs(settledArrival.progress-settledArrival.target)<.01,'The paused chapter should settle at its partial scroll target: '+JSON.stringify(settledArrival));
- await animated.locator('#terms .topic-heading').evaluate(n=>{const offset=parseFloat(n.closest('[data-chapter]').style.getPropertyValue('--topic-arrival-y'))||0;scrollTo({top:n.getBoundingClientRect().top+scrollY-offset-innerHeight*.5,behavior:'instant'});});
+ await animated.locator('#terms').evaluate(n=>scrollTo({top:ShowcaseTransitions.measureTopic(n).top+scrollY+n.querySelector('.topic-heading').offsetTop-innerHeight*.48,behavior:'instant'}));
  await animated.waitForFunction(()=>document.querySelector('#terms').dataset.arrivalState==='complete');
  assert.equal(await animated.locator('#terms').evaluate(n=>getComputedStyle(n).opacity),'1');
  assert.equal(await animated.locator('#terms').getAttribute('data-arrival-progress'),'1');
- assert.equal(await animated.locator('.chapter-bridge.has-handoff').count(),11,'All topic handoffs should be enhanced');
+ assert.equal(await animated.locator('.chapter-bridge.has-handoff').count(),12,'All topic handoffs should be enhanced');
  const handoff=animated.locator('#single .chapter-bridge');
  await handoff.evaluate(n=>scrollTo({top:n.getBoundingClientRect().top+scrollY-innerHeight*.88,behavior:'instant'}));
  await animated.waitForFunction(()=>Number(document.querySelector('#single .chapter-bridge').dataset.handoffProgress)>0);
@@ -393,5 +464,5 @@ try{
  assert.equal(await animated.locator('.chapter-transit-overlay').count(),0,'Topic navigation should use natural scrolling without a blocking overlay');
  await checkAudits(motion);await motion.close();
  const recorded=records.cases.reduce((n,c)=>n+['basic','same_information','system'].filter(k=>c[k]?.status==='recorded').length,0);
- console.log(JSON.stringify({ok:true,topics:11,contentUnits:13,highlights:7,nationalQuestions:2,savedPipelineRuns:8,diagnosticInputs:6,recordedResponses:recorded,conditions:2,viewports:[1440,980,390,320],resizableLanes:true,allTopicHandoffs:true,noJavaScript:true,network:'same-origin GET only, no cookies',screenshots:shots}));
+ console.log(JSON.stringify({ok:true,topics:12,contentUnits:13,highlights:7,nationalQuestions:2,savedPipelineRuns:8,diagnosticInputs:6,recordedResponses:recorded,conditions:2,viewports:[1440,980,390,320],resizableLanes:true,allTopicHandoffs:true,noJavaScript:true,visionCollapsedByDefault:true,wholePanel3D:true,network:'same-origin GET only, no cookies',screenshots:shots}));
 }finally{if(browser)await browser.close();server.kill('SIGTERM');}

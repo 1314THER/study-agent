@@ -1,0 +1,81 @@
+/* A compact first reading, with all 63 changes retained in the document. */
+(function(){
+ 'use strict';
+ const chapter=document.getElementById('vision');if(!chapter)return;
+ const groups=[...chapter.querySelectorAll('[data-vision-group]')];
+ const changes=[...chapter.querySelectorAll('.vision-change')];
+ const outline=chapter.querySelector('.vision-outline');
+ const storageKey='studyagent.showcase.vision.v1',disclosures=new Map();
+ let raf=0,saved=null;
+ try{
+  const raw=sessionStorage.getItem(storageKey);
+  if(raw&&raw.length<4096){const value=JSON.parse(raw);if(value?.version===1&&value.path===location.pathname&&value.groups&&typeof value.groups==='object'&&!Array.isArray(value.groups))saved=value.groups;}
+ }catch{}
+ function persist(){
+  const values={};for(const [id,row]of disclosures)values[id]=!row.more.hidden;
+  try{sessionStorage.setItem(storageKey,JSON.stringify({version:1,path:location.pathname,groups:values}));}catch{}
+ }
+ function refresh(){
+  raf=0;
+  const line=(outline?.getBoundingClientRect().bottom||0)+32;
+  const active=groups.filter(group=>group.getBoundingClientRect().top<=line).at(-1)||groups[0];
+  chapter.querySelectorAll('[data-vision-nav]').forEach(link=>{if(link.dataset.visionNav===active?.dataset.visionGroup)link.setAttribute('aria-current','location');else link.removeAttribute('aria-current');});
+  const current=changes.filter(change=>{const bounds=change.getBoundingClientRect();return bounds.top<innerHeight*.58&&bounds.bottom>line;}).at(-1);
+  changes.forEach(change=>change.classList.toggle('is-current',change===current));
+ }
+ function schedule(){if(!raf)raf=requestAnimationFrame(refresh);}
+ function setExpanded(id,expanded,{save=true,notify=true}={}){
+  const row=disclosures.get(id);if(!row)return false;
+  const changed=row.more.hidden===expanded;
+  // The control precedes the changing content, so collapsing never removes
+  // thousands of pixels above the button the reader is using.
+  if(!expanded&&row.more.contains(document.activeElement))row.button.focus({preventScroll:true});
+  if(!expanded&&row.more.contains(document.getElementById(location.hash.slice(1)))){
+   const url=new URL(location.href);url.hash=row.group.id;history.replaceState(history.state,'',url);
+  }
+  row.more.hidden=!expanded;
+  row.button.setAttribute('aria-expanded',String(expanded));
+  row.button.setAttribute('aria-label',(expanded?'收起':'展开')+row.title+'的其余 '+row.remaining+' 项');
+  row.button.querySelector('span').textContent=(expanded?'收起其余 ':'展开其余 ')+row.remaining+' 项';
+  row.group.dataset.visionExpanded=String(expanded);
+  if(save)persist();
+  if(notify&&changed){
+   dispatchEvent(new CustomEvent('showcase:layout-changed',{detail:{source:'vision',group:id,expanded}}));
+   window.Showcase?.saveReading?.();
+  }
+  schedule();return changed;
+ }
+ for(const group of groups){
+  const id=group.dataset.visionGroup,button=group.querySelector('[data-vision-toggle]'),more=group.querySelector('[data-vision-more]');
+  if(!button||!more)continue;
+  disclosures.set(id,{group,button,more,title:group.querySelector('h2')?.textContent||'',remaining:button.dataset.remaining});
+  setExpanded(id,saved?.[id]===true,{save:false,notify:false});
+  button.hidden=false;
+  button.addEventListener('click',()=>setExpanded(id,button.getAttribute('aria-expanded')!=='true'));
+ }
+ function revealAnchor(hash){
+  const target=document.getElementById(String(hash||'').replace(/^#/,''));
+  const more=target?.closest('[data-vision-more]');
+  return more?setExpanded(more.dataset.visionMore,true):false;
+ }
+ // This synchronous setup precedes the main reader's hydration and restoration.
+ revealAnchor(location.hash);
+ document.addEventListener('click',event=>{
+  if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+  const link=event.target.closest?.('a[href^="#"]');if(link)revealAnchor(link.hash);
+ },true);
+ chapter.addEventListener('click',event=>{
+  if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
+  const link=event.target.closest('a[href^="#"]');if(!link)return;
+  const target=document.getElementById(link.hash.slice(1));if(!target)return;
+  const heading=link.hasAttribute('data-vision-skip')?document.getElementById('heading-highlights'):target.querySelector('h2');
+  if(heading)requestAnimationFrame(()=>heading.focus({preventScroll:true}));
+ });
+ addEventListener('hashchange',()=>{
+  if(revealAnchor(location.hash))document.getElementById(location.hash.slice(1))?.scrollIntoView({behavior:'instant',block:'start'});
+ });
+ addEventListener('scroll',schedule,{passive:true});addEventListener('resize',schedule,{passive:true});
+ addEventListener('pageshow',schedule);addEventListener('showcase:reading-ready',schedule);
+ window.ShowcaseVision={storageKey,setExpanded,reset(){for(const id of disclosures.keys())setExpanded(id,false,{save:false});try{sessionStorage.removeItem(storageKey);}catch{}},snapshot(){return Object.fromEntries([...disclosures].map(([id,row])=>[id,!row.more.hidden]));}};
+ refresh();
+})();

@@ -1,7 +1,9 @@
 """Check the local release artifact without touching a server or model API."""
 import io
+import html
 import json
 from pathlib import Path
+import re
 import tarfile
 import tempfile
 import unittest
@@ -31,6 +33,38 @@ class ResearchReleaseTests(unittest.TestCase):
         self.assertEqual(manifest['git_head'], self.result['git_head'])
         self.assertNotIn('backend/database.py', manifest['files'])
         self.assertNotIn('frontend/showcase/fonts/build_subset.py', manifest['files'])
+
+    def test_release_includes_independent_vision_assets_and_complete_static_content(self):
+        target = self.directory / 'vision-roundtrip'
+        target.mkdir()
+        extract_archive(Path(self.result['archive']), target)
+        manifest = verify_directory(target)
+        for filename in ('vision-content.json', 'vision.css', 'vision.js'):
+            self.assertIn('frontend/showcase/' + filename, manifest['files'])
+        public = target / 'frontend/showcase'
+        vision = json.loads((public / 'vision-content.json').read_text())
+        research = json.loads((public / 'research-content.json').read_text())
+        page = (public / 'index.html').read_text()
+        self.assertNotIn('vision', research)
+        self.assertEqual(len(research['chapters']), 15)
+        self.assertEqual([len(group['rows']) for group in vision['groups']], [21, 17, 17, 8])
+        changes = re.findall(r'<article\b[^>]*class="[^"]*\bvision-change\b[^"]*"[^>]*>.*?</article>', page, re.S)
+        self.assertEqual(len(changes), 63)
+        self.assertLess(page.index('id="vision"'), page.index('id="highlights"'))
+        rows = [row for group in vision['groups'] for row in group['rows']]
+        for row, change in zip(rows, changes):
+            text = html.unescape(re.sub(r'<[^>]+>', '', change))
+            for field in ('aspect', 'before', 'after'):
+                self.assertIn(row[field], text)
+            for feature in row['features']:
+                self.assertIn(feature['label'], text)
+                self.assertIn('href="' + feature['target'] + '"', change)
+                self.assertIn(feature['status'], text)
+        self.assertNotIn('<table', page[page.index('id="vision"'):page.index('id="highlights"')])
+        self.assertEqual(page.count('class="vision-disclosure"'), 4)
+        self.assertEqual(page.count('class="vision-more"'), 4)
+        for group in vision['groups']:
+            self.assertIn('aria-controls="vision-more-' + group['id'] + '"', page)
 
     def test_modified_public_asset_fails_integrity_validation(self):
         target = self.directory / 'tampered'

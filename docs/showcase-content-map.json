@@ -3,11 +3,11 @@
   "reviewed_at": "2026-10-26",
   "read_policy": "每章设计前完整阅读其 source_docs，保留原始文件 SHA256 和参考章节；不能仅以标题、摘要或计划替代全文。",
   "implementation_snapshot": "原实现数量为2026-10-24快照；数据集聚合数量核对截至2026-10-25；能力状态按原文核对日期。",
-  "source_count": 16,
+  "source_count": 17,
   "chapters": [
     {
       "id": "overview",
-      "title": "以步骤为基础，连接完整学习过程",
+      "title": "用解题步骤串起批改、补练与复测",
       "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
       "sources": [
         {
@@ -52,7 +52,7 @@
     },
     {
       "id": "concepts",
-      "title": "四个概念，三类不同的判断",
+      "title": "四个教学单位，各回答什么问题",
       "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
       "sources": [
         {
@@ -105,7 +105,7 @@
     },
     {
       "id": "dataset",
-      "title": "数据集：让每道题找到知识与方法坐标",
+      "title": "数据集：把题目对应到知识点、步骤与方法",
       "design_basis": "完整重读定义与实现文档后设计；核心规模与规划测算来自已核对的2026-10-25聚合快照。",
       "sources": [
         {
@@ -147,7 +147,7 @@
     },
     {
       "id": "single",
-      "title": "同一份解析，连接四种能力",
+      "title": "一份解析，怎样用于批改、讲解与出题",
       "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
       "sources": [
         {
@@ -191,7 +191,7 @@
     },
     {
       "id": "diagnosis",
-      "title": "错误可见，原因仍需要证据",
+      "title": "定位错误，再核实原因",
       "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
       "sources": [
         {
@@ -233,7 +233,7 @@
       ],
       "research_urls": [
         "https://arxiv.org/html/2504.00843v2",
-        "https://numbas.org.uk/behind-the-design/marking.html",
+        "https://numbas.org.uk/behind-the-design/adaptive-marking.html",
         "https://shenleixian.github.io/pdf/iPen.pdf"
       ],
       "research_resources": [
@@ -243,20 +243,20 @@
           "paper_or_document": "https://arxiv.org/pdf/2504.00843v2"
         },
         {
-          "title": "Numbas：后续步骤可以显式依赖前一步回答",
+          "title": "Numbas：前一问算错，后续仍可按学生的结果检查",
           "website": "https://www.numbas.org.uk/",
           "paper_or_document": "https://numbas.org.uk/behind-the-design/adaptive-marking.html"
         },
         {
           "title": "CogChain：数字笔与多模态模型分析作答轨迹",
-          "website": "https://shenleixian.github.io/",
+          "website": "https://researchportal.hkust.edu.hk/en/publications/automatic-modeling-andanalysis-ofstudents-problem-solving-handwri/",
           "paper_or_document": "https://shenleixian.github.io/pdf/iPen.pdf"
         }
       ]
     },
     {
       "id": "library",
-      "title": "把错题变成下一次可执行的复盘",
+      "title": "按错误步骤整理错题，安排复盘与再练",
       "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
       "sources": [
         {
@@ -328,8 +328,8 @@
       ],
       "research_resources": [
         {
-          "title": "PFA：用成功与失败练习历史建立表现基线",
-          "website": "https://pact.cs.cmu.edu/",
+          "title": "PFA：根据过去做对、做错的次数预测下次表现",
+          "website": "https://digitalcommons.memphis.edu/facpubs/8350/",
           "paper_or_document": "https://pact.cs.cmu.edu/pubs/AIED%202009%20final%20Pavlik%20Cen%20Keodinger%20corrected.pdf"
         }
       ]
@@ -433,7 +433,7 @@
     },
     {
       "id": "agent",
-      "title": "让一次请求调动同一套教育能力",
+      "title": "用一句请求查询记录、安排教学任务",
       "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
       "sources": [
         {
@@ -546,7 +546,7 @@
     },
     {
       "id": "school",
-      "title": "从教学证据看改进，也维护体系如何变化",
+      "title": "查看教学改进，管理课程规则与版本",
       "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
       "sources": [
         {
@@ -653,7 +653,7 @@
       ],
       "research_resources": [
         {
-          "title": "高中数学 AI 实验：做得更好与学得更好分开测",
+          "title": "高中数学 AI 实验：分别检验辅助练习与独立考试",
           "website": "https://doi.org/10.1073/pnas.2422633122",
           "paper_or_document": "https://hamsabastani.github.io/education_llm.pdf"
         }
@@ -757,24 +757,24 @@
       "research_urls": [
         "https://arxiv.org/abs/2508.07407",
         "https://arxiv.org/abs/2505.22954",
-        "https://arxiv.org/abs/2512.10696",
+        "https://arxiv.org/abs/2512.10696v1",
         "https://arxiv.org/abs/2506.08989",
         "https://arxiv.org/abs/2510.22559"
       ],
       "research_resources": [
         {
-          "title": "自进化智能体综述：输入、系统、环境与优化器构成反馈环",
+          "title": "自进化智能体综述：整理反馈驱动的系统更新方法",
           "website": "https://arxiv.org/abs/2508.07407",
           "paper_or_document": "https://arxiv.org/pdf/2508.07407v2"
         },
         {
-          "title": "Darwin Gödel Machine：自我修改先过实证验证关",
+          "title": "Darwin Gödel Machine：修改代码后先做基准验证",
           "website": "https://arxiv.org/abs/2505.22954",
           "paper_or_document": "https://arxiv.org/pdf/2505.22954v3"
         },
         {
-          "title": "ReMe：经验库要蒸馏、复用与修剪，而非被动累积",
-          "website": "https://arxiv.org/abs/2512.10696",
+          "title": "ReMe：提炼、复用并清理任务经验",
+          "website": "https://arxiv.org/abs/2512.10696v1",
           "paper_or_document": "https://arxiv.org/pdf/2512.10696v1"
         },
         {
@@ -783,12 +783,120 @@
           "paper_or_document": "https://arxiv.org/pdf/2506.08989v1"
         },
         {
-          "title": "EduLoop-Agent：诊断、推荐与反馈连成教学闭环",
+          "title": "EduLoop-Agent：把诊断结果用于选题和反馈",
           "website": "https://arxiv.org/abs/2510.22559",
           "paper_or_document": "https://arxiv.org/pdf/2510.22559v1"
         }
       ]
     }
   ],
-  "editorial_revision": "亮点七块动态图解、覆盖十功能的分层结构总图、自然直连开屏按钮、浅红痛点与二级步骤称谓；统计口径及真实录制输出保持原状。"
+  "editorial_revision": "亮点七块动态图解、覆盖十功能的分层结构总图、自然直连开屏按钮、浅红痛点与二级步骤称谓；统计口径及真实录制输出保持原状。",
+  "vision": {
+    "id": "vision",
+    "title": "教学愿景",
+    "status": "长期愿景",
+    "sources": [
+      {
+        "file": "docs/教学愿景与社会价值.md",
+        "sha256": "f1bdb2bcc8083976215a60c2563bfbea31932711a99b46d7185dbaa9b707c2f1",
+        "line_count": 235,
+        "read_completeness": "full"
+      },
+      {
+        "file": "docs/当前实现能力与名词数量.md",
+        "sha256": "c918966c3792ce5ce227c826ca1248ff89707c0a690ca429034e906f8057c26c",
+        "line_count": 149,
+        "read_completeness": "full"
+      },
+      {
+        "file": "docs/项目名词与教学关系定义.md",
+        "sha256": "90a0ebb08a2c9cbe1d4aaae8cc2e111cc038a417cefa070d3615cf00e921065e",
+        "line_count": 95,
+        "read_completeness": "full"
+      },
+      {
+        "file": "docs/单题功能设计思路.md",
+        "sha256": "2b799060508e8af1e3d451f14995d9396d7ea36d0672f68d53ac60389ae65ca6",
+        "line_count": 243,
+        "read_completeness": "full"
+      },
+      {
+        "file": "docs/套路层面设计思路.md",
+        "sha256": "b1b26b65ae43c8e23733e2d732bf407f6e34542dd4c6f3560f1029f9b91c8818",
+        "line_count": 144,
+        "read_completeness": "full"
+      },
+      {
+        "file": "docs/试卷与生涯维度设计思路.md",
+        "sha256": "cca4ec803fb14bbb0851e1a6bd20cfa9b146fefd05fe34217c56df051ddc329b",
+        "line_count": 238,
+        "read_completeness": "full"
+      },
+      {
+        "file": "docs/教师端设计思路.md",
+        "sha256": "2bbd8a55b298a590b407223c2b1688bcbed4605df7d26f36e4dc22c6e0bcce35",
+        "line_count": 93,
+        "read_completeness": "full"
+      },
+      {
+        "file": "docs/学校端设计思路.md",
+        "sha256": "ff682de8d754e91d5af7aebc70d2eff3c9722093e675377eb20b7cddf0c138cf",
+        "line_count": 81,
+        "read_completeness": "full"
+      },
+      {
+        "file": "docs/教学协同Agent设计.md",
+        "sha256": "fbaf3b332379ed58021be90d203af6d8dfdbab0d2033f3148c5d51167e6778ea",
+        "line_count": 117,
+        "read_completeness": "full"
+      },
+      {
+        "file": "docs/系统Agent适配与MCP插件接入设计.md",
+        "sha256": "eca19e53df0772097af88c385cde31bbc95943f7b606af830d7ce10ffdb3e839",
+        "line_count": 134,
+        "read_completeness": "full"
+      },
+      {
+        "file": "docs/待深化功能研究-提示干预与可靠接入.md",
+        "sha256": "44b4ffc2753741312da899fcb9eea5c48b9c6d18ae22f57c95f89423ad74ceab",
+        "line_count": 178,
+        "read_completeness": "full"
+      },
+      {
+        "file": "docs/自进化与跨学科扩展设计.md",
+        "sha256": "9505d0ff82c1f16e29ed690581225fd9c1d4b9cd8d8387d63dbb5b5bd7798ab0",
+        "line_count": 131,
+        "read_completeness": "full"
+      }
+    ],
+    "content_file": "frontend/showcase/vision-content.json",
+    "content_sha256": "a7ff2d126164c6a05cc30d5c477d75925f487e985f13fc2a074db5c5ec81be9d",
+    "source_note": "用户2026-10-26正式方案；全文63项按教学用途关联现有章节，功能状态核对代码与设计文档；成本与政策另核对官方原文。",
+    "counts": {
+      "students": 21,
+      "teachers": 17,
+      "schools": 17,
+      "society": 8
+    },
+    "checked_at": "2026-10-26",
+    "public_sources": [
+      "https://www.moe.gov.cn/jyb_xxgk/moe_1777/moe_1778/202107/t20210724_546576.html?type=2",
+      "https://hudong.moe.gov.cn/srcsite/A01/s7048/202504/t20250416_1187476.html",
+      "https://www.gov.cn/zhengce/202501/content_6999913.htm",
+      "https://docs.bigmodel.cn/cn/guide/start/pricing"
+    ],
+    "presentation": "链条式正文：原来的困难→教学怎样改变→接续功能；各分支默认2项，其余展开阅读；无JS全文显示。"
+  },
+  "research_review": {
+    "checked_at": "2026-10-26",
+    "items": 18,
+    "method": "逐项对照官方论文页、指定版本原文、方法与结果定位；访问超时与链接失效分别记录。",
+    "corrections": [
+      "Verify-then-Generate补充模拟学生数据范围",
+      "SwS提升单位修为相对同规模BaseRL的百分点",
+      "DGM说明仍有效的候选可归档，低分版本也可继续探索",
+      "ReMe固定v1引用版本",
+      "Numbas/CogChain/PFA链接定位到具体研究页"
+    ]
+  }
 }

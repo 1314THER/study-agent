@@ -35,6 +35,7 @@ ASSET_PATHS = {
     "/showcase/dataset.html", "/showcase/dataset.css", "/showcase/dataset-data.json",
     "/showcase/transitions.js", "/showcase/transitions.css",
     "/showcase/highlights.js", "/showcase/highlights.css", "/showcase/highlights-layout.css",
+    "/showcase/vision.js", "/showcase/vision.css", "/showcase/vision-content.json",
     "/showcase/splitter.js", "/showcase/hero.js", "/showcase/hero.css", "/showcase/surfaces.css", "/showcase/launch-geometry.css", "/showcase/liquid-glass.js",
     "/showcase/handwriting.js", "/showcase/handwriting.css",
     "/showcase/assets/fudan-emblem-mono.svg",

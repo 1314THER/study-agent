@@ -89,9 +89,9 @@ function completeEntry(){
  if(!resolveEntry)return;
  document.body.classList.remove('is-launch-open','is-entering-site');
  dialog.classList.remove('is-leaving');leaving=false;
- const url=new URL(location.href);url.hash='highlights';history.replaceState(history.state,'',url);
- document.getElementById('highlights')?.scrollIntoView({behavior:'instant',block:'start'});
- document.getElementById('heading-highlights')?.focus({preventScroll:true});
+ const url=new URL(location.href);url.hash='vision';history.replaceState(history.state,'',url);
+ document.getElementById('vision')?.scrollIntoView({behavior:'instant',block:'start'});
+ document.getElementById('heading-vision')?.focus({preventScroll:true});
  const resolve=resolveEntry;resolveEntry=null;entryPromise=null;
  dispatchEvent(new CustomEvent('showcase:entered'));resolve();
 }

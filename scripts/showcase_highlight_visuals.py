@@ -67,11 +67,11 @@ def method_visual():
     return _clean('''
         <figure class="hx-visual hx-method-visual" data-hx-motion="method" data-hx-stage="0">
           <figcaption><strong>同一道题，看清四个单位</strong><span>概念示例：解 2x + 3 = 11</span></figcaption>
-          <div class="hx-method-context"><div><span>课时 · 组织教学</span><strong>一元一次方程</strong><small>这一节课学什么</small></div><div><span>知识点 · 衡量理解</span><strong>等式性质</strong><small>理解两边为什么可以同做运算</small></div></div>
-          <div class="hx-method-dependency"><span>知识是操作的前置</span><svg viewBox="0 0 220 24" aria-hidden="true"><path d="M2 12h212m-7-6 7 6-7 6"/></svg></div>
-          <div class="hx-routine-bracket"><div class="hx-routine-heading"><span>套路 · 按顺序组合方法</span><strong>一元一次方程求解方法</strong></div><ol class="hx-equation-steps" aria-label="这个套路中的三个步骤"><li data-hx-method-step="0"><span>步骤 · 两边减 3</span><strong>2x = 8</strong><small>应用等式性质，消去常数项</small></li><li data-hx-method-step="1"><span>步骤 · 两边除以 2</span><strong>x = 4</strong><small>应用等式性质，求出未知数</small></li><li data-hx-method-step="2"><span>步骤 · 代回检验</span><strong>2 × 4 + 3 = 11</strong><small>核对结果是否满足原方程</small></li></ol></div>
+          <div class="hx-method-context"><div><span>课时 · 组织教学</span><strong>一元一次方程</strong><small>这一节课学什么</small></div><div><span>知识点 · 说明依据</span><strong>等式性质</strong><small>理解两边为什么可以同做运算</small></div></div>
+          <div class="hx-method-dependency"><span>这三个操作都用到等式性质</span><svg viewBox="0 0 220 24" aria-hidden="true"><path d="M2 12h212m-7-6 7 6-7 6"/></svg></div>
+          <div class="hx-routine-bracket"><div class="hx-routine-heading"><span>套路 · 组合解题步骤</span><strong>一元一次方程求解方法</strong></div><ol class="hx-equation-steps" aria-label="这个套路中的三个步骤"><li data-hx-method-step="0"><span>步骤 · 两边减 3</span><strong>2x = 8</strong><small>应用等式性质，消去常数项</small></li><li data-hx-method-step="1"><span>步骤 · 两边除以 2</span><strong>x = 4</strong><small>应用等式性质，求出未知数</small></li><li data-hx-method-step="2"><span>步骤 · 代回检验</span><strong>2 × 4 + 3 = 11</strong><small>核对结果是否满足原方程</small></li></ol></div>
           <div class="hx-controls hx-method-controls" data-hx-controls hidden aria-label="查看例题的步骤"><button type="button" data-hx-method="0" aria-pressed="true">减去常数</button><button type="button" data-hx-method="1" aria-pressed="false">求出未知数</button><button type="button" data-hx-method="2" aria-pressed="false">代回检验</button></div>
-          <p class="hx-figure-note">知识点看“懂不懂”，步骤看“会不会做”，套路看“能否把操作按顺序组合”。</p>
+          <p class="hx-figure-note">知识点说明每步为什么成立；步骤记录具体怎么做；套路组织这些步骤，并说明何时使用。</p>
         </figure>
     ''')
 
@@ -80,10 +80,10 @@ def time_visual():
     return _clean('''
         <figure class="hx-visual hx-time-visual" data-hx-motion="time" data-hx-stage="0">
           <figcaption><strong>答案之外，还有过程</strong><span>从单题，到整卷，再到整个学习历程</span></figcaption>
-          <div class="hx-time-scale hx-time-question"><div class="hx-scale-label"><strong>一道题</strong><span>步骤怎样发生</span></div><div class="hx-time-detail"><div class="hx-writing-track"><span class="hx-time-segment hx-write">书写</span><span class="hx-time-segment hx-pause">停顿</span><span class="hx-time-segment hx-rewrite">返回修改</span><i class="hx-time-cursor" aria-hidden="true"></i></div><div class="hx-time-annotations"><span>开始推导</span><strong>具体卡点</strong><span>自我纠正</span></div></div></div>
+          <div class="hx-time-scale hx-time-question"><div class="hx-scale-label"><strong>一道题</strong><span>步骤怎样发生</span></div><div class="hx-time-detail"><div class="hx-writing-track"><span class="hx-time-segment hx-write">书写</span><span class="hx-time-segment hx-pause">停顿</span><span class="hx-time-segment hx-rewrite">返回修改</span><i class="hx-time-cursor" aria-hidden="true"></i></div><div class="hx-time-annotations"><span>开始推导</span><strong>停顿所在步骤</strong><span>返回修改</span></div></div></div>
           <div class="hx-time-scale"><div class="hx-scale-label"><strong>一张卷</strong><span>时间怎样分配</span></div><div class="hx-paper-time"><div><span>前段作答</span><i style="--hx-bar:54%"></i></div><div class="hx-time-overrun"><span>反复尝试</span><i style="--hx-bar:86%"></i><small>是否挤占后续作答？</small></div><div><span>后段作答</span><i style="--hx-bar:30%"></i></div></div></div>
           <div class="hx-time-scale"><div class="hx-scale-label"><strong>长期</strong><span>变化是否保持</span></div><div class="hx-history"><span><i></i>作业发现</span><b aria-hidden="true">→</b><span><i></i>订正补练</span><b aria-hidden="true">→</b><span><i></i>独立复测</span></div></div>
-          <p class="hx-figure-note">把错误位置、过程顺序和历史表现放在一起，才能进一步区分失分原因。</p>
+          <p class="hx-figure-note">将错误位置、作答顺序和历史表现相互核对，再用追问或补测核实失分原因。</p>
         </figure>
     ''')
 
@@ -95,7 +95,7 @@ def ability_visual():
         ('计算能力', '看计算步骤的准确性、熟练度与反复出错的位置。'),
         ('逻辑推理', '看推导链条、条件使用与论证是否完整严密。'),
         ('数学素养', '看数学表达、抽象建模以及跨情境理解与迁移。'),
-        ('考试技巧与心态', '看整卷时间分配、回访策略、复盘与后续复测。'),
+        ('考试技巧与心态', '查看时间分配、回访策略与复测；心态结合学生自述和教师交流了解。'),
     ]
     controls = ''.join('<button type="button" data-hx-dimension="' + str(i) + '" aria-pressed="' + ('true' if i == 0 else 'false') + '">' + escape(label) + '</button>' for i, (label, _) in enumerate(dimensions))
     evidence = ''.join('<div data-hx-evidence="' + str(i) + '"' + (' class="is-selected"' if i == 0 else '') + '><dt>' + escape(label) + '</dt><dd>' + escape(text) + '</dd></div>' for i, (label, text) in enumerate(dimensions))

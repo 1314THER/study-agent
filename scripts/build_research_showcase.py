@@ -13,9 +13,11 @@ import re
 from pathlib import Path
 
 if __package__:
+    from .showcase_vision import validate_vision, vision_section
     from .showcase_highlight_visuals import (system_visual, method_visual, time_visual,
                                             ability_visual, data_visual, participation_visual, evolution_visual)
 else:
+    from showcase_vision import validate_vision, vision_section
     from showcase_highlight_visuals import (system_visual, method_visual, time_visual,
                                           ability_visual, data_visual, participation_visual, evolution_visual)
 
@@ -24,6 +26,9 @@ PUBLIC = ROOT / 'frontend/showcase'
 CHAPTER_IDS = ['overview', 'concepts', 'dataset', 'single', 'diagnosis', 'library', 'routines',
                'exam', 'career', 'agent', 'teacher', 'school', 'modes', 'mcp', 'evolution']
 TOPICS = [
+    {'id': 'vision', 'title': '教学愿景', 'sources': [],
+     'thesis': '让每个学生，都能获得适合自己的学习支持。',
+     'bridge': ('学生、教师、学校与社会的教学变化', '系统怎样实现这些变化')},
     {'id': 'highlights', 'title': '亮点', 'sources': ['overview', 'dataset'],
      'thesis': '让 AI 参与学习全过程，推动每一次教学。',
      'bridge': ('方法、时间、能力图谱与持续改进', '课时、知识点、步骤与套路怎样连接教学')},
@@ -43,10 +48,10 @@ TOPICS = [
      'thesis': '分开评价试卷是否适合目标，以及学生怎样完成这份试卷。',
      'bridge': ('本次试卷、作答与时间证据', '这些变化在长期学习中是否持续')},
     {'id': 'longterm', 'title': '长期陪伴', 'sources': ['career'],
-     'thesis': '用连续作业和阶段考试积累不同证据，让新表现支持、修正或暂缓结论。',
+     'thesis': '汇总连续作业和阶段考试，随新作答更新知识理解与套路运用记录。',
      'bridge': ('带来源、帮助条件与复测结果的个人记录', '谁来查询证据并把它变成教学行动')},
     {'id': 'teacher', 'title': '教师工作流', 'sources': ['teacher'],
-     'thesis': '从备课到阶段调整，把个别困难转成可执行的课堂、作业与复测。',
+     'thesis': '从备课到阶段调整，根据个别困难安排课堂讲解、作业和新题复测。',
      'bridge': ('教师行动与后续学习变化', '学校怎样提供可比评估与体系支持')},
     {'id': 'school', 'title': '学校与教学采用方式', 'sources': ['school', 'modes'],
      'thesis': '学校可以维护教学体系，也可以从一个环节开始接入并逐步扩展。',
@@ -56,7 +61,7 @@ TOPICS = [
      'bridge': ('可复用的业务任务与结果', '反馈如何经过核验成为下一版本')},
     {'id': 'evolution', 'title': '自进化', 'sources': ['evolution'],
      'thesis': '反馈、人工维护、教材更新与跨学科扩展，都先形成候选再评测发布。',
-     'bridge': ('经过复核、评测、灰度与回滚的系统更新', '回到学习结果，验证这套闭环是否有效')},
+     'bridge': ('经过复核、评测和小范围试用的系统更新', '用后续独立作答检查更新效果')},
 ]
 TOPIC_IDS = [row['id'] for row in TOPICS]
 PERSPECTIVES = [('teaching', '教学应用'), ('technical', '技术实现')]
@@ -110,19 +115,20 @@ KEY_PHRASES = {
 }
 # Only explicit limitations are cautions; a study's neutral task scope stays neutral.
 RESEARCH_GAPS = [
-    '模型常选中接近却不完全相同的标准', '但没有同样改善可执行性',
-    '18 个受测模型的 F1 均低于 0.5，模糊证据下更差', '补写未出现的推理、把不足证据当成明确依据',
-    '未解决自由手写推理中的自动依赖识别', '主要标签是书写类型，不是本项目数学步骤或经核实错因',
-    '表现预测不是学生已理解概念的直接证明', '并不能代替学生学习结果',
-    '情境题的通过率仍低于标准题，迭代也未使可解性始终最优',
-    '却较难把信息转成正确状态与适配行动', '固定分解可能增加负担，或限制更有创造性的路径',
+    '模型常选中接近却不完全相同的标准', '第三项没有得到同样改善',
+    '18 个受测模型的 F1 均低于 0.5，模糊证据下更差', '补写未出现的推理、把不足的证据当成明确依据',
+    '自由书写中的前后依赖，仍需另行识别', '要判断对应哪个数学步骤、学生为何停顿，仍需结合题目和作答核查',
+    '概念是否理解、推荐是否改善学习，还需另外检验', '学生学习效果仍需另做实验',
+    '情境题的通过率仍低于标准题，迭代后可解性也并非在所有设置下最好',
+    '较难据此判断学生状态并选择合适的教学行动', '固定分解也可能增加负担，限制其他解题路径',
     '具体权重和量规需要在本地教学条件下重新校准',
-    'GPT Base 组平均考试分较对照低约 17%（相对变化）',
-    '不等于已证明显著提分', '但不支持 MCP prompt templates',
-    '连接成功也不是完整任务成功', '教育场景的优化目标与领域约束需要单独设计，不能直接套用',
-    '教学收益仍需真实学生独立复测', '教学经验的效用判断需结合真实学习结果',
-    '对学生的迁移与保持仍需独立复测', '反馈能否改变后续学习行为还需真实课堂检验',
+    'GPT Base 组平均考试分较对照低约 17%（相对变化）', '不支持 MCP prompt templates',
+    '教育应用需要另行定义学习目标、评分标准和验证方法',
+    '仍需学生独立完成新题的实验来评价学习收益', '教学经验的效用判断需结合真实学习结果',
+    '学生能否迁移方法、间隔后能否保持，需要另做独立作答实验',
+    '反馈能否改变后续学习行为还需真实课堂检验',
 ]
+
 TECHNICAL_ROUTES = {
     'overview': ('把课时、知识点、步骤、套路与题目组织成可引用的教学对象；单题输出进入训练、复测和班级行动。', '对同一案例检查对象引用、步骤证据和后续任务是否连续，缺少数据时保留未知。'),
     'concepts': ('采用稳定标识区分教学对象、前置关系、可复用步骤与题目中的实例步骤；多解路径不绑定唯一参考解。', '变更关系或拆分概念后检查引用、历史版本和题目映射；分别报告覆盖缺失与尚未标注。'),
@@ -132,13 +138,13 @@ TECHNICAL_ROUTES = {
     'library': ('分离题目、参考解、每次作答和训练任务；按题目、步骤、知识点、套路与已核实错因建立检索索引。六步循环保存阶段，套路表现与知识准备采用两路候选推荐。', '检查相似题是否满足方法边界、同一次错误是否被重复计数、提示后与独立完成是否分开、复查任务是否重复。'),
     'routines': ('用状态机记录方法识别、学习、仿练、无提示重做、变式迁移和延迟复查；以套路前置顺序生成默认路径，再用知识准备证据调整任务。', '对比套路顺序、知识 readiness 与双路推荐；用隐藏方法标签的新题和延迟复测测独立迁移，不以流程通过率替代掌握结论。'),
     'exam': ('模板保存教学目标、题位、题型、分值、时限、覆盖和难度约束；逐题复用单题校验，再汇总知识与套路覆盖矩阵。时间报告只使用真实采集的作答事件。', '检查目标覆盖、题目可解性、步骤难度、整卷梯度、时间账本与评分点；由教师经验先校准模板及权重。'),
-    'career': ('保存不可覆盖的作答事件及来源、帮助条件、题目版本、步骤表现和复测关系；分别维护知识理解与套路表现，并允许相反证据触发修订。', '以未提示新题和延迟任务检验预测；漏交、未考查、看过答案或原题熟悉都不能自动记作掌握。'),
-    'teacher': ('基于授权班级范围聚合步骤表现，记录统计分母、识别覆盖、教师复核和教学行动；任务按学生或小组分配，复测结果回连到行动。', '核对不同作答覆盖和题目可比性；检查建议是否被采纳、教师工作量及行动后新题表现，不用单一模型分数决定介入。'),
+    'career': ('保存不可覆盖的作答事件及来源、帮助条件、题目版本、步骤表现和复测关系；分别维护知识理解与套路表现，并允许相反证据触发修订。', '用无提示新题及间隔后的任务检验判断；分别记录漏交、未考查、看过答案和原题重做。'),
+    'teacher': ('基于授权班级范围聚合步骤表现，记录统计分母、识别覆盖、教师复核和教学行动；任务按学生或小组分配，复测结果回连到行动。', '核对提交与识别情况，以及题目难度和帮助条件；记录建议采用情况、教师用时和后续新题表现，由教师决定教学安排。'),
     'school': ('以组织、班级和校本体系配置隔离权限；课时、知识点、步骤或套路调整进入版本化变更，先做依赖影响分析，再审核发布并保留历史报告口径。', '对旧记录执行明确映射或补充诊断；分别评价完整采用和局部接入能支持的结论与数据条件。'),
-    'modes': ('按接入方式声明可用数据和能力：作业、试卷、照片、PDF、文本和数字笔迹分别携带不同证据；没有原始时间线时不生成题目用时。', '以能力矩阵控制功能可用范围，并在试点中比较学习收益、接入成本、教师负担和新增证据价值。'),
-    'agent': ('将自然语言任务编排到已认证的学生、教师或学校业务；查询档案、调用工具、检查真实返回并保存任务状态。内置助教负责领域解释，外部宿主负责通用会话。', '按角色做权限测试、跨任务恢复和结果溯源；记忆按来源与时效分层，避免把模型推测写成事实。'),
-    'mcp': ('将课程、题库、批改、练习、学情和报告封装成带参数、身份范围、结果结构与错误语义的 MCP 工具。官方 DSH 和 WorkBuddy 是适配方向，需针对各宿主单独验收。', '验证最小权限、幂等调用、长任务编号、超时恢复和敏感字段过滤；宿主连接器不替代后端业务授权。'),
-    'evolution': ('教师反馈、人工数据维护、新试题与教材变化先进入有来源的候选集；经过规则检查、固定评测、人工复核与小流量发布，再决定知识库、配置或模型更新。', '按题目族和学生切分防止泄漏，检查提示退化、跨版本回归、迁移与回滚；跨学科重新建立任务定义和量规。'),
+    'modes': ('按接入方式列明数据与功能：作业和试卷提供题目与作答，照片、PDF、文本和数字笔迹提供不同形式的记录；缺少原始时间线时，用时标为缺失。', '建立数据与功能对应表，再通过试点比较学习结果、接入成本、教师用时，以及新增记录是否改善判断。'),
+    'agent': ('将自然语言任务编排到已认证的学生、教师或学校业务；查询档案、调用工具、检查真实返回并保存任务状态。内置助教负责领域解释，外部宿主负责通用会话。', '分别检查各角色的访问权限、任务中断后的恢复和结果来源；记忆注明来源与时间，未核实推测单列。'),
+    'mcp': ('将课程、题库、批改、练习、学情和报告封装成带参数、身份范围、结果结构与错误语义的 MCP 工具。官方 DSH 和 WorkBuddy 是适配方向，需针对各宿主单独验收。', '检查访问权限是否限定在任务所需范围、重复请求是否只执行一次、任务能否超时恢复，以及结果是否过滤敏感字段；所有调用继续由后端核对业务权限。'),
+    'evolution': ('教师反馈、人工数据维护、新试题与教材变化先进入有来源的候选集；经过规则检查、固定评测、人工复核与小流量发布，再决定知识库、配置或模型更新。', '按题目族和学生划分训练与测试数据，检查修改后是否损害原有任务、新任务能否受益，以及能否回退旧版；跨学科另建任务定义和评分标准。'),
 }
 STATUS = {'implemented': '已有实现', 'prototype': '设计方案', 'research': '研究方向', 'mixed': '已有基础'}
 NAV_LABELS = {row['id']: row['title'] for row in TOPICS}
@@ -154,7 +160,14 @@ def validate_source_map(content, mapping):
     rows = mapping.get('chapters', [])
     if [row.get('id') for row in rows] != CHAPTER_IDS:
         raise ValueError('Source map must cover all fifteen chapters in order')
-    if len({source['file'] for row in rows for source in row.get('sources', [])}) != mapping.get('source_count'):
+    vision = json.loads((PUBLIC / 'vision-content.json').read_text())
+    validate_vision(vision)
+    vision_map = mapping.get('vision', {})
+    if vision_map.get('title') != vision['title'] or vision_map.get('status') != vision['status']:
+        raise ValueError('Vision source map title/status differs')
+    if [row['file'] for row in vision_map.get('sources', [])] != vision.get('source_docs'):
+        raise ValueError('Vision source map files differ')
+    if len({source['file'] for row in rows + [vision_map] for source in row.get('sources', [])}) != mapping.get('source_count'):
         raise ValueError('Source map source_count does not match unique source files')
     docs_root = (ROOT / 'docs').resolve()
     for chapter, mapped in zip(content['chapters'], rows):
@@ -189,6 +202,15 @@ def validate_source_map(content, mapping):
                 raise ValueError(f"Source hash changed; reread and remap chapter: {source['file']}")
             if len(text.splitlines()) != source.get('line_count'):
                 raise ValueError(f"Source line count changed; reread and remap chapter: {source['file']}")
+    for source in vision_map.get('sources', []):
+        path = (ROOT / source['file']).resolve()
+        if not path.is_relative_to(docs_root) or not path.is_file() or source.get('read_completeness') != 'full':
+            raise ValueError('Vision source was not fully read: ' + source['file'])
+        raw = path.read_bytes()
+        if hashlib.sha256(raw).hexdigest() != source.get('sha256') or len(raw.decode().splitlines()) != source.get('line_count'):
+            raise ValueError('Vision source hash changed; reread and remap: ' + source['file'])
+    if vision_map.get('content_sha256') != hashlib.sha256((PUBLIC / 'vision-content.json').read_bytes()).hexdigest():
+        raise ValueError('Vision content changed; review its source mapping')
 
 
 def marked_text(value, phrases=(), cls='key-phrase'):
@@ -398,7 +420,7 @@ def launch_screen(copy):
            '<div class="highlights-hero launch-hero"><div class="hero-copy"><h2 id="launch-title" tabindex="-1">' + ''.join('<span>' + esc(part + ('，' if i == 0 else '')) + '</span>' for i, part in enumerate(copy['title'].split('，', 1))) + '</h2><p class="hero-subtitle">' + esc(copy['subtitle']) + '</p></div>',
            '<div class="hero-art" id="hero-art" data-phase="waiting" aria-label="数学 love 书写与探索入口">' + lettering,
            '<svg class="hero-ink-link" aria-hidden="true"><path id="hero-ink-path" pathLength="1"/></svg>',
-           '<a id="explore-start" class="explore-start" href="#highlights"><span class="explore-glass" aria-hidden="true"></span><strong>开始探索</strong><span class="explore-icon" aria-hidden="true">↗</span></a></div>',
+           '<a id="explore-start" class="explore-start" href="#vision"><span class="explore-glass" aria-hidden="true"></span><strong>开始探索</strong><span class="explore-icon" aria-hidden="true">↗</span></a></div>',
            '<div class="hero-manifesto"><p>' + esc(copy['manifesto']) + '</p><p lang="en">' + esc(copy['manifesto_en']) + '</p></div></div>',
            '<footer class="launch-footer"><div class="launch-contact"><span>项目负责人：施棋智</span><a href="mailto:qzshi25@m.fudan.edu.cn">email：qzshi25@m.fudan.edu.cn</a></div><nav aria-label="正式站与备案"><a href="https://150.chat/" target="_blank" rel="noopener noreferrer">正式站（正在开发中）</a><a href="https://beian.miit.gov.cn/" target="_blank" rel="noopener noreferrer">渝ICP备2026024246号-1</a></nav></footer></div></dialog>'])
 
@@ -410,7 +432,7 @@ def highlights_section(copy):
                'evolution': evolution_visual}
     out = ['<section class="topic-section highlights-topic" id="highlights" data-chapter="highlights" aria-labelledby="heading-highlights">',
            '<span id="overview" class="anchor-alias" aria-hidden="true"></span>',
-           '<header class="topic-heading"><h1 id="heading-highlights" tabindex="-1">' + esc(copy['label']) + '</h1></header>',
+           '<header class="topic-heading"><h2 id="heading-highlights" tabindex="-1">' + esc(copy['label']) + '</h2></header>',
            '<div class="highlights-body">']
     metrics = json.loads((PUBLIC / 'dataset-data.json').read_text())['headline_metrics']
     for point in copy['points']:
@@ -445,18 +467,19 @@ def build(content):
         raise ValueError('Each reviewed source unit must map to exactly one topic')
     primary_nav = ''.join('<a href="#' + topic['id'] + '" title="' + esc(topic['thesis']) + '">' + esc(topic['title']) + '</a>' for i, topic in enumerate(TOPICS))
     mobile_options = ''.join('<option value="' + topic['id'] + '">' + esc(topic['title']) + '</option>' for i, topic in enumerate(TOPICS))
-    sections = ''.join(highlights_section(content['highlights']) if topic['id'] == 'highlights' else topic_section(topic, index + 1, chapter_map) for index, topic in enumerate(TOPICS))
+    vision = json.loads((PUBLIC / 'vision-content.json').read_text())
+    sections = ''.join(vision_section(vision) if topic['id'] == 'vision' else highlights_section(content['highlights']) if topic['id'] == 'highlights' else topic_section(topic, index + 1, chapter_map) for index, topic in enumerate(TOPICS))
     perspective_controls = ''.join('<button type="button" role="tab" aria-selected="' + ('true' if key == 'teaching' else 'false') + '" data-perspective="' + key + '">' + esc(label) + '</button>' for key, label in PERSPECTIVES)
     return '''<!doctype html>
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="description" content="StudyAgent 科研项目：以全国卷真实案例，讨论步骤诊断、方法迁移、长期学习证据与教学协同。">
+<meta name="description" content="StudyAgent：从学生、教师、学校到社会，探索针对性教学与普惠学习支持。通过全国卷案例了解步骤诊断、方法训练与长期陪伴。">
 <meta name="theme-color" content="#080808"><meta name="color-scheme" content="dark"><title>步骤诊断与方法迁移 · StudyAgent 科研展示</title>
 <link rel="icon" type="image/png" sizes="64x64" href="/showcase/assets/fudan-favicon-white.png">
 <link rel="apple-touch-icon" href="/showcase/assets/fudan-emblem-white.png">
-<link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/vendor/katex/katex.min.css"><link rel="stylesheet" href="/showcase/style.css"><link rel="stylesheet" href="/showcase/handwriting.css"><link rel="stylesheet" href="/showcase/transitions.css"><link rel="stylesheet" href="/showcase/hero.css"><link rel="stylesheet" href="/showcase/surfaces.css"><link rel="stylesheet" href="/showcase/launch-geometry.css"><link rel="stylesheet" href="/showcase/highlights.css"><link rel="stylesheet" href="/showcase/highlights-layout.css">
-<script defer src="/vendor/katex/katex.min.js"></script><script defer src="/dimchart.js"></script><script defer src="/radar.js"></script><script defer src="/showcase/handwriting.js"></script><script defer src="/showcase/bank.js"></script><script defer src="/showcase/liquid-glass.js"></script><script defer src="/showcase/hero.js"></script><script defer src="/showcase/app.js"></script><script defer src="/showcase/splitter.js"></script><script defer src="/showcase/transitions.js"></script><script defer src="/showcase/highlights.js"></script>
+<link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/vendor/katex/katex.min.css"><link rel="stylesheet" href="/showcase/style.css"><link rel="stylesheet" href="/showcase/handwriting.css"><link rel="stylesheet" href="/showcase/transitions.css"><link rel="stylesheet" href="/showcase/hero.css"><link rel="stylesheet" href="/showcase/surfaces.css"><link rel="stylesheet" href="/showcase/launch-geometry.css"><link rel="stylesheet" href="/showcase/highlights.css"><link rel="stylesheet" href="/showcase/highlights-layout.css"><link rel="stylesheet" href="/showcase/vision.css">
+<script defer src="/vendor/katex/katex.min.js"></script><script defer src="/dimchart.js"></script><script defer src="/radar.js"></script><script defer src="/showcase/handwriting.js"></script><script defer src="/showcase/bank.js"></script><script defer src="/showcase/liquid-glass.js"></script><script defer src="/showcase/hero.js"></script><script defer src="/showcase/vision.js"></script><script defer src="/showcase/app.js"></script><script defer src="/showcase/splitter.js"></script><script defer src="/showcase/transitions.js"></script><script defer src="/showcase/highlights.js"></script>
 </head><body class="research-showcase">''' + launch_screen(content['highlights']) + '''<a class="skip-link" href="#main-content">跳到项目内容</a>
-<header class="site-header"><a class="research-brand" href="#highlights"><img class="brand-emblem" src="/showcase/assets/fudan-emblem-white.png" width="44" height="44" alt="复旦大学校徽"><span>成为数学高手<small>StudyAgent 科研项目</small></span></a>
+<header class="site-header"><a class="research-brand" href="#vision"><img class="brand-emblem" src="/showcase/assets/fudan-emblem-white.png" width="44" height="44" alt="复旦大学校徽"><span>成为数学高手<small>StudyAgent 科研项目</small></span></a>
 <nav class="primary-nav" aria-label="章节导航">''' + primary_nav + '''</nav>
 <label class="topic-quick-jump"><span class="sr-only">跳转到主题</span><select id="topic-quick-jump" aria-label="跳转到主题">''' + mobile_options + '''</select></label></header>
 <main id="main-content"><div class="page-intro"><span>高中数学 / 过程诊断 / 方法迁移</span><span>全国卷案例 · 从作答到教学</span></div>
@@ -482,7 +505,7 @@ def main():
             raise SystemExit('Showcase HTML does not match reviewed chapter content')
     else:
         target.write_text(result)
-    print('Verified eleven linked topics' if args.check else 'Built eleven linked topics')
+    print('Verified twelve linked topics' if args.check else 'Built twelve linked topics')
 
 
 if __name__ == '__main__':

@@ -2,7 +2,7 @@
 (function(){
 'use strict';
 const $=id=>document.getElementById(id),NS='http://www.w3.org/2000/svg';
-const state={data:null,pipelineData:null,recordings:null,view:'highlights',perspective:'teaching',teacher:'xuefeng',example:'national-2023-q17',mode:'solution',caseIndex:0,condition:'basic',sceneTabs:{},teachingIndex:0,geometryStage:0,timestampEvent:0,routineHidden:false,completeMode:true,loadError:null};
+const state={data:null,pipelineData:null,recordings:null,view:'vision',perspective:'teaching',teacher:'xuefeng',example:'national-2023-q17',mode:'solution',caseIndex:0,condition:'basic',sceneTabs:{},teachingIndex:0,geometryStage:0,timestampEvent:0,routineHidden:false,completeMode:true,loadError:null};
 const api=window.Showcase={state,ready:null};
 const annotations=new Map();let annotationSequence=0,annotationTrigger=null;
 const teachers={liangliang:'梁梁',taotao:'韬韬',xuefeng:'雪峰',ji:'鸡'};
@@ -31,9 +31,10 @@ if(resumeReading){
 const requestedPerspectiveRaw=new URLSearchParams(location.search).get('perspective');
 const requestedPerspective=requestedPerspectiveRaw==='mechanism'?'technical':requestedPerspectiveRaw;
 if(perspectives.includes(requestedPerspective))state.perspective=requestedPerspective;
-const initialTopic=aliases[initialHash.slice(1)]||initialHash.slice(1);
+const initialAnchor=initialHash.slice(1);
+const initialTopic=$(initialAnchor)?.closest('[data-chapter]')?.id||aliases[initialAnchor]||initialAnchor;
 if(initialTopic&&document.getElementById(initialTopic))state.view=initialTopic;
-document.body.dataset.currentTopic=document.getElementById(initialTopic)?.matches('[data-chapter]')?initialTopic:'highlights';
+document.body.dataset.currentTopic=document.getElementById(initialTopic)?.matches('[data-chapter]')?initialTopic:'vision';
 function indexValue(value,max,fallback=0){return Number.isInteger(value)&&value>=0&&value<max?value:fallback;}
 function restoreChoices(){
  if(!resumeReading)return;
@@ -54,23 +55,23 @@ function restoreChoices(){
 function readingChapter(){
  const chapters=[...document.querySelectorAll('[data-chapter]')],root=getComputedStyle(document.body);
  const line=Math.max(Number.parseFloat(root.getPropertyValue('--header'))+Number.parseFloat(root.getPropertyValue('--perspective-bar'))+24,innerHeight*.3);
- return chapters.filter(node=>node.getBoundingClientRect().top<=line).at(-1)||chapters[0];
+ return chapters.filter(node=>(window.ShowcaseTransitions?.measureTopic(node)?.top??node.getBoundingClientRect().top)<=line).at(-1)||chapters[0];
 }
 function saveReading(){
  if(!uiReady||!entered||document.body.classList.contains('is-launch-open'))return;
  const chapter=readingChapter();
- document.body.dataset.currentTopic=chapter?.id||'highlights';
- const record={version:2,entered:true,path:location.pathname,hash:location.hash,position:{topic:chapter?.id||'highlights',offset:chapter?-chapter.getBoundingClientRect().top:0,y:scrollY},choices:{perspective:state.perspective,teacher:state.teacher,example:state.example,mode:state.mode,caseIndex:state.caseIndex,condition:state.condition,sceneTabs:state.sceneTabs,teachingIndex:state.teachingIndex,geometryStage:state.geometryStage,timestampEvent:state.timestampEvent,routineHidden:state.routineHidden,completeMode:state.completeMode},bank:window.ShowcaseBank?.snapshot?.()};
+ document.body.dataset.currentTopic=chapter?.id||'vision';
+ const record={version:2,entered:true,path:location.pathname,hash:location.hash,position:{topic:chapter?.id||'vision',offset:chapter?-(window.ShowcaseTransitions?.measureTopic(chapter)?.top??chapter.getBoundingClientRect().top):0,y:scrollY},choices:{perspective:state.perspective,teacher:state.teacher,example:state.example,mode:state.mode,caseIndex:state.caseIndex,condition:state.condition,sceneTabs:state.sceneTabs,teachingIndex:state.teachingIndex,geometryStage:state.geometryStage,timestampEvent:state.timestampEvent,routineHidden:state.routineHidden,completeMode:state.completeMode},bank:window.ShowcaseBank?.snapshot?.()};
  try{sessionStorage.setItem(readingKey,JSON.stringify(record));}catch{}
 }
 function scheduleReadingSave(){clearTimeout(saveTimer);if(uiReady)saveTimer=setTimeout(saveReading,160);}
-function syncCurrentTopic(){if(topicFrame)return;topicFrame=requestAnimationFrame(()=>{topicFrame=0;document.body.dataset.currentTopic=readingChapter()?.id||'highlights';});}
+function syncCurrentTopic(){if(topicFrame)return;topicFrame=requestAnimationFrame(()=>{topicFrame=0;document.body.dataset.currentTopic=readingChapter()?.id||'vision';});}
 async function restoreReadingPosition(){
  if(document.fonts)await document.fonts.ready;
  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
  if(resumeReading&&initialHash===location.hash){
   const position=savedReading.position||{},savedTopic=position.topic||aliases[position.chapter]||position.chapter,chapter=typeof savedTopic==='string'?$(savedTopic):null;
-  const top=chapter?.matches('[data-chapter]')&&Number.isFinite(position.offset)?chapter.getBoundingClientRect().top+scrollY+position.offset:Number.isFinite(position.y)?position.y:0;
+  const top=chapter?.matches('[data-chapter]')&&Number.isFinite(position.offset)?(window.ShowcaseTransitions?.measureTopic(chapter)?.top??chapter.getBoundingClientRect().top)+scrollY+position.offset:Number.isFinite(position.y)?position.y:0;
   scrollTo({top:Math.max(0,Math.min(top,document.documentElement.scrollHeight-innerHeight)),behavior:'instant'});
  }else if(!resumeReading&&initialHash&&initialHash===location.hash){
   // Native fragment positioning ran before saved math and diagrams filled their containers.
@@ -82,7 +83,7 @@ async function restoreReadingPosition(){
 }
 api.readingKey=readingKey;
 api.saveReading=saveReading;
-api.clearReadingState=()=>{entered=false;uiReady=false;clearTimeout(saveTimer);try{sessionStorage.removeItem(readingKey);}catch{}};
+api.clearReadingState=()=>{entered=false;uiReady=false;clearTimeout(saveTimer);window.ShowcaseVision?.reset();try{sessionStorage.removeItem(readingKey);}catch{}};
 addEventListener('scroll',()=>{syncCurrentTopic();scheduleReadingSave();},{passive:true});addEventListener('resize',syncCurrentTopic,{passive:true});addEventListener('pagehide',saveReading);
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveReading();});
 for(const event of ['click','change','input'])document.addEventListener(event,scheduleReadingSave);
@@ -193,36 +194,38 @@ function renderSingle(){
 }
 function timestampDemo(){
  const card=el('section','timestamp-demo');card.append(bar('学生作答时间线','过程回放方案'));
- const events=[['首行作答','00:15',['A+B+C = π','C = π/3'],'可见事实：首行出现错误值。','暂不能确定：概念不懂，还是联立时的计算错误。'],['落笔间隔','01:00',['A+B+C = π','C = π/3'],'可见事实：这段时间没有新增笔画。','可能正在读题、心算、检查或离开；停笔本身不能确认原因。'],['继续推导','01:30',['A+B+C = π','C = π/3','B = 2π/3 − A'],'可见事实：后续推导沿用了先前的 C 值。','需要检查是否另有独立错误，不能把所有错误结果重复记作知识缺陷。'],['返回修改','01:50',['A+B+C = π','4C = π，C = π/4','B = 3π/4 − A'],'可见事实：返回前面的区域并改正了角关系。','仍需核对修改是否独立、有无提示，以及新题中能否再次正确完成。']];
+ const events=[['首行作答','00:15',['A+B+C = π','C = π/3'],'可见事实：首行出现错误值。','待核实：角关系没有理解，还是联立时算错？'],['落笔间隔','01:00',['A+B+C = π','C = π/3'],'可见事实：这段时间没有新增笔画。','先查看后续作答，必要时追问这段时间在做什么。'],['继续推导','01:30',['A+B+C = π','C = π/3','B = 2π/3 − A'],'可见事实：后续推导沿用了先前的 C 值。','沿用错误前提时分别检查后续计算，再标记新出现的错误。'],['返回修改','01:50',['A+B+C = π','4C = π，C = π/4','B = 3π/4 − A'],'可见事实：返回前面的区域并改正了角关系。','记录这次修改是否获得提示，再用独立新题检查能否再次完成。']];
  let active=state.timestampEvent;const panel=el('div','timestamp-panel');
  const draw=()=>{state.timestampEvent=active;const event=events[active],sheet=svg('svg',{viewBox:'0 0 420 190',role:'img','aria-label':'学生书写中间状态',class:'timestamp-sheet'});for(let i=0;i<3;i++)sheet.append(svg('path',{d:'M20 '+(52+i*55)+' H400',stroke:'#dbe4ec','stroke-width':1}));event[2].forEach((text,i)=>sheet.append(svg('text',{x:30,y:40+i*55,fill:active===3&&i>0?'#006f72':'#172b43'},text)));const evidence=el('div','timestamp-evidence');evidence.append(el('span','small-label','示意相对时间 '+event[1]),p(event[3]),p(event[4],'scene-note'));panel.replaceChildren(sheet,evidence);};
  const ctl=tabs(events.map((e,i)=>[String(i),e[0]]),String(active),id=>{active=Number(id);draw();ctl.querySelectorAll('button').forEach((b,i)=>b.setAttribute('aria-pressed',String(i===active)));},'学生笔迹事件');card.append(ctl,panel,note('沿时间回放书写、停顿、后续推导与返回修改，把最终卷面中消失的过程重新找回来。图中时刻用于说明回放方式。'));draw();return card;
 }
-function renderDiagnosis(){const root=$('scene-diagnosis'),cases=state.recordings?.cases||[];root.replaceChildren(bar('同题诊断：判断有没有落在作答依据上','六种情境 · 两种对照'));if(!cases.length){root.append(note('对照场景尚未完成录制，不能将人工预期当作模型回答。'));return;}root.append(tabs(cases.map((c,i)=>[String(i),c.title]),String(state.caseIndex),id=>{state.caseIndex=Number(id);renderDiagnosis();},'诊断情境'));const c=cases[state.caseIndex],input=el('div','comparison-input');input.append(p(c.question,'comparison-question'),el('h3','','学生作答'),handwriting(c.student_answer));if(c.history?.length)input.append(details('可用历史与帮助记录',p(typeof c.history==='string'?c.history:JSON.stringify(c.history,null,2))));root.append(input,tabs([['basic','常见使用方式'],['same_information','同信息条件']],state.condition,id=>{state.condition=id;renderDiagnosis();},'对比条件'),note(state.condition==='basic'?'通用模型获得题目与作答；系统使用其正式工作流。输入和工具差异属于使用方式差异。':'同一基础模型与同样可用信息，比较通用提示词与系统工作流。具体输入和原始输出可核对。'));const grid=el('div','comparison-grid');grid.append(rawOutput(c[state.condition],state.condition==='basic'?'常规模型 · 题目与作答':'常规模型 · 相同可用信息'),rawOutput(c.system,'系统正式批改流程'));root.append(grid);const observation=el('div','observation-box');observation.append(el('h4','','这里重点比较什么'),p(c.observation||c.expected||'检查判断是否有原始作答依据。'));if(c.expected&&c.observation)observation.append(details('比较的判定方法',p(typeof c.expected==='string'?c.expected:JSON.stringify(c.expected,null,2))));root.append(observation,timestampDemo(),details('录制来源与比较边界',note(state.recordings.provenance?.notes||'少量案例用于解释机制，不构成准确率或教学效果结论。')));}
+function renderDiagnosis(){const root=$('scene-diagnosis'),cases=state.recordings?.cases||[];root.replaceChildren(bar('同题诊断：判断有没有落在作答依据上','六种情境 · 两种对照'));if(!cases.length){root.append(note('暂无录制记录，可先阅读本章的诊断机制与研究对照。'));return;}root.append(tabs(cases.map((c,i)=>[String(i),c.title]),String(state.caseIndex),id=>{state.caseIndex=Number(id);renderDiagnosis();},'诊断情境'));const c=cases[state.caseIndex],input=el('div','comparison-input');input.append(p(c.question,'comparison-question'),el('h3','','学生作答'),handwriting(c.student_answer));if(c.history?.length)input.append(details('可用历史与帮助记录',p(typeof c.history==='string'?c.history:JSON.stringify(c.history,null,2))));root.append(input,tabs([['basic','常见使用方式'],['same_information','同信息条件']],state.condition,id=>{state.condition=id;renderDiagnosis();},'对比条件'),note(state.condition==='basic'?'通用模型获得题目与作答；系统使用其正式工作流。输入和工具差异属于使用方式差异。':'同一基础模型与同样可用信息，比较通用提示词与系统工作流。具体输入和原始输出可核对。'));const grid=el('div','comparison-grid');grid.append(rawOutput(c[state.condition],state.condition==='basic'?'常规模型 · 题目与作答':'常规模型 · 相同可用信息'),rawOutput(c.system,'系统正式批改流程'));root.append(grid);const observation=el('div','observation-box');observation.append(el('h4','','这里重点比较什么'),p(c.observation||c.expected||'检查判断是否有原始作答依据。'));if(c.expected&&c.observation)observation.append(details('比较的判定方法',p(typeof c.expected==='string'?c.expected:JSON.stringify(c.expected,null,2))));root.append(observation,timestampDemo(),details('录制来源与比较边界',note(state.recordings.provenance?.notes||'少量案例用于解释机制，不构成准确率或教学效果结论。')));}
 function scenario(id,title,labels,descs){const root=$('scene-'+id),body=el('div','scenario-detail');let active=indexValue(state.sceneTabs[id],labels.length);const draw=()=>{state.sceneTabs[id]=active;body.replaceChildren(el('h3','',labels[active]),p(descs[active]));};const ctl=tabs(labels.map((x,i)=>[String(i),x]),String(active),id=>{active=Number(id);draw();ctl.querySelectorAll('button').forEach((b,i)=>b.setAttribute('aria-pressed',String(i===active)));});root.replaceChildren(bar(title,'方案图解'),ctl,body);draw();return root;}
-function renderRoutines(){const root=scenario('routines','一个套路内部怎样练',['方法识别','母题学习','分步仿练','无提示重做','变式迁移','延迟复查'],['隐藏标签，解释从题设与目标如何选择方法。','理解步骤为什么成立，以及需要的前置知识。','观察局部卡点，允许回退补练。','记录帮助条件；原题重做与新题迁移分开。','条件变化后，重新核实方法的适用边界。','间隔后独立完成新题，检验保持而非统计通过次数。']);const routes=el('div','route-pair');routes.append(el('div','route-line','套路顺序：前置准备 → 当前方法 → 后续方法'),el('div','route-line','知识准备：已有证据 → 局部缺口 → 补充后返回'));root.append(routes);let hidden=state.routineHidden;const label=el('p','method-label',hidden?'请自行判断采用的方法，并解释适用条件。':'方法提示：解三角形与面积关系'),toggle=button(hidden?'显示套路名称':'隐藏套路名称',()=>{hidden=!hidden;state.routineHidden=hidden;label.textContent=hidden?'请自行判断采用的方法，并解释适用条件。':'方法提示：解三角形与面积关系';toggle.textContent=hidden?'显示套路名称':'隐藏套路名称';toggle.setAttribute('aria-pressed',String(hidden));});toggle.setAttribute('aria-pressed',String(hidden));const selection=el('p','routine-selection','方法边界：是否具备边、角与目标之间的可用关系？');selection.id='routine-selection';root.append(toggle,label,selection,note('隐藏名称后，需要从题设和目标中自主选择方法，再解释适用条件。'));}
+function renderRoutines(){const root=scenario('routines','一个套路内部怎样练',['方法识别','母题学习','分步仿练','无提示重做','变式迁移','延迟复查'],['隐藏标签，解释从题设与目标如何选择方法。','理解步骤为什么成立，以及需要的前置知识。','观察局部卡点，允许回退补练。','记录帮助条件；原题重做与新题迁移分开。','条件变化后，重新核实方法的适用边界。','隔一段时间再做新题，记录是否仍能独立完成。']);const routes=el('div','route-pair');routes.append(el('div','route-line','套路顺序：前置准备 → 当前方法 → 后续方法'),el('div','route-line','知识准备：已有证据 → 局部缺口 → 补充后返回'));root.append(routes);let hidden=state.routineHidden;const label=el('p','method-label',hidden?'请自行判断采用的方法，并解释适用条件。':'方法提示：解三角形与面积关系'),toggle=button(hidden?'显示套路名称':'隐藏套路名称',()=>{hidden=!hidden;state.routineHidden=hidden;label.textContent=hidden?'请自行判断采用的方法，并解释适用条件。':'方法提示：解三角形与面积关系';toggle.textContent=hidden?'显示套路名称':'隐藏套路名称';toggle.setAttribute('aria-pressed',String(hidden));});toggle.setAttribute('aria-pressed',String(hidden));const selection=el('p','routine-selection','方法边界：是否具备边、角与目标之间的可用关系？');selection.id='routine-selection';root.append(toggle,label,selection,note('隐藏名称后，需要从题设和目标中自主选择方法，再解释适用条件。'));}
 function renderExam(){
- const root=scenario('exam','一张卷，两个评价对象',['试卷质量','学生作答'],['与模板对照知识与套路覆盖、分值、步骤难度及梯度。覆盖更广不自动等于卷子更好。','结合步骤表现、多个作答时段和历史记录提出解释；时间长不能确定是知识、策略还是心态。']);
- const t=el('table');t.innerHTML='<caption>覆盖关系示意，不是实测整卷得分</caption><thead><tr><th>全国卷案例</th><th>三角关系</th><th>面积转化</th><th>数列结构</th><th>导数与求和</th></tr></thead><tbody><tr><th>2023 Ⅰ卷 17</th><td>主要</td><td>主要</td><td>—</td><td>—</td></tr><tr><th>2025 一卷 16</th><td>—</td><td>—</td><td>主要</td><td>主要</td></tr></tbody>';const wrap=el('div','table-wrap');wrap.append(t);root.append(wrap);
- const links=el('div','replay-controls');for(const [id,label]of [['national-2023-q17','查看三角形案例的步骤与难度'],['national-2025-q16','查看数列案例的步骤与难度']])links.append(button(label,()=>{state.example=id;state.mode='solution';renderSingle();selectView('single');}));root.append(links,el('h3','','模板生成怎样复用单题系统'));flow(root,['模板目标','分配题位','选题 / 出题','单题检查','整卷复核'],3);
- const time=el('div','time-diagram');['首次作答','返回修改','后续题目','未归属时段'].forEach(x=>time.append(el('span','',x)));root.append(time,note('时间轴仅说明事件组织，不是这两道题的真实学生用时。未归属时段单独保留，不能将每步首末笔跨度直接相加。'));
+ const root=scenario('exam','一张卷，两个评价对象',['试卷质量','学生作答'],['对照模板，检查知识与套路覆盖、分值和难度安排是否符合本次教学目标。','结合失分步骤、分段用时和历史作答，列出待核实原因，再安排补测。']);
+ const t=el('table');t.innerHTML='<caption>两道全国卷案例的考查内容示意</caption><thead><tr><th>全国卷案例</th><th>三角关系</th><th>面积转化</th><th>数列结构</th><th>导数与求和</th></tr></thead><tbody><tr><th>2023 Ⅰ卷 17</th><td>主要</td><td>主要</td><td>—</td><td>—</td></tr><tr><th>2025 一卷 16</th><td>—</td><td>—</td><td>主要</td><td>主要</td></tr></tbody>';const wrap=el('div','table-wrap');wrap.append(t);root.append(wrap);
+ const links=el('div','replay-controls');for(const [id,label]of [['national-2023-q17','查看三角形案例的步骤与难度'],['national-2025-q16','查看数列案例的步骤与难度']])links.append(button(label,()=>{state.example=id;state.mode='solution';renderSingle();selectView('single');}));root.append(links,el('h3','','按模板组卷怎样复用单题能力'));flow(root,['模板目标','分配题位','选题 / 出题','单题检查','整卷复核'],3);
+ const time=el('div','time-diagram');['首次作答','返回修改','后续题目','未归属时段'].forEach(x=>time.append(el('span','',x)));root.append(time,note('时间轴为事件记录方式示意，未使用这两道题的学生用时数据。未归属时段单列，笔画首末间隔仅表示书写跨度。'));
 }
-function renderCareer(){const root=scenario('career','同样答对，长期证据不同',['提示后完成','无提示新题','出现相反证据'],['只说明本次在支持下完成，不能直接写成稳定掌握。','与原题重做分别记录，形成更强的迁移证据，仍需延迟复测。','修订已有判断，保留支持与反证，提出新的验证目标。']);const tracks=el('div','evidence-tracks');['课时作业 → 知识理解与应用','考试 / 错题 / 先导测试 → 套路与步骤表现','汇入带来源、帮助条件和版本的长期档案'].forEach(x=>tracks.append(el('div','',x)));root.append(tracks,note('知识理解、方法迁移和复盘能力分别保存，帮助条件随证据保留。'));}
-function renderAgent(){const root=scenario('agent','同一业务档案，不同职责视角',['学生助教','教师助理','学校教研'],['今天练什么？查询本人证据与任务预算，调用教学、练习或规划。','这一步要不要重讲？核对授权班级记录，准备教案和补练草稿。','本阶段怎样改进？核对可比条件，形成教研分析与体系变更草案。']);flow(root,['理解请求','查询证据','调用工具','检查结果','解释跟进'],2);root.append(note('Agent 读取共同档案、调用已有业务，再把依据和任务交给相应角色。'));}
-function renderTeacher(){const root=scenario('teacher','同一困难，不同教学范围',['个别补练','小组讲解','全班重讲'],['查看具体作答及已尝试帮助，安排局部训练与新题复测。','核实共同困难，再准备适当的小组讲解和任务。','确认共性范围与批改可信度，调整课堂重点并检查后续表现。']);flow(root,['备课','演示课件','作业','批改讲评','考试','教学调整','人工关注'],3);root.append(note('个别、小组和全班行动使用同一批作答证据，后续新题检验教学调整的效果。'));}
-function renderSchool(){const root=scenario('school','改一项定义，哪些记录受影响',['步骤定义','知识点拆分','课时重排'],['检查相关套路、解析、批改和报告；新版本不能静默改写历史。','旧整体分数不能自动分成两个可靠的新掌握分，需要映射与补充诊断。','核对课程和解法前置，教学安排与学生先修能力分别处理。']);flow(root,['变更草稿','影响分析','教研审核','版本发布','历史保留'],1);root.append(note('教学评价结合学生起点、可比任务、教学行动和多来源证据。'));}
+function renderCareer(){const root=scenario('career','同样答对，也要记录是否获得帮助',['提示后完成','无提示新题','出现相反证据'],['记录为提示后完成，后续安排无提示新题检查。','单独记录新题独立作答，并在间隔一段时间后再次检查。','保留前后作答，修订判断，并说明下一次要检查什么。']);const tracks=el('div','evidence-tracks');['课时作业 → 知识理解与应用','考试 / 错题 / 先导测试 → 套路与步骤表现','汇入带来源、帮助条件和版本的长期档案'].forEach(x=>tracks.append(el('div','',x)));root.append(tracks,note('知识理解、方法迁移和复盘能力分别保存，帮助条件随证据保留。'));}
+function renderAgent(){const root=scenario('agent','同一业务档案，不同职责视角',['学生助教','教师助理','学校教研'],['今天练什么？查询本人近期作答和可用时间，安排教学、练习或复查。','这一步要不要重讲？核对授权班级记录，准备教案和补练草稿。','本阶段怎样改进？核对学生起点与任务难度，准备教研分析和课程变更草案。']);flow(root,['理解请求','查询证据','调用工具','检查结果','解释跟进'],2);root.append(note('Agent 读取共同档案、调用已有业务，再把依据和任务交给相应角色。'));}
+function renderTeacher(){const root=scenario('teacher','同一困难，不同教学范围',['个别补练','小组讲解','全班重讲'],['查看具体作答及已尝试帮助，安排局部训练与新题复测。','核实共同困难，再准备适当的小组讲解和任务。','确认哪些学生存在同一困难，复核批改后调整课堂重点，再检查新题表现。']);flow(root,['备课','演示课件','作业','批改讲评','考试','教学调整','人工关注'],3);root.append(note('个别、小组和全班行动使用同一批作答证据，后续新题检验教学调整的效果。'));}
+function renderSchool(){const root=scenario('school','改一项定义，哪些记录受影响',['步骤定义','知识点拆分','课时重排'],['列出相关套路、解析、批改和报告，审核后发布新版本，旧报告保留原版本。','先按新知识点重新对应旧作答，资料不足的项目再安排补充诊断。','检查新课序需要哪些前置知识，再对照学生已有表现安排补充。']);flow(root,['变更草稿','影响分析','教研审核','版本发布','历史保留'],1);root.append(note('教学评价结合学生起点、可比任务、教学行动和多来源证据。'));}
 function renderModes(){
- const root=$('scene-modes');let complete=state.completeMode;const body=el('div','mode-comparison'),rows=[['学习','跟随班级课程','课程结合前置检查','原课表与按需单题帮助'],['作业','课时统一布置与订正','共同目标与个人适配任务','保留作业，接入批改讲评'],['刷题','按章节或个人经验选题','顺序与知识准备共同推荐','自选套路或错题补练'],['反思','分数、订正与自行总结','步骤证据转为验证任务','错题查找与订正'],['考试','统一考试与事后讲评','整卷关联考试前长期记录','分析本次试卷和作答'],['复习','统一进度与经验安排','复查与缺口共用任务预算','原复习安排中局部补练']];
+ const root=$('scene-modes');let complete=state.completeMode;const body=el('div','mode-comparison'),rows=[['学习','跟随班级课程','结合课序检查前置知识','原课表与按需单题帮助'],['作业','课时统一布置与订正','共同目标下分别安排作业','保留作业，接入批改讲评'],['刷题','按章节或个人经验选题','按套路顺序和知识准备选题','自选套路或错题补练'],['反思','分数、订正与自行总结','根据错误步骤安排新题复测','错题查找与订正'],['考试','统一考试与事后讲评','结合考前记录分析本次考试','分析本次试卷和作答'],['复习','统一进度与经验安排','合并复习与补练，控制总用时','原复习安排中局部补练']];
  const draw=()=>{const t=el('table');t.innerHTML='<caption>当前查看：'+(complete?'完整系统模式':'传统教学增强模式')+'；并排保留另一模式作比较</caption><thead><tr><th>环节</th><th>常见传统安排</th><th class="'+(complete?'selected-mode':'')+'">完整系统</th><th class="'+(!complete?'selected-mode':'')+'">传统教学增强</th></tr></thead><tbody>'+rows.map(r=>'<tr><th scope="row">'+r[0]+'</th><td>'+r[1]+'</td><td class="'+(complete?'selected-mode':'')+'">'+r[2]+'</td><td class="'+(!complete?'selected-mode':'')+'">'+r[3]+'</td></tr>').join('')+'</tbody>';body.replaceChildren(t);};
- const ctl=tabs([['full','完整采用'],['partial','传统教学增强']],complete?'full':'partial',id=>{complete=id==='full';state.completeMode=complete;draw();ctl.querySelectorAll('button').forEach((b,i)=>b.setAttribute('aria-pressed',String(i===(complete?0:1))));});root.replaceChildren(bar('同一套能力，两种接入深度','目标流程比较'),ctl,body,note('完整模式需要连续课时、作答与复核记录；局部模式按已有输入提供帮助。接入范围决定能支持的判断深度，两种模式的学习效果均需独立验证。'));draw();
+ const ctl=tabs([['full','完整采用'],['partial','传统教学增强']],complete?'full':'partial',id=>{complete=id==='full';state.completeMode=complete;draw();ctl.querySelectorAll('button').forEach((b,i)=>b.setAttribute('aria-pressed',String(i===(complete?0:1))));});root.replaceChildren(bar('同一套能力，两种接入深度','目标流程比较'),ctl,body,note('完整模式需要持续的课程、作答和复核记录；局部模式先使用已提供的材料。功能随数据逐步扩展，两种模式都需通过学生独立表现评价效果。'));draw();
 }
-function renderMcp(){const root=scenario('mcp','入口不同，教育规则与记录共用',['产品内置 Agent','DeepSeek 官方 DSH','WorkBuddy'],['已有内部搜索、解题、教学、批改、规划与学情查询基础。','计划通过 MCP 调用共用教育业务，宿主负责对话，系统维护领域结果。','计划通过连接器与技能调用工具；课件生成还需要实际可用的文档能力。']);const graph=el('div','mcp-topology');['课程 · 步骤 · 题库 · 作答 · 学习记录','共用教育业务与 MCP 适配','内置 Agent　 /　官方 DSH　 /　WorkBuddy'].forEach(x=>graph.append(el('div','',x)));root.append(graph,note('练习生成与课件素材等任务共用教育业务，宿主提供对话和相应文档能力。'));}
-function renderEvolution(){const root=scenario('evolution','改进经过验证，再回到系统',['教师反馈','人工维护','新试题与教材','跨学科扩展'],['经核实反馈用于知识库、记忆或模型改进，各技术路径分别验收。','修订数据、关系和参数，记录版本与受影响的历史。','新材料作为候选核对，再判断步骤、套路、知识点或课时变化。','复用基础设施，重建学科任务、评价与学习效果验证。']);flow(root,['获得反馈','核对来源','离线评价','发布版本','教学再验证'],2);root.append(note('每次改进都回到同一组任务检查，并保留内容与规则的历史版本。'));}
+function renderMcp(){const root=scenario('mcp','入口不同，教育规则与记录共用',['产品内置 Agent','DeepSeek 官方 DSH','WorkBuddy'],['已有内部搜索、解题、教学、批改、规划与学情查询基础。','计划通过 MCP 调用教学工具；DSH 提供对话，StudyAgent 保存作答和任务结果。','计划通过连接器与技能调用教学工具，制作课件时调用宿主已接入的文档工具。']);const graph=el('div','mcp-topology');['课程 · 步骤 · 题库 · 作答 · 学习记录','共用教育业务与 MCP 适配','内置 Agent　 /　官方 DSH　 /　WorkBuddy'].forEach(x=>graph.append(el('div','',x)));root.append(graph,note('适配后，练习生成和课件素材查询由同一教育服务完成，对话和文件制作使用宿主工具。'));}
+function renderEvolution(){const root=scenario('evolution','改进经过验证，再回到系统',['教师反馈','人工维护','新试题与教材','跨学科扩展'],['核实问题与修正内容后，选择更新知识库、个人记忆或模型，并检查更新效果。','修订数据、关系和参数，记录版本，并列出需要重新分析的旧记录。','先核对新题和教材，再判断是否需要新增或修改步骤、套路、知识点及课时。','复用记录和工具，重新定义各学科任务、评分标准和学习效果实验。']);flow(root,['获得反馈','核对来源','离线评价','发布版本','教学再验证'],2);root.append(note('每次修改先重跑固定测试，再用新任务检查迁移，并保留旧版内容和规则。'));}
 function navigation(){
  const nav=document.querySelector('.primary-nav'),headerLinks=[...nav.querySelectorAll('a[href^="#"]')],quickJump=$('topic-quick-jump');
  function currentTopic(id){
-  const topic=aliases[id]||id;state.view=topic;
-  if(uiReady&&$(topic)&&location.hash!=='#'+topic){const url=new URL(location.href);url.hash=topic;history.replaceState(history.state,'',url);}
+  const topic=$(id)?.closest('[data-chapter]')?.id||aliases[id]||id;state.view=topic;
+  const addressed=location.hash.slice(1),addressedTopic=$(addressed)?.closest('[data-chapter]')?.id||aliases[addressed]||addressed;
+  if(uiReady&&$(topic)&&addressedTopic!==topic){const url=new URL(location.href);url.hash=topic;history.replaceState(history.state,'',url);}
+  if($(topic)?.matches('[data-chapter]'))document.body.dataset.currentTopic=topic;
   for(const a of headerLinks){if(a.hash==='#'+topic)a.setAttribute('aria-current','location');else a.removeAttribute('aria-current');}
   if(quickJump&&quickJump.value!==topic)quickJump.value=topic;
   const selected=headerLinks.find(a=>a.hash==='#'+topic);
@@ -265,7 +268,7 @@ function navigation(){
  document.addEventListener('touchstart',event=>{
   if(!matchMedia('(max-width: 820px)').matches||event.touches.length!==1)return;
   const target=event.target,topic=target.closest?.('.topic-section');if(!topic||target.closest?.('button,a,input,select,textarea'))return;
-  if(topic.id==='highlights')return;
+  if(['vision','highlights'].includes(topic.id))return;
   let horizontalScroll=false;
   for(let node=target;node&&node!==topic;node=node.parentElement){if(node.scrollWidth>node.clientWidth+5&&/(auto|scroll|overlay)/.test(getComputedStyle(node).overflowX)){horizontalScroll=true;break;}}
   if(!horizontalScroll)touchStart={x:event.touches[0].clientX,y:event.touches[0].clientY};
@@ -280,7 +283,7 @@ function navigation(){
  const observer=new IntersectionObserver(updateTopic,{rootMargin:'-16% 0px -66% 0px'});
  for(const chapter of document.querySelectorAll('[data-chapter]'))observer.observe(chapter);
  addEventListener('showcase:reading-ready',updateTopic);
- const hash=location.hash.slice(1);currentTopic(aliases[hash]||hash||'highlights');
+ const hash=location.hash.slice(1);currentTopic(aliases[hash]||hash||'vision');
  addEventListener('hashchange',()=>{const id=location.hash.slice(1);if(singleModes[id]){state.mode=singleModes[id];renderSingle();}const topic=aliases[id]||id;if($(topic))currentTopic(topic);});
 }
 // Cross-chapter jumps leave a floating companion for returning to the exact spot.
@@ -316,6 +319,6 @@ function setupMotion(){
 }
 async function json(name){const r=await fetch('/showcase/'+name,{credentials:'omit'});if(!r.ok)throw Error(name+' 加载失败');return r.json();}
 navigation();
-const openingFinished=window.ShowcaseHero?.open({skip:resumeReading||Boolean(location.hash&&!['#overview','#highlights'].includes(location.hash))})||Promise.resolve();
+const openingFinished=window.ShowcaseHero?.open({skip:resumeReading||Boolean(location.hash)})||Promise.resolve();
 api.ready=(async()=>{const results=await Promise.allSettled([json('data.json'),json('pipeline.json'),json('recordings.json')]);if(results[0].status==='rejected'||results[1].status==='rejected')throw Error('全国卷案例数据加载失败，请刷新重试。');state.data=results[0].value;state.pipelineData=results[1].value;state.recordings=results[2].status==='fulfilled'?results[2].value:{cases:[]};restoreChoices();for(const render of [renderConcepts,renderSingle,renderDiagnosis,renderRoutines,renderExam,renderCareer,renderAgent,renderTeacher,renderSchool,renderModes,renderMcp,renderEvolution])render();ShowcaseBank.init(api,{el,p,button,details});if(resumeReading&&savedReading.bank)await ShowcaseBank.restore(savedReading.bank);else await ShowcaseBank.show();document.querySelectorAll('[data-library-tab]').forEach(b=>b.onclick=()=>ShowcaseBank.tab(b.dataset.libraryTab));$('exam-student').onclick=()=>ShowcaseBank.renderExam(false);$('exam-teacher').onclick=()=>ShowcaseBank.renderExam(true);$('exam-print').onclick=()=>window.print();const hash=location.hash.slice(1);if(aliases[hash]&&!resumeReading)selectView(hash);await openingFinished;entered=true;await restoreReadingPosition();setupMotion();return state.data;})().catch(error=>{state.loadError=error.message;$('demo-status').hidden=false;$('demo-status').textContent=error.message+' 正文仍可阅读。';console.error(error);return null;});
 })();
