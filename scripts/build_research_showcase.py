@@ -469,7 +469,7 @@ def launch_screen(copy):
     lettering = (PUBLIC / 'launch-lettering.svg').read_text()
     lettering = lettering.replace('<svg ', '<svg class="hero-love" aria-hidden="true" ', 1)
     return ''.join(['<dialog class="launch-screen" id="launch-screen" aria-labelledby="launch-title">' + (PUBLIC / 'launch-geometry.svg').read_text() + '<div class="launch-layout">',
-           '<header class="launch-brand"><img src="/showcase/assets/fudan-emblem-white.png" width="40" height="40" alt="复旦大学校徽"><span><strong>StudyAgent</strong><small>步骤级诊断与方法迁移训练系统 · 项目介绍</small></span></header>',
+           '<header class="launch-brand"><img src="/showcase/assets/fudan-emblem-white.png" width="40" height="40" alt="复旦大学校徽"><span><strong>步骤级诊断与方法迁移训练系统</strong><small>StudyAgent 科研项目</small></span></header>',
            '<div class="highlights-hero launch-hero"><div class="hero-copy"><h2 id="launch-title" tabindex="-1">' + ''.join('<span>' + esc(part + ('，' if i == 0 else '')) + '</span>' for i, part in enumerate(copy['title'].split('，', 1))) + '</h2><p class="hero-subtitle">' + esc(copy['subtitle']) + '</p></div>',
            '<div class="hero-art" id="hero-art" data-phase="waiting" aria-label="数学 love 书写与探索入口">' + lettering,
            '<svg class="hero-ink-link" aria-hidden="true"><path id="hero-ink-path" pathLength="1"/></svg>',
