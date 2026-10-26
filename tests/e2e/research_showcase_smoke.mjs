@@ -16,7 +16,7 @@ const shots=process.env.RESEARCH_SHOTS||tmpdir()+'/research-showcase-shots';
 await mkdir(shots,{recursive:true});
 const server=spawn(process.env.SHOWCASE_PYTHON||'python3',['tests/e2e/showcase_server.py'],{
   cwd:root,env:{...process.env,PYTHONDONTWRITEBYTECODE:'1'},stdio:['ignore','pipe','pipe']});
-let output='',browser;
+let output='',browser,lastPage;
 server.stderr.on('data',chunk=>{output+=chunk.toString();});
 const port=await new Promise((resolve,reject)=>{
   let stdout='';const deadline=setTimeout(()=>{server.kill('SIGTERM');reject(Error('Showcase server startup timed out\n'+output));},20000);
@@ -25,20 +25,32 @@ const port=await new Promise((resolve,reject)=>{
 });
 const base='http://127.0.0.1:'+port;
 const audits=[];
-function audit(page){const value={errors:[],console:[],requests:[],failures:[]};audits.push(value);
+// Opt-in diagnostics isolate only the icon URLs explicitly excluded from this repair.
+// Default runs remain strict and reject their 404s, along with every other resource error.
+const allowExcludedIcon404=process.env.RESEARCH_ALLOW_EXCLUDED_ICON_404==='1',excludedIcon404=new Map();
+function excludedIcon(entry){
+ if(!allowExcludedIcon404||entry.status!==404)return false;
+ let url;try{url=new URL(entry.url);}catch{return false;}
+ if(url.origin!==base||!['/showcase/assets/fudan-favicon.png','/showcase/assets/fudan-favicon-180.png'].includes(url.pathname))return false;
+ const key=entry.url+' '+entry.message;if(!excludedIcon404.has(key)){excludedIcon404.set(key,entry);console.warn('Diagnostic exclusion for unchanged icon 404: '+entry.url);}
+ return true;
+}
+function audit(page){lastPage=page;const value={errors:[],console:[],requests:[],failures:[],httpErrors:[]};audits.push(value);
  page.on('pageerror',error=>value.errors.push(error.message));
- page.on('console',message=>{if(message.type()==='error')value.console.push(message.text());});
+ page.on('console',message=>{if(message.type()==='error')value.console.push({message:message.text(),url:message.location().url,status:/server responded with a status of 404/.test(message.text())?404:null});});
  page.on('request',r=>value.requests.push({url:r.url(),method:r.method()}));
+ page.on('response',r=>{if(r.status()>=400)value.httpErrors.push({url:r.url(),status:r.status(),message:'HTTP response'});});
  page.on('requestfailed',r=>value.failures.push(r.url()+': '+r.failure()?.errorText));return value;}
 async function ready(page){const launch=page.locator('#launch-screen');if(await launch.isVisible().catch(()=>false))await page.locator('#explore-start').click();await page.waitForFunction(()=>Boolean(window.Showcase?.ready));const value=await page.evaluate(async()=>{
  const data=await window.Showcase.ready;return {version:data?.schema_version,error:window.Showcase.state.loadError};});
  assert.equal(value.error,null,'Showcase initialization failed: '+value.error);assert.equal(value.version,2);}
 async function fit(page,label){const metrics=await page.evaluate(()=>({viewport:innerWidth,width:document.documentElement.scrollWidth}));
  assert(metrics.width<=metrics.viewport+1,'Horizontal overflow '+label+': '+JSON.stringify(metrics));}
-async function checkAudits(context){for(const a of audits){assert.deepEqual(a.errors,[],'Uncaught browser errors');assert.deepEqual(a.console,[],'Console errors');assert.deepEqual(a.failures,[],'Failed resources');
+async function checkAudits(context){for(const a of audits){assert.deepEqual(a.errors,[],'Uncaught browser errors');assert.deepEqual(a.console.filter(entry=>!excludedIcon(entry)),[],'Console errors');assert.deepEqual(a.failures,[],'Failed resources');assert.deepEqual(a.httpErrors.filter(entry=>!excludedIcon(entry)),[],'HTTP resource errors');
  for(const r of a.requests){if(/^(data:|blob:)/.test(r.url))continue;assert.equal(new URL(r.url).origin,base,'Unexpected external request: '+r.url);assert.equal(r.method,'GET','Unexpected write request');
  assert(!/^\/(?:solve|grade|teach|auth|jobs|questions|patterns|generate)(?:\/|$)/.test(new URL(r.url).pathname),'Unexpected business API request: '+r.url);}}
  assert.deepEqual(await context.cookies(),[],'Showcase created cookies');}
+async function keyboardActivate(page,button){await button.focus();await page.keyboard.press('Enter');assert(await button.evaluate(n=>n===document.activeElement),'Re-rendering lost the activated control: '+await button.innerText());}
 async function choose(page,chapter,label){const button=page.locator('#scene-'+chapter).getByRole('button',{name:label,exact:true});await button.click();await fit(page,chapter+' '+label);}
 
 try{
@@ -78,11 +90,12 @@ try{
  await page.evaluate(()=>{window.__entered=0;window.addEventListener('showcase:entered',()=>window.__entered++);});
  await cta.focus();await page.keyboard.press('Enter');await page.waitForFunction(()=>location.hash==='#vision'&&!document.body.classList.contains('is-launch-open')&&window.__entered===1);
  await ready(page);
+ assert.equal(await page.evaluate(()=>window.__entered),1,'Entering must dispatch exactly once after the native close event');
  assert.equal(await launch.isVisible(),false,'The launch dialog should close on entry');
  assert.equal(await page.locator('.vision-change').count(),63);
  assert.deepEqual(await page.locator('[data-vision-group]').evaluateAll(nodes=>nodes.map(n=>n.querySelectorAll('.vision-change').length)),[21,17,17,8]);
  assert.equal(await page.locator('#vision .perspective-cell').count(),0);
- assert.equal(await page.locator('.vision-status').innerText(),'长期愿景');
+ assert.equal(await page.locator('.vision-chapter-name').innerText(),'教学愿景');
  assert.equal(await page.locator('.vision-change:visible').count(),8,'Each of four vision branches should show two changes initially');
  assert.equal(await page.locator('[data-vision-toggle]').count(),4);
  for(const [id,count] of [['students',21],['teachers',17],['schools',17],['society',8]]){
@@ -115,13 +128,13 @@ try{
   await page.waitForFunction(id=>document.activeElement?.id==='vision-title-'+id,branch);
   assert.equal(await page.locator('#topic-quick-jump').inputValue(),'vision','A vision sub-anchor should keep the chapter selector selected');
  }
- await page.locator('.vision-outline [data-vision-skip]').focus();await page.keyboard.press('Enter');
+ await page.locator('.vision-skip').focus();await page.keyboard.press('Enter');
  await page.waitForFunction(()=>document.activeElement?.id==='heading-highlights'&&location.hash==='#highlights');
  await page.goto(base+'/#vision',{waitUntil:'networkidle'});assert.equal(await page.locator('#launch-screen').isVisible(),false,'An explicit vision link should open its chapter directly');await ready(page);
- await page.locator('.vision-heading [data-vision-skip]').focus();await page.keyboard.press('Enter');
+ await page.locator('.vision-skip').focus();await page.keyboard.press('Enter');
  await page.waitForFunction(()=>document.activeElement?.id==='heading-highlights'&&location.hash==='#highlights');
  assert((await page.locator('.vision-cost-result').innerText()).includes('0.0136'));
- assert((await page.locator('.vision-cost-result').innerText()).includes('4.08'));
+ assert((await page.locator('.vision-cost-result').innerText()).includes('16.32'));
 
  await page.evaluate(()=>{window.__replayed=0;window.addEventListener('showcase:entered',()=>window.__replayed++,{once:true});void Showcase.replayOpening();});await page.waitForFunction(()=>document.body.classList.contains('is-launch-open'));
  await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.body.classList.contains('is-launch-open')&&window.__replayed===1);
@@ -150,6 +163,19 @@ try{
  assert(await ability.locator('[data-hx-evidence="4"]').evaluate(n=>n.classList.contains('is-selected')));
  assert(await ability.locator('[data-hx-axis="4"]').evaluate(n=>n.classList.contains('is-selected')));
  assert.equal(await ability.locator('[data-hx-evidence].is-selected').count(),1);assert.equal(await ability.locator('[data-hx-axis].is-selected').count(),1);
+ const radarDots=ability.locator('[data-hx-dot-dimension]');
+ assert.equal(await radarDots.count(),6);
+ await radarDots.nth(2).focus();await page.keyboard.press('Enter');
+ assert.equal(await ability.getAttribute('data-hx-dimension-active'),'2');
+ assert.equal(await radarDots.nth(2).getAttribute('aria-pressed'),'true');
+ await page.keyboard.press('ArrowRight');
+ assert(await radarDots.nth(3).evaluate(n=>n===document.activeElement));
+ assert.equal(await ability.getAttribute('data-hx-dimension-active'),'3');
+ await radarDots.nth(5).focus();await page.keyboard.press('Space');
+ assert.equal(await ability.getAttribute('data-hx-dimension-active'),'5');
+ await page.keyboard.press('Home');assert(await radarDots.first().evaluate(n=>n===document.activeElement));
+ assert.equal(await ability.getAttribute('data-hx-dimension-active'),'0');
+ assert.equal(await ability.locator('[data-hx-motion-toggle]').isVisible(),false,'Reduced-motion readers do not need animation controls');
  assert.equal(await page.locator('#highlight-system').count(),1);
  await page.goto(base+'/',{waitUntil:'networkidle'});await ready(page);
  assert.deepEqual(await page.locator('[data-chapter]').evaluateAll(nodes=>nodes.map(n=>n.id)),chapters);
@@ -162,20 +188,21 @@ try{
  assert.equal(await page.locator('.brand-emblem').getAttribute('src'),'/showcase/assets/fudan-emblem-white.png');
  assert(await page.locator('.brand-emblem').evaluate(img=>img.complete&&img.naturalWidth>0),'The Fudan emblem should load as a local asset');
  assert.equal(await page.locator('.perspective-switch').isVisible(),false,'The reading-view switch belongs only on narrow screens');
- assert.equal(await page.locator('details').count(),0,'Reader-facing content should use notes and the annotation panel');
+ assert.equal(await page.locator('details').count(),3,'Merged sections retain three expandable technical notes');
+ assert.equal(await page.locator('details.unit-tech-fold').count(),3,'Only the accepted technical notes should fold');
  assert.equal(await page.locator('.source-reading').count(),0,'Internal source-document lists should not appear in the public story');
- assert.equal(await page.locator('.perspective-cell').count(),26,'The 13 content units should have two reading lanes each');
+ assert.equal(await page.locator('.perspective-cell').count(),20,'Merged units keep one lane; seven remaining units keep parallel lanes');
  assert.equal(await page.locator('.shared-cell').count(),0,'Highlights should not use generic shared cells');
  assert.equal(await page.locator('.highlight-pain').count(),6,'Six highlights carry a practical pain point');
- assert.equal(await page.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),26,'Desktop should show two perspectives in parallel');
- assert.equal(await page.locator('.perspective-headings').count(),10,'Only topics with distinct reading lanes need column headings');
+ assert.equal(await page.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),20,'Desktop should expose every merged or parallel content lane');
+ assert.equal(await page.locator('.perspective-headings').count(),5,'Only topics with distinct reading lanes need column headings');
  assert((await page.locator('.research-scope').count())>0,'Research limitations should be visibly identified');
  assert((await page.locator('.pain-point').first().evaluate(n=>getComputedStyle(n).borderLeftColor)).includes('255, 146, 156'),'Real-world pain points should use the red accent');
  assert.equal(await page.locator('.brand-emblem').evaluate(n=>getComputedStyle(n).backgroundColor),'rgba(0, 0, 0, 0)','The white emblem should retain the black page background');
  assert((await page.locator('.research-gap').count())>10,'Only concrete research limitations should carry caution emphasis');
  // A medium desktop must keep both lanes, with the same usable connection as a wide desktop.
  await page.setViewportSize({width:980,height:900});
- assert.equal(await page.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),26);
+ assert.equal(await page.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),20);
  assert.equal(await page.locator('.perspective-switch').isVisible(),false);await fit(page,'980px two lanes');
  await page.setViewportSize({width:1440,height:1000});
  assert.equal(await page.locator('.chapter-bridge').count(),12,'Each topic must pass a specific output to its successor');
@@ -188,16 +215,17 @@ try{
  assert(await page.evaluate(()=>document.fonts.check('22px "StudyAgent Handwriting"')),'The local handwriting webfont did not load');
  await fit(page,'desktop overview');await page.screenshot({path:shots+'/desktop-overview.png'});
  await page.locator('.project-architecture').screenshot({path:shots+'/system-architecture.png'});
- // One adjustable gutter controls all topics and preserves a single vertical reading surface.
+ // Each unmerged unit remembers its own gutter while preserving a single reading surface.
  await page.locator('#single').scrollIntoViewIfNeeded();
  const divider=page.locator('#single [data-split-control]');await divider.scrollIntoViewIfNeeded();
- assert.equal(await divider.getAttribute('aria-valuenow'),'60','Teaching should receive the larger default share');
- await divider.focus();await page.keyboard.press('ArrowLeft');assert.equal(await divider.getAttribute('aria-valuenow'),'58');
- await page.keyboard.press('Enter');assert.equal(await divider.getAttribute('aria-valuenow'),'60');
+ assert.equal(await divider.getAttribute('aria-valuenow'),'66','Teaching should receive the larger default share');
+ await divider.focus();await page.keyboard.press('ArrowLeft');assert.equal(await divider.getAttribute('aria-valuenow'),'64');
+ await page.keyboard.press('Enter');assert.equal(await divider.getAttribute('aria-valuenow'),'66');
+ const otherDivider=page.locator('#library [data-split-control]').first(),otherRatio=await otherDivider.getAttribute('aria-valuenow');
  const grip=await divider.boundingBox(),gripY=Math.min(850,Math.max(170,grip.y+25));await page.mouse.move(grip.x+grip.width/2,gripY);await page.mouse.down();
  await page.mouse.move(grip.x+grip.width/2+100,gripY,{steps:8});await page.mouse.up();
- assert(Number(await divider.getAttribute('aria-valuenow'))>60,'Dragging should enlarge the teaching lane');
- assert.equal(await page.locator('#exam [data-split-control]').getAttribute('aria-valuenow'),await divider.getAttribute('aria-valuenow'),'The ratio should be common to every topic');
+ assert(Number(await divider.getAttribute('aria-valuenow'))>66,'Dragging should enlarge the teaching lane');
+ assert.equal(await otherDivider.getAttribute('aria-valuenow'),otherRatio,'Resizing one unit must preserve another unit’s chosen width');
  await divider.focus();await page.keyboard.press('Enter');
  const sizes=await page.locator('#single .perspective-cell').evaluateAll(nodes=>nodes.map(n=>n.getBoundingClientRect().width));
  assert(sizes[0]>sizes[1]*1.4,'Content should have more horizontal space than technical notes');
@@ -208,6 +236,18 @@ try{
  for(const id of chapters){await page.locator('#'+id).scrollIntoViewIfNeeded();assert(await page.locator('#heading-'+id).isVisible());await fit(page,'chapter '+id);}
  assert.equal(await page.locator('#system-trail,.system-trail').count(),0,'The redundant second navigation row should be removed');
  assert.deepEqual(await page.locator('.primary-nav a').evaluateAll(nodes=>nodes.map(n=>n.hash.slice(1))),chapters,'The single header must map directly to all topics');
+ // Re-rendered controls must keep keyboard focus at the same semantic action.
+ await keyboardActivate(page,page.locator('#scene-concepts .concept-node').nth(2));
+ for(const label of ['教学过程','步骤批改','结构化解题'])await keyboardActivate(page,page.locator('#scene-single').getByRole('button',{name:label,exact:true}));
+ await page.locator('#example-select').focus();await page.locator('#example-select').selectOption('national-2025-q16');
+ assert.equal(await page.evaluate(()=>document.activeElement?.id),'example-select');
+ await page.locator('#teacher-select').focus();await page.locator('#teacher-select').selectOption('xuefeng');
+ assert.equal(await page.evaluate(()=>document.activeElement?.id),'teacher-select');
+ assert.equal(await page.locator('#scene-single [data-math-erratum="geometric-tail"]').count(),1,'The saved sequence explanation needs a visible, separate erratum');
+ assert((await page.locator('#scene-single [data-math-erratum]').innerText()).includes('应单列'));
+ await page.locator('#scene-single [data-math-erratum]').screenshot({path:shots+'/math-erratum.png'});
+ await keyboardActivate(page,page.locator('#scene-diagnosis [aria-label="诊断情境"] button').nth(1));
+ await keyboardActivate(page,page.locator('#scene-diagnosis [aria-label="对比条件"] button').nth(1));
  // Both questions and all four genuine saved runs must be selectable.
  await choose(page,'single','结构化解题');assert.equal(await page.locator('#example-select option').count(),2);assert.equal(await page.locator('#teacher-select option').count(),4);
  for(const example of ['national-2023-q17','national-2025-q16'])for(const teacher of ['liangliang','taotao','xuefeng','ji']){
@@ -262,7 +302,7 @@ try{
  assert((await page.locator('#scene-diagnosis .timestamp-evidence').innerText()).includes('返回前面的区域'));
  // Saved teaching frames and generated result are navigable when actually recorded.
  await choose(page,'single','教学过程');if(records.teaching?.status==='recorded'&&records.teaching.frames?.length>1){
-  const before=await page.locator('#scene-single .teacher-answer').textContent();await choose(page,'single','下一状态');
+  const before=await page.locator('#scene-single .teacher-answer').textContent();await keyboardActivate(page,page.locator('#scene-single').getByRole('button',{name:'下一状态',exact:true}));
   assert.notEqual(await page.locator('#scene-single .teacher-answer').textContent(),before);await choose(page,'single','上一步');}
  await choose(page,'single','针对性变式');if(records.generation?.status==='recorded'){
   assert(await page.locator('#scene-single .sample-question').count());
@@ -272,6 +312,22 @@ try{
  // National-only library filtering, selected-question paper, teacher answers and print.
  await page.locator('#bank-workbench').scrollIntoViewIfNeeded();await page.waitForFunction(()=>window.ShowcaseBank?.state.index?.length===2);
  assert.equal(await page.locator('#library-list .bank-row').count(),2);
+ const libraryTabs=page.locator('[data-library-tab]');
+ await libraryTabs.nth(0).focus();await page.keyboard.press('ArrowRight');
+ assert.equal(await libraryTabs.nth(1).getAttribute('aria-selected'),'true');
+ assert(await libraryTabs.nth(1).evaluate(n=>n===document.activeElement));
+ await page.keyboard.press('End');assert.equal(await libraryTabs.nth(2).getAttribute('aria-selected'),'true');
+ assert(await page.locator('[data-calendar-empty]').isVisible());
+ assert((await page.locator('[data-calendar-empty]').innerText()).includes('暂无复查任务'));
+ await page.locator('[data-calendar-empty]').screenshot({path:shots+'/calendar-empty.png'});
+ assert.equal(await page.locator('#library-layout').getAttribute('role'),'tabpanel');
+ assert.equal(await page.locator('#library-layout').getAttribute('aria-labelledby'),'library-tab-calendar');
+ await page.locator('[data-calendar-empty]').getByRole('button',{name:'查看公开题库',exact:true}).click();
+ assert.equal(await libraryTabs.nth(0).getAttribute('aria-selected'),'true');
+ assert.equal(await page.evaluate(()=>document.activeElement?.id),'bank-search');
+ await libraryTabs.nth(2).focus();await page.keyboard.press('Home');
+ assert(await libraryTabs.nth(0).evaluate(n=>n===document.activeElement));
+
  await page.locator('#bank-search').fill('数列');await page.waitForFunction(()=>window.ShowcaseBank.state.rows.length===1);
  assert((await page.locator('#library-list').innerText()).includes('数列'));await fit(page,'filtered bank');
  await page.locator('#bank-search').fill('');await page.waitForFunction(()=>window.ShowcaseBank.state.rows.length===2);
@@ -280,6 +336,7 @@ try{
  assert(!(await page.locator('#exam-preview').innerText()).includes('上海'));
  assert.equal(await page.locator('#exam-preview .bank-chunk').count(),0);
  await page.locator('#exam-teacher').click();await page.waitForFunction(()=>document.querySelectorAll('#exam-preview .bank-chunk').length===4);
+ assert.equal(await page.locator('#exam-preview [data-math-erratum="geometric-tail"]').count(),1,'Teacher print must also show the sequence erratum');
  await page.locator('#exam-print').click();assert.equal(await page.evaluate(()=>window.__printed),true);await fit(page,'national paper');
  // Planned interactions must switch real local state rather than dead controls.
  await choose(page,'routines','隐藏套路名称');assert((await page.locator('#scene-routines .method-label').innerText()).includes('自行判断'));
@@ -291,17 +348,17 @@ try{
  // Reload resumes the public presentation, its selected examples, and the reading position.
  await choose(page,'single','结构化解题');await page.locator('#example-select').selectOption('national-2025-q16');await page.locator('#teacher-select').selectOption('liangliang');
  await page.locator('[data-library-tab="library"]').click();await page.locator('#bank-search').fill('数列');await page.waitForFunction(()=>window.ShowcaseBank.state.rows.length===1);
- await page.evaluate(()=>{window.Showcase.selectView('longterm');const topic=document.querySelector('#longterm');window.scrollTo({top:topic.getBoundingClientRect().top+scrollY-110,behavior:'instant'});});
+ await page.evaluate(()=>{window.Showcase.selectView('agent');const topic=document.querySelector('#agent');window.scrollTo({top:topic.getBoundingClientRect().top+scrollY-110,behavior:'instant'});});
  await page.evaluate(()=>{document.querySelector('[data-perspective="technical"]').click();window.scrollBy({top:180,behavior:'instant'});});await page.waitForTimeout(220);
- await page.locator('#longterm [data-split-control]').focus();await page.keyboard.press('ArrowRight');
+ await page.locator('#unit-anchor-agent [data-split-control]').focus();await page.keyboard.press('ArrowRight');
  // Let the resized columns finish laying out before capturing a reading position.
  await page.evaluate(()=>new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))));
- const savedSplit=await page.evaluate(()=>ShowcaseSplit.ratio);
+ const savedSplit=await page.evaluate(()=>ShowcaseSplit.ratio('agent'));
  const beforeReload=await page.evaluate(()=>({y:scrollY,caseIndex:Showcase.state.caseIndex,condition:Showcase.state.condition,perspective:Showcase.state.perspective}));
  await page.reload({waitUntil:'networkidle'});assert.equal(await page.locator('#launch-screen').isVisible(),false,'Reloading an established reading session should skip the launch dialog');await ready(page);
  const restored=await page.evaluate(()=>({y:scrollY,caseIndex:Showcase.state.caseIndex,condition:Showcase.state.condition,perspective:Showcase.state.perspective,example:Showcase.state.example,teacher:Showcase.state.teacher,career:Showcase.state.sceneTabs.career,selected:ShowcaseBank.state.selected.size}));
  assert(Math.abs(restored.y-beforeReload.y)<8,'Reading position changed after reload: '+JSON.stringify({beforeReload,restored}));
- assert(Math.abs((await page.evaluate(()=>ShowcaseSplit.ratio))-savedSplit)<.001,'The chosen column width should survive refresh');
+ assert(Math.abs((await page.evaluate(()=>ShowcaseSplit.ratio('agent')))-savedSplit)<.001,'The chosen column width should survive refresh');
  assert.equal(restored.caseIndex,beforeReload.caseIndex);assert.equal(restored.condition,beforeReload.condition);assert.equal(restored.perspective,'technical');assert.equal(restored.example,'national-2025-q16');assert.equal(restored.teacher,'liangliang');assert.equal(restored.career,2);assert.equal(restored.selected,2);assert.equal(await page.locator('#bank-search').inputValue(),'数列');
  await page.goto(base+'/?perspective=mechanism#single',{waitUntil:'networkidle'});await ready(page);assert.equal(await page.locator('#launch-screen').isVisible(),false,'Deep links should skip the launch screen');assert.equal(await page.evaluate(()=>Showcase.state.perspective),'technical','Legacy mechanism-view links should map to technical implementation');
  assert.equal(await page.locator('.site-registration a').innerText(),'渝ICP备2026024246号-1');assert.equal(await page.locator('.site-registration a').getAttribute('href'),'https://beian.miit.gov.cn/');
@@ -376,8 +433,8 @@ try{
  await nojs.goto(base+'/',{waitUntil:'networkidle'});assert.equal(await nojs.locator('[data-chapter]').count(),12);
  for(const id of chapters){const text=['vision','highlights'].includes(id)?await nojs.locator('#'+id).innerText():(await nojs.locator('#'+id+' .chapter-prose').allTextContents()).join(' ');assert(text.length>80,'Missing no-JS chapter text: '+id);}
  assert.equal(await nojs.locator('#launch-screen #explore-start').getAttribute('href'),'#vision');
- assert.equal(await nojs.locator('.perspective-cell').count(),26,'No-JS reading should expose both perspectives for all generic units');
- assert.equal(await nojs.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),26,'No-JS reading should expose all generic content');
+ assert.equal(await nojs.locator('.perspective-cell').count(),20,'No-JS reading should expose both perspectives for all generic units');
+ assert.equal(await nojs.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),20,'No-JS reading should expose all generic content');
  assert((await nojs.locator('.research-notes a[href^="https://"]').count())>=6,'Research sources unavailable without JS');
  assert(!/上海|shanghai/i.test(await nojs.locator('body').innerText()));await fit(nojs,'no JavaScript');await checkAudits(plain);await plain.close();
  const deepContext=await browser.newContext({viewport:{width:1440,height:950}}),deepPage=await deepContext.newPage();audit(deepPage);
@@ -415,6 +472,43 @@ try{
  const animatedMethodButtons=animatedMethod.locator('[data-hx-method]');await animatedMethodButtons.nth(2).click();
  assert.equal(await animatedMethodButtons.nth(2).getAttribute('aria-pressed'),'true');
  await animated.waitForTimeout(3400);assert.equal(await animatedMethod.getAttribute('data-hx-stage'),'2','A manual method selection should stop automatic rotation');
+ // Markers must remain on the polygon during interpolation and keep their DOM identity.
+ const animatedAbility=animated.locator('[data-hx-motion="ability"]');await animatedAbility.scrollIntoViewIfNeeded();
+ await animated.waitForFunction(()=>document.querySelector('[data-hx-motion="ability"]').classList.contains('is-hx-visible'));
+ await animatedAbility.evaluate(n=>{window.__firstRadarDot=n.querySelector('[data-hx-dot-dimension="0"]');});
+ await animatedAbility.locator('[data-hx-profile-button="b"]').click();
+ const morphSamples=await animatedAbility.evaluate(async n=>{
+  const rows=[];
+  for(let i=0;i<8;i++){
+   await new Promise(requestAnimationFrame);
+   const shape=n.querySelector('[data-hx-radar-shape]').getAttribute('points').trim().split(/\s+/).map(p=>p.split(',').map(Number));
+   const dots=[...n.querySelectorAll('[data-hx-dot-dimension]')].map(dot=>[Number(dot.getAttribute('cx')),Number(dot.getAttribute('cy'))]);
+   rows.push({points:shape,delta:Math.max(...shape.flatMap((point,j)=>point.map((v,k)=>Math.abs(v-dots[j][k]))))});
+  }
+  return {rows,sameNode:window.__firstRadarDot===n.querySelector('[data-hx-dot-dimension="0"]')};
+ });
+ assert(morphSamples.sameNode,'Morphing must not replace a focused marker node');
+ assert(morphSamples.rows.every(row=>row.delta<.02),'Radar markers detached during morph: '+JSON.stringify(morphSamples));
+ assert(morphSamples.rows.some(row=>row.points[0][1]>81&&row.points[0][1]<139),'The radar should interpolate rather than jump');
+ const motionTime=animated.locator('[data-hx-motion="time"]'),timeToggle=motionTime.locator('[data-hx-motion-toggle]');
+ await motionTime.scrollIntoViewIfNeeded();await timeToggle.click();
+ assert.equal(await motionTime.getAttribute('data-hx-paused'),'true');
+ assert.equal(await motionTime.locator('.hx-time-cursor').evaluate(n=>getComputedStyle(n).animationPlayState),'paused');
+ await motionTime.screenshot({path:shots+'/motion-paused.png'});
+ await timeToggle.click();
+ await animated.waitForFunction(()=>getComputedStyle(document.querySelector('[data-hx-motion="time"] .hx-time-cursor')).animationPlayState==='running');
+ const evolving=animated.locator('[data-hx-motion="evolution"]'),evolutionToggle=evolving.locator('[data-hx-motion-toggle]');
+ await evolving.scrollIntoViewIfNeeded();await evolutionToggle.click();
+ const pausedStage=await evolving.getAttribute('data-hx-stage');
+ await animated.waitForTimeout(3250);assert.equal(await evolving.getAttribute('data-hx-stage'),pausedStage,'Paused explanatory stages must remain readable');
+ await evolutionToggle.click();await animated.waitForFunction(stage=>document.querySelector('[data-hx-motion="evolution"]').dataset.hxStage!==stage,pausedStage,{timeout:6000});
+ await animated.emulateMedia({reducedMotion:'reduce'});
+ assert.equal(await evolutionToggle.isVisible(),false);
+ await evolutionToggle.evaluate(n=>{n.click();n.click();});
+ const reducedStage=await evolving.getAttribute('data-hx-stage');await animated.waitForTimeout(3250);
+ assert.equal(await evolving.getAttribute('data-hx-stage'),reducedStage,'Resuming cannot override reduced motion');
+ assert.equal(await motionTime.locator('.hx-time-cursor').evaluate(n=>getComputedStyle(n).animationName),'none');
+ await animated.emulateMedia({reducedMotion:'no-preference'});
  await animated.locator('#terms').evaluate(n=>scrollTo({top:ShowcaseTransitions.measureTopic(n).top+scrollY+ n.querySelector('.topic-heading').offsetTop-innerHeight*1.3,behavior:'instant'}));
  await animated.waitForTimeout(1500);
  await animated.locator('#terms').evaluate(n=>scrollTo({top:ShowcaseTransitions.measureTopic(n).top+scrollY+n.querySelector('.topic-heading').offsetTop-innerHeight*.82,behavior:'instant'}));
@@ -436,21 +530,26 @@ try{
  await animated.waitForFunction(()=>document.querySelector('#terms').dataset.arrivalState==='complete');
  assert.equal(await animated.locator('#terms').evaluate(n=>getComputedStyle(n).opacity),'1');
  assert.equal(await animated.locator('#terms').getAttribute('data-arrival-progress'),'1');
- assert.equal(await animated.locator('.chapter-bridge.has-handoff').count(),12,'All topic handoffs should be enhanced');
+ assert.deepEqual(await animated.locator('.chapter-bridge.has-handoff').evaluateAll(nodes=>nodes.map(n=>n.closest('[data-chapter]').id)),chapters.slice(0,-1),'All eleven structured handoffs must be enhanced; the closing invitation is a separate link');
  const handoff=animated.locator('#single .chapter-bridge');
  await handoff.evaluate(n=>scrollTo({top:n.getBoundingClientRect().top+scrollY-innerHeight*.88,behavior:'instant'}));
  await animated.waitForFunction(()=>Number(document.querySelector('#single .chapter-bridge').dataset.handoffProgress)>0);
- const early=Number(await handoff.getAttribute('data-handoff-progress'));
+ assert(Number(await handoff.getAttribute('data-handoff-progress'))>0,'The visible handoff should make progress');
  assert(await handoff.evaluate(n=>n.classList.contains('is-playing')),'Entering the handoff should start a visible transfer');
  await animated.screenshot({path:shots+'/transition-in-motion.png'});
  await handoff.evaluate(n=>scrollTo({top:n.getBoundingClientRect().top+scrollY-innerHeight*.5,behavior:'instant'}));
- await animated.waitForFunction(p=>Number(document.querySelector('#single .chapter-bridge').dataset.handoffProgress)>p+.15,early);
+ // Geometry or elapsed time can already put early progress at 1; require the
+ // actual delivered state and completed stroke rather than an impossible +0.15.
+ await animated.waitForFunction(()=>{
+  const bridge=document.querySelector('#single .chapter-bridge'),line=bridge.querySelector('.handoff-line-motion');
+  return bridge.classList.contains('is-delivered')&&Number(bridge.dataset.handoffProgress)>=.8&&Math.abs(Number.parseFloat(getComputedStyle(line).strokeDashoffset))<.02;
+ });
  assert(await handoff.evaluate(n=>n.classList.contains('is-delivered')),'The handoff should arrive by the viewport midpoint, before the reader passes it');
  assert(Number.parseFloat(await animated.locator('#single .handoff-line-motion').evaluate(n=>getComputedStyle(n).strokeDashoffset))<1);
  await animated.screenshot({path:shots+'/chapter-transition.png'});
  for(const width of [1440,390]){
   await animated.setViewportSize({width,height:950});
-  for(const id of chapters){
+  for(const id of chapters.slice(0,-1)){
    await animated.locator('#'+id+' .chapter-bridge').evaluate(n=>scrollTo({top:n.getBoundingClientRect().top+scrollY-innerHeight*.5,behavior:'instant'}));
    await animated.waitForFunction(id=>document.querySelector('#'+id+' .chapter-bridge').classList.contains('is-delivered'),id);
    assert.equal(await animated.locator('#'+id).evaluate(n=>getComputedStyle(n).opacity),'1','A deep-linked or passed topic must remain readable');
@@ -458,11 +557,24 @@ try{
   }
  }
  await animated.setViewportSize({width:1440,height:950});
+ const closingInvitation=animated.locator('.chapter-transition-closing');
+ assert.equal(await closingInvitation.count(),1);
+ assert.equal(await closingInvitation.getAttribute('href'),'#vision');
+ await closingInvitation.focus();await animated.keyboard.press('Enter');
+ await animated.waitForFunction(()=>location.hash==='#vision'&&document.querySelector('#heading-vision').getBoundingClientRect().top>=0&&document.querySelector('#heading-vision').getBoundingClientRect().top<innerHeight/2);
+ await animated.screenshot({path:shots+'/closing-return.png'});
  await animated.locator('.primary-nav a[href="#terms"]').click();
  await animated.waitForFunction(()=>location.hash==='#terms');
  await animated.screenshot({path:shots+'/chapter-navigation.png'});
  assert.equal(await animated.locator('.chapter-transit-overlay').count(),0,'Topic navigation should use natural scrolling without a blocking overlay');
  await checkAudits(motion);await motion.close();
  const recorded=records.cases.reduce((n,c)=>n+['basic','same_information','system'].filter(k=>c[k]?.status==='recorded').length,0);
- console.log(JSON.stringify({ok:true,topics:12,contentUnits:13,highlights:7,nationalQuestions:2,savedPipelineRuns:8,diagnosticInputs:6,recordedResponses:recorded,conditions:2,viewports:[1440,980,390,320],resizableLanes:true,allTopicHandoffs:true,noJavaScript:true,visionCollapsedByDefault:true,wholePanel3D:true,network:'same-origin GET only, no cookies',screenshots:shots}));
+ console.log(JSON.stringify({ok:true,mode:allowExcludedIcon404?'diagnostic_excluding_icons':'strict',excludedIcon404:[...excludedIcon404.values()],topics:12,contentUnits:13,highlights:7,nationalQuestions:2,savedPipelineRuns:8,diagnosticInputs:6,recordedResponses:recorded,conditions:2,viewports:[1440,980,390,320],resizableLanes:true,allTopicHandoffs:true,noJavaScript:true,visionCollapsedByDefault:true,wholePanel3D:true,network:'same-origin GET only, no cookies',screenshots:shots}));
+}catch(error){
+ if(lastPage&&!lastPage.isClosed()){
+  await lastPage.screenshot({path:shots+'/failure.png'}).catch(()=>{});
+  const checkpoint=await lastPage.evaluate(()=>({url:location.href,focus:{id:document.activeElement?.id,tag:document.activeElement?.tagName,text:document.activeElement?.textContent?.slice(0,100)}})).catch(()=>null);
+  console.error('Browser checkpoint: '+JSON.stringify(checkpoint));
+ }
+ throw error;
 }finally{if(browser)await browser.close();server.kill('SIGTERM');}

@@ -9,7 +9,7 @@
  const ns='http://www.w3.org/2000/svg';
  const motionEnabled=()=>!media.matches&&document.visibilityState!=='hidden'&&!document.body.classList.contains('is-launch-open');
  const active=new Set();
- const states=new Map(figures.map(figure=>[figure,{elapsed:0,manual:false,lastStage:-1,profile:'a',morph:null}]));
+ const states=new Map(figures.map(figure=>[figure,{elapsed:0,manual:false,paused:false,lastStage:-1,profile:'a',morph:null}]));
  const profiles={
   a:[[300,81],[410,152],[414,281],[300,250],[274,230],[264,194]],
   b:[[300,139],[360,181],[360,250],[300,284],[234,253],[186,150]],
@@ -38,7 +38,7 @@
   pressed(figure,'[data-hx-profile-button]',figure.querySelector('[data-hx-profile-button="'+key+'"]'));
   const ghost=figure.querySelector('.hx-radar-ghost');
   if(ghost)ghost.setAttribute('points',points(profiles[key==='a'?'b':'a']));
-  if(animate&&!media.matches&&active.has(figure)&&document.visibilityState!=='hidden'){
+  if(animate&&!media.matches&&!state.paused&&active.has(figure)&&document.visibilityState!=='hidden'){
    state.morph={from:parsePoints(shape.getAttribute('points')),to:profiles[key],elapsed:0};
    start();
   }else{
@@ -47,22 +47,28 @@
   }
   syncRadarDots(figure);
  }
- function syncRadarDots(figure){
+ function syncRadarDots(figure,value){
   const state=states.get(figure),group=figure.querySelector('[data-hx-radar-dots]');
   if(!group)return;
-  const target=profiles[state.profile]||profiles.a;
-  group.replaceChildren(...target.map((point,index)=>{
-   const dot=document.createElementNS(ns,'circle');
-   dot.setAttribute('cx',String(point[0]));dot.setAttribute('cy',String(point[1]));dot.setAttribute('r','5.5');
-   dot.setAttribute('class','hx-radar-dot'+(String(index)===figure.dataset.hxDimensionActive?' is-selected':''));
-   dot.dataset.hxDotDimension=String(index);
-   dot.setAttribute('tabindex','0');dot.setAttribute('role','button');
-   dot.setAttribute('aria-label','第'+(index+1)+'个维度，点击查看判断依据');
-   return dot;
-  }));
+  const target=value||parsePoints(figure.querySelector('[data-hx-radar-shape]').getAttribute('points'));
+  const activeIndex=Number(figure.dataset.hxDimensionActive||0),stem=group.querySelector('[data-hx-axis-stem]');
+  if(stem){const anchor=target[activeIndex];stem.setAttribute('x2',String(Math.round(anchor[0]*100)/100));stem.setAttribute('y2',String(Math.round(anchor[1]*100)/100));}
+  // Keep the controls connected while profiles morph, including a focused dot.
+  target.forEach((point,index)=>{
+   let dot=group.querySelector('[data-hx-dot-dimension="'+index+'"]');
+   if(!dot){
+    dot=document.createElementNS(ns,'circle');dot.dataset.hxDotDimension=String(index);
+    dot.setAttribute('r','5.5');dot.setAttribute('class','hx-radar-dot');
+    dot.setAttribute('tabindex','0');dot.setAttribute('role','button');
+    const label=figure.querySelector('[data-hx-dimension="'+index+'"]')?.textContent||'第'+(index+1)+'个维度';
+    dot.setAttribute('aria-label',label+'，查看判断依据');group.append(dot);
+   }
+   dot.setAttribute('cx',String(Math.round(point[0]*100)/100));dot.setAttribute('cy',String(Math.round(point[1]*100)/100));
+   dot.classList.toggle('is-selected',index===activeIndex);dot.setAttribute('aria-pressed',String(index===activeIndex));
+  });
  }
  function flashRadarDot(dot){
-  if(media.matches||!dot.animate)return;
+  if(media.matches||states.get(dot.closest('[data-hx-motion]'))?.paused||!dot.animate)return;
   dot.animate([{transform:'scale(1)'},{transform:'scale(2.1)'},{transform:'scale(1)'}],{duration:480,easing:'cubic-bezier(.22,1,.36,1)'});
   const ripple=document.createElementNS(ns,'circle');
   ripple.setAttribute('cx',dot.getAttribute('cx'));ripple.setAttribute('cy',dot.getAttribute('cy'));ripple.setAttribute('r','6');
@@ -77,6 +83,7 @@
   figure.querySelectorAll('[data-hx-axis]').forEach(axis=>axis.classList.toggle('is-selected',Number(axis.dataset.hxAxis)===index));
   figure.querySelectorAll('[data-hx-radar-dots] .hx-radar-dot').forEach(dot=>dot.classList.toggle('is-selected',Number(dot.dataset.hxDotDimension)===index));
   figure.querySelectorAll('[data-hx-dim-label]').forEach(label=>label.classList.toggle('is-active',Number(label.dataset.hxDimLabel)===index));
+  syncRadarDots(figure);
  }
  function keyboardGroup(group,selector,activate){
   group.addEventListener('keydown',event=>{
@@ -91,6 +98,24 @@
  }
  figures.forEach(figure=>{
   const state=states.get(figure);
+  if(['system','method','time','ability','participation','evolution'].includes(figure.dataset.hxMotion)){
+   const caption=figure.querySelector('figcaption'),control=document.createElement('button');
+   control.type='button';control.className='hx-motion-toggle';control.dataset.hxMotionToggle='';
+   control.textContent='暂停动画';control.setAttribute('aria-pressed','false');
+   const title=caption?.querySelector('strong')?.textContent||'本图解';
+   control.setAttribute('aria-label','暂停动画：'+title);figure.dataset.hxPaused='false';
+   control.addEventListener('click',()=>{
+    state.paused=!state.paused;figure.dataset.hxPaused=String(state.paused);
+    if(!state.paused){
+     state.manual=false;
+     const intervals={method:3200,participation:3600,evolution:3000};
+     state.elapsed=figure.dataset.hxMotion==='ability'?(state.profile==='b'?6500:0):Math.max(0,state.lastStage)*(intervals[figure.dataset.hxMotion]||0);
+    }
+    control.textContent=state.paused?'继续动画':'暂停动画';control.setAttribute('aria-pressed',String(state.paused));
+    control.setAttribute('aria-label',control.textContent+'：'+title);updateMotion();
+   });
+   if(caption){caption.append(control);figure.classList.add('has-motion-control');}
+  }
   figure.querySelectorAll('[data-hx-controls]').forEach(group=>{
    group.hidden=false;
    // Keep local taps and swipes local, including on browsers with global gestures.
@@ -114,20 +139,28 @@
    if(dimensionsGroup)keyboardGroup(dimensionsGroup,'[data-hx-dimension]',chooseDimension);
    selectDimension(figure,0);
    syncRadarDots(figure);
+   figure.querySelector('.hx-radar')?.setAttribute('role','group');
    const dotsGroup=figure.querySelector('[data-hx-radar-dots]');
+   const chooseDot=dot=>{
+    selectDimension(figure,Number(dot.dataset.hxDotDimension));flashRadarDot(dot);
+   };
    dotsGroup?.addEventListener('click',event=>{
     const dot=event.target.closest?.('.hx-radar-dot');
     if(!dot)return;
-    selectDimension(figure,Number(dot.dataset.hxDotDimension));
-    flashRadarDot(dot);
+    chooseDot(dot);
    });
+   dotsGroup?.addEventListener('keydown',event=>{
+    if(!['Enter',' '].includes(event.key)||!event.target.matches('.hx-radar-dot'))return;
+    event.preventDefault();event.stopPropagation();chooseDot(event.target);
+   });
+   if(dotsGroup)keyboardGroup(dotsGroup,'.hx-radar-dot',chooseDot);
   }
  });
  function hasWork(){
   if(!motionEnabled())return false;
   return [...active].some(figure=>{
    const state=states.get(figure),type=figure.dataset.hxMotion;
-   return Boolean(state.morph)||(!state.manual&&['method','ability','participation','evolution'].includes(type));
+   return !state.paused&&(Boolean(state.morph)||(!state.manual&&['method','ability','participation','evolution'].includes(type)));
   });
  }
  function start(){if(!frame&&!ticking&&hasWork()){lastTime=0;frame=requestAnimationFrame(tick);}}
@@ -139,6 +172,7 @@
   lastTime=now;
   active.forEach(figure=>{
    const state=states.get(figure),type=figure.dataset.hxMotion;
+   if(state.paused)return;
    if(!state.manual){
     state.elapsed+=delta;
     if(type==='method')setStage(figure,Math.floor(state.elapsed/3200)%3);
@@ -154,6 +188,7 @@
     const t=Math.min(1,state.morph.elapsed/950),ease=1-Math.pow(1-t,3);
     const value=state.morph.from.map((pair,index)=>pair.map((n,axis)=>n+(state.morph.to[index][axis]-n)*ease));
     figure.querySelector('[data-hx-radar-shape]').setAttribute('points',points(value));
+    syncRadarDots(figure,value);
     if(t===1)state.morph=null;
    }
   });
@@ -220,7 +255,7 @@
   const observer=new IntersectionObserver(entries=>{
    entries.forEach(({target,isIntersecting,intersectionRatio})=>{
     const visible=isIntersecting&&intersectionRatio>0;
-    target.classList.toggle('is-hx-visible',visible&&motionEnabled());
+    target.classList.toggle('is-hx-visible',visible&&motionEnabled()&&!states.get(target).paused);
     if(visible){
      active.add(target);target.classList.add('is-hx-revealed');target.classList.remove('hx-reveal-pending');
     }else active.delete(target);
@@ -232,11 +267,11 @@
  function updateMotion(){
   const enabled=motionEnabled();
   figures.forEach(figure=>{
-   figure.classList.toggle('is-hx-visible',enabled&&active.has(figure));
+   figure.classList.toggle('is-hx-visible',enabled&&active.has(figure)&&!states.get(figure).paused);
    if(media.matches){figure.classList.remove('hx-reveal-pending');figure.classList.add('is-hx-revealed');}
    const state=states.get(figure);
    if(!enabled&&state.morph){
-    figure.querySelector('[data-hx-radar-shape]')?.setAttribute('points',points(profiles[state.profile]));state.morph=null;
+    figure.querySelector('[data-hx-radar-shape]')?.setAttribute('points',points(profiles[state.profile]));state.morph=null;syncRadarDots(figure);
    }
   });
   if(!enabled&&frame){cancelAnimationFrame(frame);frame=0;lastTime=0;}

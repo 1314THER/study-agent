@@ -83,8 +83,9 @@ class ResearchShowcaseBuildTests(unittest.TestCase):
         self.assertEqual(len(re.findall(r'<section class="topic-section(?: [^"]+)?"', page)), 12)
         self.assertEqual([chapter['id'] for chapter in self.content['chapters']], CHAPTER_IDS)
         self.assertEqual(len(self.content['chapters']), 15)
-        self.assertEqual(page.count('class="topic-unit"'), 13)
-        self.assertEqual(len(re.findall(r'<article class="perspective-cell(?: shared-cell)?"', page)), 26)
+        self.assertEqual(len(re.findall(r'<section class="topic-unit(?: [^"]+)?"', page)), 13)
+        self.assertEqual(len(re.findall(r'<article class="perspective-cell(?: shared-cell)?"', page)), 20)
+        self.assertEqual(page.count('class="unit-tech-fold"'), 3)
         self.assertEqual(page.count('class="perspective-cell shared-cell"'), 0)
         self.assertEqual(page.count('data-perspective="'), 2)
         self.assertIn('data-perspective="teaching"', page)
@@ -101,8 +102,8 @@ class ResearchShowcaseBuildTests(unittest.TestCase):
         single = next(chapter for chapter in self.content['chapters'] if chapter['id'] == 'single')
         self.assertIn(single['title'], page)
         self.assertIn('论文原文', page)
-        self.assertEqual(page.count('class="chapter-transition"'), 12)
-        self.assertEqual(page.count('class="chapter-bridge"'), 12)
+        self.assertEqual(len(re.findall(r'<a class="chapter-transition(?: [^"]+)?"', page)), 12)
+        self.assertEqual(len(re.findall(r'<div class="chapter-bridge(?: [^"]+)?"', page)), 12)
         self.assertEqual(page.count('class="pain-point"'), 13)
         self.assertEqual(page.count('class="research-logic"'), 18)
         self.assertIn('id="launch-screen"', page)
@@ -176,9 +177,9 @@ class ResearchShowcaseBuildTests(unittest.TestCase):
         self.assertEqual([source['file'] for source in mapping['sources']], self.vision['source_docs'])
         self.assertEqual(mapping['sources'][0]['file'], 'docs/教学愿景与社会价值.md')
         self.assertEqual(mapping['counts'], {'students': 21, 'teachers': 17, 'schools': 17, 'society': 8})
-        self.assertEqual(self.vision['status'], '长期愿景')
+        self.assertEqual(self.vision['status'], '教学愿景')
         self.assertEqual(self.vision['headline'], '让每个学生，都能获得适合自己的学习支持。')
-        self.assertEqual(self.vision['subtitle'], '从学生、教师、学校到社会，探索把及时诊断、针对性教学和持续跟进融入日常教育，让家庭不必为了补上日常学习缺口而额外补课。')
+        self.assertEqual(self.vision['subtitle'], '系统通过LLM大模型提供的低成本大批量输出，探索把及时诊断、针对性教学和持续跟进融入日常教育，让学生、教师、学校到社会不必为了补上学习的差距花费过多精力。')
 
     def test_vision_content_hash_change_blocks_regeneration(self):
         changed = copy.deepcopy(self.source_map)
@@ -283,34 +284,31 @@ class ResearchShowcaseBuildTests(unittest.TestCase):
                 with self.assertRaisesRegex(ValueError, message):
                     validate_vision(value)
 
-    def test_vision_has_skip_links_at_the_heading_and_sticky_outline(self):
+    def test_vision_has_one_floating_skip_link_before_its_content(self):
         page = build(self.content)
-        heading = re.search(r'<header class="topic-heading vision-heading">.*?</header>', page, re.S).group(0)
-        outline = re.search(r'<nav class="vision-outline".*?</nav>', page, re.S).group(0)
-        for location in (heading, outline):
-            self.assertRegex(location, r'<a class="vision-skip"[^>]*data-vision-skip[^>]*href="#highlights"')
-            self.assertIn('跳过愿景，查看项目亮点', location)
-        self.assertEqual(page.count('class="vision-skip"'), 2)
-        skip_links = re.findall(r'<a\b[^>]*\bdata-vision-skip\b[^>]*>', page)
-        self.assertIn(len(skip_links), (2, 3))
-        for link in skip_links:
-            self.assertIn('href="#highlights"', link)
+        skip_links = re.findall(r'<a class="vision-skip"[^>]*\bdata-vision-skip\b[^>]*>.*?</a>', page)
+        self.assertEqual(len(skip_links), 1)
+        self.assertIn('href="#highlights"', skip_links[0])
+        self.assertIn('跳过愿景，查看项目亮点', skip_links[0])
+        self.assertLess(page.index(skip_links[0]), page.index('id="vision"'))
 
     def test_model_cost_example_uses_the_published_rates_and_exact_arithmetic(self):
         price = self.vision['cost_estimate']
         self.assertEqual((price['model'], price['currency']), ('GLM-5.3-Flash', 'CNY'))
         self.assertEqual((price['input_per_million'], price['output_per_million']), (0.8, 2.8))
         self.assertEqual((price['input_tokens'], price['output_tokens']), (10000, 2000))
-        self.assertEqual((price['daily_interactions'], price['days']), (10, 30))
+        # Six study days plus one rest day per week, as confirmed by the project owner.
+        self.assertEqual((price['daily_interactions'], price['days']), (200, 6))
         cost = (Decimal(str(price['input_per_million'])) * price['input_tokens']
                 + Decimal(str(price['output_per_million'])) * price['output_tokens']) / 1000000
-        monthly = cost * price['daily_interactions'] * price['days']
+        weekly = cost * price['daily_interactions'] * price['days']
         self.assertEqual(cost, Decimal('0.0136'))
-        self.assertEqual(monthly, Decimal('4.08'))
+        self.assertEqual(weekly, Decimal('16.32'))
         self.assertEqual(price['source'], 'https://docs.bigmodel.cn/cn/guide/start/pricing')
         page = build(self.content)
         self.assertIn('¥0.0136', page)
-        self.assertIn('约 ¥4.08 / 人', page)
+        self.assertIn('每天 200 次，连续 6 天（一周）', page)
+        self.assertIn('约 ¥16.32 / 周 / 人', page)
         self.assertIn('10,000 输入 + 2,000 输出 Token / 次', page)
         self.assertIn('模型 API 费用', page)
         self.assertIn('完整服务预算', page)

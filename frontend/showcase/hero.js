@@ -10,6 +10,7 @@ outline.style.fill='none';outline.setAttribute('aria-hidden','true');mathInk.bef
 const link=stage.querySelector('.hero-ink-link'),stroke=document.getElementById('hero-ink-path');
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
 let sequence=0,animations=[],resizeFrame=0,resolveEntry=null,entryPromise=null,leaving=false,glass=null,streamCancel=null;
+let entryCompleted=!dialog.open;
 let streaming=[];
 function layout(){
  const r=stage.getBoundingClientRect(),b=cta.getBoundingClientRect(),matrix=artwork.getScreenCTM();
@@ -87,6 +88,10 @@ if('ResizeObserver'in window){
 }else addEventListener('resize',layout,{passive:true});
 reduced.addEventListener('change',()=>{if(reduced.matches){sequence++;stop();finish();}});
 function completeEntry(){
+ // close() also queues a native close event. Complete each opening once so
+ // its later event cannot reset the reader's position or dispatch entry twice.
+ if(entryCompleted)return;
+ entryCompleted=true;
  // Cleanup must not depend on an open() promise: the inline bootstrap can open
  // the dialog before this module runs, and a skipped cleanup would leave the
  // page scroll-locked.
@@ -117,6 +122,7 @@ function initGlass(){
 function open({skip=false,force=false}={}){
  if(dialog.open)return entryPromise||Promise.resolve();
  if(skip&&!force){finish();return Promise.resolve();}
+ entryCompleted=false;
  entryPromise=new Promise(resolve=>{resolveEntry=resolve;});
  document.body.classList.add('is-launch-open');dialog.showModal();
  layout();layoutSoon();

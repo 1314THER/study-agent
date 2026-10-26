@@ -5,6 +5,12 @@
 #highlights .hx-visual figcaption{display:grid;gap:7px;margin:0 0 25px;line-height:1.65;text-align:left}
 #highlights .hx-visual figcaption>strong{color:var(--hx-white);font-size:clamp(17px,1.6vw,23px);font-weight:650;letter-spacing:-.025em}
 #highlights .hx-visual figcaption>span{font-size:12px;color:var(--hx-muted)}
+#highlights .has-motion-control>figcaption{grid-template-columns:minmax(0,1fr) auto;column-gap:14px}
+#highlights .has-motion-control>figcaption>strong,#highlights .has-motion-control>figcaption>span{grid-column:1}
+#highlights .hx-motion-toggle{grid-column:2;grid-row:1 / span 2;align-self:start;appearance:none;min-height:42px;padding:9px 11px;border:1px solid #ffffff26;border-radius:9px;background:#ffffff05;color:#b8beca;font:inherit;font-size:11px;line-height:1.5;white-space:nowrap;cursor:pointer;touch-action:manipulation;transition:background .2s,border-color .2s,color .2s}
+#highlights .hx-motion-toggle:hover{background:#ffffff12;border-color:#ffffff60;color:#fff}
+#highlights .hx-motion-toggle[aria-pressed=true]{border-color:#aac8ff80;color:#d4e3ff}
+#highlights .hx-motion-toggle:focus-visible{outline:2px solid #bed1ff;outline-offset:4px}
 #highlights .hx-figure-note{font-size:13px;line-height:1.9;margin:22px 0 0;color:var(--hx-muted)}
 #highlights .hx-icon{width:29px;height:29px;flex:none;color:var(--hx-blue)}
 #highlights .hx-wires{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none;z-index:0;color:var(--hx-line)}
@@ -103,6 +109,7 @@
 #highlights .hx-radar-vertices{color:#7593c3}
 #highlights .hx-radar-dot{fill:#8ab8ff;stroke:#0b0e14;stroke-width:1.5;cursor:pointer;transform-box:fill-box;transform-origin:center;transition:transform .2s ease,fill .2s ease}
 #highlights .hx-radar-dot:hover{transform:scale(1.45)}
+#highlights .hx-radar-dot:focus-visible{outline:2px solid #bed1ff;outline-offset:4px;stroke:#fff;stroke-width:3}
 #highlights .hx-radar-dot.is-selected{fill:#ffffff}
 #highlights .hx-radar-ripple{fill:none;stroke:#8ab8ff;stroke-width:2;transform-box:fill-box;transform-origin:center;pointer-events:none}
 /* The active profile expands outward from the center when it first appears. */
@@ -294,6 +301,8 @@
  #highlights .hx-evolution-return>span:last-child{font-size:9px}
 }
 @media(prefers-reduced-motion:reduce){
+ #highlights .hx-motion-toggle{display:none}
+ #highlights .has-motion-control>figcaption{grid-template-columns:minmax(0,1fr)}
  #highlights .hx-visual,#highlights .hx-visual *,#highlights .hx-visual *:before,#highlights .hx-visual *:after{animation:none!important;transition:none!important;scroll-behavior:auto!important}
  #highlights .hx-visual.hx-reveal-pending,#highlights .hx-visual.is-hx-revealed{opacity:1;transform:none}
  #highlights .hx-time-cursor{display:none}
@@ -301,6 +310,6 @@
 }
 @media print{
  #highlights .hx-visual{break-inside:avoid;background:#111;box-shadow:none;backdrop-filter:none;opacity:1!important;transform:none!important}
- #highlights .hx-controls{display:none!important}
+ #highlights .hx-controls,#highlights .hx-motion-toggle{display:none!important}
  #highlights .hx-wire-signal,#highlights .hx-time-cursor{display:none}
 }

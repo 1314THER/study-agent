@@ -104,9 +104,12 @@
   if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
   const link=event.target.closest?.('a[href^="#"]');if(link)revealAnchor(link.hash);
  },true);
- chapter.addEventListener('click',event=>{
+ // The floating skip link is outside the chapter, but keyboard readers still
+ // need focus to follow it to the destination heading.
+ document.addEventListener('click',event=>{
   if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey)return;
   const link=event.target.closest('a[href^="#"]');if(!link)return;
+  if(!chapter.contains(link)&&!link.hasAttribute('data-vision-skip'))return;
   const target=document.getElementById(link.hash.slice(1));if(!target)return;
   const heading=link.hasAttribute('data-vision-skip')?document.getElementById('heading-highlights'):target.querySelector('h2');
   if(heading)requestAnimationFrame(()=>heading.focus({preventScroll:true}));

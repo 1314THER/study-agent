@@ -1,5 +1,6 @@
 """National examples preserve production answers and label illustrative content."""
 import hashlib
+from datetime import datetime
 import json
 import math
 from pathlib import Path
@@ -21,7 +22,10 @@ class ShowcaseDataTests(unittest.TestCase):
         self.data = json.loads((ROOT/'frontend/showcase/data.json').read_text())
 
     def test_build_is_reproducible_without_opening_any_private_database(self):
-        with patch.object(sqlite3, 'connect', side_effect=AssertionError('Private DB access')):
+        snapshot_day = datetime.fromisoformat(self.data['progress']['as_of']).astimezone()
+        with patch.object(sqlite3, 'connect', side_effect=AssertionError('Private DB access')), \
+                patch('scripts.build_showcase_data.datetime') as clock:
+            clock.now.return_value = snapshot_day
             self.assertEqual(self.data, build())
 
     def test_both_examples_retain_exact_complete_production_answer(self):

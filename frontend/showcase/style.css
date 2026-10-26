@@ -1,4 +1,8 @@
 /* Scientific walkthrough. Shared production math/step components keep their semantics. */
+.research-showcase .math-erratum{margin:14px 0 18px;padding:14px 16px;border-left:3px solid #8ab8ff;background:rgb(138 184 255 / 6%);font-size:14px;color:#dce7f6;line-height:1.85}
+.research-showcase .math-erratum>strong{display:block;margin-bottom:6px;color:#f5f5f5}
+.research-showcase .math-erratum>p{margin:0}
+@media print{.research-showcase .math-erratum,.research-showcase .math-erratum>strong{background:transparent;color:#111;border-color:#555}}
 :root{color-scheme:dark;--ink:#f5f5f5;--muted:#b8b8b8;--blue:#5c8dff;--teal:#9db9ff;--line:#333333;--wash:#111111;--paper:#080808;--header:78px;--trail:0px}
 html{scroll-behavior:smooth;scroll-padding-top:calc(var(--header) + var(--trail) + 18px)}
 body.research-showcase{margin:0;background:var(--paper);color:var(--ink);font-family:-apple-system,BlinkMacSystemFont,'PingFang SC','Microsoft YaHei',sans-serif;font-size:16px;line-height:1.85}

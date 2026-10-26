@@ -59,7 +59,9 @@
       for(const chunk of result.chunk_results){
         const block=h.el('section','bank-chunk');block.append(h.el('h4','','第 '+chunk.chunk_id+' 问'));
         for(const step of chunk.steps){
-          const card=h.el('article','bank-step');card.append(h.el('h4','','步骤 '+step.step_number+'：'+step.title),h.p(step.standard_writing));
+          const card=h.el('article','bank-step');card.append(h.el('h4','','步骤 '+step.step_number+'：'+step.title));
+          const correction=h.mathErratum(step.standard_writing);if(correction)card.append(correction);
+          card.append(h.p(step.standard_writing));
           if(step.detailed_writing)card.append(h.details('详细过程',h.p(step.detailed_writing,'detail-content'),'step-detail'));
           block.append(card);
         }
@@ -107,11 +109,16 @@
     catch(error){$('library-list').replaceChildren(h.el('p','bank-empty',error.message),h.button('重试',show,'button'));}
   }
   function tab(name){
+    const tabs=[...document.querySelectorAll('[data-library-tab]')],selectedTab=tabs.find(button=>button.dataset.libraryTab===name);
+    if(!selectedTab)return;
     state.tab=name;
-    document.querySelectorAll('[data-library-tab]').forEach(button=>{const selected=button.dataset.libraryTab===name;button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;});
+    tabs.forEach(button=>{const selected=button===selectedTab;button.setAttribute('aria-selected',String(selected));button.tabIndex=selected?0:-1;});
     document.querySelectorAll('[data-library-panel]').forEach(panel=>panel.hidden=panel.dataset.libraryPanel!==name);
     $('bank-toolbar').hidden=name!=='library';$('bank-actions').hidden=name!=='library';
     $('library-layout').classList.toggle('is-library',name==='library');
+    $('library-layout').setAttribute('aria-labelledby',selectedTab.id);
+    // Actions such as building an exam can hide their own focused toolbar.
+    if(document.activeElement?.closest('[hidden]'))selectedTab.focus({preventScroll:true});
     if(name==='exam')return renderExam(state.teacher);
     if(name==='library'&&api.state.view==='library')return show();
   }
@@ -156,6 +163,18 @@
   }
   function init(showcase,helpers){
     api=showcase;h=helpers;api.state.bank=state;
+    const tabs=[...document.querySelectorAll('[data-library-tab]')],panel=$('library-layout');
+    panel.setAttribute('role','tabpanel');panel.tabIndex=0;
+    tabs.forEach((button,index)=>{
+      button.id='library-tab-'+button.dataset.libraryTab;button.setAttribute('aria-controls',panel.id);
+      button.onclick=()=>tab(button.dataset.libraryTab);
+      button.onkeydown=event=>{
+        if(!['ArrowLeft','ArrowRight','Home','End','Enter',' '].includes(event.key))return;
+        event.preventDefault();
+        const next=event.key==='Home'?0:event.key==='End'?tabs.length-1:event.key==='ArrowLeft'?(index+tabs.length-1)%tabs.length:event.key==='ArrowRight'?(index+1)%tabs.length:index;
+        tabs[next].focus();tab(tabs[next].dataset.libraryTab);
+      };
+    });
     let debounce;$('bank-search').oninput=()=>{clearTimeout(debounce);debounce=setTimeout(()=>{state.page=1;filter();},180);};
     for(const field of ['category','year','type','source'])$('bank-'+field).onchange=()=>{state.page=1;filter();};
     $('bank-prev').onclick=()=>{state.page--;render();};$('bank-next').onclick=()=>{state.page++;render();};
@@ -163,7 +182,13 @@
     $('bank-clear-selection').onclick=()=>{state.selected.clear();render();};
     $('bank-build-exam').onclick=()=>tab('exam');
     const calendar=$('calendar-content');calendar.replaceChildren();
-    for(const entry of api.state.data.library.calendar){const day=h.button('',()=>api.selectView(entry.view),'calendar-day');day.append(h.el('strong','',entry.date),h.el('span','',entry.title),h.el('small','',entry.method));calendar.append(day);}
+    const entries=api.state.data.library.calendar||[];
+    for(const entry of entries){const day=h.button('',()=>api.selectView(entry.view),'calendar-day');day.append(h.el('strong','',entry.date),h.el('span','',entry.title),h.el('small','',entry.method));calendar.append(day);}
+    if(!entries.length){
+      const empty=h.el('div','bank-empty');empty.dataset.calendarEmpty='';
+      empty.append(h.el('h3','','暂无复查任务'),h.p('此展示提供公开题目案例，尚未安排复查日期。可先浏览题库或预览组卷。'),h.button('查看公开题库',()=>{tab('library');$('bank-search').focus({preventScroll:true});},'button'));
+      calendar.append(empty);
+    }
     tab('library');
   }
   window.ShowcaseBank={init,show,tab,renderExam,openRoutine,reset,snapshot,restore,state};
