@@ -116,8 +116,8 @@ def vision_section(content):
     validate_vision(content)
     groups = content['groups']
     skip = '<a class="vision-skip" data-vision-skip href="#highlights">跳过愿景，查看项目亮点 <span aria-hidden="true">↗</span></a>'
-    out = ['<section class="topic-section vision-topic" id="vision" data-chapter="vision" aria-labelledby="heading-vision">',
-           '<header class="topic-heading vision-heading">' + skip +
+    out = [skip + '<section class="topic-section vision-topic" id="vision" data-chapter="vision" aria-labelledby="heading-vision">',
+           '<header class="topic-heading vision-heading">' +
            '<h1 id="heading-vision" tabindex="-1"><span class="vision-chapter-name">教学愿景</span>'
            + esc(content['headline']) + '</h1><p class="vision-lead">' + esc(content['subtitle'])
            + '</p><p class="vision-outlook">以下对照描述系统融入日常教学后希望带来的变化。各项支撑功能的现状见对应章节。</p></header>',

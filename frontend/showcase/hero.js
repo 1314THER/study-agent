@@ -94,14 +94,17 @@ if('ResizeObserver'in window){
 }else addEventListener('resize',layout,{passive:true});
 reduced.addEventListener('change',()=>{if(reduced.matches){sequence++;stop();finish();}});
 function completeEntry(){
- if(!resolveEntry)return;
+ // Cleanup must not depend on an open() promise: the inline bootstrap can open
+ // the dialog before this module runs, and a skipped cleanup would leave the
+ // page scroll-locked.
+ const resolve=resolveEntry;resolveEntry=null;entryPromise=null;
  document.body.classList.remove('is-launch-open','is-entering-site');
  dialog.classList.remove('is-leaving');leaving=false;
  const url=new URL(location.href);url.hash='vision';history.replaceState(history.state,'',url);
  document.getElementById('vision')?.scrollIntoView({behavior:'instant',block:'start'});
  document.getElementById('heading-vision')?.focus({preventScroll:true});
- const resolve=resolveEntry;resolveEntry=null;entryPromise=null;
- dispatchEvent(new CustomEvent('showcase:entered'));resolve();
+ dispatchEvent(new CustomEvent('showcase:entered'));
+ resolve?.();
 }
 function enter(event){
  if(!dialog.open)return;

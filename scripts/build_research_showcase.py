@@ -478,7 +478,7 @@ def build(content):
     sections = ''.join(vision_section(vision) if topic['id'] == 'vision' else highlights_section(content['highlights']) if topic['id'] == 'highlights' else topic_section(topic, index + 1, chapter_map) for index, topic in enumerate(TOPICS))
     perspective_controls = ''.join('<button type="button" role="tab" aria-selected="' + ('true' if key == 'teaching' else 'false') + '" data-perspective="' + key + '">' + esc(label) + '</button>' for key, label in PERSPECTIVES)
     return '''<!doctype html>
-<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="zh-CN"><head><style>html{background:#000}</style><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="description" content="StudyAgent：从学生、教师、学校到社会，探索针对性教学与普惠学习支持。通过全国卷案例了解步骤诊断、方法训练与长期陪伴。">
 <meta name="theme-color" content="#080808"><meta name="color-scheme" content="dark"><title>步骤级诊断与方法迁移训练系统 · StudyAgent</title>
 <link rel="icon" type="image/png" sizes="64x64" href="/showcase/assets/fudan-favicon-white.png">
