@@ -8,6 +8,11 @@ const mathInk=artwork.querySelector('.math-ink'),outline=mathInk.cloneNode(false
 outline.setAttribute('class','math-outline');outline.setAttribute('pathLength','1');
 outline.style.fill='none';outline.setAttribute('aria-hidden','true');mathInk.before(outline);
 const link=stage.querySelector('.hero-ink-link'),stroke=document.getElementById('hero-ink-path');
+// A pure-black guard sits between the red strokes and the CTA: anything that
+// reaches the button box is covered, so red never paints over the button.
+const guard=document.createElement('i');
+guard.className='hero-cta-guard';
+stage.append(guard);
 const reduced=matchMedia('(prefers-reduced-motion: reduce)');
 let sequence=0,animations=[],resizeFrame=0,resolveEntry=null,entryPromise=null,leaving=false,glass=null,streamCancel=null;
 let streaming=[];
@@ -24,14 +29,11 @@ function layout(){
  link.setAttribute('viewBox',`0 0 ${r.width} ${r.height}`);
  const reach=Math.max(1,endX-x),bend=Math.min(14,reach*.16);
  stroke.setAttribute('d',`M${x} ${y} C${x+reach*.34} ${y-bend} ${endX-reach*.28} ${endY+bend} ${endX} ${endY}`);
- // The red flourish must never run under the CTA: punch a hole exactly where
- // the button sits, so strokes vanish at the collision boundary while the
- // 数学 ink stays intact everywhere else.
- const art=artwork.getBoundingClientRect();
- const bx=b.left-art.left-6,by=b.top-art.top-6,bw=b.width+12,bh=b.height+12;
- if(bx<art.width&&by<art.height&&bx+bw>0&&by+bh>0){
-  artwork.style.clipPath=`path(evenodd, "M0 0H${art.width.toFixed(1)}V${art.height.toFixed(1)}H0Z M${bx.toFixed(1)} ${by.toFixed(1)}H${(bx+bw).toFixed(1)}V${(by+bh).toFixed(1)}H${bx.toFixed(1)}Z")`;
- }else artwork.style.clipPath='';
+ // The guard covers the button box plus a hair of breathing room.
+ guard.style.left=(b.left-r.left-8)+'px';
+ guard.style.top=(b.top-r.top-8)+'px';
+ guard.style.width=(b.width+16)+'px';
+ guard.style.height=(b.height+16)+'px';
 }
 function restoreCopy(){for(const row of streaming){row.node.replaceChildren(...row.original);row.node.classList.remove('is-streaming','is-stream-current');}streaming=[];}
 function stop(){streamCancel?.();streamCancel=null;restoreCopy();for(const animation of animations)animation.cancel();animations=[];}
@@ -135,6 +137,8 @@ cta.addEventListener('click',enter);
 dialog.addEventListener('cancel',enter);
 dialog.addEventListener('close',completeEntry);
 window.ShowcaseHero={open,enter,replay:play,layout};
+// Font loading can move the CTA; keep the guard aligned with it.
+document.fonts?.ready.then(()=>layout());
 // The welcome screen opens while the document is still parsing (inline
 // bootstrap); start its choreography right away instead of after data loads.
 if(dialog.open){
