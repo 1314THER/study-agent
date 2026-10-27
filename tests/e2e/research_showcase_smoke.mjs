@@ -110,9 +110,11 @@ try{
  assert(await page.locator('#vision-dialog').isVisible(),'An old aspect deep link must open its detail');
  await page.reload({waitUntil:'networkidle'});await ready(page);assert(await page.locator('#vision-dialog').isVisible());
  await page.locator('.vision-dialog-close').click();await page.waitForFunction(()=>!document.getElementById('vision-dialog').open);
+ assert.equal(await page.locator('.vision-outline,.vision-status-key').count(),0,'The redundant object navigation and progress note are removed');
  for(const branch of ['students','teachers','schools','society']){
-  await page.locator('.vision-outline a[href="#vision-'+branch+'"]').click();
-  await page.waitForFunction(id=>document.activeElement?.id==='vision-title-'+id,branch);
+  await page.goto(base+'/#vision-'+branch,{waitUntil:'networkidle'});await ready(page);
+  assert.equal(await page.evaluate(()=>location.hash),'#vision-'+branch,'Existing group anchors remain readable without the removed navigation');
+  assert(await page.locator('#vision-title-'+branch).isVisible());
   assert.equal(await page.locator('#topic-quick-jump').inputValue(),'vision');
  }
  await page.locator('.vision-skip').focus();await page.keyboard.press('Enter');
@@ -354,15 +356,15 @@ try{
  for(const width of [1440,1100,1099,980,768,390,320]){
   await page.setViewportSize({width,height:1000});await page.goto(base+'/#vision-students',{waitUntil:'networkidle'});await ready(page);await fit(page,'vision '+width);
   const layout=await page.locator('[data-vision-group]').evaluateAll(groups=>groups.map(g=>{
-   const buttons=[...g.querySelectorAll('.vision-card')],cards=buttons.map(n=>n.getBoundingClientRect()),viewport=g.querySelector('.vision-viewport').getBoundingClientRect(),heading=g.querySelector('.vision-group-heading').getBoundingClientRect();let collisions=0;
+   const buttons=[...g.querySelectorAll('.vision-card')],cards=buttons.map(n=>n.getBoundingClientRect()),viewport=g.querySelector('.vision-viewport').getBoundingClientRect(),header=g.querySelector('.vision-group-heading'),heading=header.getBoundingClientRect(),style=getComputedStyle(header);let collisions=0;
    const overlaps=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
    if(innerWidth>=1100){for(let i=0;i<cards.length;i++){if(overlaps(cards[i],heading))collisions++;for(let j=i+1;j<cards.length;j++)if(overlaps(cards[i],cards[j]))collisions++;}}
-   return {id:g.id,collisions,clipped:buttons.some(b=>b.scrollHeight>b.clientHeight+1||b.scrollWidth>b.clientWidth+1),centerDelta:Math.abs((cards[0].left+cards[0].right-viewport.left-viewport.right)/2),camera:!g.querySelector('.vision-camera-controls').hidden};
-  }));assert(layout.every(g=>g.collisions===0&&!g.clipped),'Galaxy nodes and center descriptions must fit: '+JSON.stringify({width,layout}));assert(layout.every(g=>g.camera===(width<1100)));if(width<1100)assert(layout.every(g=>g.centerDelta<2));
+   return {id:g.id,collisions,clipped:buttons.some(b=>b.scrollHeight>b.clientHeight+1||b.scrollWidth>b.clientWidth+1),centerDelta:Math.abs((cards[0].left+cards[0].right-viewport.left-viewport.right)/2),headingCenterDelta:Math.abs((heading.left+heading.right-viewport.left-viewport.right)/2),headingAbove:heading.bottom<=viewport.top+1,centered:[...header.querySelectorAll('h2,p')].every(n=>getComputedStyle(n).textAlign==='center'),ellipse:['borderTopLeftRadius','borderTopRightRadius','borderBottomLeftRadius','borderBottomRightRadius'].every(key=>style[key]==='50%')&&parseFloat(style.borderTopWidth)>0&&style.borderTopStyle!=='none',camera:!g.querySelector('.vision-camera-controls').hidden};
+  }));assert(layout.every(g=>g.collisions===0&&!g.clipped&&g.centered&&g.ellipse&&g.headingCenterDelta<2),'Galaxy nodes and centered oval descriptions must fit: '+JSON.stringify({width,layout}));assert(layout.every(g=>g.camera===(width<1100)));if(width<1100)assert(layout.every(g=>g.centerDelta<2&&g.headingAbove));
   await page.locator('#vision-students').screenshot({path:shots+'/vision-'+width+'.png'});
   await page.locator('#vision-change-students-1 .vision-card').click();await page.locator('#vision-dialog').screenshot({path:shots+'/vision-comparison-'+width+'.png'});await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.getElementById('vision-dialog').open);
  }
- await page.locator('.vision-outline a[href="#vision-teachers"]').click();
+ await page.goto(base+'/#vision-teachers',{waitUntil:'networkidle'});await ready(page);
  await page.evaluate(()=>{scrollBy({top:180,behavior:'instant'});Showcase.saveReading();});
  const visionReading=await page.evaluate(()=>({y:scrollY,hash:location.hash}));
  await page.reload({waitUntil:'networkidle'});await ready(page);

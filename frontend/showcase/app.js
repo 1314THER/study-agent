@@ -61,7 +61,7 @@ function saveReading(){
  if(!uiReady||!entered||document.body.classList.contains('is-launch-open'))return;
  const chapter=readingChapter();
  document.body.dataset.currentTopic=chapter?.id||'vision';
- const record={version:2,visionLayout:3,entered:true,path:location.pathname,hash:location.hash,position:{topic:chapter?.id||'vision',offset:chapter?-(window.ShowcaseTransitions?.measureTopic(chapter)?.top??chapter.getBoundingClientRect().top):0,y:scrollY},choices:{perspective:state.perspective,teacher:state.teacher,example:state.example,mode:state.mode,caseIndex:state.caseIndex,condition:state.condition,sceneTabs:state.sceneTabs,teachingIndex:state.teachingIndex,geometryStage:state.geometryStage,timestampEvent:state.timestampEvent,routineHidden:state.routineHidden,completeMode:state.completeMode},bank:window.ShowcaseBank?.snapshot?.()};
+ const record={version:2,visionLayout:4,entered:true,path:location.pathname,hash:location.hash,position:{topic:chapter?.id||'vision',offset:chapter?-(window.ShowcaseTransitions?.measureTopic(chapter)?.top??chapter.getBoundingClientRect().top):0,y:scrollY},choices:{perspective:state.perspective,teacher:state.teacher,example:state.example,mode:state.mode,caseIndex:state.caseIndex,condition:state.condition,sceneTabs:state.sceneTabs,teachingIndex:state.teachingIndex,geometryStage:state.geometryStage,timestampEvent:state.timestampEvent,routineHidden:state.routineHidden,completeMode:state.completeMode},bank:window.ShowcaseBank?.snapshot?.()};
  try{sessionStorage.setItem(readingKey,JSON.stringify(record));}catch{}
 }
 function scheduleReadingSave(){clearTimeout(saveTimer);if(uiReady)saveTimer=setTimeout(saveReading,160);}
@@ -71,7 +71,7 @@ async function restoreReadingPosition(){
  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
  if(resumeReading&&initialHash===location.hash){
   const position=savedReading.position||{},savedTopic=position.topic||aliases[position.chapter]||position.chapter,chapter=typeof savedTopic==='string'?$(savedTopic):null;
-  if(savedTopic==='vision'&&savedReading.visionLayout!==3){(window.ShowcaseVision?.resolveAnchor(initialHash)||$(initialHash.slice(1))||$('vision'))?.scrollIntoView({behavior:'instant',block:'start'});}
+  if(savedTopic==='vision'&&savedReading.visionLayout!==4){(window.ShowcaseVision?.resolveAnchor(initialHash)||$(initialHash.slice(1))||$('vision'))?.scrollIntoView({behavior:'instant',block:'start'});}
   else{
   const top=chapter?.matches('[data-chapter]')&&Number.isFinite(position.offset)?(window.ShowcaseTransitions?.measureTopic(chapter)?.top??chapter.getBoundingClientRect().top)+scrollY+position.offset:Number.isFinite(position.y)?position.y:0;
   scrollTo({top:Math.max(0,Math.min(top,document.documentElement.scrollHeight-innerHeight)),behavior:'instant'});

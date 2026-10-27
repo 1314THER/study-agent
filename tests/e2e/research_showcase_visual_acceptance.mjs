@@ -29,6 +29,7 @@ try{
  assert(await page.evaluate(()=>{const n=document.activeElement,s=getComputedStyle(n);return n.matches('a,button,input')&&s.outlineStyle!=='none'&&parseFloat(s.outlineWidth)>0;}),'Keyboard controls still need a visible focus ring');
  await page.locator('#explore-start').click();
  assert.equal(await page.locator('.relation-focus').count(),0);
+ assert.equal(await page.locator('.vision-outline,.vision-status-key').count(),0,'Redundant vision navigation and progress note are removed');
  const summaries=new Map(content.chapters.flatMap(chapter=>(chapter.research||[]).map(row=>[row.title,row.short_summary])));
  const researchButtons=await page.locator('.research-notes-trigger').evaluateAll(nodes=>nodes.map(n=>({title:n.querySelector('strong').textContent,summary:n.querySelector('span').textContent})));
  assert.equal(researchButtons.length,18);for(const row of researchButtons){assert(summaries.get(row.title),'Each study needs an editorial summary: '+row.title);assert.equal(row.summary,summaries.get(row.title),'Research summaries must remain complete');assert(!row.summary.endsWith('…'));}
@@ -51,10 +52,10 @@ try{
   await page.setViewportSize({width,height:1000});await page.goto(base+'/#vision-students',{waitUntil:'networkidle'});await ready(page);
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'Page overflow at '+width);
   const layout=await page.locator('[data-vision-group]').evaluateAll(groups=>groups.map(g=>{
-   const cards=[...g.querySelectorAll('.vision-card')],rects=cards.map(n=>n.getBoundingClientRect()),center=g.querySelector('header').getBoundingClientRect(),v=g.querySelector('.vision-viewport').getBoundingClientRect();
+   const cards=[...g.querySelectorAll('.vision-card')],rects=cards.map(n=>n.getBoundingClientRect()),header=g.querySelector('.vision-group-heading'),center=header.getBoundingClientRect(),style=getComputedStyle(header),v=g.querySelector('.vision-viewport').getBoundingClientRect();
    const overlaps=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
-   return {id:g.id,camera:!g.querySelector('.vision-camera-controls').hidden,collides:innerWidth>=1100&&rects.some((r,i)=>overlaps(r,center)||rects.slice(i+1).some(s=>overlaps(r,s))),clips:cards.some(n=>n.scrollWidth>n.clientWidth+1||n.scrollHeight>n.clientHeight+1),centerDelta:Math.abs((rects[0].left+rects[0].right-v.left-v.right)/2),height:rects[0].height};
-  }));assert(layout.every(g=>!g.collides&&!g.clips&&g.camera===(width<1100)&&Math.abs(g.height-88)<1&&(width>=1100||g.centerDelta<2)),JSON.stringify({width,layout}));
+   return {id:g.id,camera:!g.querySelector('.vision-camera-controls').hidden,collides:innerWidth>=1100&&rects.some((r,i)=>overlaps(r,center)||rects.slice(i+1).some(s=>overlaps(r,s))),clips:cards.some(n=>n.scrollWidth>n.clientWidth+1||n.scrollHeight>n.clientHeight+1),centerDelta:Math.abs((rects[0].left+rects[0].right-v.left-v.right)/2),headingCenterDelta:Math.abs((center.left+center.right-v.left-v.right)/2),headingAbove:center.bottom<=v.top+1,centered:[...header.querySelectorAll('h2,p')].every(n=>getComputedStyle(n).textAlign==='center'),ellipse:['borderTopLeftRadius','borderTopRightRadius','borderBottomLeftRadius','borderBottomRightRadius'].every(key=>style[key]==='50%')&&parseFloat(style.borderTopWidth)>0&&style.borderTopStyle!=='none',height:rects[0].height};
+  }));assert(layout.every(g=>!g.collides&&!g.clips&&g.centered&&g.ellipse&&g.headingCenterDelta<2&&g.camera===(width<1100)&&Math.abs(g.height-88)<1&&(width>=1100||g.centerDelta<2&&g.headingAbove)),JSON.stringify({width,layout}));
   await capture(page,'galaxy-'+width,page.locator('#vision-students'));
  }
  // Sample actual computed light positions/colors, then confirm that time advances on its own.

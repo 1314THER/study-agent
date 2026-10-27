@@ -118,10 +118,7 @@ def vision_section(content):
            '<header class="topic-heading vision-heading"><h1 id="heading-vision" tabindex="-1"><span class="vision-chapter-name">教学愿景</span>'
            + esc(content['headline']) + '</h1><p class="vision-lead">' + esc(content['subtitle'])
            + '</p><p class="vision-outlook">以下展示融入日常教学后的目标形态。点击一块愿景，查看现状、完整设想与支撑功能。</p></header>'
-           '<nav class="vision-outline" aria-label="愿景章内导航"><div class="vision-outline-links">']
-    for group in content['groups']:
-        out.append('<a href="#vision-' + group['id'] + '" data-vision-nav="' + group['id'] + '">' + esc(group['title']) + '</a>')
-    out.append('</div></nav><p class="vision-status-key">功能进度：已有基础 · 设计方案 · 研究方向；各项现状见详情。</p><div class="vision-comparisons">')
+           '<div class="vision-comparisons">']
     for group in content['groups']:
         out.append('<section class="vision-group" id="vision-' + group['id'] + '" data-vision-group="' + group['id']
                    + '" aria-labelledby="vision-title-' + group['id'] + '"><header class="vision-group-heading"><h2 id="vision-title-'

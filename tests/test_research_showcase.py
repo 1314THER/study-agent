@@ -261,6 +261,8 @@ class ResearchShowcaseBuildTests(unittest.TestCase):
         self.assertEqual(page.count('class="vision-card"'), 63)
         self.assertEqual(page.count('class="vision-fallback"'), 63)
         self.assertNotIn('vision-disclosure', page)
+        self.assertNotIn('class="vision-outline"', page)
+        self.assertNotIn('class="vision-status-key"', page)
         self.assertIn('id="vision-dialog"', page)
         self.assertIn('aria-labelledby="vision-dialog-title"', page)
         for group in self.vision['groups']:
