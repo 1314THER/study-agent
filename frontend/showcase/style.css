@@ -310,3 +310,12 @@ details>summary{cursor:pointer;padding:10px 0;list-style-position:outside;margin
 
 @media(prefers-reduced-motion:reduce){.research-showcase .technical-summary{transition:none}}
 .site-footer .site-registration{margin:8px 0 0;font-size:11px}.site-registration a{color:var(--muted)}
+
+@media(max-width:640px){
+ .research-showcase .site-header{gap:8px;padding-inline:12px}
+ .research-showcase .research-brand{flex:1 1 0;min-width:0;overflow:hidden}
+ .research-showcase .research-brand>span{display:block;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .research-showcase .research-brand small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ .research-showcase .topic-quick-jump{flex:0 1 auto;min-width:0}
+ .research-showcase .topic-quick-jump select{width:clamp(92px,31vw,126px);max-width:36vw}
+}

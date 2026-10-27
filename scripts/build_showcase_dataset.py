@@ -168,8 +168,10 @@ def render(data: dict[str, Any]) -> str:
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#080808">
 <title>数据集详细统计 · StudyAgent</title>
-<link rel="icon" type="image/png" sizes="64x64" href="/showcase/assets/fudan-favicon-white.png">
-<link rel="apple-touch-icon" href="/showcase/assets/fudan-emblem-white.png">
+<link rel="icon" type="image/svg+xml" href="/showcase/assets/fudan-emblem-mono.svg">
+<link rel="icon" type="image/png" sizes="64x64" href="/showcase/assets/fudan-favicon.png">
+<link rel="shortcut icon" type="image/x-icon" href="/favicon.ico">
+<link rel="apple-touch-icon" sizes="180x180" href="/showcase/assets/fudan-favicon-180.png">
 <link rel="stylesheet" href="/showcase/dataset.css">
 </head>
 <body class="dataset-page">
