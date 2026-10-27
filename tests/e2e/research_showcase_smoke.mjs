@@ -99,7 +99,7 @@ try{
  assert.equal(await page.locator('.vision-chapter-name').innerText(),'教学愿景');
  for(const group of vision.groups)for(let index=0;index<group.rows.length;index++){
   const source=group.rows[index],card=page.locator('#vision-change-'+group.id+'-'+(index+1)+' .vision-card');
-  assert.equal(await card.innerText(),source.short_vision);await card.scrollIntoViewIfNeeded();await card.evaluate(n=>n.addEventListener('click',()=>{window.__visionOpeningY=scrollY;},{once:true,capture:true}));await card.click();const originY=await page.evaluate(()=>window.__visionOpeningY);
+  const cardText=await card.innerText();assert(cardText.includes(source.aspect)&&cardText.includes(source.short_vision),'A galaxy node needs both its aspect and summary');await card.scrollIntoViewIfNeeded();await card.evaluate(n=>n.addEventListener('click',()=>{window.__visionOpeningY=scrollY;},{once:true,capture:true}));await card.click();const originY=await page.evaluate(()=>window.__visionOpeningY);
   assert(await page.locator('#vision-dialog').isVisible());
   const text=await page.locator('.vision-dialog-body').innerText();assert(text.includes(source.before)&&text.includes(source.after));
   for(const feature of source.features)assert.equal(await page.locator('.vision-dialog-body a[href="'+feature.target+'"]').filter({hasText:feature.label}).count(),1);
@@ -253,7 +253,7 @@ try{
  await page.locator('#single').scrollIntoViewIfNeeded();await page.screenshot({path:shots+'/desktop-solution.png'});
  await page.locator('#single .step').first().click();
  assert(await page.locator('#single .technical-summary').evaluate(n=>n.classList.contains('is-relation-target')),'Selecting a step should identify its actual technical target');
- assert((await page.locator('#single .relation-focus').innerText()).includes('三阶段解析与步骤对齐'));
+ assert.equal(await page.locator('.relation-focus').count(),0,'Content linking must not create a floating technical banner');
  const explanation=page.locator('#scene-single .step .annotation-button').first();await explanation.click();
  assert(await page.locator('#annotation-panel').isVisible());
  assert((await page.locator('#annotation-body').innerText()).length>50,'Detailed solution did not open in the side panel');
@@ -351,13 +351,14 @@ try{
  assert.equal(await page.locator('.site-registration a').innerText(),'渝ICP备2026024246号-1');assert.equal(await page.locator('.site-registration a').getAttribute('href'),'https://beian.miit.gov.cn/');
  await checkAudits(context);
 
- for(const width of [1440,980,768,390,320]){
+ for(const width of [1440,1100,1099,980,768,390,320]){
   await page.setViewportSize({width,height:1000});await page.goto(base+'/#vision-students',{waitUntil:'networkidle'});await ready(page);await fit(page,'vision '+width);
   const layout=await page.locator('[data-vision-group]').evaluateAll(groups=>groups.map(g=>{
-   const cards=[...g.querySelectorAll('.vision-card')].map(n=>n.getBoundingClientRect()),viewport=g.querySelector('.vision-viewport').getBoundingClientRect();let collisions=0;
-   if(innerWidth>=720)for(let i=0;i<cards.length;i++)for(let j=i+1;j<cards.length;j++){const a=cards[i],b=cards[j];if(a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top)collisions++;}
-   return {collisions,centerDelta:Math.abs((cards[0].left+cards[0].right-viewport.left-viewport.right)/2)};
-  }));assert(layout.every(g=>g.collisions===0));if(width<720)assert(layout.every(g=>g.centerDelta<2));
+   const buttons=[...g.querySelectorAll('.vision-card')],cards=buttons.map(n=>n.getBoundingClientRect()),viewport=g.querySelector('.vision-viewport').getBoundingClientRect(),heading=g.querySelector('.vision-group-heading').getBoundingClientRect();let collisions=0;
+   const overlaps=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
+   if(innerWidth>=1100){for(let i=0;i<cards.length;i++){if(overlaps(cards[i],heading))collisions++;for(let j=i+1;j<cards.length;j++)if(overlaps(cards[i],cards[j]))collisions++;}}
+   return {id:g.id,collisions,clipped:buttons.some(b=>b.scrollHeight>b.clientHeight+1||b.scrollWidth>b.clientWidth+1),centerDelta:Math.abs((cards[0].left+cards[0].right-viewport.left-viewport.right)/2),camera:!g.querySelector('.vision-camera-controls').hidden};
+  }));assert(layout.every(g=>g.collisions===0&&!g.clipped),'Galaxy nodes and center descriptions must fit: '+JSON.stringify({width,layout}));assert(layout.every(g=>g.camera===(width<1100)));if(width<1100)assert(layout.every(g=>g.centerDelta<2));
   await page.locator('#vision-students').screenshot({path:shots+'/vision-'+width+'.png'});
   await page.locator('#vision-change-students-1 .vision-card').click();await page.locator('#vision-dialog').screenshot({path:shots+'/vision-comparison-'+width+'.png'});await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.getElementById('vision-dialog').open);
  }
@@ -570,7 +571,7 @@ try{
  assert.equal(await animated.locator('.chapter-transit-overlay').count(),0,'Topic navigation should use natural scrolling without a blocking overlay');
  await checkAudits(motion);await motion.close();
  const recorded=records.cases.reduce((n,c)=>n+['basic','same_information','system'].filter(k=>c[k]?.status==='recorded').length,0);
- console.log(JSON.stringify({ok:true,mode:allowExcludedIcon404?'diagnostic_excluding_icons':'strict',excludedIcon404:[...excludedIcon404.values()],topics:12,contentUnits:13,highlights:7,nationalQuestions:2,savedPipelineRuns:8,diagnosticInputs:6,recordedResponses:recorded,conditions:2,viewports:[1440,980,768,390,320],resizableLanes:true,allTopicHandoffs:true,noJavaScript:true,visionGalaxies:true,visionDialogs:63,mobileCamera:true,wholePanel3D:true,network:'same-origin GET only, no cookies',screenshots:shots}));
+ console.log(JSON.stringify({ok:true,mode:allowExcludedIcon404?'diagnostic_excluding_icons':'strict',excludedIcon404:[...excludedIcon404.values()],topics:12,contentUnits:13,highlights:7,nationalQuestions:2,savedPipelineRuns:8,diagnosticInputs:6,recordedResponses:recorded,conditions:2,viewports:[1440,1100,1099,980,768,390,320],resizableLanes:true,allTopicHandoffs:true,noJavaScript:true,visionGalaxies:true,visionDialogs:63,mobileCamera:true,wholePanel3D:true,network:'same-origin GET only, no cookies',screenshots:shots}));
 }catch(error){
  if(lastPage&&!lastPage.isClosed()){
   await lastPage.screenshot({path:shots+'/failure.png'}).catch(()=>{});

@@ -336,7 +336,7 @@
     },
     {
       "id": "exam",
-      "title": "评价卷子，也分析学生怎样完成它",
+      "title": "评价试卷是否合适，复盘学生怎样作答",
       "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
       "sources": [
         {
@@ -705,7 +705,7 @@
     },
     {
       "id": "evolution",
-      "title": "让反馈成为经过验证的下一版本",
+      "title": "从反馈和新题中改进，经验证后更新",
       "design_basis": "章节设计前完整读取对应原文，再核对实现与研究材料；正文为解释性改写，不替代原文。",
       "sources": [
         {
@@ -790,7 +790,7 @@
       ]
     }
   ],
-  "editorial_revision": "亮点七块动态图解、覆盖十功能的分层结构总图、自然直连开屏按钮、浅红痛点与二级步骤称谓；统计口径及真实录制输出保持原状。",
+  "editorial_revision": "2026-10-27：愿景节点补充方面标题、对象中心描述与红蓝流动光效；1100px以下采用镜头巡游；单栏研究列表按600px容器切换两列；保留阅读框、清除冗余线及悬浮提示；考试与自进化按设计文档澄清，其他文案仅列审阅清单。",
   "vision": {
     "id": "vision",
     "title": "教学愿景",
@@ -878,14 +878,14 @@
       "schools": 17,
       "society": 8
     },
-    "checked_at": "2026-10-26",
+    "checked_at": "2026-10-27",
     "public_sources": [
       "https://www.moe.gov.cn/jyb_xxgk/moe_1777/moe_1778/202107/t20210724_546576.html?type=2",
       "https://hudong.moe.gov.cn/srcsite/A01/s7048/202504/t20250416_1187476.html",
       "https://www.gov.cn/zhengce/202501/content_6999913.htm",
       "https://docs.bigmodel.cn/cn/guide/start/pricing"
     ],
-    "presentation": "四个单列椭圆星系展示63条简短愿景；单方面弹窗对照现状与愿景，手机镜头沿轨道巡游；无JS原生详情可读。"
+    "presentation": "四个单列椭圆星系展示63个方面标题与简短愿景；中心保留对象说明；单方面原生弹窗对照现状与愿景并呈现红到蓝移动光束；1100px以下镜头沿轨道巡游；无JS原生详情可读。"
   },
   "research_review": {
     "checked_at": "2026-10-26",

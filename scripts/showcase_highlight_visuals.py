@@ -50,7 +50,7 @@ def system_visual():
     ])
     openness = ''.join([
         card('agent', 'MCP 与 Agent', '角色沟通 · 记忆 · 工具调度<br>DSH · WorkBuddy', 'ai'),
-        card('evolution', '自进化', '教师反馈 · 人工维护 · 新题与教材<br>知识库与模型改进 · 跨学科扩展', 'archive'),
+        card('evolution', '自进化', '教师反馈 · 人工维护 · 联网找题与教材更新<br>知识库与模型改进 · 跨学科扩展', 'archive'),
     ])
     return _clean('''<figure class="hx-visual hx-system-visual highlight-system-map project-architecture" id="scene-overview" data-hx-motion="system">
       <figcaption><strong>十个功能，共用一套教学逻辑</strong><span>表示连接功能，学习形成证据，证据改变教学，新的反馈再回到系统。</span></figcaption>
@@ -148,8 +148,8 @@ def evolution_visual():
         <figure class="hx-visual hx-evolution-visual" data-hx-motion="evolution" data-hx-stage="0">
           <figcaption><strong>能力向外连接，经验向内积累</strong><span>经过审核与评测的改进，才能回到教学</span></figcaption>
           <div class="hx-open-tools"><div><strong>不同助教与教师工具</strong><span>通过开放工具接口调用</span></div><span class="hx-interface-link" aria-hidden="true">⇄</span><div><strong>共同的教育能力</strong><span>解题 · 批改 · 出题 · 学情</span></div></div>
-          <div class="hx-evolution-input"><span>新试题</span><span>教材变化</span><span>教师纠错</span><span>后续学习结果</span></div>
-          <div class="hx-evolution-flow"><span class="hx-flow-intro">形成候选</span><span aria-hidden="true">↓</span><ol><li><span class="hx-cycle-symbol" aria-hidden="true">⤓</span><strong>AI 辅助整理校验</strong><small>核对结构与来源</small></li><li><span class="hx-cycle-symbol" aria-hidden="true">✓</span><strong>教师审核</strong><small>校准教学与评分依据</small></li><li><span class="hx-cycle-symbol" aria-hidden="true">⌁</span><strong>离线评测</strong><small>确认改进及影响范围</small></li><li><span class="hx-cycle-symbol" aria-hidden="true">↗</span><strong>发布与教学再验证</strong><small>让新经验服务更多场景</small></li></ol><div class="hx-evolution-return"><span aria-hidden="true">↺</span><strong>知识库 · 规则 · 模型</strong><span>教学产生新反馈，继续进入下一轮。</span></div></div>
+          <div class="hx-evolution-input"><span>联网采集新题</span><span>教材变化</span><span>教师纠错</span><span>后续学习结果</span></div>
+          <div class="hx-evolution-flow"><span class="hx-flow-intro">整理待审核的新题、内容与规则修改</span><span aria-hidden="true">↓</span><ol><li><span class="hx-cycle-symbol" aria-hidden="true">⤓</span><strong>核对来源与解析</strong><small>去重并对应知识与方法目录</small></li><li><span class="hx-cycle-symbol" aria-hidden="true">✓</span><strong>教师审核</strong><small>校准教学与评分依据</small></li><li><span class="hx-cycle-symbol" aria-hidden="true">⌁</span><strong>独立测试</strong><small>比较改进与原有能力</small></li><li><span class="hx-cycle-symbol" aria-hidden="true">↗</span><strong>审核发布与跟踪</strong><small>检查后续学习是否改善</small></li></ol><div class="hx-evolution-return"><span aria-hidden="true">↺</span><strong>知识库 · 规则 · 模型</strong><span>教学产生新反馈，继续进入下一轮。</span></div></div>
         </figure>
     ''')
 

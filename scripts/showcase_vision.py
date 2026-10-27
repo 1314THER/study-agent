@@ -5,6 +5,12 @@ import html
 
 
 GROUP_COUNTS = {'students': 21, 'teachers': 17, 'schools': 17, 'society': 8}
+GROUP_DESCRIPTIONS = {
+    'students': '根据每次作答调整讲解、练习和复习，逐渐学会安排自己的学习。',
+    'teachers': '从学生的具体困难出发安排教学，用后续表现检验调整是否有效。',
+    'schools': '把学情、教学行动和学习变化联系起来，支持持续教研与资源安排。',
+    'society': '让必要的学习帮助更容易获得，减少家庭寻找额外补习的负担。',
+}
 FEATURE_TARGETS = {'#terms', '#single', '#time', '#library', '#exam', '#longterm',
                    '#teacher', '#school', '#agent', '#evolution', '#highlights'}
 FEATURE_STATES = {'已有基础', '设计方案', '研究方向'}
@@ -52,14 +58,16 @@ def comparison_chain(group):
         out.append('<article class="vision-change" id="' + key + '" data-aspect="' + esc(row['aspect']) + '">'
                    '<button class="vision-card" type="button" hidden aria-haspopup="dialog" aria-controls="vision-dialog" '
                    'aria-label="' + esc(group['title'] + '：' + row['aspect'] + '，' + row['short_vision'] + '，查看现状与愿景') + '">'
-                   + esc(row['short_vision']) + '</button><details class="vision-fallback"><summary>'
+                   + '<strong class="vision-card-title">' + esc(row['aspect']) + '</strong>'
+                   '<span class="vision-card-summary">' + esc(row['short_vision']) + '</span></button><details class="vision-fallback"><summary>'
                    + esc(row['aspect']) + ' · ' + esc(row['short_vision']) + '</summary>'
                    '<div class="vision-detail"><div class="vision-change-flow"><div class="vision-change-before">'
                    '<span class="vision-stage-label">现状</span><p>' + esc(row['before']) + '</p></div>'
-                   '<div class="vision-change-connector" aria-hidden="true"><svg viewBox="0 0 100 40">'
+                   '<div class="vision-change-connector" aria-hidden="true"><span class="vision-arrow-track"><svg viewBox="0 0 100 40">'
                    '<defs><linearGradient id="gradient-' + key + '"><stop stop-color="#FF7B86"/>'
                    '<stop offset="1" stop-color="#8AB8FF"/></linearGradient></defs>'
-                   '<path d="M4 20H92m-12-12 12 12-12 12" stroke="url(#gradient-' + key + ')"/></svg></div>'
+                   '<path d="M4 20H92m-12-12 12 12-12 12" stroke="url(#gradient-' + key + ')"/></svg>'
+                   '<i class="vision-transition-beam"><i class="vision-beam-red"></i><i class="vision-beam-blue"></i></i></span></div>'
                    '<div class="vision-change-result"><span class="vision-stage-label">愿景</span><p>'
                    + esc(row['after']) + '</p></div></div><div class="vision-features"><span>接续功能</span><ul>'
                    + ''.join(feature_link(feature) for feature in row['features']) + '</ul></div></div></details></article>')
@@ -117,7 +125,7 @@ def vision_section(content):
     for group in content['groups']:
         out.append('<section class="vision-group" id="vision-' + group['id'] + '" data-vision-group="' + group['id']
                    + '" aria-labelledby="vision-title-' + group['id'] + '"><header class="vision-group-heading"><h2 id="vision-title-'
-                   + group['id'] + '" tabindex="-1">' + esc(group['title']) + '</h2><p>' + esc(group['tagline']) + '</p></header>'
+                   + group['id'] + '" tabindex="-1">' + esc(group['title']) + '</h2><p>' + esc(GROUP_DESCRIPTIONS[group['id']]) + '</p></header>'
                    + comparison_chain(group) + '</section>')
     out.append('</div><dialog id="vision-dialog" class="vision-dialog" aria-labelledby="vision-dialog-title"><header class="vision-dialog-head">'
                '<h2 id="vision-dialog-title"></h2><button type="button" class="vision-dialog-close" aria-label="关闭愿景详情">关闭</button></header>'

@@ -247,7 +247,6 @@ details>summary{cursor:pointer;padding:10px 0;list-style-position:outside;margin
 .research-showcase .timestamp-sheet text.is-correction{fill:var(--accent)}
 
 /* These short, paired arrows connect actual teaching input to its processing and returned action. */
-.research-showcase .relation-focus{margin:0 0 15px;padding:10px 12px;background:#131e2e;border-left:2px solid var(--accent);font-size:12px;line-height:1.7;color:var(--ink);font-weight:600}
 .research-showcase .technical-summary.is-relation-target{background:#111a27;padding-block:9px;padding-right:10px}
 @media(min-width:821px){
  .research-showcase{--perspective-bar:0px}
@@ -302,11 +301,10 @@ details>summary{cursor:pointer;padding:10px 0;list-style-position:outside;margin
  .lane-divider-control{position:absolute;inset:0;z-index:1;cursor:col-resize;touch-action:none;outline:0;background:transparent;border:0}
  .lane-divider-control:focus-visible{outline:1px solid var(--accent);outline-offset:-16px}
  .research-showcase .perspective-cell[data-perspective-cell="technical"] .cell-content{height:100%}
- .research-showcase .relation-focus{position:sticky;top:calc(var(--header) + 52px);z-index:9;background:#15243a;box-shadow:0 5px 12px #0005}
  .is-resizing-lanes,.is-resizing-lanes *{cursor:col-resize!important;user-select:none!important}
 }
 @media(max-width:820px){.lane-divider,.splitter-introduction{display:none!important}.research-showcase .perspective-headings{display:none!important}}
-@media print{.lane-divider,.splitter-introduction{display:none!important}.research-showcase .relation-focus{position:static}.research-showcase .topic-unit-grid:not(.topic-unit-shared){grid-template-columns:1fr 1fr;column-gap:20px}.research-showcase .topic-unit-grid:not(.topic-unit-shared)>.perspective-cell{grid-column:auto}}
+@media print{.lane-divider,.splitter-introduction{display:none!important}.research-showcase .topic-unit-grid:not(.topic-unit-shared){grid-template-columns:1fr 1fr;column-gap:20px}.research-showcase .topic-unit-grid:not(.topic-unit-shared)>.perspective-cell{grid-column:auto}}
 
 @media(prefers-reduced-motion:reduce){.research-showcase .technical-summary{transition:none}}
 .site-footer .site-registration{margin:8px 0 0;font-size:11px}.site-registration a{color:var(--muted)}

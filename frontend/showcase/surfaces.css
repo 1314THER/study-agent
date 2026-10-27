@@ -119,7 +119,6 @@
 
 .research-showcase .topic-unit-grid:not(.topic-unit-shared) {
   border: 0;
-  border-block: 1px solid rgb(255 255 255 / 9%);
   border-radius: 0;
   background: none;
 }
@@ -128,18 +127,13 @@
   background: none;
 }
 
-.research-showcase .topic-unit-grid:not(.topic-unit-shared) > .perspective-cell[data-current="true"] {
-  box-shadow: inset 0 2px rgb(92 141 255 / 45%);
-}
-
 .research-showcase .topic-unit.is-linked .topic-unit-grid {
-  border-block-color: rgb(115 160 255 / 42%);
-  box-shadow: inset 0 0 0 1px rgb(92 141 255 / 16%);
+  box-shadow: none;
 }
 
 .research-showcase .topic-unit.is-linked .perspective-cell {
   background: rgb(255 255 255 / 2.5%);
-  box-shadow: inset 0 2px rgb(92 141 255 / 55%);
+  box-shadow: none;
 }
 
 .research-showcase .chapter-scene .native-workbench,
@@ -240,7 +234,7 @@
 /* Merged units read top-down: teaching first, then the technical lane. */
 .research-showcase .topic-unit-grid.is-single{display:block!important;grid-template-columns:none!important;column-gap:0!important;row-gap:0;border:0;background:none}
 .research-showcase .topic-unit-grid.is-single>.perspective-cell{border:0;padding:0;background:none}
-.research-showcase .topic-unit-grid.is-single>.unit-lane{margin-top:30px;padding-top:26px;border-top:1px solid rgb(255 255 255 / 9%)}
+.research-showcase .topic-unit-grid.is-single>.unit-lane{margin-top:30px;padding-top:26px}
 .unit-tech-points h4{font-size:12px;font-weight:600;letter-spacing:.05em;color:#9db9ff;margin:16px 0 6px}
 .unit-tech-points h4:first-child{margin-top:0}
 .unit-tech-points ul{margin:0 0 4px;padding-left:18px;color:#c9d1dd;font-size:13px;line-height:1.95}
@@ -317,6 +311,16 @@
 .research-showcase .research-notes-trigger strong{font-size:14px}
 .research-showcase .research-notes-trigger span{font-size:12.5px}
 
+/* The seven merged units have room for paired studies; narrow technical lanes
+   keep their existing single column. The query uses the reading area's width. */
+.research-showcase .topic-unit.is-merged .research-notes{container:merged-research / inline-size}
+.research-showcase .topic-unit.is-merged .research-list{max-width:none}
+.research-showcase .topic-unit.is-merged .research-notes-trigger{max-width:none}
+.research-showcase .topic-unit.is-merged .research-list>.research-notes-trigger:only-child{grid-column:1 / -1}
+@container merged-research (min-width:600px){
+  .research-showcase .topic-unit.is-merged .research-list{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px 16px}
+}
+
 /* A short stream follows a static route; it never grows into a progress bar. */
 .research-showcase .flow-strip.flow-stream{position:relative;display:grid;grid-template-columns:repeat(var(--flow-columns,7),minmax(0,1fr));gap:22px 0;margin:18px 0 0;padding:0 0 22px;overflow:hidden;isolation:isolate}
 .research-showcase .flow-stream:before,.research-showcase .flow-stream button:after,.research-showcase .flow-stream button:before{display:none!important}
@@ -331,6 +335,12 @@
 .research-showcase .flow-stream button.active,.research-showcase .flow-stream button:hover{color:#fff;background:none;border:0}
 .chapter-transition-closing{animation-play-state:paused!important}.chapter-transition-closing.motion-running{animation-play-state:running!important}
 body.showcase-motion-suspended *{animation-play-state:paused!important}
+/* A modal suspends the obscured page, while its own transition remains active.
+   Reduced-motion and hidden-page states still stop the dialog via data-motion. */
+@media(prefers-reduced-motion:no-preference){
+ body.showcase-motion-suspended .vision-dialog[open][data-motion=running] :is(.vision-transition-beam,.vision-transition-beam>i),
+ body.showcase-motion-suspended .vision-dialog[open][data-motion=running] .vision-change-result:before{animation-play-state:running!important}
+}
 
 .research-modal,.research-modal-body{overscroll-behavior:contain}
 

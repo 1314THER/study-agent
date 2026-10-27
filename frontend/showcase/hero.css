@@ -65,6 +65,9 @@ body.is-launch-open{overflow:hidden}
 .launch-brand{display:flex;align-items:center;gap:12px;line-height:1.4;width:100%}.launch-brand img{display:block;flex:none}.launch-brand strong{display:block;font-size:18px;font-weight:650;color:#fff;letter-spacing:-.02em}.launch-brand small{display:block;margin-top:4px;font-size:11px;color:#aaa}
 .launch-hero{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(300px,.85fr);gap:38px 64px;align-items:center;margin-block:auto}
 .launch-hero #launch-title{max-width:920px;font-size:clamp(36px,3.8vw,64px);line-height:1.26;letter-spacing:-.045em;margin:0 0 25px;font-weight:750;text-align:left;text-wrap:balance}.launch-hero #launch-title>span{display:block}
+/* This reading heading receives programmatic screen-reader focus. Interactive
+   controls retain the global visible keyboard-focus treatment. */
+.launch-hero #launch-title:focus{outline:none}
 .launch-hero .hero-manifesto{margin-top:25px;padding-top:27px;max-width:none}.launch-hero .hero-art{margin-block:0}
 .launch-footer{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px 24px;border-top:1px solid #ffffff12;padding-top:17px;font-size:11px;line-height:1.6}.launch-footer a{color:#999;text-decoration:none}.launch-footer a:hover{color:#eee}
 .is-entering-site>:is(.site-header,main,.site-footer){animation:site-push-in .56s cubic-bezier(.22,.7,.22,1) both;will-change:transform}

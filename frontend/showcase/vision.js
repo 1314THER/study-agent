@@ -3,7 +3,7 @@
  'use strict';
  const chapter=document.getElementById('vision');if(!chapter)return;
  const dialog=document.getElementById('vision-dialog'),body=dialog.querySelector('.vision-dialog-body'),title=dialog.querySelector('h2');
- const mobile=matchMedia('(max-width:719px)'),reduced=matchMedia('(prefers-reduced-motion: reduce)'),ns='http://www.w3.org/2000/svg';
+ const mobile=matchMedia('(max-width:1099px)'),reduced=matchMedia('(prefers-reduced-motion: reduce)'),ns='http://www.w3.org/2000/svg';
  let ready=false,active=null,frame=0,opened=null,layoutFrame=0,returnFocus=null;
  const groups=[...chapter.querySelectorAll('[data-vision-group]')].map(group=>({group,id:group.dataset.visionGroup,viewport:group.querySelector('.vision-viewport'),world:group.querySelector('.vision-world'),svg:group.querySelector('svg'),nodes:[...group.querySelectorAll('.vision-change')],index:0,timer:0,animation:null,points:[],segments:[]}));
  const aspectMap=new Map();
@@ -29,27 +29,28 @@
   groups.forEach(row=>{if(eligible(row))start(row);else stop(row);});
  }
  function schedule(){if(!frame)frame=requestAnimationFrame(refresh);}
+ function syncModalMotion(){dialog.dataset.motion=dialog.open&&document.visibilityState==='visible'&&!reduced.matches?'running':'stopped';}
  function layout(row){
-  stop(row);const phone=mobile.matches,band=phone||innerWidth>=1100?0:innerWidth>=900?1:2,social=row.id==='society';
-  const w=phone?1200:Math.min(1200,row.viewport.clientWidth),h=(social?[460,480,520]:[600,640,720])[band],cw=[144,124,108][band],ch=[56,52,48][band],margin=[16,14,12][band];
-  row.group.style.setProperty('--world-w',w+'px');row.group.style.setProperty('--world-h',h+'px');row.group.style.setProperty('--card-w',cw+'px');row.group.style.setProperty('--card-h',ch+'px');row.group.style.setProperty('--card-font',[14,13,12.5][band]+'px');
+  stop(row);const phone=mobile.matches,social=row.id==='society',student=row.id==='students';
+  const w=phone?1200:Math.min(1200,row.viewport.clientWidth),h=social?520:student?760:660,cw=Math.max(140,Math.min(164,w*.1+44)),ch=88,margin=16;
+  row.group.style.setProperty('--world-w',w+'px');row.group.style.setProperty('--world-h',h+'px');row.group.style.setProperty('--card-w',cw+'px');row.group.style.setProperty('--card-h',ch+'px');row.group.style.setProperty('--center-w',Math.min(240,w*.22)+'px');
   row.world.style.width=w+'px';row.world.style.height=h+'px';row.svg.setAttribute('viewBox','0 0 '+w+' '+h);row.svg.replaceChildren();
-  const outer={cx:w/2,cy:h/2,rx:(w-cw)/2-margin,ry:(h-ch)/2-margin},inner={cx:w/2,cy:h/2,rx:w*[.25,.24,.21][band],ry:h*(row.id==='students'?[.23,.27,.31]:[.22,.22,.23])[band]};
+  const outer={cx:w/2,cy:h/2,rx:(w-cw)/2-margin,ry:(h-ch)/2-margin},inner={cx:w/2,cy:h/2,rx:w*(student?.215:.21),ry:h*(student?.26:.20)};
   const outerCount=social?8:row.id==='students'?13:11;
   const rings=social?[outer]:[outer,inner];
   rings.forEach(r=>{const e=document.createElementNS(ns,'ellipse');for(const key of ['cx','cy','rx','ry'])e.setAttribute(key,r[key]);row.svg.append(e);});
-  const entries=row.nodes.map((node,i)=>{const ring=i<outerCount?outer:inner,start=i<outerCount?0:outerCount,count=i<outerCount?outerCount:row.nodes.length-outerCount,angle=-Math.PI/2+(i-start)*Math.PI*2/count;const point=ellipse(ring,angle);node.style.setProperty('--node-x',point.x+'px');node.style.setProperty('--node-y',point.y+'px');return {ring,angle,count,point};});
+  const entries=row.nodes.map((node,i)=>{const ring=i<outerCount?outer:inner,start=i<outerCount?0:outerCount,count=i<outerCount?outerCount:row.nodes.length-outerCount,angle=-Math.PI/2+(i-start+(i<outerCount?0:.5))*Math.PI*2/count;const point=ellipse(ring,angle);node.style.setProperty('--node-x',point.x+'px');node.style.setProperty('--node-y',point.y+'px');return {ring,angle,count,point};});
   row.points=entries.map(e=>e.point);row.segments=entries.map((entry,i)=>{
    const next=entries[(i+1)%entries.length],same=entry.ring===next.ring;
    const points=Array.from({length:33},(_,k)=>same?ellipse(entry.ring,entry.angle+(Math.PI*2/entry.count)*k/32):cubic(entry.point,next.point,k/32));
-   if(!same){const p=document.createElementNS(ns,'path');p.setAttribute('d',points.map((v,j)=>(j?'L':'M')+v.x+' '+v.y).join(' '));row.svg.append(p);}return points;
+   return points;
   });
   row.group.querySelector('.vision-camera-controls').hidden=!phone;position(row,row.points[row.index]);mark(row);
  }
  function relayout(){cancelAnimationFrame(layoutFrame);layoutFrame=requestAnimationFrame(()=>{groups.forEach(layout);schedule();});}
  function restoreFocus(){const saved=returnFocus;if(!saved||aspectMap.has(location.hash.slice(1)))return;returnFocus=null;requestAnimationFrame(()=>requestAnimationFrame(()=>{if(!dialog.open&&saved.node.isConnected){scrollTo({top:saved.y,behavior:'instant'});saved.node.querySelector('.vision-card').focus({preventScroll:true});}}));}
  function closePanel(updateUrl=true,restore=true){
-  if(!opened)return;const saved=opened;opened=null;returnFocus=restore?{node:saved.node,y:saved.returnY}:null;dialog.close();body.replaceChildren();
+  if(!opened)return;const saved=opened;opened=null;returnFocus=restore?{node:saved.node,y:saved.returnY}:null;dialog.close();syncModalMotion();body.replaceChildren();
   if(updateUrl&&location.hash==='#'+saved.node.id){if(history.state?.visionDialog===saved.node.id)history.back();else{const u=new URL(location.href);u.hash='vision-'+saved.row.id;history.replaceState(null,'',u);}}
   restoreFocus();schedule();
  }
@@ -59,7 +60,7 @@
   if(push&&location.hash!=='#'+node.id){const u=new URL(location.href);u.hash=node.id;history.pushState({...history.state,visionDialog:node.id,visionReturn:location.hash||'#vision-'+row.id},'',u);}
   const clone=node.querySelector('.vision-detail').cloneNode(true);
   clone.querySelectorAll('[id]').forEach(el=>{const old=el.id;el.id=old+'-modal';clone.querySelectorAll('[stroke]').forEach(path=>{if(path.getAttribute('stroke')==='url(#'+old+')')path.setAttribute('stroke','url(#'+el.id+')');});});
-  title.textContent=row.group.querySelector('h2').textContent+' · '+node.dataset.aspect;body.replaceChildren(clone);opened={row,node,returnY,returnHash};if(!dialog.open)dialog.showModal();schedule();
+  title.textContent=row.group.querySelector('h2').textContent+' · '+node.dataset.aspect;body.replaceChildren(clone);opened={row,node,returnY,returnHash};if(!dialog.open)dialog.showModal();syncModalMotion();schedule();
  }
  function resolveAnchor(hash){const value=aspectMap.get(String(hash).replace(/^#/,''));if(!value)return null;choose(value.row,value.index);return mobile.matches?value.row.group:value.node;}
  function hashChanged(){const value=aspectMap.get(location.hash.slice(1));if(value){resolveAnchor(location.hash);if(ready)openPanel(value.row,value.index);}else if(opened)closePanel(false,location.hash===opened.returnHash||location.hash==='#vision-'+opened.row.id);restoreFocus();schedule();}
@@ -74,8 +75,8 @@
  chapter.querySelectorAll('[data-vision-nav]').forEach(link=>link.addEventListener('click',()=>requestAnimationFrame(()=>document.querySelector(link.hash+' h2')?.focus({preventScroll:true}))));
  document.querySelectorAll('[data-vision-skip]').forEach(link=>link.addEventListener('click',()=>requestAnimationFrame(()=>document.getElementById('heading-highlights')?.focus({preventScroll:true}))));
  addEventListener('showcase:reading-ready',()=>{ready=true;hashChanged();schedule();});addEventListener('hashchange',hashChanged);addEventListener('popstate',hashChanged);
- addEventListener('pageshow',schedule);addEventListener('resize',relayout,{passive:true});addEventListener('scroll',schedule,{passive:true});document.addEventListener('visibilitychange',schedule);
- reduced.addEventListener('change',schedule);mobile.addEventListener('change',relayout);
+ addEventListener('pageshow',schedule);addEventListener('resize',relayout,{passive:true});addEventListener('scroll',schedule,{passive:true});document.addEventListener('visibilitychange',()=>{syncModalMotion();groups.forEach(stop);schedule();});
+ reduced.addEventListener('change',()=>{syncModalMotion();schedule();});mobile.addEventListener('change',relayout);
  new MutationObserver(schedule).observe(document.body,{subtree:true,attributes:true,attributeFilter:['open']});
  window.ShowcaseVision={resolveAnchor,reset(){groups.forEach(row=>choose(row,0));closePanel(false,false);try{sessionStorage.removeItem('studyagent.showcase.vision.v1');}catch{}},snapshot(){return Object.fromEntries(groups.map(r=>[r.id,r.index]));}};
  resolveAnchor(location.hash);schedule();

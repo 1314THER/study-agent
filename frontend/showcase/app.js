@@ -61,7 +61,7 @@ function saveReading(){
  if(!uiReady||!entered||document.body.classList.contains('is-launch-open'))return;
  const chapter=readingChapter();
  document.body.dataset.currentTopic=chapter?.id||'vision';
- const record={version:2,visionLayout:2,entered:true,path:location.pathname,hash:location.hash,position:{topic:chapter?.id||'vision',offset:chapter?-(window.ShowcaseTransitions?.measureTopic(chapter)?.top??chapter.getBoundingClientRect().top):0,y:scrollY},choices:{perspective:state.perspective,teacher:state.teacher,example:state.example,mode:state.mode,caseIndex:state.caseIndex,condition:state.condition,sceneTabs:state.sceneTabs,teachingIndex:state.teachingIndex,geometryStage:state.geometryStage,timestampEvent:state.timestampEvent,routineHidden:state.routineHidden,completeMode:state.completeMode},bank:window.ShowcaseBank?.snapshot?.()};
+ const record={version:2,visionLayout:3,entered:true,path:location.pathname,hash:location.hash,position:{topic:chapter?.id||'vision',offset:chapter?-(window.ShowcaseTransitions?.measureTopic(chapter)?.top??chapter.getBoundingClientRect().top):0,y:scrollY},choices:{perspective:state.perspective,teacher:state.teacher,example:state.example,mode:state.mode,caseIndex:state.caseIndex,condition:state.condition,sceneTabs:state.sceneTabs,teachingIndex:state.teachingIndex,geometryStage:state.geometryStage,timestampEvent:state.timestampEvent,routineHidden:state.routineHidden,completeMode:state.completeMode},bank:window.ShowcaseBank?.snapshot?.()};
  try{sessionStorage.setItem(readingKey,JSON.stringify(record));}catch{}
 }
 function scheduleReadingSave(){clearTimeout(saveTimer);if(uiReady)saveTimer=setTimeout(saveReading,160);}
@@ -71,7 +71,7 @@ async function restoreReadingPosition(){
  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
  if(resumeReading&&initialHash===location.hash){
   const position=savedReading.position||{},savedTopic=position.topic||aliases[position.chapter]||position.chapter,chapter=typeof savedTopic==='string'?$(savedTopic):null;
-  if(savedTopic==='vision'&&savedReading.visionLayout!==2){(window.ShowcaseVision?.resolveAnchor(initialHash)||$(initialHash.slice(1))||$('vision'))?.scrollIntoView({behavior:'instant',block:'start'});}
+  if(savedTopic==='vision'&&savedReading.visionLayout!==3){(window.ShowcaseVision?.resolveAnchor(initialHash)||$(initialHash.slice(1))||$('vision'))?.scrollIntoView({behavior:'instant',block:'start'});}
   else{
   const top=chapter?.matches('[data-chapter]')&&Number.isFinite(position.offset)?(window.ShowcaseTransitions?.measureTopic(chapter)?.top??chapter.getBoundingClientRect().top)+scrollY+position.offset:Number.isFinite(position.y)?position.y:0;
   scrollTo({top:Math.max(0,Math.min(top,document.documentElement.scrollHeight-innerHeight)),behavior:'instant'});
@@ -262,10 +262,24 @@ function renderDiagnosis(){const root=$('scene-diagnosis'),cases=state.recording
 function scenario(id,title,labels,descs){const root=$('scene-'+id),body=el('div','scenario-detail');let active=indexValue(state.sceneTabs[id],labels.length);const draw=()=>{state.sceneTabs[id]=active;body.replaceChildren(el('h3','',labels[active]),p(descs[active]));};const ctl=tabs(labels.map((x,i)=>[String(i),x]),String(active),id=>{active=Number(id);draw();ctl.querySelectorAll('button').forEach((b,i)=>b.setAttribute('aria-pressed',String(i===active)));});root.replaceChildren(bar(title,'方案图解'),ctl,body);draw();return root;}
 function renderRoutines(){const root=scenario('routines','一个套路内部怎样练',['方法识别','母题学习','分步仿练','无提示重做','变式迁移','延迟复查'],['隐藏标签，解释从题设与目标如何选择方法。','理解步骤为什么成立，以及需要的前置知识。','观察局部卡点，允许回退补练。','记录帮助条件；原题重做与新题迁移分开。','条件变化后，重新核实方法的适用边界。','隔一段时间再做新题，记录是否仍能独立完成。']);const routes=el('div','route-pair');routes.append(el('div','route-line','套路顺序：前置准备 → 当前方法 → 后续方法'),el('div','route-line','知识准备：已有证据 → 局部缺口 → 补充后返回'));root.append(routes);let hidden=state.routineHidden;const label=el('p','method-label',hidden?'请自行判断采用的方法，并解释适用条件。':'方法提示：解三角形与面积关系'),toggle=button(hidden?'显示套路名称':'隐藏套路名称',()=>{hidden=!hidden;state.routineHidden=hidden;label.textContent=hidden?'请自行判断采用的方法，并解释适用条件。':'方法提示：解三角形与面积关系';toggle.textContent=hidden?'显示套路名称':'隐藏套路名称';toggle.setAttribute('aria-pressed',String(hidden));});toggle.setAttribute('aria-pressed',String(hidden));const selection=el('p','routine-selection','方法边界：是否具备边、角与目标之间的可用关系？');selection.id='routine-selection';root.append(toggle,label,selection,note('隐藏名称后，需要从题设和目标中自主选择方法，再解释适用条件。'));}
 function renderExam(){
- const root=scenario('exam','一张卷，两个评价对象',['试卷质量','学生作答'],['对照模板，检查知识与套路覆盖、分值和难度安排是否符合本次教学目标。','结合失分步骤、分段用时和历史作答，列出待核实原因，再安排补测。']);
- const t=el('table');t.innerHTML='<caption>两道全国卷案例的考查内容示意</caption><thead><tr><th>全国卷案例</th><th>三角关系</th><th>面积转化</th><th>数列结构</th><th>导数与求和</th></tr></thead><tbody><tr><th>2023 Ⅰ卷 17</th><td>主要</td><td>主要</td><td>—</td><td>—</td></tr><tr><th>2025 一卷 16</th><td>—</td><td>—</td><td>主要</td><td>主要</td></tr></tbody>';const wrap=el('div','table-wrap');wrap.append(t);root.append(wrap);
- const links=el('div','replay-controls');for(const [id,label]of [['national-2023-q17','查看三角形案例的步骤与难度'],['national-2025-q16','查看数列案例的步骤与难度']])links.append(button(label,()=>{state.example=id;state.mode='solution';renderSingle();selectView('single');}));root.append(links,el('h3','','按模板组卷怎样复用单题能力'));flow(root,['模板目标','分配题位','选题 / 出题','单题检查','整卷复核'],3);
- const time=el('div','time-diagram');['首次作答','返回修改','后续题目','未归属时段'].forEach(x=>time.append(el('span','',x)));root.append(time,note('时间轴为事件记录方式示意，未使用这两道题的学生用时数据。未归属时段单列，笔画首末间隔仅表示书写跨度。'));
+ const root=$('scene-exam'),body=el('div','scenario-detail exam-detail'),labels=['试卷评价与生成','学生作答复盘'];let active=indexValue(state.sceneTabs.exam,labels.length);
+ const draw=()=>{
+  state.sceneTabs.exam=active;body.dataset.examPanel=active===0?'paper':'student';body.replaceChildren(el('h3','',labels[active]));
+  if(active===0){
+   body.append(p('先用模板规定知识范围、题型、分值、总时长与难度要求，再据此评价已有试卷，或组织一份新试卷。'));
+   const t=el('table');t.innerHTML='<caption>两道全国卷案例的考查内容示意</caption><thead><tr><th>全国卷案例</th><th>三角关系</th><th>面积转化</th><th>数列结构</th><th>导数与求和</th></tr></thead><tbody><tr><th>2023 Ⅰ卷 17</th><td>主要</td><td>主要</td><td>—</td><td>—</td></tr><tr><th>2025 一卷 16</th><td>—</td><td>—</td><td>主要</td><td>主要</td></tr></tbody>';const wrap=el('div','table-wrap');wrap.append(t);body.append(wrap);
+   const links=el('div','replay-controls');for(const [id,label]of [['national-2023-q17','查看三角形案例的步骤与难度'],['national-2025-q16','查看数列案例的步骤与难度']])links.append(button(label,()=>{state.example=id;state.mode='solution';renderSingle();selectView('single');}));
+   body.append(links,el('h3','','先安排整卷目标，再逐题核验'));flow(body,['确定教学目标','安排卷面结构','选题或出题','逐题解析核验','检查覆盖与难度']);
+   body.append(note('选题和出题都要经过单题解析核验，整卷还需检查知识与方法是否遗漏、重复，以及难度分布是否符合模板。两道全国卷仅示意考查内容。'));
+  }else{
+   body.append(p('将批改定位的失分步骤与实际作答顺序对照，再结合考试前的历史表现、学生说明和后续补测，核实困难的原因。'));
+   const time=el('div','time-diagram');time.setAttribute('aria-label','作答事件记录示意');['首次作答','回看与修改','继续后续题目','无法归属的时间'].forEach(x=>time.append(el('span','',x)));body.append(time);
+   body.append(note('这里只说明记录方式，未使用两道全国卷的真实学生用时。首次作答和返回修改分开记录，跨题停顿或无法归属的时间单列；首笔到末笔的间隔只表示书写跨度。'));
+   const evidence=el('ul','exam-evidence');for(const text of ['作答事实：在哪一步失分，何时回看或修改，哪些时间无法归属。','核对依据：考试前是否能独立完成相似任务，学生怎样说明当时的过程。','待核实原因：知识理解、计算执行或时间安排可能共同影响表现。','后续验证：安排针对性练习或补测，再检查原先的解释是否成立。'])evidence.append(el('li','',text));body.append(evidence,note('没有时间线的历史试卷仍可分析内容与步骤，用时保留缺失，不补造数据。'));
+  }
+  ctl.querySelectorAll('button').forEach((b,i)=>b.setAttribute('aria-pressed',String(i===active)));
+ };
+ const ctl=tabs(labels.map((label,i)=>[String(i),label]),String(active),id=>{active=Number(id);draw();},'考试评价对象');root.replaceChildren(bar('评价试卷目标，复盘学生作答','方案图解'),ctl,body);draw();
 }
 function renderCareer(){const root=scenario('career','同样答对，也要记录是否获得帮助',['提示后完成','无提示新题','出现相反证据'],['记录为提示后完成，后续安排无提示新题检查。','单独记录新题独立作答，并在间隔一段时间后再次检查。','保留前后作答，修订判断，并说明下一次要检查什么。']);const tracks=el('div','evidence-tracks');['课时作业 → 知识理解与应用','考试 / 错题 / 先导测试 → 套路与步骤表现','汇入带来源、帮助条件和版本的长期档案'].forEach(x=>tracks.append(el('div','',x)));root.append(tracks,note('知识理解、方法迁移和复盘能力分别保存，帮助条件随证据保留。'));}
 function renderAgent(){const root=scenario('agent','同一业务档案，不同职责视角',['学生助教','教师助理','学校教研'],['今天练什么？查询本人近期作答和可用时间，安排教学、练习或复查。','这一步要不要重讲？核对授权班级记录，准备教案和补练草稿。','本阶段怎样改进？核对学生起点与任务难度，准备教研分析和课程变更草案。']);flow(root,['理解请求','查询证据','调用工具','检查结果','解释跟进'],2);root.append(note('Agent 读取共同档案、调用已有业务，再把依据和任务交给相应角色。'));}
@@ -277,7 +291,7 @@ function renderModes(){
  const ctl=tabs([['full','完整采用'],['partial','传统教学增强']],complete?'full':'partial',id=>{complete=id==='full';state.completeMode=complete;draw();ctl.querySelectorAll('button').forEach((b,i)=>b.setAttribute('aria-pressed',String(i===(complete?0:1))));});root.replaceChildren(bar('同一套能力，两种接入深度','目标流程比较'),ctl,body,note('完整模式需要持续的课程、作答和复核记录；局部模式先使用已提供的材料。功能随数据逐步扩展，两种模式都需通过学生独立表现评价效果。'));draw();
 }
 function renderMcp(){const root=scenario('mcp','入口不同，教育规则与记录共用',['产品内置 Agent','DeepSeek 官方 DSH','WorkBuddy'],['已有内部搜索、解题、教学、批改、规划与学情查询基础。','计划通过 MCP 调用教学工具；DSH 提供对话，StudyAgent 保存作答和任务结果。','计划通过连接器与技能调用教学工具，制作课件时调用宿主已接入的文档工具。']);const graph=el('div','mcp-topology');['课程 · 步骤 · 题库 · 作答 · 学习记录','共用教育业务与 MCP 适配','内置 Agent　 /　官方 DSH　 /　WorkBuddy'].forEach(x=>graph.append(el('div','',x)));root.append(graph,note('适配后，练习生成和课件素材查询由同一教育服务完成，对话和文件制作使用宿主工具。'));}
-function renderEvolution(){const root=scenario('evolution','改进经过验证，再回到系统',['教师反馈','人工维护','新试题与教材','跨学科扩展'],['核实问题与修正内容后，选择更新知识库、个人记忆或模型，并检查更新效果。','修订数据、关系和参数，记录版本，并列出需要重新分析的旧记录。','先核对新题和教材，再判断是否需要新增或修改步骤、套路、知识点及课时。','复用记录和工具，重新定义各学科任务、评分标准和学习效果实验。']);flow(root,['获得反馈','核对来源','离线评价','发布版本','教学再验证'],2);root.append(note('每次修改先重跑固定测试，再用新任务检查迁移，并保留旧版内容和规则。'));}
+function renderEvolution(){const root=scenario('evolution','收集反馈与新题，经核验后更新系统',['教师反馈','人工维护','联网找题与教材更新','跨学科扩展'],['保存原输出、错误证据、修正理由与适用条件，再按问题选择更新知识库、提示词、规则或研究模型训练。','维护教学定义、评分与推荐参数，记录修改原因、版本和受影响的题目、解析及学习记录。','启动找题任务后，系统可从指定公开题源联网发现、下载、识别和切题，接收到素材池；再核验解析、对应知识与方法目录，经审核进入正式题库。教材变更另形成知识点与课时的调整草稿。','复用学习档案、任务安排、教师反馈、工具调用与版本管理；为新学科重新建立知识结构、任务示例和评价标准，再从小单元试点检验。']);flow(root,['收集反馈与新题','核对与去重','整理更新草稿','独立测试','审核发布','跟踪学习效果']);root.append(note('更新草稿指待审核的新题、内容或规则修改。联网采集已有实现基础；完整更新、模型训练与跨学科扩展按方案继续验证。采集新题不会自动训练模型或发布新版本。'),note('每次修改先运行固定测试，再用未参与修改的新任务检验；审核后小范围试用，保留旧版本，并跟踪后续独立作答是否改善。'));}
 function navigation(){
  const nav=document.querySelector('.primary-nav'),headerLinks=[...nav.querySelectorAll('a[href^="#"]')],quickJump=$('topic-quick-jump');
  function currentTopic(id){
@@ -309,14 +323,12 @@ function navigation(){
   if(!unit||unit.querySelector('.shared-cell'))return;
   const mobile=matchMedia('(max-width:820px)').matches;
   const selected=!(key?.classList.contains('topic-unit-key')&&!mobile&&unit.classList.contains('is-linked'));
-  const label=interactive?.querySelector('h4,h5')?.textContent||interactive?.selectedOptions?.[0]?.textContent||interactive?.textContent.trim()||unit.querySelector('.topic-unit-key strong')?.textContent;
   // Capture the unit before scene rendering replaces a clicked button's parent.
   queueMicrotask(()=>{
    document.querySelectorAll('.topic-unit').forEach(node=>{
     const on=node===unit&&selected;node.classList.toggle('is-linked',on);
     node.querySelectorAll('[data-link-focus]').forEach(trigger=>trigger.setAttribute('aria-pressed',String(on)));
     node.querySelector('[data-relation-anchor]')?.classList.toggle('is-relation-target',on);
-    const note=node.querySelector('.relation-focus');if(note){note.hidden=!on;if(on)note.textContent='对应内容：'+label+'；技术依据：'+unit.dataset.relatedProcessing;}
    });
 
   });
