@@ -11,6 +11,7 @@ const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const root=new URL('../../',import.meta.url);
 const chapters=['vision','highlights','terms','single','time','library','exam','longterm','teacher','school','agent','evolution'];
 const records=JSON.parse(await readFile(new URL('frontend/showcase/recordings.json',root),'utf8'));
+const vision=JSON.parse(await readFile(new URL('frontend/showcase/vision-content.json',root),'utf8'));
 const pipeline=JSON.parse(await readFile(new URL('frontend/showcase/pipeline.json',root),'utf8'));
 const shots=process.env.RESEARCH_SHOTS||tmpdir()+'/research-showcase-shots';
 await mkdir(shots,{recursive:true});
@@ -92,47 +93,31 @@ try{
  await ready(page);
  assert.equal(await page.evaluate(()=>window.__entered),1,'Entering must dispatch exactly once after the native close event');
  assert.equal(await launch.isVisible(),false,'The launch dialog should close on entry');
- assert.equal(await page.locator('.vision-change').count(),63);
- assert.deepEqual(await page.locator('[data-vision-group]').evaluateAll(nodes=>nodes.map(n=>n.querySelectorAll('.vision-change').length)),[21,17,17,8]);
- assert.equal(await page.locator('#vision .perspective-cell').count(),0);
+ assert.equal(await page.locator('.vision-card').count(),63);
+ assert.deepEqual(await page.locator('[data-vision-group]').evaluateAll(nodes=>nodes.map(n=>n.querySelectorAll('.vision-card').length)),[21,17,17,8]);
+ assert.equal(await page.locator('[data-vision-toggle]').count(),0);
  assert.equal(await page.locator('.vision-chapter-name').innerText(),'教学愿景');
- assert.equal(await page.locator('.vision-change:visible').count(),8,'Each of four vision branches should show two changes initially');
- assert.equal(await page.locator('[data-vision-toggle]').count(),4);
- for(const [id,count] of [['students',21],['teachers',17],['schools',17],['society',8]]){
-  const group=page.locator('[data-vision-group="'+id+'"]'),toggle=group.locator('[data-vision-toggle]');
-  assert.equal(await group.locator('.vision-change:visible').count(),2);
-  assert.equal(await toggle.getAttribute('aria-expanded'),'false');
-  await toggle.focus();await page.keyboard.press('Enter');
-  assert.equal(await toggle.getAttribute('aria-expanded'),'true');
-  assert.equal(await group.locator('.vision-change:visible').count(),count);
-  const before=await toggle.boundingBox();await toggle.click();const after=await toggle.boundingBox();
-  assert(Math.abs(after.y-before.y)<3,'Collapsing should keep its button steady: '+id);
-  assert.equal(await group.locator('.vision-change:visible').count(),2);
+ for(const group of vision.groups)for(let index=0;index<group.rows.length;index++){
+  const source=group.rows[index],card=page.locator('#vision-change-'+group.id+'-'+(index+1)+' .vision-card');
+  assert.equal(await card.innerText(),source.short_vision);await card.scrollIntoViewIfNeeded();await card.evaluate(n=>n.addEventListener('click',()=>{window.__visionOpeningY=scrollY;},{once:true,capture:true}));await card.click();const originY=await page.evaluate(()=>window.__visionOpeningY);
+  assert(await page.locator('#vision-dialog').isVisible());
+  const text=await page.locator('.vision-dialog-body').innerText();assert(text.includes(source.before)&&text.includes(source.after));
+  for(const feature of source.features)assert.equal(await page.locator('.vision-dialog-body a[href="'+feature.target+'"]').filter({hasText:feature.label}).count(),1);
+  await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.getElementById('vision-dialog').open&&!location.hash.startsWith('#vision-change-'));
+  await page.waitForFunction(id=>document.activeElement===document.querySelector('#'+id+' .vision-card'),'vision-change-'+group.id+'-'+(index+1));assert(Math.abs(await page.evaluate(()=>scrollY)-originY)<3,'Closing a detail must retain its reading position: '+JSON.stringify({originY,after:await page.evaluate(()=>scrollY),aspect:source.aspect}));
  }
- await page.locator('[data-vision-toggle="teachers"]').click();
- await page.locator('#vision-change-teachers-3 a').first().focus();
- await page.evaluate(()=>Showcase.saveReading());const expandedY=await page.evaluate(()=>scrollY);
- await page.reload({waitUntil:'networkidle'});await ready(page);
- assert.equal(await page.locator('[data-vision-toggle="teachers"]').getAttribute('aria-expanded'),'true');
- assert(Math.abs(await page.evaluate(()=>scrollY)-expandedY)<8,'Expanded vision reading should restore before layout is measured');
- await page.evaluate(()=>ShowcaseVision.setExpanded('teachers',false));
  await page.goto(base+'/#vision-change-students-3',{waitUntil:'networkidle'});await ready(page);
- assert.equal(await page.locator('[data-vision-toggle="students"]').getAttribute('aria-expanded'),'true','A hidden change deep link should open its branch');
- await page.locator('#vision-change-students-3 a').first().focus();
- await page.evaluate(()=>ShowcaseVision.setExpanded('students',false));
- assert.equal(await page.evaluate(()=>document.activeElement?.dataset.visionToggle),'students','Hiding a focused change should return focus to its disclosure control');
- assert.equal(await page.evaluate(()=>location.hash),'#vision-students');
-
+ assert(await page.locator('#vision-dialog').isVisible(),'An old aspect deep link must open its detail');
+ await page.reload({waitUntil:'networkidle'});await ready(page);assert(await page.locator('#vision-dialog').isVisible());
+ await page.locator('.vision-dialog-close').click();await page.waitForFunction(()=>!document.getElementById('vision-dialog').open);
  for(const branch of ['students','teachers','schools','society']){
-  await page.locator('.vision-map-branch[href="#vision-'+branch+'"]').click();
+  await page.locator('.vision-outline a[href="#vision-'+branch+'"]').click();
   await page.waitForFunction(id=>document.activeElement?.id==='vision-title-'+id,branch);
-  assert.equal(await page.locator('#topic-quick-jump').inputValue(),'vision','A vision sub-anchor should keep the chapter selector selected');
+  assert.equal(await page.locator('#topic-quick-jump').inputValue(),'vision');
  }
  await page.locator('.vision-skip').focus();await page.keyboard.press('Enter');
  await page.waitForFunction(()=>document.activeElement?.id==='heading-highlights'&&location.hash==='#highlights');
- await page.goto(base+'/#vision',{waitUntil:'networkidle'});assert.equal(await page.locator('#launch-screen').isVisible(),false,'An explicit vision link should open its chapter directly');await ready(page);
- await page.locator('.vision-skip').focus();await page.keyboard.press('Enter');
- await page.waitForFunction(()=>document.activeElement?.id==='heading-highlights'&&location.hash==='#highlights');
+ await page.goto(base+'/#vision',{waitUntil:'networkidle'});await ready(page);
  assert((await page.locator('.vision-cost-result').innerText()).includes('0.0136'));
  assert((await page.locator('.vision-cost-result').innerText()).includes('16.32'));
 
@@ -141,8 +126,8 @@ try{
  assert.equal(await page.locator('.highlight-point').count(),7);assert.equal(await page.locator('#highlights .topic-unit').count(),0);
  assert.equal(await page.locator('#highlights .dataset-metric').count(),4);
  assert.deepEqual(await page.locator('#highlights .dataset-metric dd').allTextContents(),['541','359','1,019','23,261']);
- assert.equal(await page.locator('#scene-overview .architecture-node').count(),10);
- assert.deepEqual(await page.locator('#scene-overview .architecture-node').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('href'))),['#terms','#single','#time','#library','#exam','#longterm','#teacher','#school','#agent','#evolution']);
+ assert.equal(await page.locator('#scene-overview .architecture-node').count(),13);
+ assert.deepEqual(await page.locator('#scene-overview .architecture-node').evaluateAll(nodes=>nodes.map(n=>n.getAttribute('href'))),['#terms','#terms','#terms','#terms','#single','#time','#library','#exam','#longterm','#teacher','#school','#agent','#evolution']);
  assert.deepEqual(await page.locator('#highlights [data-hx-motion]').evaluateAll(nodes=>nodes.map(n=>n.dataset.hxMotion)),['system','method','time','ability','data','participation','evolution']);
  assert.equal(await page.locator('#scene-overview .system-people').count(),0,'The retired people diagram should not return');
  assert.equal(await page.locator('.primary-nav a span').evaluateAll(nodes=>nodes.filter(n=>/^\s*\d+/.test(n.textContent)).length),0,'Primary navigation should not show decorative numbering');
@@ -175,7 +160,7 @@ try{
  assert.equal(await ability.getAttribute('data-hx-dimension-active'),'5');
  await page.keyboard.press('Home');assert(await radarDots.first().evaluate(n=>n===document.activeElement));
  assert.equal(await ability.getAttribute('data-hx-dimension-active'),'0');
- assert.equal(await ability.locator('[data-hx-motion-toggle]').isVisible(),false,'Reduced-motion readers do not need animation controls');
+ assert.equal(await ability.locator('[data-hx-motion-toggle]').count(),0,'Reduced-motion readers do not need animation controls');
  assert.equal(await page.locator('#highlight-system').count(),1);
  await page.goto(base+'/',{waitUntil:'networkidle'});await ready(page);
  assert.deepEqual(await page.locator('[data-chapter]').evaluateAll(nodes=>nodes.map(n=>n.id)),chapters);
@@ -188,21 +173,21 @@ try{
  assert.equal(await page.locator('.brand-emblem').getAttribute('src'),'/showcase/assets/fudan-emblem-white.png');
  assert(await page.locator('.brand-emblem').evaluate(img=>img.complete&&img.naturalWidth>0),'The Fudan emblem should load as a local asset');
  assert.equal(await page.locator('.perspective-switch').isVisible(),false,'The reading-view switch belongs only on narrow screens');
- assert.equal(await page.locator('details').count(),3,'Merged sections retain three expandable technical notes');
- assert.equal(await page.locator('details.unit-tech-fold').count(),3,'Only the accepted technical notes should fold');
+ assert.equal(await page.locator('details.vision-fallback').count(),63,'All aspects retain a native no-JS fallback');
+ assert.equal(await page.locator('details.unit-tech-fold').count(),0,'Technical notes stay visible as accepted on main');
  assert.equal(await page.locator('.source-reading').count(),0,'Internal source-document lists should not appear in the public story');
- assert.equal(await page.locator('.perspective-cell').count(),20,'Merged units keep one lane; seven remaining units keep parallel lanes');
+ assert.equal(await page.locator('.perspective-cell').count(),19,'All current merged and parallel lanes are retained');
  assert.equal(await page.locator('.shared-cell').count(),0,'Highlights should not use generic shared cells');
  assert.equal(await page.locator('.highlight-pain').count(),6,'Six highlights carry a practical pain point');
- assert.equal(await page.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),20,'Desktop should expose every merged or parallel content lane');
- assert.equal(await page.locator('.perspective-headings').count(),5,'Only topics with distinct reading lanes need column headings');
+ assert.equal(await page.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),19,'Desktop should expose every merged or parallel content lane');
+ assert.equal(await page.locator('.perspective-headings').count(),4,'Only topics with distinct reading lanes need column headings');
  assert((await page.locator('.research-scope').count())>0,'Research limitations should be visibly identified');
  assert((await page.locator('.pain-point').first().evaluate(n=>getComputedStyle(n).borderLeftColor)).includes('255, 146, 156'),'Real-world pain points should use the red accent');
  assert.equal(await page.locator('.brand-emblem').evaluate(n=>getComputedStyle(n).backgroundColor),'rgba(0, 0, 0, 0)','The white emblem should retain the black page background');
  assert((await page.locator('.research-gap').count())>10,'Only concrete research limitations should carry caution emphasis');
  // A medium desktop must keep both lanes, with the same usable connection as a wide desktop.
  await page.setViewportSize({width:980,height:900});
- assert.equal(await page.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),20);
+ assert.equal(await page.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),19);
  assert.equal(await page.locator('.perspective-switch').isVisible(),false);await fit(page,'980px two lanes');
  await page.setViewportSize({width:1440,height:1000});
  assert.equal(await page.locator('.chapter-bridge').count(),12,'Each topic must pass a specific output to its successor');
@@ -210,7 +195,7 @@ try{
  assert.equal(await page.locator('.research-logic').count(),18,'Related work must have a presentation-style logic diagram');
  assert.equal(await page.locator('.research-source-links a').count(),36,'Each related work needs a website and a primary document link');
  assert.equal(await page.locator('#reading-progress,#opening-skip').count(),0);
- assert.equal(await page.locator('#scene-overview .architecture-node').count(),10,'The highlight system map should cover all ten functional topics');
+ assert.equal(await page.locator('#scene-overview .architecture-node').count(),13,'The highlight system map should cover all ten functional topics');
  await page.evaluate(()=>document.fonts.ready);
  assert(await page.evaluate(()=>document.fonts.check('22px "StudyAgent Handwriting"')),'The local handwriting webfont did not load');
  await fit(page,'desktop overview');await page.screenshot({path:shots+'/desktop-overview.png'});
@@ -243,9 +228,10 @@ try{
  assert.equal(await page.evaluate(()=>document.activeElement?.id),'example-select');
  await page.locator('#teacher-select').focus();await page.locator('#teacher-select').selectOption('xuefeng');
  assert.equal(await page.evaluate(()=>document.activeElement?.id),'teacher-select');
- assert.equal(await page.locator('#scene-single [data-math-erratum="geometric-tail"]').count(),1,'The saved sequence explanation needs a visible, separate erratum');
- assert((await page.locator('#scene-single [data-math-erratum]').innerText()).includes('应单列'));
- await page.locator('#scene-single [data-math-erratum]').screenshot({path:shots+'/math-erratum.png'});
+ await page.locator('#scene-single .solution-more').first().click();
+ assert.equal(await page.locator('#research-modal [data-math-erratum="geometric-tail"]').count(),1,'The saved second-part explanation needs its separate erratum');
+ assert((await page.locator('#research-modal [data-math-erratum]').innerText()).includes('应单列'));
+ await page.locator('#research-modal [data-math-erratum]').screenshot({path:shots+'/math-erratum.png'});await page.locator('.research-modal-close').click();
  await keyboardActivate(page,page.locator('#scene-diagnosis [aria-label="诊断情境"] button').nth(1));
  await keyboardActivate(page,page.locator('#scene-diagnosis [aria-label="对比条件"] button').nth(1));
  // Both questions and all four genuine saved runs must be selectable.
@@ -253,8 +239,9 @@ try{
  for(const example of ['national-2023-q17','national-2025-q16'])for(const teacher of ['liangliang','taotao','xuefeng','ji']){
   await page.locator('#example-select').selectOption(example);await page.locator('#teacher-select').selectOption(teacher);
   const run=pipeline.examples[example][teacher];
-  assert.equal(await page.locator('#scene-single .step').count(),run.answer_json.chunk_results.reduce((n,c)=>n+c.steps.length,0));
+  assert.equal(await page.locator('#scene-single .step').count(),run.answer_json.chunk_results[0].steps.length);
   assert.equal(await page.locator('#scene-single .step h4').first().innerText(),run.answer_json.chunk_results[0].steps[0].title);
+  for(const chunk of run.answer_json.chunk_results.slice(1)){await page.locator('#scene-single .solution-more').filter({hasText:'第 '+chunk.chunk_id+' 问'}).click();assert.equal(await page.locator('#research-modal .step').count(),chunk.steps.length);await page.locator('.research-modal-close').click();}
   const model=run.stages.solver.model,tier={'glm-4.7-flash':'免费','deepseek-flash':'便宜','glm-5.3-flash':'便宜','gpt-6-astra':'昂贵'}[model];
   assert((await page.locator('#teacher-select option:checked').innerText()).includes(model),'Teacher selector should identify the model used for the current saved answer');
   assert((await page.locator('.teacher-model-note').innerText()).includes(tier),'The selected model should show its price tier');
@@ -272,7 +259,7 @@ try{
  assert((await page.locator('#annotation-body').innerText()).length>50,'Detailed solution did not open in the side panel');
  await page.screenshot({path:shots+'/desktop-annotation.png'});
  await page.keyboard.press('Escape');assert(!(await page.locator('#annotation-panel').isVisible()));
- await page.locator('#single .research-study').first().screenshot({path:shots+'/research-comparison.png'});
+ await page.locator('#single .research-notes-trigger').first().click();await page.locator('#research-modal .research-study').screenshot({path:shots+'/research-comparison.png'});await page.locator('.research-modal-close').click();
  // Geometry should reveal the altitude only after an explicit action.
  await choose(page,'single','辅助线与推理');assert.equal(await page.locator('#scene-single .construction-line').count(),0);
  await choose(page,'single','显示辅助线');assert.equal(await page.locator('#scene-single .construction-line').count(),1);
@@ -364,20 +351,17 @@ try{
  assert.equal(await page.locator('.site-registration a').innerText(),'渝ICP备2026024246号-1');assert.equal(await page.locator('.site-registration a').getAttribute('href'),'https://beian.miit.gov.cn/');
  await checkAudits(context);
 
- for(const width of [1440,980,390,320]){
-  await page.setViewportSize({width,height:1000});
-  await page.goto(base+'/#vision-students',{waitUntil:'networkidle'});await ready(page);
-  assert.equal(await page.locator('#topic-quick-jump').inputValue(),'vision');
-  await fit(page,'vision '+width);
-  const flow=await page.locator('.vision-change-flow').first().evaluate(n=>({display:getComputedStyle(n).display,columns:getComputedStyle(n).gridTemplateColumns.split(' ').length}));
-  assert.equal(flow.display,'grid');assert.equal(flow.columns,width<=640?1:3);
-  assert.equal(await page.locator('#vision table').count(),0,'The vision uses chains, not tables');
-  await page.locator('#vision').evaluate(n=>n.scrollIntoView({behavior:'instant'}));
-  await page.screenshot({path:shots+'/vision-'+width+'.png'});
-  await page.locator('.vision-map-branch').first().click();await page.waitForTimeout(120);
-  await page.screenshot({path:shots+'/vision-comparison-'+width+'.png'});
+ for(const width of [1440,980,768,390,320]){
+  await page.setViewportSize({width,height:1000});await page.goto(base+'/#vision-students',{waitUntil:'networkidle'});await ready(page);await fit(page,'vision '+width);
+  const layout=await page.locator('[data-vision-group]').evaluateAll(groups=>groups.map(g=>{
+   const cards=[...g.querySelectorAll('.vision-card')].map(n=>n.getBoundingClientRect()),viewport=g.querySelector('.vision-viewport').getBoundingClientRect();let collisions=0;
+   if(innerWidth>=720)for(let i=0;i<cards.length;i++)for(let j=i+1;j<cards.length;j++){const a=cards[i],b=cards[j];if(a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top)collisions++;}
+   return {collisions,centerDelta:Math.abs((cards[0].left+cards[0].right-viewport.left-viewport.right)/2)};
+  }));assert(layout.every(g=>g.collisions===0));if(width<720)assert(layout.every(g=>g.centerDelta<2));
+  await page.locator('#vision-students').screenshot({path:shots+'/vision-'+width+'.png'});
+  await page.locator('#vision-change-students-1 .vision-card').click();await page.locator('#vision-dialog').screenshot({path:shots+'/vision-comparison-'+width+'.png'});await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.getElementById('vision-dialog').open);
  }
- await page.locator('.vision-map-branch[href="#vision-teachers"]').click();
+ await page.locator('.vision-outline a[href="#vision-teachers"]').click();
  await page.evaluate(()=>{scrollBy({top:180,behavior:'instant'});Showcase.saveReading();});
  const visionReading=await page.evaluate(()=>({y:scrollY,hash:location.hash}));
  await page.reload({waitUntil:'networkidle'});await ready(page);
@@ -433,13 +417,41 @@ try{
  await nojs.goto(base+'/',{waitUntil:'networkidle'});assert.equal(await nojs.locator('[data-chapter]').count(),12);
  for(const id of chapters){const text=['vision','highlights'].includes(id)?await nojs.locator('#'+id).innerText():(await nojs.locator('#'+id+' .chapter-prose').allTextContents()).join(' ');assert(text.length>80,'Missing no-JS chapter text: '+id);}
  assert.equal(await nojs.locator('#launch-screen #explore-start').getAttribute('href'),'#vision');
- assert.equal(await nojs.locator('.perspective-cell').count(),20,'No-JS reading should expose both perspectives for all generic units');
- assert.equal(await nojs.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),20,'No-JS reading should expose all generic content');
+ assert.equal(await nojs.locator('.perspective-cell').count(),19,'No-JS reading should retain every current generic lane');
+ assert.equal(await nojs.locator('.perspective-cell').evaluateAll(nodes=>nodes.filter(n=>getComputedStyle(n).display!=='none').length),19,'No-JS reading should expose all generic content');
  assert((await nojs.locator('.research-notes a[href^="https://"]').count())>=6,'Research sources unavailable without JS');
  assert(!/上海|shanghai/i.test(await nojs.locator('body').innerText()));await fit(nojs,'no JavaScript');await checkAudits(plain);await plain.close();
  const deepContext=await browser.newContext({viewport:{width:1440,height:950}}),deepPage=await deepContext.newPage();audit(deepPage);
  await deepPage.goto(base+'/#single',{waitUntil:'networkidle'});assert.equal(await deepPage.locator('#launch-screen').isVisible(),false,'A fresh deep link should skip the launch dialog');await ready(deepPage);
  assert.equal(await deepPage.evaluate(()=>location.hash),'#single');await checkAudits(deepContext);await deepContext.close();
+ // Camera touring and decorative flow share visibility/reduced-motion lifecycles.
+ const tourContext=await browser.newContext({viewport:{width:390,height:844},reducedMotion:'no-preference'}),tour=await tourContext.newPage();audit(tour);
+ await tour.goto(base+'/#vision-students',{waitUntil:'networkidle'});await ready(tour);
+ const galaxy=tour.locator('#vision-students'),counter=galaxy.locator('.vision-camera-count');await galaxy.scrollIntoViewIfNeeded();
+ await tour.waitForFunction(()=>document.querySelector('#vision-students .vision-camera-count').textContent.startsWith('2 /'),{},{timeout:5000});
+ await galaxy.locator('[data-camera-step="1"]').click();await galaxy.locator('h2').click();
+ const selected=await counter.innerText();await tour.waitForTimeout(1400);assert.equal(await counter.innerText(),selected,'Each camera stop must remain readable before moving');
+ await tour.waitForFunction(old=>document.querySelector('#vision-students .vision-camera-count').textContent!==old,selected,{timeout:2200});
+ await tour.emulateMedia({reducedMotion:'reduce'});const settled=await counter.innerText();await tour.waitForTimeout(2800);assert.equal(await counter.innerText(),settled);
+ await galaxy.locator('[data-camera-step="1"]').click();assert.notEqual(await counter.innerText(),settled,'Manual navigation remains available with reduced motion');
+ await galaxy.locator('.vision-card[aria-current=true]').click();assert(await tour.locator('#vision-dialog').isVisible());await tour.goBack();await tour.waitForFunction(()=>!document.getElementById('vision-dialog').open);
+ await tour.goto(base+'/#vision-change-teachers-3',{waitUntil:'networkidle'});await ready(tour);assert(await tour.locator('#vision-dialog').isVisible());
+ const destination=await tour.locator('.vision-dialog-body a').first().getAttribute('href');await tour.locator('.vision-dialog-body a').first().click();await tour.waitForFunction(hash=>location.hash===hash&&!document.getElementById('vision-dialog').open,destination);
+ await tour.emulateMedia({reducedMotion:'no-preference'});await tour.goto(base+'/#vision-students',{waitUntil:'networkidle'});await ready(tour);await galaxy.scrollIntoViewIfNeeded();
+ await galaxy.locator('[data-camera-step="1"]').click();await galaxy.locator('h2').click();
+ await galaxy.locator('.vision-card[aria-current=true]').click();const modalIndex=await counter.innerText();await tour.waitForTimeout(2800);assert.equal(await counter.innerText(),modalIndex,'An open detail freezes its camera');await tour.locator('.vision-dialog-close').click();
+ await tour.locator('#terms').scrollIntoViewIfNeeded();await tour.waitForFunction(()=>!document.querySelector('#vision-students .vision-world').getAnimations().length);const offscreen=await galaxy.locator('.vision-world').evaluate(n=>getComputedStyle(n).transform);await tour.waitForTimeout(2800);assert.equal(await galaxy.locator('.vision-world').evaluate(n=>getComputedStyle(n).transform),offscreen,'An offscreen galaxy must stop');
+ await tour.setViewportSize({width:1440,height:950});await tour.locator('#teacher').scrollIntoViewIfNeeded();const stream=tour.locator('#scene-teacher .flow-stream');await stream.scrollIntoViewIfNeeded();
+ await tour.waitForFunction(()=>document.querySelector('#scene-teacher .flow-stream').dataset.flowRunning==='true');
+ assert.equal(await stream.locator('button').first().getAttribute('aria-pressed'),'true','The first visible step starts at the left');
+ const beam=await stream.locator('.flow-beam').first().evaluate(n=>({duration:n.getAnimations()[0].effect.getTiming().duration,first:n.getAnimations()[0].effect.getKeyframes()[0].transform}));assert.equal(beam.duration,2000);
+ const startX=await stream.evaluate(n=>{const b=n.querySelector('button');return b.offsetLeft+b.offsetWidth/2;});assert(Math.abs(Number(beam.first.match(/translate3d\(([-.\d]+)/)[1])-startX)<1,'A flow starts at the first step, never a restored middle index');
+ await stream.locator('button').nth(3).click();assert.equal(await stream.getAttribute('data-flow-running'),'true','Choosing a step does not stop the decorative flow');await stream.evaluate(n=>n.querySelectorAll('.flow-beam').forEach(b=>b.getAnimations().forEach(a=>a.currentTime=900)));await stream.screenshot({path:shots+'/flow-stream.png'});
+ await tour.emulateMedia({reducedMotion:'reduce'});await tour.waitForFunction(()=>document.querySelector('#scene-teacher .flow-stream').dataset.flowRunning==='false');await tour.emulateMedia({reducedMotion:'no-preference'});await tour.waitForFunction(()=>document.querySelector('#scene-teacher .flow-stream').dataset.flowRunning==='true');
+ await tour.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));});assert.equal(await stream.getAttribute('data-flow-running'),'false','Background pages stop their flows');await tour.evaluate(()=>{delete document.visibilityState;document.dispatchEvent(new Event('visibilitychange'));});await tour.waitForFunction(()=>document.querySelector('#scene-teacher .flow-stream').dataset.flowRunning==='true');
+ await tour.locator('#vision').scrollIntoViewIfNeeded();await tour.waitForFunction(()=>document.querySelector('#scene-teacher .flow-stream').dataset.flowRunning==='false');
+ await checkAudits(tourContext);await tourContext.close();
+
 // The opening copy, white math, red lettering, and connector play before entry; topic handoffs remain readable.
  const motion=await browser.newContext({viewport:{width:1440,height:950},reducedMotion:'no-preference'});
  const animated=await motion.newPage();audit(animated);await animated.goto(base+'/',{waitUntil:'domcontentloaded'});
@@ -489,24 +501,13 @@ try{
  });
  assert(morphSamples.sameNode,'Morphing must not replace a focused marker node');
  assert(morphSamples.rows.every(row=>row.delta<.02),'Radar markers detached during morph: '+JSON.stringify(morphSamples));
- assert(morphSamples.rows.some(row=>row.points[0][1]>81&&row.points[0][1]<139),'The radar should interpolate rather than jump');
- const motionTime=animated.locator('[data-hx-motion="time"]'),timeToggle=motionTime.locator('[data-hx-motion-toggle]');
- await motionTime.scrollIntoViewIfNeeded();await timeToggle.click();
- assert.equal(await motionTime.getAttribute('data-hx-paused'),'true');
- assert.equal(await motionTime.locator('.hx-time-cursor').evaluate(n=>getComputedStyle(n).animationPlayState),'paused');
- await motionTime.screenshot({path:shots+'/motion-paused.png'});
- await timeToggle.click();
- await animated.waitForFunction(()=>getComputedStyle(document.querySelector('[data-hx-motion="time"] .hx-time-cursor')).animationPlayState==='running');
- const evolving=animated.locator('[data-hx-motion="evolution"]'),evolutionToggle=evolving.locator('[data-hx-motion-toggle]');
- await evolving.scrollIntoViewIfNeeded();await evolutionToggle.click();
- const pausedStage=await evolving.getAttribute('data-hx-stage');
- await animated.waitForTimeout(3250);assert.equal(await evolving.getAttribute('data-hx-stage'),pausedStage,'Paused explanatory stages must remain readable');
- await evolutionToggle.click();await animated.waitForFunction(stage=>document.querySelector('[data-hx-motion="evolution"]').dataset.hxStage!==stage,pausedStage,{timeout:6000});
- await animated.emulateMedia({reducedMotion:'reduce'});
- assert.equal(await evolutionToggle.isVisible(),false);
- await evolutionToggle.evaluate(n=>{n.click();n.click();});
- const reducedStage=await evolving.getAttribute('data-hx-stage');await animated.waitForTimeout(3250);
- assert.equal(await evolving.getAttribute('data-hx-stage'),reducedStage,'Resuming cannot override reduced motion');
+ assert(morphSamples.rows.every(row=>row.points[0][1]===139),'Radar geometry should switch once while opacity crossfades');
+ assert.equal(await animated.locator('[data-hx-motion-toggle]').count(),0,'The requested design has no pause buttons');
+ const motionTime=animated.locator('[data-hx-motion="time"]');await motionTime.scrollIntoViewIfNeeded();
+ await animated.waitForFunction(()=>getComputedStyle(document.querySelector('.hx-time-cursor')).animationPlayState==='running');
+ const evolving=animated.locator('[data-hx-motion="evolution"]');await evolving.scrollIntoViewIfNeeded();
+ const stage=await evolving.getAttribute('data-hx-stage');await animated.waitForFunction(old=>document.querySelector('[data-hx-motion="evolution"]').dataset.hxStage!==old,stage,{timeout:6500});
+ await animated.emulateMedia({reducedMotion:'reduce'});const reducedStage=await evolving.getAttribute('data-hx-stage');await animated.waitForTimeout(3250);assert.equal(await evolving.getAttribute('data-hx-stage'),reducedStage);
  assert.equal(await motionTime.locator('.hx-time-cursor').evaluate(n=>getComputedStyle(n).animationName),'none');
  await animated.emulateMedia({reducedMotion:'no-preference'});
  await animated.locator('#terms').evaluate(n=>scrollTo({top:ShowcaseTransitions.measureTopic(n).top+scrollY+ n.querySelector('.topic-heading').offsetTop-innerHeight*1.3,behavior:'instant'}));
@@ -569,7 +570,7 @@ try{
  assert.equal(await animated.locator('.chapter-transit-overlay').count(),0,'Topic navigation should use natural scrolling without a blocking overlay');
  await checkAudits(motion);await motion.close();
  const recorded=records.cases.reduce((n,c)=>n+['basic','same_information','system'].filter(k=>c[k]?.status==='recorded').length,0);
- console.log(JSON.stringify({ok:true,mode:allowExcludedIcon404?'diagnostic_excluding_icons':'strict',excludedIcon404:[...excludedIcon404.values()],topics:12,contentUnits:13,highlights:7,nationalQuestions:2,savedPipelineRuns:8,diagnosticInputs:6,recordedResponses:recorded,conditions:2,viewports:[1440,980,390,320],resizableLanes:true,allTopicHandoffs:true,noJavaScript:true,visionCollapsedByDefault:true,wholePanel3D:true,network:'same-origin GET only, no cookies',screenshots:shots}));
+ console.log(JSON.stringify({ok:true,mode:allowExcludedIcon404?'diagnostic_excluding_icons':'strict',excludedIcon404:[...excludedIcon404.values()],topics:12,contentUnits:13,highlights:7,nationalQuestions:2,savedPipelineRuns:8,diagnosticInputs:6,recordedResponses:recorded,conditions:2,viewports:[1440,980,768,390,320],resizableLanes:true,allTopicHandoffs:true,noJavaScript:true,visionGalaxies:true,visionDialogs:63,mobileCamera:true,wholePanel3D:true,network:'same-origin GET only, no cookies',screenshots:shots}));
 }catch(error){
  if(lastPage&&!lastPage.isClosed()){
   await lastPage.screenshot({path:shots+'/failure.png'}).catch(()=>{});

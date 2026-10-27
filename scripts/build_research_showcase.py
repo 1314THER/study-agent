@@ -261,7 +261,7 @@ def bank_markup():
 <button type="button" data-library-tab="exam" role="tab" aria-selected="false">组卷</button>
 <button type="button" data-library-tab="calendar" role="tab" aria-selected="false">复查</button></div></div>
 <div id="bank-toolbar" class="bank-toolbar">
-<label>查找题目<input id="bank-search" type="search" placeholder="题干、板块、全国卷来源"></label>
+<label>查找题目<input id="bank-search" name="question-search" type="search" autocomplete="off" placeholder="例如：数列、2025 全国卷…"></label>
 <label>板块<select id="bank-category"><option value="">全部板块</option></select></label>
 <label>题型<select id="bank-type"><option value="">全部题型</option></select></label>
 <label>年份<select id="bank-year"><option value="">全部年份</option></select></label>

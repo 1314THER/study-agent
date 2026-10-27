@@ -61,7 +61,7 @@ function saveReading(){
  if(!uiReady||!entered||document.body.classList.contains('is-launch-open'))return;
  const chapter=readingChapter();
  document.body.dataset.currentTopic=chapter?.id||'vision';
- const record={version:2,entered:true,path:location.pathname,hash:location.hash,position:{topic:chapter?.id||'vision',offset:chapter?-(window.ShowcaseTransitions?.measureTopic(chapter)?.top??chapter.getBoundingClientRect().top):0,y:scrollY},choices:{perspective:state.perspective,teacher:state.teacher,example:state.example,mode:state.mode,caseIndex:state.caseIndex,condition:state.condition,sceneTabs:state.sceneTabs,teachingIndex:state.teachingIndex,geometryStage:state.geometryStage,timestampEvent:state.timestampEvent,routineHidden:state.routineHidden,completeMode:state.completeMode},bank:window.ShowcaseBank?.snapshot?.()};
+ const record={version:2,visionLayout:2,entered:true,path:location.pathname,hash:location.hash,position:{topic:chapter?.id||'vision',offset:chapter?-(window.ShowcaseTransitions?.measureTopic(chapter)?.top??chapter.getBoundingClientRect().top):0,y:scrollY},choices:{perspective:state.perspective,teacher:state.teacher,example:state.example,mode:state.mode,caseIndex:state.caseIndex,condition:state.condition,sceneTabs:state.sceneTabs,teachingIndex:state.teachingIndex,geometryStage:state.geometryStage,timestampEvent:state.timestampEvent,routineHidden:state.routineHidden,completeMode:state.completeMode},bank:window.ShowcaseBank?.snapshot?.()};
  try{sessionStorage.setItem(readingKey,JSON.stringify(record));}catch{}
 }
 function scheduleReadingSave(){clearTimeout(saveTimer);if(uiReady)saveTimer=setTimeout(saveReading,160);}
@@ -71,11 +71,14 @@ async function restoreReadingPosition(){
  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
  if(resumeReading&&initialHash===location.hash){
   const position=savedReading.position||{},savedTopic=position.topic||aliases[position.chapter]||position.chapter,chapter=typeof savedTopic==='string'?$(savedTopic):null;
+  if(savedTopic==='vision'&&savedReading.visionLayout!==2){(window.ShowcaseVision?.resolveAnchor(initialHash)||$(initialHash.slice(1))||$('vision'))?.scrollIntoView({behavior:'instant',block:'start'});}
+  else{
   const top=chapter?.matches('[data-chapter]')&&Number.isFinite(position.offset)?(window.ShowcaseTransitions?.measureTopic(chapter)?.top??chapter.getBoundingClientRect().top)+scrollY+position.offset:Number.isFinite(position.y)?position.y:0;
   scrollTo({top:Math.max(0,Math.min(top,document.documentElement.scrollHeight-innerHeight)),behavior:'instant'});
+  }
  }else if(!resumeReading&&initialHash&&initialHash===location.hash){
   // Native fragment positioning ran before saved math and diagrams filled their containers.
-  ($(initialHash.slice(1))||$(aliases[initialHash.slice(1)]))?.scrollIntoView({behavior:'instant',block:'start'});
+  (window.ShowcaseVision?.resolveAnchor(initialHash)||$(initialHash.slice(1))||$(aliases[initialHash.slice(1)]))?.scrollIntoView({behavior:'instant',block:'start'});
  }
  await new Promise(resolve=>requestAnimationFrame(resolve));
  document.documentElement.style.removeProperty('overflow-anchor');
@@ -120,36 +123,37 @@ function openAnnotation(id,trigger){const value=annotations.get(id);if(!value)re
 function closeAnnotation(){$('annotation-panel').hidden=true;if(annotationTrigger?.isConnected)annotationTrigger.focus();}
 function bar(title,subtitle){const n=el('div','workbench-bar');n.append(el('strong','',title));if(subtitle)n.append(el('span','',subtitle));return n;}
 function tabs(rows,active,change,label='切换图解'){const n=el('div','scene-tabs');n.setAttribute('role','group');n.setAttribute('aria-label',label);rows.forEach(([id,title])=>{const b=button(title,()=>change(id));b.dataset.sceneFocus=label+':'+id;b.setAttribute('aria-pressed',String(id===active));n.append(b);});return n;}
-function flow(root,labels,active=0){
- const n=el('div','flow-strip'),track=el('div','flow-track');
- track.append(el('i','flow-fill'));n.append(track);
- let current=active,timer=0,scanTimer=0;
- const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
- const buttons=labels.map((t,i)=>{const b=el('button',i===active?'active':'',t);b.type='button';b.setAttribute('aria-pressed',String(i===active));b.style.setProperty('--i',i);b.addEventListener('click',()=>{stopLoop();sync(i);});n.append(b);return b;});
- function sync(index){
-  current=index;
-  buttons.forEach((b,i)=>{b.classList.toggle('active',i===index);b.setAttribute('aria-pressed',String(i===index));});
-  n.style.setProperty('--flow-progress',((index+.5)/labels.length*100).toFixed(2)+'%');
-  clearTimeout(scanTimer);n.classList.remove('is-scanning');
-  void n.offsetWidth;n.classList.add('is-scanning');
-  scanTimer=setTimeout(()=>n.classList.remove('is-scanning'),720);
- }
- function stopLoop(){if(timer){clearInterval(timer);timer=0;}}
- function startLoop(){if(reduced||timer||labels.length<2)return;timer=setInterval(()=>{
-  const next=(current+1)%labels.length,wrap=next===0;
-  if(wrap)n.classList.add('is-rewinding');
-  sync(next);
-  if(wrap)setTimeout(()=>n.classList.remove('is-rewinding'),340);
- },2400);}
- sync(active);root.append(n);
- n.style.setProperty('--flow-count',labels.length);
- // Steps read in from the left once, then walk through the loop while in view.
- n.dataset.reveal='pending';
- const reveal=()=>{n.classList.add('is-revealed');n.dataset.reveal='done';};
- const begin=()=>{reveal();startLoop();};
- if(reduced||!('IntersectionObserver' in window))begin();
- else{const io=new IntersectionObserver(entries=>{if(entries.some(e=>e.isIntersecting))begin();else stopLoop();},{threshold:.3});io.observe(n);}
- return n;
+const ambientLoops=new Map([...document.querySelectorAll('.chapter-transition-closing')].map(n=>[n,false]));
+const ambientObserver=new IntersectionObserver(entries=>{entries.forEach(e=>ambientLoops.set(e.target,e.isIntersecting));refreshFlows();},{threshold:0});ambientLoops.forEach((_,n)=>ambientObserver.observe(n));
+const flowControllers=new Set(),flowMotion=matchMedia('(prefers-reduced-motion: reduce)');
+function stopFlow(row){row.animations.forEach(a=>a.cancel());row.animations=[];row.node.dataset.flowRunning='false';}
+function flowAllowed(row){return uiReady&&row.visible&&row.node.isConnected&&!flowMotion.matches&&document.visibilityState==='visible'&&!document.querySelector('dialog[open]');}
+function playFlow(row){if(!flowAllowed(row)||row.animations.length||!row.keys.length)return;row.animations=row.beams.slice(0,row.keys.length).map((beam,i)=>beam.animate(row.keys[i],{duration:2000,iterations:Infinity,easing:'linear'}));row.node.dataset.flowRunning='true';}
+function refreshFlows(){const suspended=document.visibilityState!=='visible'||Boolean(document.querySelector('dialog[open]'));document.body.classList.toggle('showcase-motion-suspended',document.visibilityState!=='visible'||Boolean(document.querySelector('dialog[open]:not(.launch-screen)')));ambientLoops.forEach((visible,node)=>node.classList.toggle('motion-running',visible&&!suspended&&!flowMotion.matches));for(const row of flowControllers){if(!row.node.isConnected){stopFlow(row);row.io?.disconnect();row.resize?.disconnect();flowControllers.delete(row);}else if(flowAllowed(row))playFlow(row);else stopFlow(row);}}
+function layoutFlow(row){
+ stopFlow(row);if(!row.node.isConnected)return;
+ const count=row.buttons.length,columns=innerWidth<=460?2:innerWidth<=760?3:count;
+ row.node.style.setProperty('--flow-columns',columns);
+ row.buttons.forEach((b,i)=>{const line=Math.floor(i/columns),column=i%columns;b.style.gridRow=line+1;b.style.gridColumn=line%2?columns-column:column+1;});
+ const box={width:row.node.clientWidth,height:row.node.clientHeight},points=row.buttons.map(b=>({x:b.offsetLeft+b.offsetWidth/2,y:b.offsetTop+b.offsetHeight+8,row:parseInt(b.style.gridRow)}));
+ if(!box.width||!points.length)return;
+ row.svg.setAttribute('viewBox','0 0 '+box.width+' '+box.height);row.svg.setAttribute('width',box.width);row.svg.setAttribute('height',box.height);
+ let d='M'+points[0].x+' '+points[0].y;
+ for(let i=1;i<points.length;i++){const p=points[i],a=points[i-1];if(p.row===a.row)d+='L'+p.x+' '+p.y;else{const bend=a.x+((a.row-1)%2?-22:22);d+='C'+bend+' '+a.y+' '+bend+' '+p.y+' '+p.x+' '+p.y;}}
+ row.path.setAttribute('d',d);const length=row.path.getTotalLength();row.straight=columns===count;row.node.dataset.flowStraight=String(row.straight);row.node.style.setProperty('--flow-start-x',points[0].x+'px');row.node.style.setProperty('--flow-end-gap',Math.max(0,box.width-points.at(-1).x-4)+'px');
+ row.keys=row.beams.slice(0,row.straight?1:24).map((_,index)=>Array.from({length:121},(_,k)=>{const t=k/120,progress=Math.max(0,Math.min(1,(t-.06)/.88)),raw=progress*length-index*6,distance=Math.max(0,Math.min(length,raw));const p=row.path.getPointAtLength(distance),q=row.path.getPointAtLength(Math.min(length,distance+.5)),back=row.path.getPointAtLength(Math.max(0,distance-.5)),angle=Math.atan2(q.y-back.y,q.x-back.x)*180/Math.PI;return {offset:t,transform:'translate3d('+p.x+'px,'+p.y+'px,0) rotate('+angle+'deg)'+(row.straight?' translateX(-140px)':''),opacity:(raw<0?0:1-index/25)*(t>.94?(1-t)/.06:1)};}));
+ playFlow(row);
+}
+addEventListener('showcase:reading-ready',refreshFlows);addEventListener('pageshow',refreshFlows);document.addEventListener('visibilitychange',refreshFlows);flowMotion.addEventListener('change',refreshFlows);
+let flowSweep=0;new MutationObserver(()=>{if(!flowSweep)flowSweep=requestAnimationFrame(()=>{flowSweep=0;refreshFlows();});}).observe(document.body,{childList:true,subtree:true,attributes:true,attributeFilter:['open']});
+function flow(root,labels){
+ const n=el('div','flow-strip flow-stream'),svgLayer=document.createElementNS(NS,'svg'),path=document.createElementNS(NS,'path');svgLayer.classList.add('flow-route');svgLayer.setAttribute('aria-hidden','true');svgLayer.append(path);n.append(svgLayer);
+ const overlay=el('div','flow-beams');overlay.setAttribute('aria-hidden','true');const beams=Array.from({length:24},()=>{const beam=el('i','flow-beam');overlay.append(beam);return beam;});n.append(overlay);
+ const buttons=labels.map((label,index)=>{const b=el('button',index===0?'active':'',label);b.type='button';b.setAttribute('aria-pressed',String(index===0));b.addEventListener('click',()=>buttons.forEach((button,j)=>{button.classList.toggle('active',j===index);button.setAttribute('aria-pressed',String(j===index));}));n.append(b);return b;});
+ root.append(n);const row={node:n,buttons,beams,svg:svgLayer,path,animations:[],keys:[],visible:false};flowControllers.add(row);
+ row.io=new IntersectionObserver(entries=>{row.visible=entries[0].isIntersecting;if(row.visible&&!row.keys.length)layoutFlow(row);refreshFlows();},{threshold:0});row.io.observe(n);
+ let queued=0;row.resize=new ResizeObserver(()=>{cancelAnimationFrame(queued);queued=requestAnimationFrame(()=>layoutFlow(row));});row.resize.observe(n);
+ requestAnimationFrame(()=>layoutFlow(row));return n;
 }
 function selectView(name){const id=aliases[name]||name;if(!$(id))return;recordOrigin(id);dispatchEvent(new CustomEvent('showcase:navigate',{detail:{from:state.view,to:id}}));state.view=id;if(singleModes[name]){state.mode=singleModes[name];renderSingle();}const url=new URL(location.href);url.hash=id;history.pushState(history.state,'',url);$(id)?.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'start'});}
 api.selectView=selectView;api.focusRoutine=id=>{const r=state.data?.catalog?.routines.find(x=>x.id===id);if(r)$('routine-selection').textContent=r.name;};
@@ -383,7 +387,7 @@ api.ready=(async()=>{const results=await Promise.allSettled([json('data.json'),j
 /* Research comparisons and the second part of a solution open in one shared panel. */
 (()=>{
  const dialog=document.createElement('dialog');
- dialog.className='research-modal';dialog.id='research-modal';
+ dialog.className='research-modal';dialog.id='research-modal';dialog.setAttribute('aria-labelledby','research-modal-title');
  const head=document.createElement('div');head.className='research-modal-head';
  const title=document.createElement('h3');title.id='research-modal-title';title.textContent='现有研究';
  const close=document.createElement('button');close.type='button';close.className='research-modal-close';

@@ -140,7 +140,7 @@
       "research_resources": [],
       "aggregate_snapshot": {
         "file": "frontend/showcase/dataset-data.json",
-        "sha256": "76cec584caca4e76a3d9375a0f5e2ce9b9e76c332ace3ba983bfe8c4e76b60a4",
+        "sha256": "f16f1ee84a1e4fbc044bc62026142ed13574ae21d14b483408893000f866cdf4",
         "checked_at": "2026-10-26",
         "scope": "公开聚合规模和明确假设的规划测算；内部规模仍为2026-10-25快照，2026-10-26仅复核公开两题清单及其资源摘要。"
       }
@@ -870,7 +870,7 @@
       }
     ],
     "content_file": "frontend/showcase/vision-content.json",
-    "content_sha256": "d24fd9d890310645705c5f117653b5118d71e56465de7ca753591c3e50965b98",
+    "content_sha256": "8181925fa0e93dd87d667de9f664b5a2d99245c64f7dbf122f7b4735c2a26b2a",
     "source_note": "用户2026-10-26正式方案；全文63项按教学用途关联现有章节，功能状态核对代码与设计文档；成本与政策另核对官方原文。",
     "counts": {
       "students": 21,
@@ -885,7 +885,7 @@
       "https://www.gov.cn/zhengce/202501/content_6999913.htm",
       "https://docs.bigmodel.cn/cn/guide/start/pricing"
     ],
-    "presentation": "链条式正文：原来的困难→教学怎样改变→接续功能；各分支默认2项，其余展开阅读；无JS全文显示。"
+    "presentation": "四个单列椭圆星系展示63条简短愿景；单方面弹窗对照现状与愿景，手机镜头沿轨道巡游；无JS原生详情可读。"
   },
   "research_review": {
     "checked_at": "2026-10-26",

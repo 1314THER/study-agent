@@ -36,7 +36,7 @@ class VisionChangeParser(HTMLParser):
                 self.article_depth = 1
         if self.change is not None:
             self.change['tags'].append(tag)
-            if 'hidden' in attributes or (tag == 'details' and 'open' not in attributes):
+            if 'hidden' in attributes and tag != 'button':
                 self.change['hidden'] = True
             if tag == 'a':
                 self.link = {'target': attributes.get('href'), 'text': ''}
@@ -182,7 +182,10 @@ class ResearchShowcaseBuildTests(unittest.TestCase):
         self.assertEqual(mapping['counts'], {'students': 21, 'teachers': 17, 'schools': 17, 'society': 8})
         self.assertEqual(self.vision['status'], '教学愿景')
         self.assertEqual(self.vision['headline'], '让每个学生，都能获得适合自己的学习支持。')
-        self.assertEqual(self.vision['subtitle'], '系统通过LLM大模型提供的低成本大批量输出，探索把及时诊断、针对性教学和持续跟进融入日常教育，让学生、教师、学校到社会不必为了补上学习的差距花费过多精力。')
+        self.assertIn('大语言模型', self.vision['subtitle'])
+        self.assertNotIn('LLM大模型', self.vision['subtitle'])
+        self.assertEqual(self.content['highlights']['manifesto_en'], 'The purpose of AI is not to assist humanity, but to surpass it.')
+        self.assertIn(self.content['highlights']['manifesto_en'], build(self.content))
 
     def test_vision_content_hash_change_blocks_regeneration(self):
         changed = copy.deepcopy(self.source_map)
@@ -220,7 +223,7 @@ class ResearchShowcaseBuildTests(unittest.TestCase):
                 self.assertEqual(len(group['rows']), counts[group['id']])
                 self.assertEqual(len(changes), counts[group['id']])
                 for source, change in zip(group['rows'], changes):
-                    self.assertEqual(set(source), {'aspect', 'before', 'after', 'features'})
+                    self.assertEqual(set(source), {'aspect', 'before', 'after', 'features', 'short_vision'})
                     self.assertFalse(change['hidden'])
                     for field in ('aspect', 'before', 'after'):
                         self.assertIn(source[field], change['text'])
@@ -236,25 +239,21 @@ class ResearchShowcaseBuildTests(unittest.TestCase):
         vision_start, highlights_start = page.index('id="vision"'), page.index('id="highlights"')
         self.assertLess(vision_start, highlights_start)
         self.assertIn(html.escape(self.vision['subtitle']), page[vision_start:highlights_start])
-        self.assertNotIn('<details', page[vision_start:highlights_start])
+        self.assertIn('<details class="vision-fallback"', page[vision_start:highlights_start])
         self.assertNotIn('<table', page[vision_start:highlights_start])
 
-    def test_vision_groups_have_accessible_disclosures_after_the_first_two_changes(self):
+    def test_vision_galaxies_retain_all_short_cards_and_native_fallbacks(self):
         page = build(self.content)
+        self.assertEqual(page.count('class="vision-card"'), 63)
+        self.assertEqual(page.count('class="vision-fallback"'), 63)
+        self.assertNotIn('vision-disclosure', page)
+        self.assertIn('id="vision-dialog"', page)
+        self.assertIn('aria-labelledby="vision-dialog-title"', page)
         for group in self.vision['groups']:
-            with self.subTest(group=group['id']):
-                section = re.search(r'<section class="vision-group" id="vision-' + group['id']
-                                    + r'".*?</section>', page, re.S).group(0)
-                button = re.search(r'<button class="vision-disclosure".*?</button>', section, re.S).group(0)
-                before, after = section.split(button, 1)
-                self.assertEqual(before.count('<article class="vision-change"'), 2)
-                self.assertEqual(after.count('<article class="vision-change"'), len(group['rows']) - 2)
-                self.assertIn('type="button" hidden', button)
-                self.assertIn('aria-expanded="true"', button, 'The no-JS document exposes every item')
-                self.assertIn('aria-controls="vision-more-' + group['id'] + '"', button)
-                self.assertIn('data-remaining="' + str(len(group['rows']) - 2) + '"', button)
-                self.assertIn('id="vision-more-' + group['id'] + '"', after)
-                self.assertNotRegex(after, r'<div class="vision-more"[^>]*\bhidden\b')
+            for index, row in enumerate(group['rows'], 1):
+                self.assertTrue(0 < len(row['short_vision']) <= 14)
+                self.assertIn(html.escape(row['short_vision']), page)
+                self.assertIn('id="vision-change-' + group['id'] + '-' + str(index) + '"', page)
 
     def test_vision_feature_states_and_targets_link_to_existing_topics(self):
         page = build(self.content)
@@ -277,6 +276,8 @@ class ResearchShowcaseBuildTests(unittest.TestCase):
         cases = (
             ('missing row', lambda value: value['groups'][0]['rows'].pop(), 'Incomplete vision comparisons'),
             ('missing column', lambda value: value['groups'][0]['rows'][0].pop('after'), 'all four columns'),
+            ('missing short vision', lambda value: value['groups'][0]['rows'][0].pop('short_vision'), 'all four columns'),
+            ('long short vision', lambda value: value['groups'][0]['rows'][0].update(short_vision='字' * 15), 'fourteen characters'),
             ('unknown target', lambda value: value['groups'][0]['rows'][0]['features'][0].update(target='#absent-topic'), 'Unknown vision feature target'),
             ('unqualified status', lambda value: value['groups'][0]['rows'][0]['features'][0].update(status='全部实现'), 'implementation status'),
         )

@@ -26,8 +26,10 @@ def validate_vision(content):
         if len({row['aspect'] for row in group['rows']}) != len(group['rows']):
             raise ValueError('Duplicate vision comparison: ' + group['id'])
         for row in group['rows']:
-            if not all(row.get(key) for key in ('aspect', 'before', 'after', 'features')):
+            if not all(row.get(key) for key in ('aspect', 'before', 'after', 'features', 'short_vision')):
                 raise ValueError('Vision comparison must contain all four columns')
+            if len(row['short_vision']) > 14:
+                raise ValueError('Short vision exceeds fourteen characters')
             for feature in row['features']:
                 if feature.get('target') not in FEATURE_TARGETS:
                     raise ValueError('Unknown vision feature target: ' + str(feature))
@@ -43,36 +45,25 @@ def feature_link(feature):
 
 
 def comparison_chain(group):
-    out = ['<div class="vision-chain" aria-label="' + esc(group['title']) + '的教学变化链">']
-    more_id = 'vision-more-' + group['id']
-    remaining = len(group['rows']) - 2
+    out = ['<div class="vision-viewport"><div class="vision-world">'
+           '<svg class="vision-orbits" aria-hidden="true"></svg>']
     for index, row in enumerate(group['rows']):
-        if index == 2:
-            # All text is readable without JavaScript. The client initializes disclosure
-            # before the main reader restores its saved scroll position.
-            out.append('<button class="vision-disclosure" type="button" hidden data-vision-toggle="'
-                       + group['id'] + '" data-remaining="' + str(remaining) + '" aria-expanded="true" aria-controls="'
-                       + more_id + '" aria-label="收起' + esc(group['title']) + '的其余 ' + str(remaining)
-                       + ' 项"><span>收起其余 ' + str(remaining) + ' 项</span>'
-                       '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>'
-                       '<div class="vision-more" id="' + more_id + '" data-vision-more="' + group['id'] + '">')
         key = 'vision-change-' + group['id'] + '-' + str(index + 1)
-        # Weight identifies the change; the complete source sentence is preserved.
-        lead, stop, rest = row['after'].partition('。')
-        after = '<strong>' + esc(lead + stop) + '</strong>' + esc(rest)
-        out.append('<article class="vision-change" id="' + key + '" aria-labelledby="' + key + '-title">'
-                   '<header class="vision-change-heading"><span class="vision-chain-dot" aria-hidden="true"></span>'
-                   '<h3 id="' + key + '-title">' + esc(row['aspect']) + '</h3></header>'
-                   '<div class="vision-change-flow"><div class="vision-change-before">'
-                   '<span class="vision-stage-label">原来的困难</span><p>' + esc(row['before']) + '</p></div>'
-                   '<div class="vision-change-connector" aria-hidden="true"><svg viewBox="0 0 56 56">'
-                   '<path class="vision-arrow-wide" d="M4 12H20Q28 12 28 20V36Q28 44 36 44H51m-6-6 6 6-6 6"/>'
-                   '<path class="vision-arrow-narrow" d="M12 3V44m-6-6 6 6 6-6"/></svg></div>'
-                   '<div class="vision-change-result"><span class="vision-stage-label">教学怎样改变</span>'
-                   '<p>' + after + '</p><div class="vision-features"><span>接续功能</span><ul>'
-                   + ''.join(feature_link(feature) for feature in row['features']) + '</ul></div></div></div></article>')
-    out.append('</div></div>')
-    return ''.join(out)
+        out.append('<article class="vision-change" id="' + key + '" data-aspect="' + esc(row['aspect']) + '">'
+                   '<button class="vision-card" type="button" hidden aria-haspopup="dialog" aria-controls="vision-dialog" '
+                   'aria-label="' + esc(group['title'] + '：' + row['aspect'] + '，' + row['short_vision'] + '，查看现状与愿景') + '">'
+                   + esc(row['short_vision']) + '</button><details class="vision-fallback"><summary>'
+                   + esc(row['aspect']) + ' · ' + esc(row['short_vision']) + '</summary>'
+                   '<div class="vision-detail"><div class="vision-change-flow"><div class="vision-change-before">'
+                   '<span class="vision-stage-label">现状</span><p>' + esc(row['before']) + '</p></div>'
+                   '<div class="vision-change-connector" aria-hidden="true"><svg viewBox="0 0 100 40">'
+                   '<defs><linearGradient id="gradient-' + key + '"><stop stop-color="#FF7B86"/>'
+                   '<stop offset="1" stop-color="#8AB8FF"/></linearGradient></defs>'
+                   '<path d="M4 20H92m-12-12 12 12-12 12" stroke="url(#gradient-' + key + ')"/></svg></div>'
+                   '<div class="vision-change-result"><span class="vision-stage-label">愿景</span><p>'
+                   + esc(row['after']) + '</p></div></div><div class="vision-features"><span>接续功能</span><ul>'
+                   + ''.join(feature_link(feature) for feature in row['features']) + '</ul></div></div></details></article>')
+    return ''.join(out) + '</div></div><div class="vision-camera-controls" hidden><button type="button" data-camera-step="-1" aria-label="上一项愿景">上一项</button><span class="vision-camera-count"></span><button type="button" data-camera-step="1" aria-label="下一项愿景">下一项</button><span class="sr-only" role="status"></span></div>'
 
 
 def cost_estimate(content):
@@ -114,44 +105,23 @@ def policy_connections(content):
 
 def vision_section(content):
     validate_vision(content)
-    groups = content['groups']
-    skip = '<a class="vision-skip" data-vision-skip href="#highlights">跳过愿景，查看项目亮点 <span aria-hidden="true">↗</span></a>'
-    out = [skip + '<section class="topic-section vision-topic" id="vision" data-chapter="vision" aria-labelledby="heading-vision">',
-           '<header class="topic-heading vision-heading">' +
-           '<h1 id="heading-vision" tabindex="-1"><span class="vision-chapter-name">教学愿景</span>'
+    out = ['<a class="vision-skip" data-vision-skip href="#highlights">跳过愿景，查看项目亮点 <span aria-hidden="true">↗</span></a>'
+           '<section class="topic-section vision-topic" id="vision" data-chapter="vision" aria-labelledby="heading-vision">'
+           '<header class="topic-heading vision-heading"><h1 id="heading-vision" tabindex="-1"><span class="vision-chapter-name">教学愿景</span>'
            + esc(content['headline']) + '</h1><p class="vision-lead">' + esc(content['subtitle'])
-           + '</p><p class="vision-outlook">以下对照描述系统融入日常教学后希望带来的变化。各项支撑功能的现状见对应章节。</p></header>',
-           '<figure class="vision-map" aria-labelledby="vision-map-title">'
-           '<figcaption id="vision-map-title">我们希望教学发生什么变化</figcaption>'
-           '<div class="vision-map-root"><span>系统基于 LLM 提供</span><strong>适合每个人的支持</strong></div>'
-           '<div class="vision-map-branches">']
-    for group in groups:
-        out.append('<a class="vision-map-branch" href="#vision-' + group['id'] + '"><strong>'
-                   + esc(group['title']) + '</strong><span>' + esc(group['tagline']) + '</span></a>')
-    out.extend(['</div><p class="vision-map-connection">学生作答 → 教师调整 → 学校教研 → 更普遍的学习支持<br>'
-                '<span>新的讲解、资源和安排，再回到学生的下一次学习。</span></p></figure>',
-                '<p class="vision-status-key"><span>功能进度</span><b>已有基础</b>已有代码或演示；<b>设计方案</b>待接入教学流程；<b>研究方向</b>待方法与效果验证。</p>',
-                '<nav class="vision-outline" aria-label="愿景章内导航"><div class="vision-outline-links">'])
-    for group in groups:
-        out.append('<a href="#vision-' + group['id'] + '" data-vision-nav="' + group['id'] + '">'
-                   + esc(group['title']) + '</a>')
-    out.extend(['</div></nav><div class="vision-comparisons">'])
-    connections = {
-        'students': ('学生的困难，成为教师下一次教学的依据。', '个人作答与复测汇成班级问题分布，教师据此决定个别辅导、小组讲解或全班重讲。'),
-        'teachers': ('教学调整的结果，成为学校教研的材料。', '将采用了什么教学行动、学生随后有何变化放在一起，学校才能找到值得推广的做法和需要补充的资源。'),
-        'schools': ('校内支持越及时，家庭越少需要额外补救。', '学校提供持续诊断、针对性讲解和后续复查，让更多必要的学习帮助发生在日常教育中。'),
-    }
-    for group in groups:
-        out.append('<section class="vision-group" id="vision-' + group['id'] + '" data-vision-group="'
-                   + group['id'] + '" aria-labelledby="vision-title-' + group['id'] + '">'
-                   '<header class="vision-group-heading"><span>' + esc(group['tagline']) + '</span><h2 id="vision-title-'
-                   + group['id'] + '" tabindex="-1">' + esc(group['title']) + '</h2><p>'
-                   + esc(group['summary']) + '</p></header>' + comparison_chain(group) + '</section>')
-        if group['id'] in connections:
-            title, text = connections[group['id']]
-            out.append('<aside class="vision-connection"><span aria-hidden="true">↓</span><div><strong>'
-                       + esc(title) + '</strong><p>' + esc(text) + '</p></div></aside>')
-    out.append('</div>' + cost_estimate(content) + policy_connections(content))
+           + '</p><p class="vision-outlook">以下展示融入日常教学后的目标形态。点击一块愿景，查看现状、完整设想与支撑功能。</p></header>'
+           '<nav class="vision-outline" aria-label="愿景章内导航"><div class="vision-outline-links">']
+    for group in content['groups']:
+        out.append('<a href="#vision-' + group['id'] + '" data-vision-nav="' + group['id'] + '">' + esc(group['title']) + '</a>')
+    out.append('</div></nav><p class="vision-status-key">功能进度：已有基础 · 设计方案 · 研究方向；各项现状见详情。</p><div class="vision-comparisons">')
+    for group in content['groups']:
+        out.append('<section class="vision-group" id="vision-' + group['id'] + '" data-vision-group="' + group['id']
+                   + '" aria-labelledby="vision-title-' + group['id'] + '"><header class="vision-group-heading"><h2 id="vision-title-'
+                   + group['id'] + '" tabindex="-1">' + esc(group['title']) + '</h2><p>' + esc(group['tagline']) + '</p></header>'
+                   + comparison_chain(group) + '</section>')
+    out.append('</div><dialog id="vision-dialog" class="vision-dialog" aria-labelledby="vision-dialog-title"><header class="vision-dialog-head">'
+               '<h2 id="vision-dialog-title"></h2><button type="button" class="vision-dialog-close" aria-label="关闭愿景详情">关闭</button></header>'
+               '<div class="vision-dialog-body"></div></dialog>' + cost_estimate(content) + policy_connections(content))
     out.append('<div class="vision-conclusion"><p>我们希望看到的成效，是学生能独立解决新问题、隔一段时间仍然会用，教师的调整有后续结果，家庭少一些无效投入。</p></div>')
     out.append('<div class="chapter-bridge"><div class="bridge-flow"><div class="bridge-output"><span>希望改变的教学日常</span>'
                '<strong>学生学习、教师教学、学校教研与社会支持</strong></div><div class="bridge-track" aria-hidden="true">'
