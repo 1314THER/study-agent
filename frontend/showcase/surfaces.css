@@ -339,6 +339,7 @@ body.showcase-motion-suspended *{animation-play-state:paused!important}
    Reduced-motion and hidden-page states still stop the dialog via data-motion. */
 @media(prefers-reduced-motion:no-preference){
  body.showcase-motion-suspended .vision-dialog[open][data-motion=running] :is(.vision-transition-beam,.vision-transition-beam>i),
+ body.showcase-motion-suspended .vision-dialog[open][data-motion=running] .vision-change-before:before,
  body.showcase-motion-suspended .vision-dialog[open][data-motion=running] .vision-change-result:before{animation-play-state:running!important}
 }
 

@@ -2,10 +2,11 @@
 import assert from 'node:assert/strict';
 import {spawn,execFileSync} from 'node:child_process';
 import {createRequire} from 'node:module';
-import {mkdir,writeFile} from 'node:fs/promises';
+import {mkdir,readFile,writeFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 const require=createRequire(import.meta.url),{chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
 const root=new URL('../../',import.meta.url),revision=execFileSync('git',['rev-parse','--short','HEAD'],{cwd:root,encoding:'utf8'}).trim();
+const content=JSON.parse(await readFile(new URL('frontend/showcase/research-content.json',root),'utf8'));
 const dirty=Boolean(execFileSync('git',['status','--porcelain'],{cwd:root,encoding:'utf8'}).trim());
 const stamp=new Date().toISOString().replace(/[:.]/g,'-'),label=revision+(dirty?'-working':'');
 const shots=process.env.RESEARCH_SHOTS||`${tmpdir()}/demo-visual-${label}-${stamp}`;
@@ -28,6 +29,9 @@ try{
  assert(await page.evaluate(()=>{const n=document.activeElement,s=getComputedStyle(n);return n.matches('a,button,input')&&s.outlineStyle!=='none'&&parseFloat(s.outlineWidth)>0;}),'Keyboard controls still need a visible focus ring');
  await page.locator('#explore-start').click();
  assert.equal(await page.locator('.relation-focus').count(),0);
+ const summaries=new Map(content.chapters.flatMap(chapter=>(chapter.research||[]).map(row=>[row.title,row.short_summary])));
+ const researchButtons=await page.locator('.research-notes-trigger').evaluateAll(nodes=>nodes.map(n=>({title:n.querySelector('strong').textContent,summary:n.querySelector('span').textContent})));
+ assert.equal(researchButtons.length,18);for(const row of researchButtons){assert(summaries.get(row.title),'Each study needs an editorial summary: '+row.title);assert.equal(row.summary,summaries.get(row.title),'Research summaries must remain complete');assert(!row.summary.endsWith('…'));}
  const research=page.locator('.topic-unit.is-merged .research-notes');assert.equal(await research.count(),7);
  for(const width of [599,600]){
   await research.evaluateAll((nodes,w)=>nodes.forEach(n=>n.style.width=w+'px'),width);
@@ -60,10 +64,10 @@ try{
   const dialog=page.locator('#vision-dialog');await page.waitForFunction(()=>document.getElementById('vision-dialog').dataset.motion==='running');
   await page.waitForTimeout(150);assert(await dialog.locator('.vision-transition-beam').evaluate(n=>n.getAnimations()[0].playState==='running'),'Modal light must survive the background animation suspension');
   const samples=[];
-  for(const time of [240,960,1800,2200]){
-   const sample=await dialog.evaluate((d,t)=>{d.getAnimations({subtree:true}).forEach(a=>{a.pause();a.currentTime=t;});const beam=d.querySelector('.vision-transition-beam'),r=beam.getBoundingClientRect();return {time:t,x:r.x,y:r.y,red:Number(getComputedStyle(d.querySelector('.vision-beam-red')).opacity),blue:Number(getComputedStyle(d.querySelector('.vision-beam-blue')).opacity),arrival:Number(getComputedStyle(d.querySelector('.vision-change-result'),'::before').opacity)};},time);samples.push(sample);await capture(page,`light-${width}-${time}`,dialog);
+  for(const time of [0,960,1800,2200]){
+   const sample=await dialog.evaluate((d,t)=>{d.getAnimations({subtree:true}).forEach(a=>{a.pause();a.currentTime=t;});const beam=d.querySelector('.vision-transition-beam'),r=beam.getBoundingClientRect(),source=d.querySelector('.vision-change-before'),target=d.querySelector('.vision-change-result'),from=source.getBoundingClientRect(),to=target.getBoundingClientRect();return {time:t,x:r.x,y:r.y,tip:innerWidth<720?r.bottom:r.right,origin:innerWidth<720?r.top:r.left,from:innerWidth<720?from.bottom:from.right,to:innerWidth<720?to.top:to.left,red:Number(getComputedStyle(d.querySelector('.vision-beam-red')).opacity),blue:Number(getComputedStyle(d.querySelector('.vision-beam-blue')).opacity),sourceGlow:Number(getComputedStyle(source,'::before').opacity),arrival:Number(getComputedStyle(target,'::before').opacity),frames:[source,target].map(n=>{const s=getComputedStyle(n);return ['Top','Right','Bottom','Left'].every(side=>parseFloat(s['border'+side+'Width'])>=1);})};},time);samples.push(sample);await capture(page,`light-${width}-${time}`,dialog);
   }
-  const [red,,blue]=samples;assert(red.red>red.blue&&blue.blue>blue.red&&blue.arrival>.8);assert(width===390?blue.y-red.y>50&&Math.abs(blue.x-red.x)<1:blue.x-red.x>50&&Math.abs(blue.y-red.y)<1,'Light must move along its arrow');evidence.motion[width]=samples;
+  const [red,,blue]=samples;assert(red.red>red.blue&&blue.blue>blue.red&&blue.arrival>.8);assert(red.sourceGlow>.9&&red.arrival===0,'Only the red source frame starts illuminated');assert(samples.every(s=>s.frames.every(Boolean)),'Both states need complete frames');assert(Math.abs(red.origin-red.from)<2&&Math.abs(blue.tip-blue.to)<2,'The light must leave the source frame and reach the destination frame');assert(width===390?blue.y-red.y>50&&Math.abs(blue.x-red.x)<1:blue.x-red.x>50&&Math.abs(blue.y-red.y)<1,'Light must move along its arrow');evidence.motion[width]=samples;
   // Recreate native CSS animations: WAAPI pause/play overrides CSS play-state,
   // so staged sampling must not contaminate the lifecycle assertions below.
   await page.reload({waitUntil:'networkidle'});await ready(page);

@@ -281,10 +281,10 @@ function renderExam(){
  };
  const ctl=tabs(labels.map((label,i)=>[String(i),label]),String(active),id=>{active=Number(id);draw();},'考试评价对象');root.replaceChildren(bar('评价试卷目标，复盘学生作答','方案图解'),ctl,body);draw();
 }
-function renderCareer(){const root=scenario('career','同样答对，也要记录是否获得帮助',['提示后完成','无提示新题','出现相反证据'],['记录为提示后完成，后续安排无提示新题检查。','单独记录新题独立作答，并在间隔一段时间后再次检查。','保留前后作答，修订判断，并说明下一次要检查什么。']);const tracks=el('div','evidence-tracks');['课时作业 → 知识理解与应用','考试 / 错题 / 先导测试 → 套路与步骤表现','汇入带来源、帮助条件和版本的长期档案'].forEach(x=>tracks.append(el('div','',x)));root.append(tracks,note('知识理解、方法迁移和复盘能力分别保存，帮助条件随证据保留。'));}
-function renderAgent(){const root=scenario('agent','同一业务档案，不同职责视角',['学生助教','教师助理','学校教研'],['今天练什么？查询本人近期作答和可用时间，安排教学、练习或复查。','这一步要不要重讲？核对授权班级记录，准备教案和补练草稿。','本阶段怎样改进？核对学生起点与任务难度，准备教研分析和课程变更草案。']);flow(root,['理解请求','查询证据','调用工具','检查结果','解释跟进'],2);root.append(note('Agent 读取共同档案、调用已有业务，再把依据和任务交给相应角色。'));}
+function renderCareer(){const root=scenario('career','同样答对，也要记录是否获得帮助',['提示后完成','无提示新题','出现相反证据'],['记录为提示后完成，后续安排无提示新题检查。','单独记录新题独立作答，并在间隔一段时间后再次检查。','保留前后作答，修订判断，并说明下一次要检查什么。']);const tracks=el('div','evidence-tracks');['课时作业 → 知识理解与应用','考试 / 错题 / 先导测试 → 套路与步骤表现','汇入注明来源、是否获得提示、是否看过答案和版本的长期档案'].forEach(x=>tracks.append(el('div','',x)));root.append(tracks,note('分别记录知识理解、方法使用和复盘表现，同时注明是否得到提示、是否看过答案。'));}
+function renderAgent(){const root=scenario('agent','共同的学习记录，服务学生、教师与教研',['学生助教','教师助理','学校教研'],['今天练什么？查询本人近期作答、已有练习和可用时间，安排讲解、练习或复查。','这一步要不要重讲？查询授权班级的作答与共性困难，准备教案和补练草稿。','本阶段怎样改进？查询学生起点、阶段表现和任务难度，准备教研分析和课程变更草稿。']);flow(root,['理解请求','查询证据','调用工具','检查结果','解释跟进'],2);root.append(note('各角色在授权范围内查询同一套学习记录，分别完成个人练习安排、班级教学准备和阶段教研分析。'));}
 function renderTeacher(){const root=scenario('teacher','同一困难，不同教学范围',['个别补练','小组讲解','全班重讲'],['查看具体作答及已尝试帮助，安排局部训练与新题复测。','核实共同困难，再准备适当的小组讲解和任务。','确认哪些学生存在同一困难，复核批改后调整课堂重点，再检查新题表现。']);flow(root,['备课','演示课件','作业','批改讲评','考试','教学调整','人工关注'],3);root.append(note('个别、小组和全班行动使用同一批作答证据，后续新题检验教学调整的效果。'));}
-function renderSchool(){const root=scenario('school','改一项定义，哪些记录受影响',['步骤定义','知识点拆分','课时重排'],['列出相关套路、解析、批改和报告，审核后发布新版本，旧报告保留原版本。','先按新知识点重新对应旧作答，资料不足的项目再安排补充诊断。','检查新课序需要哪些前置知识，再对照学生已有表现安排补充。']);flow(root,['变更草稿','影响分析','教研审核','版本发布','历史保留'],1);root.append(note('教学评价结合学生起点、可比任务、教学行动和多来源证据。'));}
+function renderSchool(){const root=scenario('school','改一项定义，哪些记录受影响',['步骤定义','知识点拆分','课时重排'],['列出相关套路、解析、批改和报告，审核后发布新版本，旧报告保留原版本。','知识点拆分后，重新标注历史作答涉及的内容；无法据此判断的部分，再安排补测。','检查新课序需要哪些前置知识，再对照学生已有表现安排补充。']);flow(root,['变更草稿','影响分析','教研审核','版本发布','历史保留'],1);root.append(note('教学评价结合学生起点、可比任务、教学行动和多来源证据。'));}
 function renderModes(){
  const root=$('scene-modes');let complete=state.completeMode;const body=el('div','mode-comparison'),rows=[['学习','跟随班级课程','结合课序检查前置知识','原课表与按需单题帮助'],['作业','课时统一布置与订正','共同目标下分别安排作业','保留作业，接入批改讲评'],['刷题','按章节或个人经验选题','按套路顺序和知识准备选题','自选套路或错题补练'],['反思','分数、订正与自行总结','根据错误步骤安排新题复测','错题查找与订正'],['考试','统一考试与事后讲评','结合考前记录分析本次考试','分析本次试卷和作答'],['复习','统一进度与经验安排','合并复习与补练，控制总用时','原复习安排中局部补练']];
  const draw=()=>{const t=el('table');t.innerHTML='<caption>当前查看：'+(complete?'完整系统模式':'传统教学增强模式')+'；并排保留另一模式作比较</caption><thead><tr><th>环节</th><th>常见传统安排</th><th class="'+(complete?'selected-mode':'')+'">完整系统</th><th class="'+(!complete?'selected-mode':'')+'">传统教学增强</th></tr></thead><tbody>'+rows.map(r=>'<tr><th scope="row">'+r[0]+'</th><td>'+r[1]+'</td><td class="'+(complete?'selected-mode':'')+'">'+r[2]+'</td><td class="'+(!complete?'selected-mode':'')+'">'+r[3]+'</td></tr>').join('')+'</tbody>';body.replaceChildren(t);};
@@ -418,14 +418,13 @@ api.ready=(async()=>{const results=await Promise.allSettled([json('data.json'),j
   const list=document.createElement('div');list.className='research-list';
   for(const study of studies){
    const studyTitle=study.querySelector('h4');
-   const brief=study.querySelector('.research-prior p')||study.querySelector('p');
    const name=studyTitle?studyTitle.textContent.trim():'这项研究';
    const trigger=document.createElement('button');
    trigger.type='button';trigger.className='research-notes-trigger';
    const strong=document.createElement('strong');strong.textContent=name;
-   const text=(brief?brief.textContent.trim():'').replace(/\s+/g,' ');
+   const text=study.dataset.studySummary||'';
    const hint=document.createElement('span');
-   hint.textContent=text?(text.length>64?text.slice(0,64)+'…':text):'查看研究任务、方法与差异';
+   hint.textContent=text||'查看研究任务、方法与差异';
    trigger.append(strong,hint);
    trigger.addEventListener('click',()=>{
     const clone=study.cloneNode(true);clone.hidden=false;

@@ -33,7 +33,7 @@ TOPICS = [
      'thesis': '让 AI 参与学习全过程，推动每一次教学。',
      'bridge': ('方法、时间、能力图谱与持续改进', '课时、知识点、步骤与套路怎样连接教学')},
     {'id': 'terms', 'title': '系统底层名词的定义与作用', 'sources': ['concepts'],
-     'thesis': '课时组织教学，知识点衡量理解，步骤描述操作，套路组织方法。',
+     'thesis': '课时组织教学，知识点标记所学内容；作答与复测判断是否理解，步骤描述操作，套路组织方法。',
      'bridge': ('统一的教学对象与前置关系', '同一道题的结构化解题与分步反馈')},
     {'id': 'single', 'title': '单题能力', 'sources': ['single'],
      'thesis': 'AI 解题建立参考，批改定位表现，教学提供支持，出题形成下一次练习。',
@@ -42,7 +42,7 @@ TOPICS = [
      'thesis': '把笔迹事件放回步骤顺序，先看见疑点，再安排能区分原因的验证。',
      'bridge': ('带时间顺序的步骤证据', '可查找、可复练、可复测的题目记录')},
     {'id': 'library', 'title': '题库与错题', 'sources': ['library', 'routines'],
-     'thesis': '从错误步骤找到相似任务，再把套路练习转成独立迁移与延迟复查。',
+     'thesis': '从错误步骤找到需要补练的方法，先做无提示的新题，再隔一段时间检查是否仍会使用。',
      'bridge': ('围绕缺口组织的题单与迁移表现', '把单题和训练放进整卷目标中检验')},
     {'id': 'exam', 'title': '考试与复盘', 'sources': ['exam'],
      'thesis': '分开评价试卷是否适合目标，以及学生怎样完成这份试卷。',
@@ -184,6 +184,10 @@ def validate_source_map(content, mapping):
         expected_urls = [row.get('url') for row in chapter.get('research', [])]
         if mapped.get('research_urls', []) != expected_urls:
             raise ValueError(f"Research source map differs for {chapter['id']}")
+        for study in chapter.get('research', []):
+            summary = study.get('short_summary', '')
+            if not isinstance(summary, str) or not summary.strip() or len(summary) > 72 or not summary.endswith('。'):
+                raise ValueError('Research short summary must be a complete sentence of at most 72 characters: ' + study['title'])
         resources = [{'title': row['title'], 'website': row.get('website_url', row['url']),
                       'paper_or_document': row.get('paper_url', row.get('source_url', row['url']))}
                      for row in chapter.get('research', [])]
@@ -294,7 +298,7 @@ def references(chapter):
             raise ValueError('Research links must be HTTPS: ' + url)
         resource_type = row.get('resource_type', 'paper')
         site_label, paper_label = {'paper': ('研究页面', '论文原文'), 'software': ('项目网站', '方法文档'), 'protocol': ('官方网站', '协议文档'), 'report': ('项目网页', '研究报告')}[resource_type]
-        out.append('<article class="research-study"><header><h4>' + esc(row['title']) + '</h4></header><div class="research-source-links">')
+        out.append('<article class="research-study" data-study-summary="' + esc(row['short_summary']) + '"><header><h4>' + esc(row['title']) + '</h4></header><div class="research-source-links">')
         for label, target in [(site_label, row.get('website_url', row['url'])), (paper_label, row.get('paper_url', url))]:
             if not str(target).startswith('https://'):
                 raise ValueError('Research resources must use HTTPS')

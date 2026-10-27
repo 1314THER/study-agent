@@ -69,6 +69,20 @@ class ResearchShowcaseBuildTests(unittest.TestCase):
     def test_full_source_map_and_hashes_are_current(self):
         validate_source_map(self.content, self.source_map)
 
+    def test_research_buttons_have_complete_editorial_summaries(self):
+        page = build(self.content)
+        studies = [study for chapter in self.content['chapters'] for study in chapter.get('research', [])]
+        self.assertEqual(len(studies), 18)
+        self.assertEqual(page.count('data-study-summary='), 18)
+        for study in studies:
+            self.assertTrue(study['short_summary'].endswith('。'))
+            self.assertIn('data-study-summary="' + html.escape(study['short_summary'], quote=True) + '"', page)
+        for invalid in ('', '尚未完成的摘要', '字' * 72 + '。'):
+            changed = copy.deepcopy(self.content)
+            next(chapter for chapter in changed['chapters'] if chapter['research'])['research'][0]['short_summary'] = invalid
+            with self.subTest(summary=invalid), self.assertRaisesRegex(ValueError, 'Research short summary'):
+                validate_source_map(changed, self.source_map)
+
     def test_source_hash_change_blocks_regeneration(self):
         changed = copy.deepcopy(self.source_map)
         changed['chapters'][0]['sources'][0]['sha256'] = '0' * 64

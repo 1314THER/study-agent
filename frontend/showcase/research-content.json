@@ -97,7 +97,8 @@
           },
           "website_url": "https://aclanthology.org/2024.findings-emnlp.323/",
           "paper_url": "https://aclanthology.org/2024.findings-emnlp.323.pdf",
-          "resource_type": "paper"
+          "resource_type": "paper",
+          "short_summary": "检查一道数学题是否满足课程标准，并找出应对应的全部标准。"
         }
       ],
       "details": [
@@ -208,7 +209,8 @@
           },
           "website_url": "https://aclanthology.org/2024.emnlp-main.478/",
           "paper_url": "https://aclanthology.org/2024.emnlp-main.478.pdf",
-          "resource_type": "paper"
+          "resource_type": "paper",
+          "short_summary": "先核对学生推理并定位首错，再据此生成下一轮教学反馈。"
         }
       ],
       "details": [
@@ -282,7 +284,8 @@
           },
           "website_url": "https://arxiv.org/abs/2504.00843v2",
           "paper_url": "https://arxiv.org/pdf/2504.00843v2",
-          "resource_type": "paper"
+          "resource_type": "paper",
+          "short_summary": "分别检查学生作答是否体现某项技能，以及诊断结论是否有明确依据。"
         },
         {
           "title": "Numbas：前一问算错，后续仍可按学生的结果检查",
@@ -308,7 +311,8 @@
           },
           "website_url": "https://www.numbas.org.uk/",
           "paper_url": "https://numbas.org.uk/behind-the-design/adaptive-marking.html",
-          "resource_type": "software"
+          "resource_type": "software",
+          "short_summary": "沿用学生前一问的结果检查后续计算，区分最初错误与后续表现。"
         },
         {
           "title": "CogChain：数字笔与多模态模型分析作答轨迹",
@@ -334,7 +338,8 @@
           },
           "website_url": "https://researchportal.hkust.edu.hk/en/publications/automatic-modeling-andanalysis-ofstudents-problem-solving-handwri/",
           "paper_url": "https://shenleixian.github.io/pdf/iPen.pdf",
-          "resource_type": "paper"
+          "resource_type": "paper",
+          "short_summary": "将数字笔记录按时间和题目整理，展示作答过程中的不同书写活动。"
         }
       ],
       "details": [
@@ -445,7 +450,8 @@
           },
           "website_url": "https://digitalcommons.memphis.edu/facpubs/8350/",
           "paper_url": "https://pact.cs.cmu.edu/pubs/AIED%202009%20final%20Pavlik%20Cen%20Keodinger%20corrected.pdf",
-          "resource_type": "paper"
+          "resource_type": "paper",
+          "short_summary": "用各知识要素上做对和做错的次数，预测学生下一次作答的表现。"
         }
       ],
       "details": [
@@ -524,7 +530,8 @@
           },
           "website_url": "https://aclanthology.org/2025.acl-long.628/",
           "paper_url": "https://aclanthology.org/2025.acl-long.628.pdf",
-          "resource_type": "paper"
+          "resource_type": "paper",
+          "short_summary": "以概念、能力和认知要求为目标，生成题目并逐项检查是否符合要求。"
         }
       ],
       "details": [
@@ -598,7 +605,8 @@
           },
           "website_url": "https://aclanthology.org/2026.acl-long.1371/",
           "paper_url": "https://aclanthology.org/2026.acl-long.1371.pdf",
-          "resource_type": "paper"
+          "resource_type": "paper",
+          "short_summary": "分别评价长期辅导中的历史取证、知识诊断，以及依据历史安排教学的能力。"
         }
       ],
       "details": [
@@ -716,7 +724,8 @@
           },
           "website_url": "https://arxiv.org/abs/2610.16344v1",
           "paper_url": "https://arxiv.org/pdf/2610.16344v1",
-          "resource_type": "paper"
+          "resource_type": "paper",
+          "short_summary": "先生成诊断子问与评分量规，再让教师复核并分析学生回答。"
         },
         {
           "title": "Tutor CoPilot：支持教师行动需要真实场景验证",
@@ -742,7 +751,8 @@
           },
           "website_url": "https://arxiv.org/abs/2410.03017v3",
           "paper_url": "https://arxiv.org/pdf/2410.03017v3",
-          "resource_type": "paper"
+          "resource_type": "paper",
+          "short_summary": "在真实在线辅导中向辅导者提供可选教学建议，检验教学行为与学习结果的变化。"
         }
       ],
       "details": [
@@ -822,7 +832,8 @@
           },
           "website_url": "https://cepr.harvard.edu/met-project",
           "paper_url": "https://cepr.harvard.edu/file_url/2595",
-          "resource_type": "report"
+          "resource_type": "report",
+          "short_summary": "结合课堂观察、学生感受和学习增益，检查教学评价能否预测后续表现。"
         }
       ],
       "details": [
@@ -897,7 +908,8 @@
           },
           "website_url": "https://doi.org/10.1073/pnas.2422633122",
           "paper_url": "https://hamsabastani.github.io/education_llm.pdf",
-          "resource_type": "paper"
+          "resource_type": "paper",
+          "short_summary": "分别测量使用 AI 时的练习表现，以及撤去 AI 后的独立考试表现。"
         }
       ],
       "details": [
@@ -980,7 +992,8 @@
           },
           "website_url": "https://modelcontextprotocol.io/",
           "paper_url": "https://modelcontextprotocol.io/specification/2026-07-28",
-          "resource_type": "protocol"
+          "resource_type": "protocol",
+          "short_summary": "规定宿主发现、调用外部工具和读取资源的方式，实际教学接入仍需验收。"
         }
       ],
       "details": [
@@ -1055,7 +1068,8 @@
           },
           "website_url": "https://arxiv.org/abs/2508.07407",
           "paper_url": "https://arxiv.org/pdf/2508.07407v2",
-          "resource_type": "paper"
+          "resource_type": "paper",
+          "short_summary": "按模型、提示词、记忆和工具等组件，整理反馈驱动的系统改进方法。"
         },
         {
           "title": "Darwin Gödel Machine：修改代码后先做基准验证",
@@ -1082,7 +1096,8 @@
           },
           "website_url": "https://arxiv.org/abs/2505.22954",
           "paper_url": "https://arxiv.org/pdf/2505.22954v3",
-          "resource_type": "paper"
+          "resource_type": "paper",
+          "short_summary": "修改智能体自身代码后先做基准测试，再将仍能工作的版本及得分归档。"
         },
         {
           "title": "ReMe：提炼、复用并清理任务经验",
@@ -1108,7 +1123,8 @@
           },
           "website_url": "https://arxiv.org/abs/2512.10696v1",
           "paper_url": "https://arxiv.org/pdf/2512.10696v1",
-          "resource_type": "paper"
+          "resource_type": "paper",
+          "short_summary": "从任务记录中提炼经验，按当前任务检索复用，再根据使用效果更新或清理。"
         },
         {
           "title": "SwS：先诊断弱点，再合成针对性练习",
@@ -1134,7 +1150,8 @@
           },
           "website_url": "https://arxiv.org/abs/2506.08989",
           "paper_url": "https://arxiv.org/pdf/2506.08989v1",
-          "resource_type": "paper"
+          "resource_type": "paper",
+          "short_summary": "从模型的失败解题记录中找出薄弱点，生成并验证新题后继续训练。"
         },
         {
           "title": "EduLoop-Agent：把诊断结果用于选题和反馈",
@@ -1160,7 +1177,8 @@
           },
           "website_url": "https://arxiv.org/abs/2510.22559",
           "paper_url": "https://arxiv.org/pdf/2510.22559v1",
-          "resource_type": "paper"
+          "resource_type": "paper",
+          "short_summary": "根据知识诊断结果调整选题，并把诊断信息转成学生可执行的学习建议。"
         }
       ],
       "details": [
