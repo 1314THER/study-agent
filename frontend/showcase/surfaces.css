@@ -324,15 +324,16 @@
 /* A short stream follows a static route; it never grows into a progress bar. */
 .research-showcase .flow-strip.flow-stream{position:relative;display:grid;grid-template-columns:repeat(var(--flow-columns,7),minmax(0,1fr));gap:22px 0;margin:18px 0 0;padding:0 0 22px;overflow:hidden;isolation:isolate}
 .research-showcase .flow-stream:before,.research-showcase .flow-stream button:after,.research-showcase .flow-stream button:before{display:none!important}
-.research-showcase .flow-stream button{min-width:0;min-height:40px;padding:8px 5px;line-height:1.6;border:0;border-radius:0;background:none;color:#8995a7;text-align:center;position:relative;transition:color .18s;z-index:1;animation:none!important;opacity:1!important;font-size:12px}
+.research-showcase .flow-stream button{display:grid;align-content:center;min-width:0;min-height:40px;padding:8px 5px;line-height:1.6;border:0;border-radius:0;background:none;color:#8995a7;text-align:center;position:relative;transition:color .18s;z-index:1;animation:none!important;opacity:1!important;font-size:12px}
+.research-showcase .flow-stream .flow-label-base,.research-showcase .flow-stream .flow-label-glow{grid-area:1 / 1;display:block;flex:none;min-width:0;margin:0;padding:0;border:0;background:none;font:inherit;line-height:inherit}.flow-label-glow{color:#f4f8ff;text-shadow:0 0 11px #c7e1ff9e;opacity:0;pointer-events:none}.flow-stream[data-flow-running=true] .flow-label-glow{will-change:opacity}
 .research-showcase .flow-stream .flow-route{position:absolute;inset:0;pointer-events:none;overflow:visible}
 .flow-route path{stroke:#5d6c8055;stroke-width:1;fill:none}
 .flow-beams{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:2}
-.flow-beam{position:absolute;left:0;top:0;width:6.25px;height:1.5px;opacity:0;transform-origin:left center;background:#e4f0ff;will-change:transform,opacity}
+.flow-beam{position:absolute;left:0;top:0;width:6.25px;height:1.5px;opacity:0;transform-origin:left center;background:#e4f0ff;will-change:transform,opacity}.flow-beam:first-child{box-shadow:0 0 6px #c7e1ff88}
 .research-showcase .flow-stream[data-flow-running=false] .flow-beam{opacity:0}
 @media(prefers-reduced-motion:reduce){.flow-beams{display:none}.flow-beam{will-change:auto}}
 
-.research-showcase .flow-stream button.active,.research-showcase .flow-stream button:hover{color:#fff;background:none;border:0}
+.research-showcase .flow-stream button.active{color:#aab7c9;background:none;border:0;font-weight:600}.research-showcase .flow-stream button:hover{color:#c8d4e5;background:none;border:0}
 .chapter-transition-closing{animation-play-state:paused!important}.chapter-transition-closing.motion-running{animation-play-state:running!important}
 body.showcase-motion-suspended *{animation-play-state:paused!important}
 /* A modal suspends the obscured page, while its own transition remains active.
@@ -345,4 +346,4 @@ body.showcase-motion-suspended *{animation-play-state:paused!important}
 
 .research-modal,.research-modal-body{overscroll-behavior:contain}
 
-.flow-stream[data-flow-straight=true] .flow-beams{clip-path:inset(0 var(--flow-end-gap) 0 var(--flow-start-x))}.flow-stream[data-flow-straight=true] .flow-beam:first-child{width:144px;background:linear-gradient(90deg,transparent,#a6c9f077 45%,#f3f8ff);box-shadow:0 0 5px #a7caff44}
+.flow-stream[data-flow-straight=true] .flow-beams{clip-path:inset(0 var(--flow-end-gap) 0 var(--flow-start-x))}

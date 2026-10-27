@@ -59,7 +59,7 @@ def comparison_chain(group):
                    '<button class="vision-card" type="button" hidden aria-haspopup="dialog" aria-controls="vision-dialog" '
                    'aria-label="' + esc(group['title'] + '：' + row['aspect'] + '，' + row['short_vision'] + '，查看现状与愿景') + '">'
                    + '<strong class="vision-card-title">' + esc(row['aspect']) + '</strong>'
-                   '<span class="vision-card-summary">' + esc(row['short_vision']) + '</span></button><details class="vision-fallback"><summary>'
+                   '<span class="vision-card-summary">' + esc(row['short_vision']) + '</span><span class="vision-card-hint" aria-hidden="true">查看现状与愿景 <span>↗</span></span></button><details class="vision-fallback"><summary>'
                    + esc(row['aspect']) + ' · ' + esc(row['short_vision']) + '</summary>'
                    '<div class="vision-detail"><div class="vision-change-flow"><div class="vision-change-before">'
                    '<span class="vision-stage-label">现状</span><p>' + esc(row['before']) + '</p></div>'
@@ -71,7 +71,7 @@ def comparison_chain(group):
                    '<div class="vision-change-result"><span class="vision-stage-label">愿景</span><p>'
                    + esc(row['after']) + '</p></div></div><div class="vision-features"><span>接续功能</span><ul>'
                    + ''.join(feature_link(feature) for feature in row['features']) + '</ul></div></div></details></article>')
-    return ''.join(out) + '</div></div><div class="vision-camera-controls" hidden><button type="button" data-camera-step="-1" aria-label="上一项愿景">上一项</button><span class="vision-camera-count"></span><button type="button" data-camera-step="1" aria-label="下一项愿景">下一项</button><span class="sr-only" role="status"></span></div>'
+    return ''.join(out) + '</div></div><div class="vision-camera-controls" hidden><button type="button" data-camera-step="-1" aria-label="上一项愿景"><span aria-hidden="true">←</span></button><span class="vision-camera-count"></span><button type="button" data-camera-step="1" aria-label="下一项愿景"><span aria-hidden="true">→</span></button><span class="sr-only" role="status"></span></div>'
 
 
 def cost_estimate(content):
@@ -111,6 +111,12 @@ def policy_connections(content):
     return ''.join(out) + '</div></section>'
 
 
+def group_description(group_id):
+    parts = GROUP_DESCRIPTIONS[group_id].split('，')
+    return ''.join('<span class="vision-description-phrase">' + esc(part + ('，' if index < len(parts) - 1 else '')) + '</span>'
+                   for index, part in enumerate(parts))
+
+
 def vision_section(content):
     validate_vision(content)
     out = ['<a class="vision-skip" data-vision-skip href="#highlights">跳过愿景，查看项目亮点 <span aria-hidden="true">↗</span></a>'
@@ -122,7 +128,7 @@ def vision_section(content):
     for group in content['groups']:
         out.append('<section class="vision-group" id="vision-' + group['id'] + '" data-vision-group="' + group['id']
                    + '" aria-labelledby="vision-title-' + group['id'] + '"><header class="vision-group-heading"><h2 id="vision-title-'
-                   + group['id'] + '" tabindex="-1">' + esc(group['title']) + '</h2><p>' + esc(GROUP_DESCRIPTIONS[group['id']]) + '</p></header>'
+                   + group['id'] + '" tabindex="-1">' + esc(group['title']) + '</h2><p>' + group_description(group['id']) + '</p></header>'
                    + comparison_chain(group) + '</section>')
     out.append('</div><dialog id="vision-dialog" class="vision-dialog" aria-labelledby="vision-dialog-title"><header class="vision-dialog-head">'
                '<h2 id="vision-dialog-title"></h2><button type="button" class="vision-dialog-close" aria-label="关闭愿景详情">关闭</button></header>'

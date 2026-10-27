@@ -356,11 +356,11 @@ try{
  for(const width of [1440,1100,1099,980,768,390,320]){
   await page.setViewportSize({width,height:1000});await page.goto(base+'/#vision-students',{waitUntil:'networkidle'});await ready(page);await fit(page,'vision '+width);
   const layout=await page.locator('[data-vision-group]').evaluateAll(groups=>groups.map(g=>{
-   const buttons=[...g.querySelectorAll('.vision-card')],cards=buttons.map(n=>n.getBoundingClientRect()),viewport=g.querySelector('.vision-viewport').getBoundingClientRect(),header=g.querySelector('.vision-group-heading'),heading=header.getBoundingClientRect(),style=getComputedStyle(header);let collisions=0;
+   const buttons=[...g.querySelectorAll('.vision-card')],cards=buttons.map(n=>n.getBoundingClientRect()),v=g.querySelector('.vision-viewport'),viewport=v.getBoundingClientRect(),header=g.querySelector('.vision-group-heading'),heading=header.getBoundingClientRect(),style=getComputedStyle(header),current=g.querySelector('.vision-card[aria-current=true]').getBoundingClientRect();let collisions=0;
    const overlaps=(a,b)=>a.left<b.right&&a.right>b.left&&a.top<b.bottom&&a.bottom>b.top;
    if(innerWidth>=1100){for(let i=0;i<cards.length;i++){if(overlaps(cards[i],heading))collisions++;for(let j=i+1;j<cards.length;j++)if(overlaps(cards[i],cards[j]))collisions++;}}
-   return {id:g.id,collisions,clipped:buttons.some(b=>b.scrollHeight>b.clientHeight+1||b.scrollWidth>b.clientWidth+1),centerDelta:Math.abs((cards[0].left+cards[0].right-viewport.left-viewport.right)/2),headingCenterDelta:Math.abs((heading.left+heading.right-viewport.left-viewport.right)/2),headingAbove:heading.bottom<=viewport.top+1,centered:[...header.querySelectorAll('h2,p')].every(n=>getComputedStyle(n).textAlign==='center'),ellipse:['borderTopLeftRadius','borderTopRightRadius','borderBottomLeftRadius','borderBottomRightRadius'].every(key=>style[key]==='50%')&&parseFloat(style.borderTopWidth)>0&&style.borderTopStyle!=='none',camera:!g.querySelector('.vision-camera-controls').hidden};
-  }));assert(layout.every(g=>g.collisions===0&&!g.clipped&&g.centered&&g.ellipse&&g.headingCenterDelta<2),'Galaxy nodes and centered oval descriptions must fit: '+JSON.stringify({width,layout}));assert(layout.every(g=>g.camera===(width<1100)));if(width<1100)assert(layout.every(g=>g.centerDelta<2&&g.headingAbove));
+   return {id:g.id,collisions,clipped:buttons.some(b=>b.scrollHeight>b.clientHeight+1||b.scrollWidth>b.clientWidth+1),centerDelta:Math.abs((current.left+current.right-viewport.left-viewport.right)/2),headingCenterDelta:Math.abs((heading.left+heading.right-viewport.left-viewport.right)/2),headingAbove:heading.bottom<=viewport.top+1,centered:[...header.querySelectorAll('h2,p')].every(n=>getComputedStyle(n).textAlign==='center'),ellipse:['borderTopLeftRadius','borderTopRightRadius','borderBottomLeftRadius','borderBottomRightRadius'].every(key=>style[key]==='50%')&&parseFloat(style.borderTopWidth)>0&&style.borderTopStyle!=='none',unframed:parseFloat(style.borderTopWidth)===0,carousel:getComputedStyle(v).scrollSnapType.includes('x')&&getComputedStyle(g.querySelector('.vision-orbits')).display==='none',controls:!g.querySelector('.vision-camera-controls').hidden};
+  }));assert(layout.every(g=>g.collisions===0&&!g.clipped&&g.centered&&g.headingCenterDelta<2&&(width>=1100?g.ellipse:g.unframed&&g.carousel)),'Vision overview or manual carousel must fit: '+JSON.stringify({width,layout}));assert(layout.every(g=>g.controls===(width<1100)));if(width<1100)assert(layout.every(g=>g.centerDelta<2&&g.headingAbove));
   await page.locator('#vision-students').screenshot({path:shots+'/vision-'+width+'.png'});
   await page.locator('#vision-change-students-1 .vision-card').click();await page.locator('#vision-dialog').screenshot({path:shots+'/vision-comparison-'+width+'.png'});await page.keyboard.press('Escape');await page.waitForFunction(()=>!document.getElementById('vision-dialog').open);
  }
@@ -427,29 +427,30 @@ try{
  const deepContext=await browser.newContext({viewport:{width:1440,height:950}}),deepPage=await deepContext.newPage();audit(deepPage);
  await deepPage.goto(base+'/#single',{waitUntil:'networkidle'});assert.equal(await deepPage.locator('#launch-screen').isVisible(),false,'A fresh deep link should skip the launch dialog');await ready(deepPage);
  assert.equal(await deepPage.evaluate(()=>location.hash),'#single');await checkAudits(deepContext);await deepContext.close();
- // Camera touring and decorative flow share visibility/reduced-motion lifecycles.
+ // Narrow-screen vision uses a stable manual carousel; flow motion stays decorative.
  const tourContext=await browser.newContext({viewport:{width:390,height:844},reducedMotion:'no-preference'}),tour=await tourContext.newPage();audit(tour);
  await tour.goto(base+'/#vision-students',{waitUntil:'networkidle'});await ready(tour);
  const galaxy=tour.locator('#vision-students'),counter=galaxy.locator('.vision-camera-count');await galaxy.scrollIntoViewIfNeeded();
- await tour.waitForFunction(()=>document.querySelector('#vision-students .vision-camera-count').textContent.startsWith('2 /'),{},{timeout:5000});
- await galaxy.locator('[data-camera-step="1"]').click();await galaxy.locator('h2').click();
- const selected=await counter.innerText();await tour.waitForTimeout(1400);assert.equal(await counter.innerText(),selected,'Each camera stop must remain readable before moving');
- await tour.waitForFunction(old=>document.querySelector('#vision-students .vision-camera-count').textContent!==old,selected,{timeout:2200});
- await tour.emulateMedia({reducedMotion:'reduce'});const settled=await counter.innerText();await tour.waitForTimeout(2800);assert.equal(await counter.innerText(),settled);
- await galaxy.locator('[data-camera-step="1"]').click();assert.notEqual(await counter.innerText(),settled,'Manual navigation remains available with reduced motion');
+ const initialCard=await counter.innerText();await tour.waitForTimeout(2800);assert.equal(await counter.innerText(),initialCard,'The carousel waits for the reader');
+ await galaxy.locator('[data-camera-step="1"]').click();await tour.waitForFunction(old=>document.querySelector('#vision-students .vision-camera-count').textContent!==old,initialCard);
+ await tour.waitForFunction(()=>{const g=document.querySelector('#vision-students'),c=g.querySelector('.vision-card[aria-current=true]').getBoundingClientRect(),v=g.querySelector('.vision-viewport').getBoundingClientRect();return Math.abs((c.left+c.right-v.left-v.right)/2)<2;});
+ const selected=await counter.innerText();await galaxy.locator('.vision-viewport').hover();await tour.mouse.wheel(336,0);
+ await tour.waitForFunction(old=>document.querySelector('#vision-students .vision-camera-count').textContent!==old,selected);
+ await tour.emulateMedia({reducedMotion:'reduce'});const settled=await counter.innerText();
+ await galaxy.locator('[data-camera-step="1"]').click();await tour.waitForFunction(old=>document.querySelector('#vision-students .vision-camera-count').textContent!==old,settled);
  await galaxy.locator('.vision-card[aria-current=true]').click();assert(await tour.locator('#vision-dialog').isVisible());await tour.goBack();await tour.waitForFunction(()=>!document.getElementById('vision-dialog').open);
  await tour.goto(base+'/#vision-change-teachers-3',{waitUntil:'networkidle'});await ready(tour);assert(await tour.locator('#vision-dialog').isVisible());
  const destination=await tour.locator('.vision-dialog-body a').first().getAttribute('href');await tour.locator('.vision-dialog-body a').first().click();await tour.waitForFunction(hash=>location.hash===hash&&!document.getElementById('vision-dialog').open,destination);
  await tour.emulateMedia({reducedMotion:'no-preference'});await tour.goto(base+'/#vision-students',{waitUntil:'networkidle'});await ready(tour);await galaxy.scrollIntoViewIfNeeded();
  await galaxy.locator('[data-camera-step="1"]').click();await galaxy.locator('h2').click();
- await galaxy.locator('.vision-card[aria-current=true]').click();const modalIndex=await counter.innerText();await tour.waitForTimeout(2800);assert.equal(await counter.innerText(),modalIndex,'An open detail freezes its camera');await tour.locator('.vision-dialog-close').click();
- await tour.locator('#terms').scrollIntoViewIfNeeded();await tour.waitForFunction(()=>!document.querySelector('#vision-students .vision-world').getAnimations().length);const offscreen=await galaxy.locator('.vision-world').evaluate(n=>getComputedStyle(n).transform);await tour.waitForTimeout(2800);assert.equal(await galaxy.locator('.vision-world').evaluate(n=>getComputedStyle(n).transform),offscreen,'An offscreen galaxy must stop');
+ await galaxy.locator('.vision-card[aria-current=true]').click();const modalIndex=await counter.innerText();await tour.waitForTimeout(250);assert.equal(await counter.innerText(),modalIndex,'An open detail preserves its carousel page');await tour.locator('.vision-dialog-close').click();
+ await tour.locator('#terms').scrollIntoViewIfNeeded();assert.equal(await galaxy.locator('.vision-world').evaluate(n=>n.getAnimations().length),0,'The carousel has no automatic camera animation');const offscreen=await galaxy.locator('.vision-viewport').evaluate(n=>n.scrollLeft);await tour.waitForTimeout(250);assert.equal(await galaxy.locator('.vision-viewport').evaluate(n=>n.scrollLeft),offscreen,'An offscreen carousel remains at its chosen page');
  await tour.setViewportSize({width:1440,height:950});await tour.locator('#teacher').scrollIntoViewIfNeeded();const stream=tour.locator('#scene-teacher .flow-stream');await stream.scrollIntoViewIfNeeded();
  await tour.waitForFunction(()=>document.querySelector('#scene-teacher .flow-stream').dataset.flowRunning==='true');
  assert.equal(await stream.locator('button').first().getAttribute('aria-pressed'),'true','The first visible step starts at the left');
- const beam=await stream.locator('.flow-beam').first().evaluate(n=>({duration:n.getAnimations()[0].effect.getTiming().duration,first:n.getAnimations()[0].effect.getKeyframes()[0].transform}));assert.equal(beam.duration,2000);
+ const beam=await stream.locator('.flow-beam').first().evaluate(n=>({duration:n.getAnimations()[0].effect.getTiming().duration,first:n.getAnimations()[0].effect.getKeyframes()[0].transform}));assert.equal(beam.duration,4000);
  const startX=await stream.evaluate(n=>{const b=n.querySelector('button');return b.offsetLeft+b.offsetWidth/2;});assert(Math.abs(Number(beam.first.match(/translate3d\(([-.\d]+)/)[1])-startX)<1,'A flow starts at the first step, never a restored middle index');
- await stream.locator('button').nth(3).click();assert.equal(await stream.getAttribute('data-flow-running'),'true','Choosing a step does not stop the decorative flow');await stream.evaluate(n=>n.querySelectorAll('.flow-beam').forEach(b=>b.getAnimations().forEach(a=>a.currentTime=900)));await stream.screenshot({path:shots+'/flow-stream.png'});
+ await stream.locator('button').nth(3).click();assert.equal(await stream.getAttribute('data-flow-running'),'true','Choosing a step does not stop the decorative flow');await stream.evaluate(n=>n.getAnimations({subtree:true}).forEach(a=>a.currentTime=900));await stream.screenshot({path:shots+'/flow-stream.png'});
  await tour.emulateMedia({reducedMotion:'reduce'});await tour.waitForFunction(()=>document.querySelector('#scene-teacher .flow-stream').dataset.flowRunning==='false');await tour.emulateMedia({reducedMotion:'no-preference'});await tour.waitForFunction(()=>document.querySelector('#scene-teacher .flow-stream').dataset.flowRunning==='true');
  await tour.evaluate(()=>{Object.defineProperty(document,'visibilityState',{configurable:true,value:'hidden'});document.dispatchEvent(new Event('visibilitychange'));});assert.equal(await stream.getAttribute('data-flow-running'),'false','Background pages stop their flows');await tour.evaluate(()=>{delete document.visibilityState;document.dispatchEvent(new Event('visibilitychange'));});await tour.waitForFunction(()=>document.querySelector('#scene-teacher .flow-stream').dataset.flowRunning==='true');
  await tour.locator('#vision').scrollIntoViewIfNeeded();await tour.waitForFunction(()=>document.querySelector('#scene-teacher .flow-stream').dataset.flowRunning==='false');
@@ -536,8 +537,15 @@ try{
  assert.equal(await animated.locator('#terms').getAttribute('data-arrival-progress'),'1');
  assert.deepEqual(await animated.locator('.chapter-bridge.has-handoff').evaluateAll(nodes=>nodes.map(n=>n.closest('[data-chapter]').id)),chapters.slice(0,-1),'All eleven structured handoffs must be enhanced; the closing invitation is a separate link');
  const handoff=animated.locator('#single .chapter-bridge');
+ // Reduced motion above leaves every handoff delivered. Park this one inside
+ // the observer root (viewport plus a 12% bottom margin) but still below the
+ // 0.96-screen start line, so it re-arms without playing; only then does the
+ // next scroll produce a fresh, observable trip. Scrolling further out would
+ // emit no intersection change at all and the stale trip would stay delivered.
+ await handoff.evaluate(n=>scrollTo({top:n.getBoundingClientRect().top+scrollY-innerHeight*1.05,behavior:'instant'}));
+ await animated.waitForFunction(()=>Number(document.querySelector('#single .chapter-bridge').dataset.handoffProgress)===0);
  await handoff.evaluate(n=>scrollTo({top:n.getBoundingClientRect().top+scrollY-innerHeight*.88,behavior:'instant'}));
- await animated.waitForFunction(()=>Number(document.querySelector('#single .chapter-bridge').dataset.handoffProgress)>0);
+ await animated.waitForFunction(()=>{const bridge=document.querySelector('#single .chapter-bridge');return bridge.classList.contains('is-playing')&&Number(bridge.dataset.handoffProgress)>0;});
  assert(Number(await handoff.getAttribute('data-handoff-progress'))>0,'The visible handoff should make progress');
  assert(await handoff.evaluate(n=>n.classList.contains('is-playing')),'Entering the handoff should start a visible transfer');
  await animated.screenshot({path:shots+'/transition-in-motion.png'});
@@ -573,7 +581,7 @@ try{
  assert.equal(await animated.locator('.chapter-transit-overlay').count(),0,'Topic navigation should use natural scrolling without a blocking overlay');
  await checkAudits(motion);await motion.close();
  const recorded=records.cases.reduce((n,c)=>n+['basic','same_information','system'].filter(k=>c[k]?.status==='recorded').length,0);
- console.log(JSON.stringify({ok:true,mode:allowExcludedIcon404?'diagnostic_excluding_icons':'strict',excludedIcon404:[...excludedIcon404.values()],topics:12,contentUnits:13,highlights:7,nationalQuestions:2,savedPipelineRuns:8,diagnosticInputs:6,recordedResponses:recorded,conditions:2,viewports:[1440,1100,1099,980,768,390,320],resizableLanes:true,allTopicHandoffs:true,noJavaScript:true,visionGalaxies:true,visionDialogs:63,mobileCamera:true,wholePanel3D:true,network:'same-origin GET only, no cookies',screenshots:shots}));
+ console.log(JSON.stringify({ok:true,mode:allowExcludedIcon404?'diagnostic_excluding_icons':'strict',excludedIcon404:[...excludedIcon404.values()],topics:12,contentUnits:13,highlights:7,nationalQuestions:2,savedPipelineRuns:8,diagnosticInputs:6,recordedResponses:recorded,conditions:2,viewports:[1440,1100,1099,980,768,390,320],resizableLanes:true,allTopicHandoffs:true,noJavaScript:true,visionGalaxies:true,visionDialogs:63,mobileCarousel:true,wholePanel3D:true,network:'same-origin GET only, no cookies',screenshots:shots}));
 }catch(error){
  if(lastPage&&!lastPage.isClosed()){
   await lastPage.screenshot({path:shots+'/failure.png'}).catch(()=>{});
