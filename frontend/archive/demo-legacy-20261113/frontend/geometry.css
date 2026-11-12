@@ -1,0 +1,18 @@
+.geometry-panel{border:1px solid #dce4ed;border-radius:12px;background:#fff;margin:12px 0;overflow:hidden;text-align:left;color:#253044}
+.geometry-panel>summary{cursor:pointer;padding:12px 14px;font-size:14px;font-weight:600;background:#f5f8fc}
+.geometry-toolbar{display:flex;gap:8px;align-items:center;padding:10px 12px;flex-wrap:wrap}
+.geometry-toolbar button,.geometry-toolbar select{font:inherit;font-size:13px;padding:6px 9px;border:1px solid #ccd7e4;border-radius:6px;background:white;color:#253044;max-width:100%}
+.geometry-toolbar button{cursor:pointer}.geometry-toolbar button:disabled{opacity:.45;cursor:default}
+.geometry-stage{width:100%;height:320px;position:relative;overflow:hidden;touch-action:none;background:#fbfcff}
+.geometry-stage canvas{display:block;width:100%;height:100%}.geometry-stage .jxgbox{width:100%;height:100%;border:0}
+.geometry-note{padding:8px 12px 12px;white-space:pre-wrap;font-size:13px;line-height:1.65;color:#586477}
+.geometry-status{font-size:12px;margin-left:auto;color:#6b7280}
+.geometry-label{position:absolute;pointer-events:none;font-size:13px;background:#ffffffbd;border-radius:3px;padding:1px 3px;white-space:nowrap}
+.geometry-images{padding:10px 12px;display:flex;gap:10px;flex-wrap:wrap}
+.geometry-images a{display:block;max-width:100%;color:#64748b;font-size:12px}
+.geometry-images img{display:block;max-width:100%;max-height:280px;object-fit:contain;border-radius:6px}
+.geometry-parameter{display:flex;align-items:center;gap:8px;font-size:12px;padding:4px 12px 10px}
+.geometry-parameter input{flex:1;min-width:60px}.geometry-parameter button{border:1px solid #ccd7e4;border-radius:5px;background:white;cursor:pointer}
+.geometry-active-step{outline:2px solid #cfe3fb;outline-offset:2px}
+.teach-info-panel .geometry-panel{flex-shrink:0;margin:0}.teach-info-panel .geometry-stage{height:285px}
+@media(max-width:700px){.geometry-stage{height:275px}.geometry-toolbar{gap:5px}.geometry-toolbar select{width:100%}.teach-info-panel .geometry-stage{height:250px}}

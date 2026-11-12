@@ -1,0 +1,316 @@
+{
+  "snapshot_date": "2026-11-13",
+  "source_commit": "e2739d72dd809197597a2e5e6825e50e88c38d8e",
+  "source_route": "https://demo.150.chat/home.html",
+  "file_count": 77,
+  "files": {
+    "README.md": {
+      "sha256": "54daf2e5c2024ccaabc6057d046d96227cb9397c5a504f743c7ec004cfb18f43",
+      "size": 748
+    },
+    "backend/__init__.py": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "size": 0
+    },
+    "backend/showcase.py": {
+      "sha256": "f9ebd492e8378ae338f817e21a47f99f8d4ffe5c5a9abb32cd5c6aea192f4e8c",
+      "size": 9542
+    },
+    "backend/showcase_bank.py": {
+      "sha256": "6df1bfc6b3ac8d9c46874d32f87b49712bab9acbfa5b4f4c7b19d533c17bf93a",
+      "size": 2401
+    },
+    "frontend/dimchart.js": {
+      "sha256": "339562402dc6557f4e1e40a946ef91b0cbc73fc145d0e20c0ba89bf8388ac1fd",
+      "size": 1956
+    },
+    "frontend/geometry.css": {
+      "sha256": "46a13e652f601b2a2f608b452a7389e0e5ca2708856d526f825a09ddaf5e363b",
+      "size": 2007
+    },
+    "frontend/geometry.js": {
+      "sha256": "c79d9bade545a6be217203f0f05c55bdc6bdc93a0b8d5f870353ee27b90d1a27",
+      "size": 26000
+    },
+    "frontend/launch-lettering.svg": {
+      "sha256": "a7b5ae77bc8861f47bf73c470e5a25343bdc82e52bc7533ee0dec391ce0d5541",
+      "size": 14425
+    },
+    "frontend/radar.js": {
+      "sha256": "ad82ead10971060daee29caa032ac1e9362c55d21f694e962d13987d2135a81a",
+      "size": 7265
+    },
+    "frontend/routine-graph.css": {
+      "sha256": "fa8fb992b36b587629d9050157bef6bc234e741d375d91ef94df7e9635c6aabf",
+      "size": 15993
+    },
+    "frontend/showcase/app.js": {
+      "sha256": "fb472a4161458c2d8c2294f1cf4e4a4565936853847ed982f5589a5d1faa14b4",
+      "size": 60666
+    },
+    "frontend/showcase/assets/fudan-emblem-mono.svg": {
+      "sha256": "ad2d867674286865e06f77ba822d0c6e69b1addd9763d54bfeb144b5155e22e7",
+      "size": 84866
+    },
+    "frontend/showcase/assets/fudan-emblem-white.png": {
+      "sha256": "e8f29bc8860840d03dbfaf8e94ffb7fac5c84378d3c162836da75943fc5b764f",
+      "size": 115880
+    },
+    "frontend/showcase/assets/fudan-favicon-180.png": {
+      "sha256": "7a4949a155493972a132f4775762f8347c6c2d3166788e026cc3bbad228c4127",
+      "size": 18140
+    },
+    "frontend/showcase/assets/fudan-favicon.png": {
+      "sha256": "c8177dbe451dd516aa22995d33fe034556cff48554c46563c30f7bef83d8b186",
+      "size": 4120
+    },
+    "frontend/showcase/bank.js": {
+      "sha256": "238fb4597379d8ca16e597762103167c0a2c401c105b13211177868190f8832b",
+      "size": 14980
+    },
+    "frontend/showcase/data.json": {
+      "sha256": "bd2d1578e9543203a294437c1b179a98d5e9e016e248d631ac703ff411234be8",
+      "size": 656898
+    },
+    "frontend/showcase/dataset-data.json": {
+      "sha256": "76cec584caca4e76a3d9375a0f5e2ce9b9e76c332ace3ba983bfe8c4e76b60a4",
+      "size": 27680
+    },
+    "frontend/showcase/dataset.css": {
+      "sha256": "47470f3fd8781820592fcf978205a2d3ab3d35371df4bdf44f453ec9372340c5",
+      "size": 14301
+    },
+    "frontend/showcase/dataset.html": {
+      "sha256": "4187c4d204b59919c37ba8dc432297e0fb488a15e90a07c3878235a81221f00b",
+      "size": 32243
+    },
+    "frontend/showcase/fonts/OFL.txt": {
+      "sha256": "5c7a27c7ad419621c541a95f7143e98d32c873e60e8790d09268619b98afb71b",
+      "size": 4389
+    },
+    "frontend/showcase/fonts/README.md": {
+      "sha256": "ed587be3b2df463739c9d29405b36e4e20a0ef3b4382de6e8eb8726752504de6",
+      "size": 2187
+    },
+    "frontend/showcase/fonts/coverage.json": {
+      "sha256": "49a364fb253d279442a9f89bed4695390dd4dac6a262c80f57ff1e0f698566e4",
+      "size": 3633
+    },
+    "frontend/showcase/fonts/studyagent-handwriting.woff2": {
+      "sha256": "c9e56b42b9373ea8c4c194e430b12347e5fc4c032bbd67dff6e3934c2fbc75a3",
+      "size": 32540
+    },
+    "frontend/showcase/handwriting.css": {
+      "sha256": "acf0c23e7c393413ca63ed7f81d341d019b1a5cc0ce77ba8c336ba0b7b876ecf",
+      "size": 1523
+    },
+    "frontend/showcase/handwriting.js": {
+      "sha256": "e4f291c860a2a0a1696366903620510b4d325a2b0c6d571500497b08904d0701",
+      "size": 7254
+    },
+    "frontend/showcase/hero.css": {
+      "sha256": "9d644f59083b514b8f784313a0cbf54522f9a43cd095c0888156d0157fd229c3",
+      "size": 18357
+    },
+    "frontend/showcase/hero.js": {
+      "sha256": "3e322c798a91c469b22a8104e03d83eeab8d20227133d1c8f2faefc61f46db87",
+      "size": 8774
+    },
+    "frontend/showcase/highlights-layout.css": {
+      "sha256": "b83df24b5f03ed0275010e9c59165c3359b02c4d506b0e421933042cbc0c6cbb",
+      "size": 5418
+    },
+    "frontend/showcase/highlights.css": {
+      "sha256": "336d6296df3227e201a807b55c42551438bcec54154da5eda1f636ecb1111fbb",
+      "size": 28713
+    },
+    "frontend/showcase/highlights.js": {
+      "sha256": "1ee2016dd652f91dc54ff733b77f32f917cdd106955724267d05f9bb7c62b5c8",
+      "size": 15162
+    },
+    "frontend/showcase/index.html": {
+      "sha256": "7a53b4669427a32162de689eff4f3165fe1409dc19a1a683382356d4c8604dac",
+      "size": 283768
+    },
+    "frontend/showcase/launch-geometry.css": {
+      "sha256": "4b8bde8329c573a7dab91be9793c97376a3a42506649ca881c70071ad39d4a8e",
+      "size": 1547
+    },
+    "frontend/showcase/launch-lettering.svg": {
+      "sha256": "81811453cfdff8312a99bf4882ff72f348808d242305dfbe6ec43bea89287d76",
+      "size": 14431
+    },
+    "frontend/showcase/liquid-glass.js": {
+      "sha256": "039cf92890867bbaf038f091ddee2f85b9485160368237dbff2c21fcf9c5cf9a",
+      "size": 9825
+    },
+    "frontend/showcase/pipeline.json": {
+      "sha256": "e85668680ce38e09fea92856f9b1081c956ef967c8a4c024ee67542596207c92",
+      "size": 255103
+    },
+    "frontend/showcase/question-bank/index.json": {
+      "sha256": "cbb893e900bc5e8388f8411df273daf907a00b8f5a07b1a20bd7eeca06a2bb49",
+      "size": 813
+    },
+    "frontend/showcase/question-bank/manifest.json": {
+      "sha256": "4bd87091a01566360099af8c0c4ddc0bf11ee4152c91d778b0c91f3ddb60e230",
+      "size": 683
+    },
+    "frontend/showcase/question-bank/part-0000.json": {
+      "sha256": "e21cb7b25c00d93c538d9a231c1497aef7b63dee6e302d029c543caf545b2b21",
+      "size": 16936
+    },
+    "frontend/showcase/recordings.json": {
+      "sha256": "0e1931e87791f117a8b98b81ab723809365dbb873fc1bd6fc213b0fa68248cb1",
+      "size": 525981
+    },
+    "frontend/showcase/research-content.json": {
+      "sha256": "25d2bf9d7c88df57baa858bbf1775c08c3ff443eea936c459c33accdb4f26d91",
+      "size": 82955
+    },
+    "frontend/showcase/splitter.js": {
+      "sha256": "9ce0081b4376217ffa093f42ed1f2b84f43ec574b6c6eb987657d519fc53ec5c",
+      "size": 5758
+    },
+    "frontend/showcase/style.css": {
+      "sha256": "fa6df2911efdd71157e29bd6dcf874693d0150783776c91a8c2c421457a53854",
+      "size": 72890
+    },
+    "frontend/showcase/surfaces.css": {
+      "sha256": "06e1c532ade8f74467e381517cfd3110bd7502d2b26eccb2340b21e1d0a677f2",
+      "size": 19116
+    },
+    "frontend/showcase/transitions.css": {
+      "sha256": "e31eb2877b7c2c20332b9e5a9b35118542fa55402ba147680bfe130d353aa3f8",
+      "size": 8517
+    },
+    "frontend/showcase/transitions.js": {
+      "sha256": "09d0faae490f8f525e33f32ea6d1453194377afa037f7695970549dc5c9a959b",
+      "size": 14408
+    },
+    "frontend/showcase/vision-content.json": {
+      "sha256": "d24fd9d890310645705c5f117653b5118d71e56465de7ca753591c3e50965b98",
+      "size": 64259
+    },
+    "frontend/showcase/vision.css": {
+      "sha256": "b1e09b923c527d530b30691901b853f95a5b6f6c7448b0cf964a27728e5afd79",
+      "size": 17436
+    },
+    "frontend/showcase/vision.js": {
+      "sha256": "7c953f4f5a935e9a756251c2ab890a4008f20b6d1c7eab1d848d58af2739828c",
+      "size": 7584
+    },
+    "frontend/style.css": {
+      "sha256": "8b17ac8bd6c89414a8a6a842d159c2887f49247a6a79cc0c35d6765bb15d7cda",
+      "size": 99575
+    },
+    "frontend/vendor/jsxgraph-1.11.1/distrib/jsxgraph.css": {
+      "sha256": "3c50c360ea9166e1776688a51d7b29f04335edbb287a907d1529eee852ccb5fc",
+      "size": 4747
+    },
+    "frontend/vendor/jsxgraph-1.11.1/distrib/jsxgraphcore.js": {
+      "sha256": "8d7e62e8582785d2647fe4833b9bfcdfb614af44983117aa6aeaf3f5f1c43145",
+      "size": 948689
+    },
+    "frontend/vendor/katex/fonts/KaTeX_AMS-Regular.woff2": {
+      "sha256": "0cdd387c9590a1a9f9794560022dbb59654a7d86f187aa0c81495ad42d3a7308",
+      "size": 28076
+    },
+    "frontend/vendor/katex/fonts/KaTeX_Caligraphic-Bold.woff2": {
+      "sha256": "de7701e42cf1f4cf0b766c03fb27977207eee2f4fd5d76fa82188406da43ea4c",
+      "size": 6912
+    },
+    "frontend/vendor/katex/fonts/KaTeX_Caligraphic-Regular.woff2": {
+      "sha256": "5d53e70ad607c2352162dec9e0923fb54ecdafaccbf604cd8dcf7d00facb989b",
+      "size": 6908
+    },
+    "frontend/vendor/katex/fonts/KaTeX_Fraktur-Bold.woff2": {
+      "sha256": "74444efd593c005e3f4573b44524704c0af0a937fe911cca9e94068d0d140d3f",
+      "size": 11348
+    },
+    "frontend/vendor/katex/fonts/KaTeX_Fraktur-Regular.woff2": {
+      "sha256": "51814d270d06ff0255dba0799994fa4d8c84d11f09951d47595f4abb1f3602dc",
+      "size": 11316
+    },
+    "frontend/vendor/katex/fonts/KaTeX_Main-Bold.woff2": {
+      "sha256": "0f60d1b897938ec918c8ce073092411baf9438f6739465693ff18b0f9d20b021",
+      "size": 25324
+    },
+    "frontend/vendor/katex/fonts/KaTeX_Main-BoldItalic.woff2": {
+      "sha256": "99cd42a3c072d918f2f44984a807cf7aa16e13545fd0875fc07c6c65f99e715b",
+      "size": 16780
+    },
+    "frontend/vendor/katex/fonts/KaTeX_Main-Italic.woff2": {
+      "sha256": "97479ca6cce906abc961ecac96faa5f9ca2e61b8e7670d475826bcdee9a7c267",
+      "size": 16988
+    },
+    "frontend/vendor/katex/fonts/KaTeX_Main-Regular.woff2": {
+      "sha256": "c2342cd8b869e01752a9321dc17213fc40d4d04c79688c1d43f2cf316abd7866",
+      "size": 26272
+    },
+    "frontend/vendor/katex/fonts/KaTeX_Math-BoldItalic.woff2": {
+      "sha256": "dc47344dbb6cb5b655c8460d561f4df5f501b90c804ad3c6cec65fe322351ab1",
+      "size": 16400
+    },
+    "frontend/vendor/katex/fonts/KaTeX_Math-Italic.woff2": {
+      "sha256": "7af58c5ec8f132a2ddde9027c6d7814decce4d3b822a11192a42a20e2e973264",
+      "size": 16440
+    },
+    "frontend/vendor/katex/fonts/KaTeX_SansSerif-Bold.woff2": {
+      "sha256": "e99ae51144bf1232efcc1bfe5add36262c6866b0faab24fa75740e1b98577a62",
+      "size": 12216
+    },
+    "frontend/vendor/katex/fonts/KaTeX_SansSerif-Italic.woff2": {
+      "sha256": "00b26ac825e2095056396e0553b8ac26d3f8ad158c3826e28b4c45b385c4714a",
+      "size": 12028
+    },
+    "frontend/vendor/katex/fonts/KaTeX_SansSerif-Regular.woff2": {
+      "sha256": "68e8c73ef42afd3ccec58bf0fba302cce448938e7fc020a5e31f8a952eee1342",
+      "size": 10344
+    },
+    "frontend/vendor/katex/fonts/KaTeX_Script-Regular.woff2": {
+      "sha256": "036d4e95149b69ff9bcc0cd55771efeb25ffa3947293e69acd78d5ac328c684b",
+      "size": 9644
+    },
+    "frontend/vendor/katex/fonts/KaTeX_Size1-Regular.woff2": {
+      "sha256": "6b47c40166b6dbe21a5dfca7718413f2147fd2399be1ba605d8ad39cedf25dfe",
+      "size": 5468
+    },
+    "frontend/vendor/katex/fonts/KaTeX_Size2-Regular.woff2": {
+      "sha256": "d04c54219f9eaec6d4d4fd42dfb28785975a4794d6b2fc71e566b9cd6db842dd",
+      "size": 5208
+    },
+    "frontend/vendor/katex/fonts/KaTeX_Size3-Regular.woff2": {
+      "sha256": "73d591271b1604960cb10bb90fee021670af7297017e0e98480b332d11f51995",
+      "size": 3624
+    },
+    "frontend/vendor/katex/fonts/KaTeX_Size4-Regular.woff2": {
+      "sha256": "a4af7d414440a1c1790825cfb700cf9cf43b0f2c4b04f0ebc523011ad9853ec0",
+      "size": 4928
+    },
+    "frontend/vendor/katex/fonts/KaTeX_Typewriter-Regular.woff2": {
+      "sha256": "71d517d67827787cfabdf186914cc3358eda539e37931941f2b2fd4a21f68c0b",
+      "size": 13568
+    },
+    "frontend/vendor/katex/katex.min.css": {
+      "sha256": "c7c428bc728dc8b818e6e2562aadf26b01e64ad435611fe845152d84bfbd0654",
+      "size": 21062
+    },
+    "frontend/vendor/katex/katex.min.js": {
+      "sha256": "dc84b296ec3e884de093158f760fd9d45b6c7abe58b5381557f4e138f46a58ae",
+      "size": 277038
+    },
+    "frontend/vendor/three-0.180.0/build/three.core.min.js": {
+      "sha256": "61ba0df005b05991361d040d8ff670e1aadfd0ce7aeebd1fdb0725957a8957de",
+      "size": 381124
+    },
+    "frontend/vendor/three-0.180.0/build/three.module.min.js": {
+      "sha256": "e2b5ee6bccd38fd6d8a2428546b83c5f2426d84b152ef82be8055556e3b40eb6",
+      "size": 338908
+    },
+    "frontend/vendor/three-0.180.0/examples/jsm/controls/OrbitControls.js": {
+      "sha256": "7ccdd6ac6532c6be7a99383244440074faf1a6d4979fa70b52d995a8cd11fa36",
+      "size": 38732
+    }
+  }
+}

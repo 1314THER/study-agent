@@ -64,16 +64,17 @@ macOS 双击「一键打开.command」会在后台启动服务并打开首页，
 
 ### 公开项目展示
 
-`demo.150.chat` 的新展示页采用 14 章连续长页，沿“统一表示 → 单题证据 → 诊断与训练 → 长期记录 → 教学协同 → 系统改进”介绍项目。主案例为 2023 年新课标全国Ⅰ卷第 17 题，补充案例为 2025 年全国一卷第 16 题。数学图形、步骤卡片、关系图和时间轴穿插一手研究对照；已有实现、方案演示与研究方向分别标识。
+`demo.150.chat` 现以问侠申请书配套的独立技术路线页为首页，按“总体数据流 → 数据库与 LLM 协作 → Agent Loop → 学生答疑场景 → 长期 / 班级教学 → LoRA → Benchmark → B/C 部署”说明实现计划和验证边界。新前端单独位于 `frontend/wenxia-demo/`；页面说明中明确区分已有记录、拟议设计与待验证结果。
 
 | 入口 | 用途 | 数据与 AI |
 |---|---|---|
 | `150.chat/home.html` | 主人学习与题库管理 | 保留主人数据及原 AI 配置 |
-| `demo.150.chat/home.html` | 科研介绍与固定结果回放 | 无需账号，只读取公开静态文件，浏览时不调用 AI |
+| `demo.150.chat/home.html` | 问侠项目技术路线与评审说明 | 无需账号，只读取公开静态文件，浏览时不调用 AI |
+| `demo.150.chat/showcase/index.html` | 原 15 章数学科研展示页 | 保留旧版案例与实录；其可迁移快照位于 `frontend/archive/demo-legacy-20261113/` |
 
 两道全国卷题各有四位老师的真实三阶段解题记录。六类预定诊断情境共保存 18 份实际回答，支持常见使用方式与同信息条件对照，包含完整请求、配置和输出；不预设系统胜出。教学与变式来自本地正式业务代码和真实模型 API，页面如实注明来源。公开题库仅含这两道有明确全国卷来源的案例，支持筛选、组卷与当前选题打印。
 
-每章先完整阅读对应 Markdown，再将设计和研究边界写入页面。`docs/showcase-content-map.json` 保存 15 份原文的哈希及章节映射；`scripts/build_research_showcase.py --check` 同时核验来源与静态正文。教师端、学校端、完整生涯评估和外部 MCP 接入按方案呈现。
+旧展示页的原始记录与静态内容继续由 `docs/showcase-content-map.json` 和 `scripts/build_research_showcase.py --check` 校验；新技术路线页从 `outputs/问侠-原格式申请书大纲-v9-20261113/`、数据库与学生端设计文档及 Benchmark 方案整理。教师端、学校端、长期学情与新 Agent Loop 按“拟议设计”呈现，未将方案写成已完成结果。
 
 本地预览运行 `.venv/bin/python scripts/run_demo.py --port 8302`，打开 `http://127.0.0.1:8302/home.html`。展示服务独立使用 `backend.showcase:app`，不初始化主人数据库或 AI 模块。页面与验收见 [展示站说明](docs/showcase-demo.md)；本轮先在本地验收并推送 GitHub，再由 Workbench 手动同步到阿里云，具体步骤见 [演示站发布说明](docs/research-showcase-release.md)。
 

@@ -1,5 +1,7 @@
 # 科研展示站
 
+> **2026-11-13 首页更新：**`demo.150.chat/` 与 `/home.html` 现由独立前端 `frontend/wenxia-demo/` 承载，展示问侠申请书中的总体架构、数据库与 LLM 协作、Agent Loop、场景、LoRA 和 Benchmark。本文以下内容说明原 15 章数学记录页；该页保留在 `/showcase/index.html`，整站公开资源快照另存于 `frontend/archive/demo-legacy-20261113/`。
+
 部署目标为 `https://demo.150.chat/home.html`，正式业务站为 `https://150.chat/`。本轮先完成本地验收、提交并推送 GitHub，再由用户在阿里云 Workbench 手动同步；本文描述新版本，不表示服务器已经更新。
 
 ## 内容与来源

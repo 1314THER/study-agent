@@ -1,5 +1,7 @@
 # 科研展示站的独立发布包
 
+> 当前发布包仍包含旧版 15 章展示页及其固定公开数据，以便保留 `/showcase/index.html` 和安全回滚；新版首页取自 `frontend/wenxia-demo/index.html`，并由 `backend/showcase.py` 映射至 `/` 与 `/home.html`。发布激活后，脚本以新版首页摘要做校验。旧版可迁移快照保存在 `frontend/archive/demo-legacy-20261113/`。
+
 本轮先在本地完成、验收并推送 GitHub，再由项目负责人在阿里云 Workbench 手动发布。本文和打包器都不连接服务器；没有执行激活脚本就不能表述为已经上线。
 
 ## 发布范围

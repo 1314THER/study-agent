@@ -79,7 +79,7 @@ def public_paths(root: Path) -> set[str]:
             paths.update(eval(compile(expression, '<public-assets>', 'eval'), {'__builtins__': {}}, {}))
     if not paths or any(not isinstance(p, str) or not p.startswith('/') for p in paths):
         raise ValueError('Missing static ASSET_PATHS')
-    result = BACKEND | {'frontend/showcase/index.html'} | {'frontend' + p for p in paths}
+    result = BACKEND | {'frontend/showcase/index.html', 'frontend/wenxia-demo/index.html'} | {'frontend' + p for p in paths}
     bank_path = 'frontend/showcase/question-bank/manifest.json'
     bank = json.loads(checked_file(root, bank_path).read_text())
     if bank.get('version') != 1 or type(bank.get('count')) is not int or bank['count'] < 1:
@@ -124,6 +124,16 @@ def scan_public(name: str, content: bytes) -> None:
 
 def validate_content(root: Path) -> None:
     read = lambda name: json.loads(checked_file(root, 'frontend/showcase/' + name).read_text())
+    site_path = checked_file(root, 'frontend/wenxia-demo/index.html')
+    site = site_path.read_text(encoding='utf-8')
+    required_sections = ('architecture', 'databases', 'agent', 'scenario', 'people-and-class',
+                         'lora', 'benchmark', 'deployment', 'comparison', 'evidence', 'roadmap')
+    for section in required_sections:
+        if f'id="{section}"' not in site:
+            raise ValueError('New demo site is missing section: ' + section)
+    for marker in ('PostgreSQL', 'SQLite', 'FTS5', '4B', '9B', '27B', 'Benchmark', 'GradeRevision'):
+        if marker not in site:
+            raise ValueError('New demo site is missing architecture marker: ' + marker)
     content = read('research-content.json')
     if [c.get('id') for c in content.get('chapters', [])] != CHAPTERS:
         raise ValueError('All 15 research chapters must exist in order')
@@ -370,7 +380,7 @@ ready=0
 for _ in {1..30}; do if health http://127.0.0.1:8001/health >/dev/null 2>&1; then ready=1; break; fi; sleep 1; done
 (( ready )) || { echo '新 demo 本地健康检查失败。' >&2; exit 1; }
 curl --noproxy '*' --connect-timeout 2 --max-time 8 -fsS http://127.0.0.1:8001/home.html -o "$BACKUP/served-home.html"
-[[ $(sha256sum "$BACKUP/served-home.html" | cut -d' ' -f1) == $(sha256sum "$RELEASE/frontend/showcase/index.html" | cut -d' ' -f1) ]] || { echo 'demo 首页不是本次快照。' >&2; exit 1; }
+[[ $(sha256sum "$BACKUP/served-home.html" | cut -d' ' -f1) == $(sha256sum "$RELEASE/frontend/wenxia-demo/index.html" | cut -d' ' -f1) ]] || { echo 'demo 首页不是本次快照。' >&2; exit 1; }
 health https://demo.150.chat/health >/dev/null
 SUCCESS=1
 echo "demo 发布完成：$RELEASE"

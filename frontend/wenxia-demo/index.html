@@ -1,0 +1,474 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="description" content="问侠项目申请书配套技术路线：高中数学教学数据库、LLM 与 Agent 协同、LoRA 适配、系统任务 Benchmark 与 B/C 部署边界。">
+  <meta name="theme-color" content="#080808">
+  <title>问侠｜项目技术路线与评测方案</title>
+  <link rel="icon" href="/wenxia-demo/assets/mantis-icon.png" type="image/png">
+  <link rel="stylesheet" href="/wenxia-demo/site.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">跳到正文</a>
+  <div class="reading-progress" aria-hidden="true"><span id="reading-progress-bar"></span></div>
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="问侠项目介绍首页">
+      <img class="brand-mark" src="/wenxia-demo/assets/mantis-icon.png" alt="">
+      <span class="brand-text"><strong>问侠</strong><small>项目技术路线</small></span>
+    </a>
+    <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="primary-nav">
+      <span class="menu-icon" aria-hidden="true"></span><span class="sr-only">打开目录</span>
+    </button>
+    <nav class="primary-nav" id="primary-nav" aria-label="页面章节">
+      <a href="#architecture">总体架构</a>
+      <a href="#databases">三库与检索</a>
+      <a href="#agent">Agent Loop</a>
+      <a href="#scenario">答疑场景</a>
+      <a href="#lora">LoRA</a>
+      <a href="#benchmark">Benchmark</a>
+      <a href="#deployment">B / C 部署</a>
+    </nav>
+    <a class="header-link" href="https://150.chat/" target="_blank" rel="noopener">项目入口 <span aria-hidden="true">↗</span></a>
+  </header>
+
+  <main id="main">
+    <section class="hero section-shell" id="top" aria-labelledby="hero-title">
+      <div class="hero-copy">
+        <div class="eyebrow"><span class="eyebrow-rule"></span>问侠项目展示 · 申请书技术路线 · 2026.11</div>
+        <h1 id="hero-title">把一次数学答疑，<br><span class="hero-title-fragment">延伸为可追溯的</span><span class="hero-title-fragment">教学闭环。</span></h1>
+        <p class="hero-lede">问侠研究 LLM、Agent 与数据库怎样协同：从学生的原始作答出发，找到适用的教学依据，解释本次判断，记录帮助条件，再安排一次真正独立的验证。</p>
+        <div class="hero-actions">
+          <a class="button button-primary" href="#architecture">先看总体数据流 <span aria-hidden="true">↓</span></a>
+          <a class="text-link" href="#scenario">从一个学生作答开始 <span aria-hidden="true">↗</span></a>
+        </div>
+        <div class="hero-state"><span class="state-dot"></span>当前页面说明研究设计；已实现基础、拟实现机制和待验证结果分别标注。</div>
+      </div>
+      <div class="hero-diagram" aria-label="本项目的核心闭环摘要">
+        <div class="hero-diagram-head"><span>一条作答如何变成下一步教学</span><span class="diagram-live"><i></i>研究对象</span></div>
+        <div class="trace-line" aria-hidden="true"><span></span><span></span><span></span><span></span><span></span></div>
+        <ol class="trace-list">
+          <li><b>原始作答</b><small>原图、笔迹、修订</small></li>
+          <li><b>证据检索</b><small>教学依据＋学习事实</small></li>
+          <li><b>角色化处理</b><small>识别、诊断、提示</small></li>
+          <li><b>受控提交</b><small>校验、事务、事件</small></li>
+          <li><b>独立验证</b><small>新题与延迟复测</small></li>
+        </ol>
+        <div class="hero-diagram-foot"><span>数据库保存事实和版本</span><span>LLM提出解释与行动</span><span>Agent负责取证、执行与恢复</span></div>
+      </div>
+      <div class="hero-metrics" aria-label="项目研究范围摘要">
+        <div><strong>DB1 / DB2 / DB3</strong><span>教学依据 · 学习事实 · 当前学情</span></div>
+        <div><strong>4B / 9B / 27B</strong><span>三档模型的系统任务对照</span></div>
+        <div><strong>Q01—Q20</strong><span>完整教学任务，而非单轮问答</span></div>
+      </div>
+    </section>
+
+    <section class="section-shell status-strip" aria-label="项目内容状态图例">
+      <span class="status-title">阅读图例</span>
+      <span class="status-item"><i class="status-mark mark-existing"></i><b>已有基础</b><small>当前代码或实录可查</small></span>
+      <span class="status-item"><i class="status-mark mark-design"></i><b>拟议设计</b><small>按方案实施，尚不代表上线</small></span>
+      <span class="status-item"><i class="status-mark mark-verify"></i><b>待验证</b><small>需用封存任务或真实使用证明</small></span>
+    </section>
+
+    <section class="content-section section-shell" id="architecture" aria-labelledby="architecture-title">
+      <div class="section-heading">
+        <div class="section-index">01 / 系统边界</div>
+        <div>
+          <h2 id="architecture-title">总体架构：让每个箭头都有数据含义</h2>
+          <p>端侧采集输入；领域服务确定身份、权限和事务；Agent 决定查什么、调用什么；模型只在当前角色上下文中提出结果；数据库负责事实、版本与可恢复状态。</p>
+        </div>
+        <span class="status-pill is-design">拟议架构</span>
+      </div>
+
+      <div class="architecture-legend" aria-label="架构图箭头图例">
+        <span><i class="legend-swatch swatch-request"></i>任务 / 请求</span>
+        <span><i class="legend-swatch swatch-evidence"></i>检索证据（R）</span>
+        <span><i class="legend-swatch swatch-action"></i>提案与工具返回</span>
+        <span><i class="legend-swatch swatch-write"></i>事实 / 修订写入（W）</span>
+      </div>
+      <figure class="diagram-frame diagram-overall">
+        <a class="diagram-open" href="/wenxia-demo/assets/architecture-overall.svg" target="_blank" rel="noopener" aria-label="在新标签页查看总体架构原图">打开原尺寸 ↗</a>
+        <img src="/wenxia-demo/assets/architecture-overall.svg" alt="问侠系统总体架构图：学生端、教师端、学校端向业务入口提交请求，Agent 运行时连接本地模型与受控工具服务；DB1 提供只读教学依据，DB2 保存学习事实，DB3 保存当前学情与修订。图中标出事件回流与本地部署边界。" width="1800" height="1960" fetchpriority="high">
+        <figcaption>图 1　系统总体架构与数据方向。检索向上提供依据，模型向工具服务提交带引用的提案；正式事实由领域服务提交，DB2 事件再触发 DB3 学情修订。</figcaption>
+      </figure>
+
+      <div class="architecture-walkthrough">
+        <article><span class="step-code">A</span><div><h3>入口先确定范围</h3><p>身份由认证服务给出，课程、题目、任务和量规按当前版本绑定。LLM 不能自行声明“我是教师”或扩大可读学生范围。</p></div></article>
+        <article><span class="step-code">B</span><div><h3>两路检索，再读当前状态</h3><p>RAG1 找“教学上可用的依据”；RAG2 找“这个人实际发生的事实”。DB3 提供有版本的当前解释。三者带出处进入 EvidenceBundle。</p></div></article>
+        <article><span class="step-code">C</span><div><h3>模型提出，服务核验并提交</h3><p>模型返回 GradeDraft、TutorTurn 或 WikiPatch 等结构化提案；服务核对权限、引用、对象版本、阶段与预算后，再将正式事实和 outbox 事件写入 PostgreSQL。</p></div></article>
+        <article><span class="step-code">D</span><div><h3>事件驱动跨时间闭环</h3><p>事件消费者重新取证，LLM 提出学情更新；服务比较 base_revision 后保存 DB3 新版本，再刷新相关任务和班级视图。失败可按事件位点恢复。</p></div></article>
+      </div>
+      <aside class="callout callout-blue"><b>研究重点</b><span>系统是否成功，要看业务任务的最终状态、依据和副作用，而不是只看模型回答像不像正确答案，也不是只看工具 JSON 能否通过解析。</span></aside>
+    </section>
+
+    <section class="content-section section-shell" id="databases" aria-labelledby="databases-title">
+      <div class="section-heading">
+        <div class="section-index">02 / 数据底座</div>
+        <div>
+          <h2 id="databases-title">三类数据库职责分开，证据再由 LLM 协作</h2>
+          <p>“数据库”不是一个向量搜索框。教学定义、发生过的事实和系统目前对学生的判断，更新节奏和可信等级都不同，因此分开保存、按对象版本关联。</p>
+        </div>
+        <span class="status-pill is-design">物理选型方案</span>
+      </div>
+
+      <div class="db-grid">
+        <article class="db-card db1-card">
+          <div class="db-card-head"><span class="db-number">DB1</span><span class="db-type">SQLite · 只读发布</span></div>
+          <h3>教学依据库</h3>
+          <p class="db-intro">回答“在这个省份、教材和课堂进度下，什么依据可用”。</p>
+          <ul>
+            <li>课程、知识前置、方法及适用 / 排除条件</li>
+            <li>题目、多条解法、规范操作、步骤与评分量规</li>
+            <li>来源、审核记录、稳定 ID 与 CourseRelease 版本</li>
+          </ul>
+          <div class="db-tech"><b>编辑侧</b>独立 SQLite 工作库，保留提案和审核历史。<b>运行侧</b>发布为只读 SQLite 文件；学生运行不依赖内容工作台在线。</div>
+          <div class="db-index">关系表 / nodes & edges <span>→</span> FTS5 词法检索 <span>+</span> 公式归一化候选 <span>+</span> 语义候选</div>
+        </article>
+        <article class="db-card db2-card">
+          <div class="db-card-head"><span class="db-number">DB2</span><span class="db-type">PostgreSQL · 事务事实</span></div>
+          <h3>学习与教学事实库</h3>
+          <p class="db-intro">回答“学生 / 教师实际做过什么，发生在何时、哪个版本”。</p>
+          <ul>
+            <li>题目与作答修订、原始媒体引用、笔迹和时间</li>
+            <li>帮助暴露、提示确认、评分版本、教师复核与任务</li>
+            <li>model_runs、jobs、outbox、consumer_receipts</li>
+          </ul>
+          <div class="db-tech"><b>类型</b>关系表保存约束和关联；JSONB 放有版本的扩展载荷。<b>媒体</b>放在受控文件 / 对象存储，PG 只保存 asset_ref、hash、归属和权限。</div>
+          <div class="db-index">SQL 取精确字段 <span>+</span> 原文片段检索 <span>+</span> 事务 / 幂等键</div>
+        </article>
+        <article class="db-card db3-card">
+          <div class="db-card-head"><span class="db-number">DB3</span><span class="db-type">PostgreSQL 修订元数据 + Wiki</span></div>
+          <h3>当前学情与可读状态</h3>
+          <p class="db-intro">回答“目前有哪些有依据的理解，哪些仍未知，需要怎样验证”。</p>
+          <ul>
+            <li>学习进度、知识 / 方法 / 步骤表现、目标和未知</li>
+            <li>每条判断标记 observed_fact、inference、self_report 或 human_note</li>
+            <li>保存证据、反证、旧版本、base_revision 与 supersedes</li>
+          </ul>
+          <div class="db-tech"><b>可读层</b>Markdown 与结构化 blocks。<b>修订层</b>PG 保存 Wiki revision、sync cursor 与 conflict；可与 DB2 共用 PG 实例，但逻辑 schema 和权限边界分开。</div>
+          <div class="db-index">DB2 正式事件 <span>→</span> Agent 取证 <span>→</span> LLM 提案 <span>→</span> 服务提交新版本</div>
+        </article>
+      </div>
+
+      <div class="db-architecture-details">
+        <div>
+          <h3>教学关系怎样被搜索</h3>
+          <p>先用课程 release、审核状态、学段和任务目标做硬过滤；再以词法、公式结构和语义召回候选，沿“知识前置 → 方法 → 有序步骤 → 例题”扩展。最后回表验证来源、权限与版本，才把片段交给模型。向量相似度只负责候选排序，不负责评分或事实判定。</p>
+        </div>
+        <div class="retrieval-stack" aria-label="DB1 候选检索流程">
+          <span>课程 / 权限硬过滤</span><i>↓</i><span>FTS5 + 公式 token + 向量候选</span><i>↓</i><span>关系扩展 / 重排</span><i>↓</i><span>回表校验 / EvidenceBundle</span>
+        </div>
+        <div class="db-tech-note"><b>向量索引状态</b><p>候选方案是复用 PostgreSQL pgvector 保存派生向量，让 DB1 教学片段和 DB2 私人证据分 schema / 权限域管理；这是待验证选型，不写成已上线。关系结构首版由 SQLite / PostgreSQL 强类型关系表表达，不为技术名词额外引入图数据库或消息中间件。</p></div>
+      </div>
+
+      <div class="collaboration-protocol">
+        <div class="subheading"><span>模型与数据库的调用协议</span><small>LLM 不拿整库连接，不把聊天记录当数据库</small></div>
+        <ol class="protocol-list">
+          <li><b>身份与任务</b><span>认证服务给身份、班级范围、课程与任务版本；TA 生成 QueryPlan。</span></li>
+          <li><b>受控取证</b><span>RAG1 查 DB1，RAG2 查 DB2 精确事实与原文片段；再读相关 DB3 版本。硬过滤由程序执行。</span></li>
+          <li><b>编译上下文</b><span>按角色规则、任务合同、课程约束、检索证据、不可信原始输入五层组装；记录来源和 token 清单。</span></li>
+          <li><b>生成提案</b><span>LLM 只做当前角色的语义工作，例如找首错、给有限提示或提出 WikiPatch。</span></li>
+          <li><b>服务核验</b><span>Tool Gateway 检查 schema、权限、证据引用、对象版本、业务阶段和预算；数学正确性另行核验。</span></li>
+          <li><b>事务提交</b><span>领域服务写正式事实和 outbox；后台消费者按 event_id 去重，再触发 DB3 学情更新。</span></li>
+        </ol>
+      </div>
+      <p class="footnote">RAG1 / RAG2 中的词法、公式、向量索引均是从源对象派生的搜索结构，不能代替 DB1 / DB2 作为事实来源。</p>
+    </section>
+
+    <section class="content-section section-shell" id="agent" aria-labelledby="agent-title">
+      <div class="section-heading">
+        <div class="section-index">03 / Agent 执行机制</div>
+        <div>
+          <h2 id="agent-title">新 Agent Loop：围绕可恢复任务状态运行</h2>
+          <p>旧原型已有简单工具轮询。研究方案要具体到状态、证据、提交和恢复：Agent 不是聊天里反复问模型“下一步做什么”，而是一个带任务合同、预算、权限和持久事件位点的执行器。</p>
+        </div>
+        <span class="status-pill is-design">拟实现协议</span>
+      </div>
+
+      <div class="loop-flow" aria-label="单任务 Agent 执行循环的八个阶段">
+        <article><span>01</span><b>接收</b><small>校验身份、输入版本和完成条件</small></article>
+        <article><span>02</span><b>取证</b><small>QueryPlan → DB1 / DB2 / DB3</small></article>
+        <article><span>03</span><b>编译</b><small>角色上下文、引用、预算</small></article>
+        <article><span>04</span><b>提案</b><small>模型提出动作或请求补充</small></article>
+        <article><span>05</span><b>校验</b><small>权限、schema、版本、业务规则</small></article>
+        <article><span>06</span><b>执行</b><small>受控工具与领域服务</small></article>
+        <article><span>07</span><b>观察 / 恢复</b><small>核验真实返回，识别已提交副作用</small></article>
+        <article><span>08</span><b>提交 / 停止</b><small>完成、等输入、待复核或失败</small></article>
+      </div>
+      <div class="runstate-panel">
+        <div><span class="panel-label">RunState 持久字段</span><h3>恢复时从任务事实继续，不靠模型 KV cache</h3></div>
+        <ul class="field-chips"><li>task / run id</li><li>课程与输入 revision</li><li>当前 phase</li><li>EvidenceRef 清单</li><li>动作与实际返回</li><li>剩余调用 / token / 时间</li><li>待学生输入 / 教师复核</li><li>commit 记录 / event cursor</li></ul>
+      </div>
+
+      <div class="role-section">
+        <div class="subheading"><span>四类逻辑角色，按任务隔离上下文与工具</span><small>角色不是四个必须独立训练的模型</small></div>
+        <div class="role-grid">
+          <article><span class="role-id">01 / CLEAN</span><h3>保真识别</h3><p>读取题图、笔迹或文本，返回转写片段、位置和歧义候选；不读取参考答案，也不擅自修正学生的数学错误。</p><small>图像 / 笔迹 → 可信转写</small></article>
+          <article><span class="role-id">02 / SOLVE</span><h3>求解与核验</h3><p>结合题目版本、课程范围和 DB1 依据生成候选解法，检查条件、边界与合理异解，记录实际使用的操作。</p><small>题目 + 课程依据 → 解法提案</small></article>
+          <article><span class="role-id">03 / SOCRATIC</span><h3>批改、提示与范围</h3><p>按不同 task contract 执行 GRADER、TUTOR、SCOPE、PAPER_REVIEW；角色间隔离参考答案、学生状态和提示等级。</p><small>证据 + 量规 → 有边界的教学回应</small></article>
+          <article><span class="role-id">04 / TA</span><h3>协调与学情维护</h3><p>持有 RunState，决定补查、调用哪个角色、如何恢复，以及何时提交或等待；通过工具服务取证，不直接写 SQL。</p><small>任务状态 → 可验证的动作序列</small></article>
+        </div>
+        <p class="role-note">同一个 4B / 9B / 27B 权重可以按角色加载不同 system contract 和工具权限，也可使用独立适配器；每次运行记录实际权重 / adapter。OCR、embedding、reranker、外部求解器若参与，也必须在运行账中单列。</p>
+      </div>
+
+      <div class="three-loops">
+        <article class="loop-card loop-card-task"><span class="loop-number">1</span><div><h3>单任务循环</h3><p>接收一项具体请求，补查证据、提出动作、校验返回、提交结果或说明为什么等待。按幂等键避免重试造成重复写入。</p><small>一次答疑、批改或组卷</small></div></article>
+        <article class="loop-card loop-card-learning"><span class="loop-number">2</span><div><h3>跨时间教学循环</h3><p>作答 → 批改 → 分级提示 / 训练 → 无提示新题 → 延迟复测。提示后会做是“辅助完成”，不直接记成独立掌握。</p><small>多次任务与学生交互</small></div></article>
+        <article class="loop-card loop-card-state"><span class="loop-number">3</span><div><h3>后台状态维护循环</h3><p>正式事件 → 重新取证 → LLM 提交语义 patch → base_revision 校验 → DB3 新版本 → 更新受影响任务。失败可重放，旧判断可撤回。</p><small>事件消费者异步执行</small></div></article>
+      </div>
+      <aside class="callout callout-amber"><b>提交边界</b><span>模型输出先保存为提案。最终分数、对象关系、权限、版本与事务由代码负责；调用成功不等于任务成功，JSON 合法也不等于数学正确。</span></aside>
+    </section>
+
+    <section class="content-section section-shell scenario-section" id="scenario" aria-labelledby="scenario-title">
+      <div class="section-heading">
+        <div class="section-index">04 / 完整业务场景</div>
+        <div>
+          <h2 id="scenario-title">用一道闭区间最值题走完整条数据链</h2>
+          <p>这里展示总体架构中的一个场景实例：学生写错后，系统怎样定位边界条件、分级引导、记录提示暴露、更新学情，再验证新题。图中状态 ID 是协议示意，不是已发生的模型调用。</p>
+        </div>
+        <span class="status-pill is-example">构造案例</span>
+      </div>
+
+      <div class="problem-board">
+        <div class="problem-label">题目与当前作答</div>
+        <div class="problem-content"><p>设 <span class="math">a ∈ [0, 3]</span>，<span class="math">f(x) = x² − 2ax + 1</span>，且 <span class="math">x ∈ [0, 2]</span>。求最小值与最大值随 <span class="math">a</span> 的变化。</p><blockquote>学生片段 seg-2：“配方得 f(x) = (x − a)² + 1 − a²，所以所有 a 的最小值都是 1 − a²。”</blockquote></div>
+        <div class="problem-finding"><b>本例要发现</b><span>只有当顶点 x=a 落在定义域 [0,2] 时，最小值才能直接取 1−a²。</span></div>
+      </div>
+
+      <div class="math-result-grid">
+        <div class="math-result"><span class="result-label">最小值</span><div class="piecewise"><span>0 ≤ a ≤ 2</span><b>1 − a²</b><span>2 ≤ a ≤ 3</span><b>5 − 4a</b></div><small>当 a=3，顶点 x=3 不可行；区间端点 x=2 给出 f(2)=−7，而学生公式给 −8。</small></div>
+        <div class="math-result"><span class="result-label">最大值</span><div class="piecewise"><span>0 ≤ a ≤ 1</span><b>5 − 4a</b><span>1 ≤ a ≤ 3</span><b>1</b></div><small>在闭区间上比较两个端点值 f(0)=1 与 f(2)=5−4a；本例不使用尚未学习的导数。</small></div>
+      </div>
+
+      <div class="scenario-control">
+        <div><h3>一次任务的 30 个交互节点</h3><p>先看 RAG、批改和提示；再看事件、WikiPatch 与独立复测。</p></div>
+        <div class="segmented-control" role="tablist" aria-label="场景时序图">
+          <button type="button" role="tab" id="scenario-tab-evidence" aria-selected="true" aria-controls="scenario-panel" data-scenario="evidence">读取与诊断 · 01—18</button>
+          <button type="button" role="tab" id="scenario-tab-teaching" aria-selected="false" aria-controls="scenario-panel" data-scenario="teaching">学情与复测 · 19—30</button>
+        </div>
+      </div>
+      <div class="diagram-frame scenario-diagram" id="scenario-panel" role="tabpanel" aria-labelledby="scenario-tab-evidence">
+        <a class="diagram-open" href="/wenxia-demo/assets/scenario-evidence.svg" target="_blank" rel="noopener" id="scenario-open">打开原尺寸 ↗</a>
+        <img id="scenario-diagram-image" src="/wenxia-demo/assets/scenario-evidence.svg" alt="场景时序图上半部分：学生提交题目和作答，Agent 保存原始材料，CLEAN 保真识别，读取 DB3 与 DB2 历史，RAG1 检索闭区间最值的教学依据，GRADER 生成批改提案并经服务提交，然后 TUTOR 给出限制参考内容的一级提示。" width="1800" height="2740">
+        <p class="diagram-caption" id="scenario-caption">图 2a　原图、识别、作答修订、双路检索、GradeDraft、正式评分与 TUTOR 提示。</p>
+      </div>
+
+      <div class="scenario-timeline">
+        <article><span class="timeline-key">输入</span><div><h3>保存原始材料，再做保真识别</h3><p>照片或原生笔迹先进入受控资产目录；PostgreSQL 写 AttemptRevision、asset_ref 和学生原文。CLEAN 输出转写、区域和歧义；关键符号不清时请求确认，不替学生把错误式子改对。</p></div></article>
+        <article><span class="timeline-key">取证</span><div><h3>分别查询 DB1 教学依据、DB2 学习事实</h3><p>RAG1 返回顶点可行性、闭区间单调性 / 端点比较、量规和 CourseRelease；RAG2 返回相关作答、提示暴露和独立复测事实。DB3 回传旧状态及 revision；无历史就明确“未知”。</p></div></article>
+        <article><span class="timeline-key">批改</span><div><h3>GRADER 只提交带引用的诊断提案</h3><p>SOCRATIC.GRADER 引用 seg-2，指出“所有 a”推广过度，并用 a=3 作为反例。把“没有检查定义域”作为本次可观察缺失；究竟是遗忘、分类讨论不熟还是书写省略，暂时保留为候选解释。</p></div></article>
+        <article><span class="timeline-key">引导</span><div><h3>独立编译 TUTOR 上下文，不泄露完整解答</h3><p>只传当前目标、学生片段、允许的提示等级、已暴露内容和最小参考片段。例： “最值点一定在允许的 x 范围内吗？” 服务保存 TutorTurn；提示实际展示后另记 HintExposed。</p></div></article>
+        <article><span class="timeline-key">回流</span><div><h3>事件驱动更新，但辅助订正不算独立掌握</h3><p>学生提示后订正形成新 response_revision，并带 assisted 条件。TA 读取 DB1、DB2、旧 DB3 后让 LLM 提出 WikiPatch；服务校验证据、反证和 base_revision，再写 DB3 新版本。</p></div></article>
+        <article><span class="timeline-key">验证</span><div><h3>排除已暴露题族，生成下一项独立任务</h3><p>规划器读取硬性作业、复习期限与时长预算；检索避开已暴露题及近亲题。新题先由 SOLVE 独立求解 / 核验，再在无提示条件下记录真实表现。结果支持、收窄或撤回旧判断。</p></div></article>
+      </div>
+
+      <div class="case-outcome">
+        <div><span class="outcome-label">数据库中的对象链</span><code>AttemptRevision → HelpExposure → GradeRevision → outbox event → LearnerStateUpdate → TaskPlanRevision → IndependentCheck</code></div>
+        <div><span class="outcome-label">人工纠错分支</span><p>若教师发现 OCR 漏掉了正确的区间讨论，系统追加新 GradeRevision 与 GradeSuperseded 事件，撤回不受支持的 DB3 判断，重评相关任务和班级汇总；原稿与旧修订都保留。</p></div>
+      </div>
+      <p class="scenario-disclaimer">案例说明的是拟议数据协议与数学边界，不是真实学生、教师实验或新 Agent 的实跑轨迹。后续必须用脚本回放正确异解、重复 / 迟到事件、教师纠错和服务故障分支。</p>
+    </section>
+
+    <section class="content-section section-shell" id="people-and-class" aria-labelledby="people-title">
+      <div class="section-heading">
+        <div class="section-index">05 / 学生与班级教学</div>
+        <div>
+          <h2 id="people-title">长期学习和班级教学，具体落在同一条修订链上</h2>
+          <p>长期学情不是把历次对话压成一段摘要；班级报告也不是把个人分数取平均就结束。每个结论需要保留观察范围、帮助条件、适用版本和可下钻的原始依据。</p>
+        </div>
+        <span class="status-pill is-design">业务闭环</span>
+      </div>
+      <div class="learning-grid">
+        <article class="learning-card"><span class="learning-icon" aria-hidden="true">学</span><h3>学生长期学习</h3><ol><li>新作答、提示、订正、独立复测分别成为事件。</li><li>状态按知识 / 方法 / 步骤与证据范围更新；一次提问或答对不直接推出长期掌握。</li><li>规划器从必做、到期复习与候选训练中分配时间，冲突时解释替换或延期。</li><li>教师或后续新题推翻旧判断时，系统保留历史并重算后续任务。</li></ol></article>
+        <article class="learning-card"><span class="learning-icon" aria-hidden="true">班</span><h3>教师与班级教学</h3><ol><li>教师确定教材 / 校本 CourseRelease、课时目标、题目版本、量规和帮助规则。</li><li>学生提交与修订共享 task_id；缺交、未识别、未参与分别计入分母规则。</li><li>班级汇总显示共性错误、范围边界、样本量和未观测人数，可回查到原作答与量规。</li><li>教师复核后产生正式 GradeRevision；受影响的个人状态、分层任务与班级视图同步重算。</li></ol></article>
+      </div>
+      <div class="cold-start">
+        <div><b>有历史</b><p>只导入授权材料，保留来源、原始时间和未知范围；不把旧摘要当作已验证事实。</p></div>
+        <div><b>没有历史</b><p>可以选择经校准的短测建档，也可以直接开始使用；系统逐次记录证据，不强迫学生先完成全科测评。</p></div>
+        <div><b>中途加入</b><p>按入组日期和实际观察窗口做班级比较；未参与、缺材料和未掌握分开统计，不把“没数据”补成零分。</p></div>
+      </div>
+    </section>
+
+    <section class="content-section section-shell" id="lora" aria-labelledby="lora-title">
+      <div class="section-heading">
+        <div class="section-index">06 / 小模型与 LoRA</div>
+        <div>
+          <h2 id="lora-title">让 4B、9B、27B 在同一系统里接受检验</h2>
+          <p>LoRA 不是项目创新结论，而是适配手段。研究重点是：同一套数据库、证据编译和工具协议下，业务适配能否让不同规模模型更可靠地完成教学任务、并在资源受限环境运行。</p>
+        </div>
+        <span class="status-pill is-verify">效果待测</span>
+      </div>
+      <div class="model-selector" role="group" aria-label="选择模型规模研究目标">
+        <button type="button" class="model-option" aria-pressed="false" data-model="4B">4B</button>
+        <button type="button" class="model-option is-selected" aria-pressed="true" data-model="9B">9B</button>
+        <button type="button" class="model-option" aria-pressed="false" data-model="27B">27B</button>
+      </div>
+      <div class="model-focus" id="model-focus" aria-live="polite">
+        <span class="focus-kicker">主线模型档</span><strong id="model-focus-title">9B · 系统核心评测档</strong><p id="model-focus-copy">优先回答：在三库、Agent Loop 和业务 LoRA 协同后，9B 能否覆盖已定义的解题、批改、提示、状态维护和教学协作任务；逐类报告失败，不以单一均分掩盖短板。</p>
+      </div>
+      <div class="model-tiers">
+        <article><span>4B</span><h3>部署资源下限</h3><p>测低资源下的工具遵循、检索证据使用和有限提示能力，明确哪些任务需要拆分、确定性工具或人工复核；不预设它能独立承担所有任务。</p><small>回答：可用的最低资源档在哪里？</small></article>
+        <article class="tier-primary"><span>9B</span><h3>重点系统主线</h3><p>固定系统条件比较基座模型与 LoRA 适配模型，重点观察核心业务任务覆盖、重大错误、成本和校内断网运行。</p><small>回答：小模型能否覆盖完整定义的核心流程？</small></article>
+        <article><span>27B</span><h3>更高质量上限</h3><p>作为更高资源档参照，观察难题、开放式诊断和长上下文任务的质量收益及资源代价；确定哪些工作值得交给更大模型。</p><small>回答：额外算力在哪些任务上产生可测收益？</small></article>
+      </div>
+      <div class="lora-pipeline" aria-label="LoRA 适配流程">
+        <div><b>审核数据</b><small>原题 / 原答 / 双人修改 / 教师校准</small></div><i aria-hidden="true">→</i>
+        <div><b>隔离划分</b><small>按题族、学生、事件链分 train / dev / sealed</small></div><i aria-hidden="true">→</i>
+        <div><b>LoRA 训练</b><small>角色输出、工具参数、证据引用、停止与复核</small></div><i aria-hidden="true">→</i>
+        <div><b>固定系统对照</b><small>相同 DB、Agent、任务与评分规则</small></div>
+      </div>
+      <div class="lora-scope"><b>数据边界</b><p>历史 Qwen / DeepSeek 解析保留真实来源与模型版本；新候选由实际模型生成后，经两位满分选手与高中数学教师校准。模型原始输出、人工接受 / 修改 / 拒绝、正式入库版本分开记录。封存测试题族、学生 / 事件链及金标准不进入训练与提示调参。</p></div>
+      <p class="footnote">LoRA 原论文：冻结基座权重，通过低秩矩阵更新减少可训练参数；这说明参数高效适配的技术基础，不证明本项目在数学或教学上有效。<a href="https://arxiv.org/abs/2106.09685" target="_blank" rel="noopener">Hu et al., 2021 ↗</a></p>
+    </section>
+
+    <section class="content-section section-shell" id="benchmark" aria-labelledby="benchmark-title">
+      <div class="section-heading">
+        <div class="section-index">07 / 研究验证</div>
+        <div>
+          <h2 id="benchmark-title">Benchmark：测系统做成了什么，不只测答得像不像</h2>
+          <p>评测单位是完整 episode：给定初始数据库、可见资料、身份范围、事件时序、工具和业务目标，运行系统后核对最终记录、证据、任务状态、副作用与成本。</p>
+        </div>
+        <span class="status-pill is-verify">协议设计中</span>
+      </div>
+      <div class="benchmark-topline"><div><strong>8</strong><span>任务包 A—H</span></div><div><strong>20</strong><span>业务功能 Q01—Q20</span></div><div><strong>6</strong><span>支撑指标 E01—E06</span></div><div><strong>3</strong><span>模型规模 4B / 9B / 27B</span></div></div>
+      <div class="benchmark-grid">
+        <div class="benchmark-matrix">
+          <div class="matrix-head"><span>任务包</span><span>覆盖的完整工作</span><span>主要验收</span></div>
+          <div><b>A</b><span>解题与课程适配</span><small>答案 / 关键论证 / 方法边界 / 合理异解</small></div>
+          <div><b>B</b><span>批改与诊断</span><small>首错定位 / 证据 / 未知保留 / 分数修订</small></div>
+          <div><b>C</b><span>出题、组卷与评卷</span><small>题目有效 / 覆盖硬约束 / 合格成本</small></div>
+          <div><b>D</b><span>教学引导与训练选择</span><small>提示等级 / 答案暴露 / 目标题选择</small></div>
+          <div><b>E</b><span>学情、记忆与修订</span><small>反证 / 重复或迟到事件 / 教师纠错传播</small></div>
+          <div><b>F</b><span>任务与复习规划</span><small>时长 / 期限 / 必做任务 / 取舍解释</small></div>
+          <div><b>G</b><span>无历史与自然接续</span><small>选择短测 / 直接使用 / 未观测范围</small></div>
+          <div><b>H</b><span>教师协作</span><small>班级聚合 / 分母 / 备课与复核时间</small></div>
+        </div>
+        <aside class="benchmark-method">
+          <h3>可复现的对照条件</h3>
+          <ul><li>专项强模型，及接入合理 Agent / 数据库的通用强模型</li><li>同一模型下做数据库 / 检索、Loop / 上下文、LoRA 消融</li><li>对 4B、9B、27B 分别报告端到端能力与资源账</li><li>人工双标、分歧仲裁；封存标签在运行时不可见</li><li>按题族、学生、事件链隔离 train / dev / sealed</li></ul>
+          <p class="proposal-note">规划中的评测规模：24 个开发场景用于打磨协议；封存集建议从 160 个独立场景起步，按八个任务包分层。数量需结合标注工时和预实验功效校准；不是已完成数据集或显著性承诺。</p>
+        </aside>
+      </div>
+      <div class="metric-bands">
+        <div><b>教学质量</b><span>首错、步骤证据、有效异解、提示泄题、独立新题表现、延迟保持</span></div>
+        <div><b>状态可靠性</b><span>引用支持、未知保留、过时判断撤回、重复计数、纠错传播与权限边界</span></div>
+        <div><b>系统代价</b><span>p50 / p95 时延、token、显存 / 内存、每个合格任务成本、教师净复核分钟</span></div>
+      </div>
+      <aside class="callout callout-blue"><b>如何从工程变成研究</b><span>分别回答四个可检验问题：关系化 DB1 是否提高必要证据覆盖；上下文编译是否优于同证据普通拼接；事件驱动 DB3 能否正确处理反证与教师修订；LoRA 是否在固定完整系统任务上改善不同规模模型的质量 / 成本边界。</span></aside>
+    </section>
+
+    <section class="content-section section-shell" id="deployment" aria-labelledby="deployment-title">
+      <div class="section-heading">
+        <div class="section-index">08 / 产品与部署边界</div>
+        <div>
+          <h2 id="deployment-title">B 端守住学校数据边界，C 端降低开始使用的门槛</h2>
+          <p>两种模式共享任务、课程、证据和修订契约，数据范围、身份来源与模型调用策略不同。部署选项应让学校和学生能按需要选择，而不是把全量学生信息默认送去外部 API。</p>
+        </div>
+        <span class="status-pill is-design">双模式设计</span>
+      </div>
+      <div class="deployment-table-wrap">
+        <table class="deployment-table">
+          <thead><tr><th scope="col">使用方</th><th scope="col">实际需求</th><th scope="col">问侠的交付边界</th><th scope="col">模型与数据</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">学校 / B 端</th><td>课程校本化、班级任务、教师复核、教学统计、可审计数据链。</td><td>FastAPI 模块化单体起步；学校私有网络部署；学生端与教师端共享任务 ID、版本和权限规则。</td><td>核心工作流不以商业模型 API 为前提；本地 PostgreSQL / 文件服务 / 模型运行由学校控制。断网任务、外部请求和权限边界纳入验收。</td></tr>
+            <tr><th scope="row">学生 / C 端</th><td>不用学校采购和管理员配置，也能快速开始提问、手写、复习与查看反馈。</td><td>个人模式直接建立自己的课程上下文；iOS、Android、鸿蒙手写端与网页按同一任务契约接续。</td><td>可以选择适合的公网模型服务或自托管模型；调用前明确数据传输范围。个人数据不默认进入学校班级或他人账户。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="local-boundary"><div><span class="boundary-symbol" aria-hidden="true">↳</span><h3>“本地部署”解决什么，不能替代什么</h3></div><p>让推理、数据库与原始笔迹留在学校控制域，可以减少学生数据发往外部商业 API 的需要；但它本身不自动等于合规。仍要做目的限定、最小必要、访问控制、留存期限、未成年人信息保护、学校选用审查和安全管理。现行个人信息保护法强调合法、正当、必要及最小范围；教育部发布的 JY/T 0661—2025《教育数据分类分级指南》自 2026-02-18 起实施。这里不把政策概括成“所有学生数据一律不得上云”。</p><div class="source-links"><a href="https://www.cac.gov.cn/2021-08/20/c_1631050028355286.htm" target="_blank" rel="noopener">《个人信息保护法》全文 ↗</a><a href="https://www.moe.gov.cn/srcsite/A16/s3342/202601/W020260107510856466340.pdf" target="_blank" rel="noopener">JY/T 0661—2025 ↗</a><a href="https://www.moe.gov.cn/srcsite/A16/moe_784/201908/t20190829_396505.html" target="_blank" rel="noopener">教育移动应用治理要求 ↗</a></div></div>
+    </section>
+
+    <section class="content-section section-shell" id="comparison" aria-labelledby="comparison-title">
+      <div class="section-heading">
+        <div class="section-index">09 / 竞品与选型</div>
+        <div>
+          <h2 id="comparison-title">为什么做问侠，而不是直接接一个现成平台？</h2>
+          <p>不是因为豆包、学而思或讯飞“没有模型 / 数据库 / 教学能力”。它们已有各自成熟的产品与解决方案。研究问题更窄：在同一套可审计的数学教学任务里，学校能否控制教学库、状态修订和模型部署边界，并用公开任务独立复现结果。</p>
+        </div>
+        <span class="status-pill is-verify">按公开交付边界比较</span>
+      </div>
+      <div class="comparison-table-wrap">
+        <table class="comparison-table">
+          <thead><tr><th scope="col">方案类型</th><th scope="col">公开资料中的能力边界</th><th scope="col">学校仍需核实的问题</th><th scope="col">问侠研究的对照点</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">豆包 / 通用消费助手</th><td>面向个人的问答、拍题或学习能力；具体功能以当前版本为准。</td><td>学校能否控制题库 / 量规版本、学生事实的长期保存与退出、模型调用数据边界及班级复核流程？</td><td>同题、同证据、同任务，对比步骤诊断、帮助暴露和可追溯修订；不把消费产品的便利性当成研究缺点。</td></tr>
+            <tr><th scope="row">学而思 / 好未来方案</th><td>公开提供解题、题库和师生场景能力，并有平台 / API 入口。</td><td>目标学校如何获得所需部署形态、数据访问权限、校本版本与完整成本；需按真实合同核验。</td><td>比较教学对象可编辑性、来源版本、Agent 执行轨迹和系统任务基准；不预判其内部架构。</td></tr>
+            <tr><th scope="row">讯飞教育方案</th><td>公开介绍智能批阅、错因与学情分析等教育产品能力。</td><td>学校侧部署、数据迁移、校内模型替换、细粒度证据导出和采购条件需逐项询价核对。</td><td>在相同作答和量规上做盲审，比较证据支持、教师纠错传播、可回放性与资源成本。</td></tr>
+            <tr><th scope="row">通用 Agent / RAG 平台</th><td>可搭建企业 Agent 和检索增强流程，通用能力不局限于个人端。</td><td>能否按高中数学对象与教学规则建模、支持私有环境、隔离评测集，并保持业务事务边界？</td><td>给强通用模型配上合理数据库、Agent 和工具后共同对照，测系统任务而非裸模型聊天。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="comparison-links">
+        <span>公开资料入口</span>
+        <a href="https://docs.volcengine.com/docs/networked-qa-agent/doubao-loves-to-learn-homework-correction-function?lang=zh" target="_blank" rel="noopener">豆包爱学功能文档 ↗</a>
+        <a href="https://ai.100tal.com/solution?name=problem_solving" target="_blank" rel="noopener">好未来解题方案 ↗</a>
+        <a href="https://edu.iflytek.com/solution/school/the-spark-ai-grader" target="_blank" rel="noopener">讯飞智能批阅方案 ↗</a>
+        <a href="https://www.aliyun.com/product/bailian/features" target="_blank" rel="noopener">百炼 Agent 能力 ↗</a>
+      </div>
+      <aside class="callout callout-blue"><b>学校为什么用</b><span>可以先核对数据控制域、课程 / 校本库修改权、迁移和退出能力、教师纠错链、离线任务与全量成本，再决定自建、采购或混合接入。问侠以可部署和可评测为研究目标，不预设学校一定要选自研。</span></aside>
+      <aside class="callout callout-teal"><b>学生为什么用</b><span>个人端可以不等学校采购先开始使用；按作答步骤获得解释和后续练习，并保留自己控制的学习记录。帮助过程和独立表现分开，避免把“看过答案”误当掌握。</span></aside>
+    </section>
+
+    <section class="content-section section-shell" id="evidence" aria-labelledby="evidence-title">
+      <div class="section-heading">
+        <div class="section-index">10 / 已有基础与研究边界</div>
+        <div>
+          <h2 id="evidence-title">已有记录可回看，尚未完成的实验不提前报结果</h2>
+          <p>把现有系统积累、构造案例、新架构计划分开写。让评委能点开旧版演示检查实际记录，同时知道哪些结论仍然需要后续实验。</p>
+        </div>
+        <span class="status-pill is-existing">有可查基础</span>
+      </div>
+      <div class="evidence-columns">
+        <article class="evidence-current"><span class="evidence-label">当前可查</span><strong>2 × 4 = 8</strong><h3>全国卷真实模型管线记录</h3><p>两道全国卷题各由四种已记录配置完成 Solver / Verifier / Formatter 管线，保留分阶段原始输出和保存结果。</p></article>
+        <article class="evidence-current"><span class="evidence-label">当前可查</span><strong>6 × 3 = 18</strong><h3>构造情境下的实际模型回答</h3><p>六类预设答疑情境分别记录普通模型、相同信息条件和正式系统流程的回答；包含正确结果，也如实展示失败与差异。</p></article>
+        <article class="evidence-limit"><span class="evidence-label">必须说明</span><strong>0</strong><h3>本页新架构的实跑成绩</h3><p>本页展示的新三库、事件驱动 Agent Loop、4B / 9B / 27B LoRA 与 Benchmark 仍属研究计划；没有把旧模型记录冒充新系统结果。</p></article>
+      </div>
+      <div class="evidence-note"><span class="evidence-note-mark" aria-hidden="true">i</span><p>上述旧站录制由本地正式业务代码和实际模型 API 生成；六类学生答疑材料为构造测试情境，不是收集到的真实学生数据，也不能单凭它们推断学习成效。<a href="/showcase/index.html">查看旧版数学展示与记录 ↗</a></p></div>
+    </section>
+
+    <section class="content-section section-shell" id="roadmap" aria-labelledby="roadmap-title">
+      <div class="section-heading">
+        <div class="section-index">11 / 实施计划</div>
+        <div>
+          <h2 id="roadmap-title">先把数据和评分边界冻结，再扩模型与客户端</h2>
+          <p>时间按申请书八个月路线整理。每个阶段都产出可回放工件；若数据审核、算力或教师参与未落实，后续指标如实顺延，不用模拟对话替代验收。</p>
+        </div>
+        <span class="status-pill is-design">项目计划</span>
+      </div>
+      <div class="roadmap">
+        <article><div class="roadmap-time">第 1—2 月</div><div class="roadmap-node"></div><div><h3>教学数据与对象合同</h3><p>选高中数学课程子集，建立 DB1 / DB2 / DB3 schema、来源与审核手册；联合校准首批题目、解法、操作与量规。</p><small>交付：发布子集、版本清单、双人复核与分歧记录。</small></div></article>
+        <article><div class="roadmap-time">第 3—4 月</div><div class="roadmap-node"></div><div><h3>答疑、状态与教师闭环</h3><p>接通采集、检索、角色上下文、持久 Agent、事实事务、outbox、WikiPatch 与班级聚合；回放纠错和中途加入案例。</p><small>交付：端到端任务轨迹、恢复检查、权限与聚合验收。</small></div></article>
+        <article><div class="roadmap-time">第 5 月</div><div class="roadmap-node"></div><div><h3>冻结 Benchmark 与强基线</h3><p>整理完整任务 episode、评分手册和封存分区；由标注者交叉评分、仲裁分歧；建立专项模型与通用 Agent 基线。</p><small>交付：封存任务集、评分器验证、一致性与基线报告。</small></div></article>
+        <article><div class="roadmap-time">第 6 月</div><div class="roadmap-node"></div><div><h3>模型适配与机制消融</h3><p>在审核后的训练数据上适配 LoRA；测 4B / 9B / 27B，分别报告数据库、Loop / 上下文和 LoRA 的贡献。</p><small>交付：权重 / 配置清单、成本、延迟与断网任务报告。</small></div></article>
+        <article><div class="roadmap-time">第 7—8 月</div><div class="roadmap-node"></div><div><h3>多端回放与授权小规模试用</h3><p>完成学生 iOS / Android / 鸿蒙手写采集，网页和教师封装端；开展获许可的试用、延迟复测和最终盲评。</p><small>交付：设备回放、净复核时间、学生独立表现与限制说明。</small></div></article>
+      </div>
+    </section>
+
+    <section class="final-panel section-shell" aria-labelledby="final-title">
+      <div><span class="final-kicker">项目的研究主张</span><h2 id="final-title">让小模型的边界可以被测出来，<br>而不靠更长的提示词来猜。</h2><p>通过教学关系数据库、可恢复 Agent Loop 和人类校准的 LoRA 三条路线，重点验证 9B 能否覆盖定义好的完整教学任务；用 4B 寻找资源下限，用 27B 观察质量上限和难任务收益。答案交给封存 Benchmark 和真实教学记录。</p></div>
+      <div class="final-statement"><span>系统能否完成</span><i>×</i><span>依据是否可追溯</span><i>×</i><span>数据能否留在学校</span><i>×</i><span>教师是否真正省时</span></div>
+    </section>
+
+    <section class="sources section-shell" id="sources" aria-labelledby="sources-title">
+      <div><span class="section-index">参考入口</span><h2 id="sources-title">研究与政策来源</h2></div>
+      <ul>
+        <li><a href="https://arxiv.org/abs/2005.11401" target="_blank" rel="noopener">Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks ↗</a></li>
+        <li><a href="https://arxiv.org/abs/2406.12045" target="_blank" rel="noopener">τ-bench: Tool-Agent-User Interaction Benchmark ↗</a></li>
+        <li><a href="https://arxiv.org/abs/2407.18901" target="_blank" rel="noopener">AppWorld: Controllable Benchmark for Interactive Agents ↗</a></li>
+        <li><a href="https://github.com/haolpku/Omni-Edu" target="_blank" rel="noopener">Omni-Edu 官方代码仓库 ↗</a></li>
+        <li><a href="https://www.sqlite.org/fts5.html" target="_blank" rel="noopener">SQLite FTS5 官方文档 ↗</a></li>
+        <li><a href="https://github.com/pgvector/pgvector" target="_blank" rel="noopener">pgvector 官方仓库 ↗</a></li>
+      </ul>
+    </section>
+  </main>
+
+  <footer class="site-footer section-shell">
+    <a class="brand brand-footer" href="#top"><img class="brand-mark" src="/wenxia-demo/assets/mantis-icon.png" alt=""><span class="brand-text"><strong>问侠</strong><small>高中数学个性化教学研究</small></span></a>
+    <p>本页为申请书评审提供技术路线、数据流程与验证方案。方案设计不代表已完成部署或取得实验效果。</p>
+    <div class="footer-links"><a href="https://150.chat/" target="_blank" rel="noopener">项目入口 ↗</a><a href="#top">返回顶部 ↑</a></div>
+    <small class="footer-copy">© 2026 问侠项目 · 公开展示页不接收学生作答，不调用大模型接口。</small>
+  </footer>
+  <script src="/wenxia-demo/site.js" defer></script>
+</body>
+</html>

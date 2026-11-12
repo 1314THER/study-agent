@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1960" viewBox="0 0 1800 1960" role="img">
+<title>问侠｜系统总体架构、存储类型与LLM协作</title><desc>拟议架构 · 学校模式核心服务在校内控制域运行；个人模式使用同一业务合同</desc>
+<rect width="1800" height="1960" fill="#080808"/>
+<text x="60" y="78.30000000000001" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="37" fill="#f5f5f5">问侠｜系统总体架构、存储类型与LLM协作</text>
+<text x="60" y="125.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">拟议架构 · 学校模式核心服务在校内控制域运行；个人模式使用同一业务合同</text>
+<rect x="60" y="210" width="500" height="145" rx="10" fill="#141414" stroke="#606060"/>
+<text x="80" y="252.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">学生端</text>
+<text x="80" y="289.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">iOS / 安卓 / 鸿蒙原生手写＋Web</text>
+<text x="80" y="321.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">题目、作答、笔迹、帮助与复测</text>
+<polyline points="310,355 310,420" fill="none" stroke="#606060" stroke-width="2"/>
+<polygon points="310.00,420.00 304.79,409.19 315.21,409.19" fill="#606060"/>
+<polygon points="310.00,355.00 315.21,365.81 304.79,365.81" fill="#606060"/>
+<rect x="650" y="210" width="500" height="145" rx="10" fill="#141414" stroke="#606060"/>
+<text x="670" y="252.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">教师端</text>
+<text x="670" y="289.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">Web＋封装客户端</text>
+<text x="670" y="321.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">课程、作业、量规、复核与教学调整</text>
+<polyline points="900,355 900,420" fill="none" stroke="#606060" stroke-width="2"/>
+<polygon points="900.00,420.00 894.79,409.19 905.21,409.19" fill="#606060"/>
+<polygon points="900.00,355.00 905.21,365.81 894.79,365.81" fill="#606060"/>
+<rect x="1240" y="210" width="500" height="145" rx="10" fill="#141414" stroke="#606060"/>
+<text x="1260" y="252.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">学校端</text>
+<text x="1260" y="289.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">Web配置与授权分析</text>
+<text x="1260" y="321.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">省校版本、班级范围、部署及管理</text>
+<polyline points="1490,355 1490,420" fill="none" stroke="#606060" stroke-width="2"/>
+<polygon points="1490.00,420.00 1484.79,409.19 1495.21,409.19" fill="#606060"/>
+<polygon points="1490.00,355.00 1495.21,365.81 1484.79,365.81" fill="#606060"/>
+<rect x="60" y="420" width="1680" height="120" rx="10" fill="#141414" stroke="#606060"/>
+<text x="80" y="462.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">业务入口：身份、对象范围、课程/任务版本与原始材料保存</text>
+<text x="80" y="499.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">FastAPI领域服务；原始文件进入受控资产目录，PG保存asset_ref；客户端离线队列按请求与修订去重同步。</text>
+<polyline points="570,540 570,630" fill="none" stroke="#606060" stroke-width="2"/>
+<polygon points="570.00,630.00 564.79,619.19 575.21,619.19" fill="#606060"/>
+<polygon points="570.00,540.00 575.21,550.81 564.79,550.81" fill="#606060"/>
+<rect x="60" y="630" width="1020" height="310" rx="10" fill="#171a1e" stroke="#606060"/>
+<text x="80" y="672.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">Agent运行时：TA协调＋持久任务执行器</text>
+<text x="80" y="709.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">① TaskContract / RunState：目标、范围、阶段、预算及提交记录</text>
+<text x="80" y="741.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">② Retriever：QueryPlan → 双路RAG → 关系扩展与证据回表校验</text>
+<text x="80" y="773.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">③ Context Compiler：角色规则＋课程约束＋必要证据＋工具返回</text>
+<text x="80" y="805.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">④ 动作提案 → 执行/观察 → 产物检查；按需补查、等待或恢复</text>
+<text x="80" y="837.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">⑤ 正式事件 → 学情更新、任务刷新与班级视图</text>
+<rect x="1260" y="630" width="480" height="310" rx="10" fill="#171a1e" stroke="#606060"/>
+<text x="1280" y="672.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">本地模型服务＋LoRA</text>
+<text x="1280" y="709.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">4B / 9B / 27B：每次固定档位</text>
+<text x="1280" y="741.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">CLEAN：保真识别</text>
+<text x="1280" y="773.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">SOLVE：求解/异解核验</text>
+<text x="1280" y="805.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">SOCRATIC：批改/引导/范围</text>
+<text x="1280" y="837.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">TA：协调、取证与学情提案</text>
+<text x="1280" y="869.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">逻辑角色独立上下文，可共享权重</text>
+<polyline points="1080,780 1260,780" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="1260.00,780.00 1249.19,785.21 1249.19,774.79" fill="#8ab8ff"/>
+<polygon points="1080.00,780.00 1090.81,774.79 1090.81,785.21" fill="#8ab8ff"/>
+<rect x="1091" y="733" width="131.0" height="30" fill="#080808"/>
+<text x="1095" y="754.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">上下文 / 提案</text>
+<polyline points="570,940 570,1030" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="570.00,1030.00 564.79,1019.19 575.21,1019.19" fill="#8ab8ff"/>
+<polygon points="570.00,940.00 575.21,950.81 564.79,950.81" fill="#8ab8ff"/>
+<rect x="586" y="967" width="152.0" height="30" fill="#080808"/>
+<text x="590" y="988.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">动作 / 工具返回</text>
+<rect x="60" y="1030" width="1680" height="150" rx="10" fill="#141414" stroke="#606060"/>
+<text x="80" y="1072.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">Typed Tool Gateway＋领域服务：模型提案经校验后执行</text>
+<text x="80" y="1109.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">catalog.search / facts.query / get_state / solve.verify / grade.propose / tutor.propose / plan.propose / wiki.patch</text>
+<text x="80" y="1141.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">参数、身份、引用、版本、业务阶段和预算检查；服务提交正式事实＋outbox；后台消费者取证并调用LLM修订DB3。</text>
+<rect x="60" y="1310" width="500" height="280" rx="10" fill="#141414" stroke="#606060"/>
+<text x="80" y="1352.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">DB1｜SQLite只读教学发布库</text>
+<text x="80" y="1389.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">nodes / edges / aliases / sources</text>
+<text x="80" y="1421.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">RAG1：FTS5＋公式＋向量召回</text>
+<text x="80" y="1453.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">知识/方法/步骤/例题关系扩展</text>
+<text x="80" y="1485.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">公共基础＋省份/校本覆盖 → release</text>
+<text x="80" y="1517.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">只读发布；编辑与审核留在工作库</text>
+<rect x="650" y="1310" width="500" height="280" rx="10" fill="#141414" stroke="#606060"/>
+<text x="670" y="1352.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">DB2｜PostgreSQL事实库</text>
+<text x="670" y="1389.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">题目/作答/帮助/评分/任务：关系表＋JSONB</text>
+<text x="670" y="1421.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">RAG2：SQL硬筛＋相关证据片段检索</text>
+<text x="670" y="1453.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">model_runs / jobs / outbox / receipts</text>
+<text x="670" y="1485.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">原图/笔迹存文件，PG保存hash与引用</text>
+<text x="670" y="1517.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">事实和正式事件同事务提交</text>
+<rect x="1240" y="1310" width="500" height="280" rx="10" fill="#141414" stroke="#606060"/>
+<text x="1260" y="1352.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">DB3｜学情Wiki与当前状态</text>
+<text x="1260" y="1389.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">Markdown物化＋PG修订/游标元数据</text>
+<text x="1260" y="1421.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">LLM依据双路RAG提出WikiPatch</text>
+<text x="1260" y="1453.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">进度/能力/困难、证据/反证/未知</text>
+<text x="1260" y="1485.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">base_revision校验后保存新版本</text>
+<text x="1260" y="1517.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">授权副本增量同步，人工笔记独立保留</text>
+<polyline points="310,1310 310,1180" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="310.00,1180.00 315.21,1190.81 304.79,1190.81" fill="#8ab8ff"/>
+<rect x="321" y="1217" width="113.0" height="30" fill="#080808"/>
+<text x="325" y="1238.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">R 教学依据</text>
+<polyline points="900,1180 900,1310" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="900.00,1310.00 894.79,1299.19 905.21,1299.19" fill="#8ab8ff"/>
+<polygon points="900.00,1180.00 905.21,1190.81 894.79,1190.81" fill="#8ab8ff"/>
+<rect x="911" y="1217" width="214.0" height="30" fill="#080808"/>
+<text x="915" y="1238.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">R / W 学习与教学事实</text>
+<polyline points="1490,1180 1490,1310" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="1490.00,1310.00 1484.79,1299.19 1495.21,1299.19" fill="#8ab8ff"/>
+<polygon points="1490.00,1180.00 1495.21,1190.81 1484.79,1190.81" fill="#8ab8ff"/>
+<rect x="1501" y="1217" width="226.0" height="30" fill="#080808"/>
+<text x="1505" y="1238.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">R 当前状态 / 提交patch</text>
+<text x="60" y="1681.6" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="24" fill="#8ab8ff">事件回流：DB2 outbox → 后台Agent双路取证 → LLM学情patch → 服务校验 → DB3新版本。</text>
+<text x="60" y="1741.6" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="24" fill="#b8b8b8">离线：教材/题目 → 双模型候选 → 联合人审 → DB1发布；审核业务轨迹 → LoRA → 部署权重。</text>
+<text x="60" y="1801.6" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="24" fill="#b8b8b8">物理实现：DB3修订元数据可与DB2共用PG实例；向量后端尚未冻结，本稿建议pgvector派生索引。</text>
+<text x="60" y="1861.6" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="24" fill="#b8b8b8">所有检索返回对象、片段和版本；模型不直接写SQL。C端公网选项按角色发送必要输入，B端不依赖云端兜底。</text>
+</svg>

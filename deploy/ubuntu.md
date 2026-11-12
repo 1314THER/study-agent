@@ -118,7 +118,7 @@ curl -I https://150.chat/home.html
 两个代码目录来自同一个 Git 提交。项目展示站运行独立 `backend.showcase:app`，提供专属页面、固定样例与本地数学/几何资源；不导入主人后端，不创建游客题库，不加载学习教程。同步保留正式站账号、题库和密钥配置。
 主人继续使用 `https://150.chat/home.html`：用户名 **`studyadmin`**，密码是部署 Caddy 时自设的网站密码，主数据持续保存。Caddy 保存的是不可逆密码哈希，无法从配置反查明文；忘记时，在 Workbench 运行 `caddy hash-password` 设置新密码，然后在 `/etc/caddy/Caddyfile` 仅替换 `studyadmin` 后的旧哈希，执行 `caddy validate --config /etc/caddy/Caddyfile` 与 `systemctl reload caddy`。不要将密码或哈希提交到 Git。
 
-项目展示入口为 `https://demo.150.chat/home.html`，无需账号密码。已有功能通过分步解析、作答诊断、几何动画和只读套路图谱展示；未来能力用图文规划说明。所有交互在浏览器运行，展示站不开放教学、上传、生成与写入接口。原有体验目录及旧 AI 快照不主动删除，便于版本回滚。
+项目展示入口为 `https://demo.150.chat/`，无需账号密码。当前首页说明问侠的总体架构、数据库与 LLM 协作、Agent Loop、答疑场景、长期 / 班级教学、LoRA 和 Benchmark；旧 15 章数学案例页仍可从 `/showcase/index.html` 查看，其全部公开资源快照保存在仓库 `frontend/archive/demo-legacy-20261113/`。展示站不开放教学、上传、生成与写入接口，不读取正式站数据库或调用模型。
 
 本地预览运行 `.venv/bin/python scripts/run_demo.py --port 8301`，打开 `http://127.0.0.1:8301/home.html`，无需 API 密钥。`Ctrl+C` 停止预览。详细内容和验收见 [展示站说明](../docs/showcase-demo.md)。
 ### 第一步：添加子域名解析

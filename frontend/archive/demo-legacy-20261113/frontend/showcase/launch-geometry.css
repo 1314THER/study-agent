@@ -1,0 +1,52 @@
+/* Decorative launch backdrop: keep it behind the copy and pause while the dialog is closed. */
+#launch-screen .launch-geometry {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  display: block;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: .86;
+}
+
+#launch-screen .launch-geo-grid {
+  transform-origin: 800px 520px;
+  animation: launch-geo-drift 34s ease-in-out infinite alternate;
+}
+
+#launch-screen .launch-geo-orbits {
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  animation: launch-geo-orbit 72s linear infinite;
+}
+
+#launch-screen .launch-geo-signal {
+  stroke-dasharray: .17 .83;
+  animation: launch-geo-dash 24s linear infinite;
+}
+
+#launch-screen .launch-geo-curves {
+  animation: launch-geo-breathe 12s ease-in-out infinite alternate;
+}
+
+#launch-screen:not([open]) .launch-geometry *,
+#launch-screen:not([open]) .launch-geometry {
+  animation-play-state: paused !important;
+}
+
+@keyframes launch-geo-drift {
+  from { transform: translate3d(0, 0, 0) scale(1); opacity: .13; }
+  to { transform: translate3d(0, -9px, 0) scale(1.012); opacity: .21; }
+}
+
+@keyframes launch-geo-orbit { to { transform: rotate(360deg); } }
+@keyframes launch-geo-dash { to { stroke-dashoffset: -1; } }
+@keyframes launch-geo-breathe { to { opacity: .31; } }
+
+@media (prefers-reduced-motion: reduce) {
+  #launch-screen .launch-geometry *,
+  #launch-screen .launch-geometry { animation: none !important; }
+  #launch-screen .launch-geo-grid { transform: none; opacity: .18; }
+  #launch-screen .launch-geo-signal { stroke-dashoffset: 0; }
+}

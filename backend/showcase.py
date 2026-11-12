@@ -17,7 +17,9 @@ from starlette.responses import FileResponse, JSONResponse, RedirectResponse
 
 
 FRONTEND = Path(__file__).resolve().parent.parent / "frontend"
-HOME_PATHS = {"/", "/home.html", "/demo-home.html", "/showcase/index.html"}
+NEW_HOME_PATHS = {"/", "/home.html", "/demo-home.html"}
+LEGACY_HOME_PATHS = {"/showcase/index.html"}
+HOME_PATHS = NEW_HOME_PATHS | LEGACY_HOME_PATHS
 LEGACY_ANCHORS = {
     "/index.html": "solution", "/multimodal.html": "solution",
     "/teach.html": "teaching", "/grade.html": "diagnosis",
@@ -31,6 +33,10 @@ LEGACY_ANCHORS = {
 }
 ASSET_PATHS = {
     "/favicon.ico",
+    "/wenxia-demo/site.css", "/wenxia-demo/site.js",
+    "/wenxia-demo/assets/architecture-overall.svg",
+    "/wenxia-demo/assets/scenario-evidence.svg", "/wenxia-demo/assets/scenario-teaching.svg",
+    "/wenxia-demo/assets/mantis-icon.png",
     "/showcase/style.css", "/showcase/app.js", "/showcase/bank.js", "/showcase/data.json", "/showcase/pipeline.json",
     "/showcase/research-content.json", "/showcase/recordings.json", "/showcase/launch-lettering.svg",
     "/showcase/dataset.html", "/showcase/dataset.css", "/showcase/dataset-data.json",
@@ -107,7 +113,7 @@ class ShowcaseBoundary:
 
 
 def create_app(frontend: Path = FRONTEND, *, draining: bool | None = None, bank_root: Path | None = None) -> FastAPI:
-    app = FastAPI(title="登辉项目展示", docs_url=None, redoc_url=None, openapi_url=None)
+    app = FastAPI(title="问侠项目展示", docs_url=None, redoc_url=None, openapi_url=None)
     root = Path(frontend).resolve()
     bank = Path(bank_root or os.environ.get('STUDY_SHOWCASE_BANK_ROOT') or root / 'showcase/question-bank').resolve()
     bank_manifest = None
@@ -172,7 +178,9 @@ def create_app(frontend: Path = FRONTEND, *, draining: bool | None = None, bank_
                 return JSONResponse({'detail': 'Not found'}, status_code=404)
         if url_path in LEGACY_ANCHORS:
             return RedirectResponse("/#" + LEGACY_ANCHORS[url_path], status_code=307)
-        if url_path in HOME_PATHS:
+        if url_path in NEW_HOME_PATHS:
+            relative = Path("wenxia-demo/index.html")
+        elif url_path in LEGACY_HOME_PATHS:
             relative = Path("showcase/index.html")
         elif url_path in ASSET_PATHS:
             relative = Path(path)

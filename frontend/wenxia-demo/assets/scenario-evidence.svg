@@ -1,0 +1,144 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="2740" viewBox="0 0 1800 2740" role="img">
+<title>问侠｜闭区间最值场景时序（上：取证与教学）</title><desc>协议示例，非真实调用记录 · 展示一次教学任务怎样跨角色、数据库和后续事件运行</desc>
+<rect width="1800" height="2740" fill="#080808"/>
+<text x="60" y="78.30000000000001" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="37" fill="#f5f5f5">问侠｜闭区间最值场景时序（上：取证与教学）</text>
+<text x="60" y="125.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">协议示例，非真实调用记录 · 展示一次教学任务怎样跨角色、数据库和后续事件运行</text>
+<text x="60" y="182.5" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="25" fill="#f5f5f5">题目：f(x)=x²−2ax+1，x∈[0,2]，a∈[0,3]；学生写“所有a的最小值都是1−a²”。</text>
+<text x="60" y="225.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">诊断目标：核实顶点可行性；帮助后订正与独立掌握分开。调用中的状态版本及ID均为示意。</text>
+<rect x="20" y="285" width="260" height="110" rx="10" fill="#171a1e" stroke="#606060"/>
+<text x="40" y="327.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">学生/教师</text>
+<text x="40" y="362.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">原始材料与任务</text>
+<line x1="150" y1="395" x2="150" y2="2440" stroke="#363636"/>
+<rect x="320" y="285" width="260" height="110" rx="10" fill="#171a1e" stroke="#606060"/>
+<text x="340" y="327.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">Agent＋服务</text>
+<text x="340" y="362.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">取证/编译/校验/提交</text>
+<line x1="450" y1="395" x2="450" y2="2440" stroke="#363636"/>
+<rect x="620" y="285" width="260" height="110" rx="10" fill="#171a1e" stroke="#606060"/>
+<text x="640" y="327.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">DB1 / RAG1</text>
+<text x="640" y="362.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">SQLite教学发布＋索引</text>
+<line x1="750" y1="395" x2="750" y2="2440" stroke="#363636"/>
+<rect x="920" y="285" width="260" height="110" rx="10" fill="#171a1e" stroke="#606060"/>
+<text x="940" y="327.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">本地LLM</text>
+<text x="940" y="362.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">按角色隔离上下文</text>
+<line x1="1050" y1="395" x2="1050" y2="2440" stroke="#363636"/>
+<rect x="1220" y="285" width="260" height="110" rx="10" fill="#171a1e" stroke="#606060"/>
+<text x="1240" y="327.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">DB2 / PG</text>
+<text x="1240" y="362.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">作答/帮助/评分/事件</text>
+<line x1="1350" y1="395" x2="1350" y2="2440" stroke="#363636"/>
+<rect x="1520" y="285" width="260" height="110" rx="10" fill="#171a1e" stroke="#606060"/>
+<text x="1540" y="327.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">DB3 / Wiki</text>
+<text x="1540" y="362.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">当前学情与修订</text>
+<line x1="1650" y1="395" x2="1650" y2="2440" stroke="#363636"/>
+<rect x="162" y="452" width="168.0" height="27" fill="#080808"/>
+<text x="165" y="472.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">01 提交题目/作答</text>
+<rect x="162" y="478" width="186.0" height="27" fill="#080808"/>
+<text x="165" y="498.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">绑定课程与任务版本</text>
+<polyline points="150,538 450,538" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="450.00,538.00 439.19,543.21 439.19,532.79" fill="#8ab8ff"/>
+<rect x="462" y="562" width="366.0" height="27" fill="#080808"/>
+<text x="465" y="582.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">02 保存原始媒体、Attempt与asset_ref</text>
+<rect x="462" y="588" width="306.0" height="27" fill="#080808"/>
+<text x="465" y="608.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">原件先落盘，转写不覆盖原始数据</text>
+<polyline points="450,648 1350,648" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="1350.00,648.00 1339.19,653.21 1339.19,642.79" fill="#8ab8ff"/>
+<rect x="462" y="672" width="190.0" height="27" fill="#080808"/>
+<text x="465" y="692.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">03 CLEAN保真转写</text>
+<rect x="462" y="698" width="292.0" height="27" fill="#080808"/>
+<text x="465" y="718.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">原图/笔迹与区域；不传参考答案</text>
+<polyline points="450,758 1050,758" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="1050.00,758.00 1039.19,763.21 1039.19,752.79" fill="#8ab8ff"/>
+<rect x="462" y="782" width="225.0" height="27" fill="#080808"/>
+<text x="465" y="802.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">04 返回作答片段与歧义</text>
+<rect x="462" y="808" width="246.0" height="27" fill="#080808"/>
+<text x="465" y="828.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">保留学生错式，必要时确认</text>
+<polyline points="1050,868 450,868" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="450.00,868.00 460.81,862.79 460.81,873.21" fill="#8ab8ff"/>
+<rect x="462" y="892" width="316.0" height="27" fill="#080808"/>
+<text x="465" y="912.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">05 保存确认的response_revision</text>
+<rect x="462" y="918" width="276.0" height="27" fill="#080808"/>
+<text x="465" y="938.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">本例seg-2为学生实际作答片段</text>
+<polyline points="450,978 1350,978" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="1350.00,978.00 1339.19,983.21 1339.19,972.79" fill="#8ab8ff"/>
+<rect x="462" y="1002" width="203.0" height="27" fill="#080808"/>
+<text x="465" y="1022.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">06 读取相关DB3状态</text>
+<rect x="462" y="1028" width="206.0" height="27" fill="#080808"/>
+<text x="465" y="1048.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">使用本次作答前的版本</text>
+<polyline points="450,1088 1650,1088" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="1650.00,1088.00 1639.19,1093.21 1639.19,1082.79" fill="#8ab8ff"/>
+<rect x="462" y="1112" width="246.0" height="27" fill="#080808"/>
+<text x="465" y="1132.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">07 返回旧状态与未知范围</text>
+<rect x="462" y="1138" width="254.0" height="27" fill="#080808"/>
+<text x="465" y="1158.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">附revision、来源和更新时间</text>
+<polyline points="1650,1198 450,1198" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="450.00,1198.00 460.81,1192.79 460.81,1203.21" fill="#8ab8ff"/>
+<rect x="462" y="1222" width="294.0" height="27" fill="#080808"/>
+<text x="465" y="1242.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">08 RAG2查相关作答/帮助/复测</text>
+<rect x="462" y="1248" width="286.0" height="27" fill="#080808"/>
+<text x="465" y="1268.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">按学生、课程、时间和状态过滤</text>
+<polyline points="450,1308 1350,1308" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="1350.00,1308.00 1339.19,1313.21 1339.19,1302.79" fill="#8ab8ff"/>
+<rect x="462" y="1332" width="267.0" height="27" fill="#080808"/>
+<text x="465" y="1352.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">09 返回原始证据片段及版本</text>
+<rect x="462" y="1358" width="226.0" height="27" fill="#080808"/>
+<text x="465" y="1378.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">无历史则返回空，不补造</text>
+<polyline points="1350,1418 450,1418" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="450.00,1418.00 460.81,1412.79 460.81,1423.21" fill="#8ab8ff"/>
+<rect x="462" y="1442" width="135.0" height="27" fill="#080808"/>
+<text x="465" y="1462.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">10 RAG1查询</text>
+<rect x="462" y="1468" width="212.0" height="27" fill="#080808"/>
+<text x="465" y="1488.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">闭区间最值/顶点可行性</text>
+<polyline points="450,1528 750,1528" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="750.00,1528.00 739.19,1533.21 739.19,1522.79" fill="#8ab8ff"/>
+<rect x="462" y="1552" width="257.0" height="27" fill="#080808"/>
+<text x="465" y="1572.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">11 返回教学EvidencePack</text>
+<rect x="462" y="1578" width="226.0" height="27" fill="#080808"/>
+<text x="465" y="1598.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">方法、步骤、量规与来源</text>
+<polyline points="750,1638 450,1638" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="450.00,1638.00 460.81,1632.79 460.81,1643.21" fill="#8ab8ff"/>
+<rect x="462" y="1662" width="230.0" height="27" fill="#080808"/>
+<text x="465" y="1682.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">12 编译GRADER上下文</text>
+<rect x="462" y="1688" width="292.0" height="27" fill="#080808"/>
+<text x="465" y="1708.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">原题/作答＋参考依据＋帮助条件</text>
+<polyline points="450,1748 1050,1748" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="1050.00,1748.00 1039.19,1753.21 1039.19,1742.79" fill="#8ab8ff"/>
+<rect x="462" y="1772" width="345.0" height="27" fill="#080808"/>
+<text x="465" y="1792.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">13 GradeDraft：a&gt;2时顶点在区间外</text>
+<rect x="462" y="1798" width="276.0" height="27" fill="#080808"/>
+<text x="465" y="1818.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">引用seg-2；具体原因仍待核实</text>
+<polyline points="1050,1858 450,1858" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="450.00,1858.00 460.81,1852.79 460.81,1863.21" fill="#8ab8ff"/>
+<rect x="462" y="1882" width="369.0" height="27" fill="#080808"/>
+<text x="465" y="1902.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">14 核验后提交GradeRevision＋outbox</text>
+<rect x="462" y="1908" width="312.0" height="27" fill="#080808"/>
+<text x="465" y="1928.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">引用/版本及数学检查，争议转复核</text>
+<polyline points="450,1968 1350,1968" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="1350.00,1968.00 1339.19,1973.21 1339.19,1962.79" fill="#8ab8ff"/>
+<rect x="462" y="1992" width="213.0" height="27" fill="#080808"/>
+<text x="465" y="2012.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">15 编译TUTOR上下文</text>
+<rect x="462" y="2018" width="366.0" height="27" fill="#080808"/>
+<text x="465" y="2038.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">当前目标＋限级参考片段，隔离完整解答</text>
+<polyline points="450,2078 1050,2078" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="1050.00,2078.00 1039.19,2083.21 1039.19,2072.79" fill="#8ab8ff"/>
+<rect x="462" y="2102" width="281.0" height="27" fill="#080808"/>
+<text x="465" y="2122.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">16 TutorTurnDraft：有限追问</text>
+<rect x="462" y="2128" width="266.0" height="27" fill="#080808"/>
+<text x="465" y="2148.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">服务核对提示级别与帮助边界</text>
+<polyline points="1050,2188 450,2188" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="450.00,2188.00 460.81,2182.79 460.81,2193.21" fill="#8ab8ff"/>
+<rect x="462" y="2212" width="256.0" height="27" fill="#080808"/>
+<text x="465" y="2232.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">17 保存经校验的TutorTurn</text>
+<rect x="462" y="2238" width="346.0" height="27" fill="#080808"/>
+<text x="465" y="2258.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">提示内容和版本固定，尚不冒充已看过</text>
+<polyline points="450,2298 1350,2298" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="1350.00,2298.00 1339.19,2303.21 1339.19,2292.79" fill="#8ab8ff"/>
+<rect x="162" y="2322" width="162.0" height="27" fill="#080808"/>
+<text x="165" y="2342.9" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="21" fill="#8ab8ff">18 返回一级提示</text>
+<rect x="162" y="2348" width="246.0" height="27" fill="#080808"/>
+<text x="165" y="2368.0" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="20" fill="#b8b8b8">最值点一定在允许范围吗？</text>
+<polyline points="450,2408 150,2408" fill="none" stroke="#8ab8ff" stroke-width="2"/>
+<polygon points="150.00,2408.00 160.81,2402.79 160.81,2413.21" fill="#8ab8ff"/>
+<text x="60" y="2510.2" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="28" fill="#f5f5f5">接续到下半场景</text>
+<text x="60" y="2550.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">教师纠错 → 新GradeRevision / GradeSuperseded → 撤回旧判断 → 重评任务及班级视图；历史和人工修订保留。</text>
+<text x="60" y="2600.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">时序是可解释的示例；两路检索可并行。关键产物与正式事件入库，等待学生时保存状态，后台更新可异步恢复。</text>
+<text x="60" y="2650.7" font-family="Arial Unicode MS, PingFang SC, sans-serif" font-size="23" fill="#b8b8b8">每次模型调用只带当前角色需要的证据；以实际输入输出和最终状态验收，不以模型自称完成为准。</text>
+</svg>
