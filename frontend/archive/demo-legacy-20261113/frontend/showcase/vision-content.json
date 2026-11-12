@@ -4,7 +4,7 @@
   "title": "教学愿景",
   "status": "教学愿景",
   "headline": "让每个学生，都能获得适合自己的学习支持。",
-  "subtitle": "系统通过LLM大模型提供的低成本大批量输出，探索把及时诊断、针对性教学和持续跟进融入日常教育，让学生、教师、学校到社会不必为了补上学习的差距花费过多精力。",
+  "subtitle": "系统借助大语言模型的低成本批量处理能力，探索把及时诊断、针对性教学和持续跟进融入日常教育，让必要的学习支持更容易获得。",
   "intro": "围绕共同学习目标，根据每个人的实际表现，持续调整教、学、练、评。一次作答中发现的问题，接到后面的诊断、讲解、练习、复测、课堂调整和学校教研；每个环节知道前面发生了什么，也能检查后面有没有改善。",
   "scope": "以下对照描述全部设想接入日常教学后的目标形态。传统一侧概括常见困难，许多优秀教师已在实践针对性支持；项目希望让这些做法更容易持续开展、覆盖更多学生。功能标签按当前本地实现区分已有基础、设计方案与研究方向；实际收益以真实使用中的独立表现、延迟保持和完整负担检验。",
   "social_goal": "让必要的学习帮助更普遍可得，让家庭减少对额外补课的依赖。",
@@ -44,7 +44,8 @@
               "target": "#teacher",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "先补基础，再进入新课"
         },
         {
           "aspect": "课堂跟进",
@@ -61,7 +62,8 @@
               "target": "#longterm",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "个人缺口接上课堂进度"
         },
         {
           "aspect": "个性化作业",
@@ -78,7 +80,8 @@
               "target": "#library",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "作业随个人表现调整"
         },
         {
           "aspect": "统一负担预算",
@@ -95,7 +98,8 @@
               "target": "#agent",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "所有任务共用时间预算"
         },
         {
           "aspect": "搜题诊断",
@@ -117,7 +121,8 @@
               "target": "#time",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "从本人作答定位卡点"
         },
         {
           "aspect": "卡点讲解",
@@ -139,7 +144,8 @@
               "target": "#longterm",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "从真正卡住的地方讲起"
         },
         {
           "aspect": "分级提示",
@@ -161,7 +167,8 @@
               "target": "#library",
               "status": "已有基础"
             }
-          ]
+          ],
+          "short_vision": "逐级提示，留出思考空间"
         },
         {
           "aspect": "步骤批改",
@@ -183,7 +190,8 @@
               "target": "#teacher",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "每一步都有批改依据"
         },
         {
           "aspect": "错因分析",
@@ -205,7 +213,8 @@
               "target": "#time",
               "status": "研究方向"
             }
-          ]
+          ],
+          "short_vision": "分清错因，保留已经会的"
         },
         {
           "aspect": "合理刷题",
@@ -222,7 +231,8 @@
               "target": "#library",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "围绕明确目标练习"
         },
         {
           "aspect": "局部步骤训练",
@@ -239,7 +249,8 @@
               "target": "#single",
               "status": "已有基础"
             }
-          ]
+          ],
+          "short_vision": "薄弱步骤可以单独补练"
         },
         {
           "aspect": "新题迁移",
@@ -256,7 +267,8 @@
               "target": "#single",
               "status": "已有基础"
             }
-          ]
+          ],
+          "short_vision": "换一道新题检验迁移"
         },
         {
           "aspect": "知识理解",
@@ -273,7 +285,8 @@
               "target": "#single",
               "status": "研究方向"
             }
-          ]
+          ],
+          "short_vision": "会做题，也理解为什么"
         },
         {
           "aspect": "错题管理",
@@ -295,7 +308,8 @@
               "target": "#library",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "错题能检索，也能复测"
         },
         {
           "aspect": "订正复习",
@@ -317,7 +331,8 @@
               "target": "#longterm",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "订正之后再独立验证"
         },
         {
           "aspect": "学习计划",
@@ -339,7 +354,8 @@
               "target": "#agent",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "每天知道做什么、何时结束"
         },
         {
           "aspect": "考试复盘",
@@ -361,7 +377,8 @@
               "target": "#exam",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "把失分放回作答过程"
         },
         {
           "aspect": "成长评价",
@@ -378,7 +395,8 @@
               "target": "#library",
               "status": "已有基础"
             }
-          ]
+          ],
+          "short_vision": "用多种证据看见成长"
         },
         {
           "aspect": "长期助教",
@@ -400,7 +418,8 @@
               "target": "#longterm",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "助教接续每次学习背景"
         },
         {
           "aspect": "帮助可获得性",
@@ -422,7 +441,8 @@
               "target": "#school",
               "status": "研究方向"
             }
-          ]
+          ],
+          "short_vision": "需要帮助时及时获得"
         },
         {
           "aspect": "自主学习",
@@ -444,7 +464,8 @@
               "target": "#single",
               "status": "研究方向"
             }
-          ]
+          ],
+          "short_vision": "逐渐学会安排自己的学习"
         }
       ]
     },
@@ -469,7 +490,8 @@
               "target": "#teacher",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "依据真实学情备课"
         },
         {
           "aspect": "备课材料",
@@ -486,7 +508,8 @@
               "target": "#teacher",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "教学材料按需组织"
         },
         {
           "aspect": "PPT",
@@ -503,7 +526,8 @@
               "target": "#agent",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "课件随教学目标生成"
         },
         {
           "aspect": "课堂演示",
@@ -525,7 +549,8 @@
               "target": "#single",
               "status": "研究方向"
             }
-          ]
+          ],
+          "short_vision": "推理过程可以逐步演示"
         },
         {
           "aspect": "理解检查",
@@ -542,7 +567,8 @@
               "target": "#teacher",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "及时检查学生是否理解"
         },
         {
           "aspect": "课堂时间分配",
@@ -559,7 +585,8 @@
               "target": "#agent",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "课堂时间用在关键问题"
         },
         {
           "aspect": "作业分配",
@@ -576,7 +603,8 @@
               "target": "#longterm",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "共同作业配合个人任务"
         },
         {
           "aspect": "批改复核",
@@ -598,7 +626,8 @@
               "target": "#evolution",
               "status": "研究方向"
             }
-          ]
+          ],
+          "short_vision": "常规批改与教师复核衔接"
         },
         {
           "aspect": "班级学情",
@@ -615,7 +644,8 @@
               "target": "#teacher",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "从具体作答看班级问题"
         },
         {
           "aspect": "问题讲评",
@@ -632,7 +662,8 @@
               "target": "#teacher",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "相似错题找到共同卡点"
         },
         {
           "aspect": "出卷评卷",
@@ -654,7 +685,8 @@
               "target": "#teacher",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "按教学目标组织试卷"
         },
         {
           "aspect": "教学调整",
@@ -671,7 +703,8 @@
               "target": "#longterm",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "用后续表现检验教学调整"
         },
         {
           "aspect": "个别辅导",
@@ -688,7 +721,8 @@
               "target": "#agent",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "个别辅导从证据出发"
         },
         {
           "aspect": "干预跟进",
@@ -710,7 +744,8 @@
               "target": "#teacher",
               "status": "研究方向"
             }
-          ]
+          ],
+          "short_vision": "支持行动持续跟进"
         },
         {
           "aspect": "学生评价",
@@ -727,7 +762,8 @@
               "target": "#teacher",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "评价保留差异与变化"
         },
         {
           "aspect": "经验积累",
@@ -744,7 +780,8 @@
               "target": "#evolution",
               "status": "研究方向"
             }
-          ]
+          ],
+          "short_vision": "有效经验可以积累复用"
         },
         {
           "aspect": "对话式任务协同",
@@ -766,7 +803,8 @@
               "target": "#agent",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "用对话接续教学任务"
         }
       ]
     },
@@ -791,7 +829,8 @@
               "target": "#longterm",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "教学质量看见过程与变化"
         },
         {
           "aspect": "问题早发现",
@@ -808,7 +847,8 @@
               "target": "#agent",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "学习问题更早得到支持"
         },
         {
           "aspect": "问题范围定位",
@@ -825,7 +865,8 @@
               "target": "#school",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "分清个人、班级与课程问题"
         },
         {
           "aspect": "持续教研",
@@ -842,7 +883,8 @@
               "target": "#teacher",
               "status": "研究方向"
             }
-          ]
+          ],
+          "short_vision": "教研依据具体教学证据"
         },
         {
           "aspect": "教师评价",
@@ -854,7 +896,8 @@
               "target": "#school",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "教师评价结合情境与过程"
         },
         {
           "aspect": "资源配置",
@@ -871,7 +914,8 @@
               "target": "#agent",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "资源投向实际需要"
         },
         {
           "aspect": "负担管理",
@@ -888,7 +932,8 @@
               "target": "#school",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "各种任务共同控制负担"
         },
         {
           "aspect": "公平支持",
@@ -910,7 +955,8 @@
               "target": "#school",
               "status": "研究方向"
             }
-          ]
+          ],
+          "short_vision": "不同学生获得适合的支持"
         },
         {
           "aspect": "校本课程",
@@ -927,7 +973,8 @@
               "target": "#school",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "课程回应学校真实学情"
         },
         {
           "aspect": "共同标准",
@@ -944,7 +991,8 @@
               "target": "#school",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "共用清晰的教学语言"
         },
         {
           "aspect": "资源库",
@@ -966,7 +1014,8 @@
               "target": "#school",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "资源有来源、有审核"
         },
         {
           "aspect": "教材更新",
@@ -983,7 +1032,8 @@
               "target": "#evolution",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "教材与教学反馈持续衔接"
         },
         {
           "aspect": "经验传承",
@@ -1000,7 +1050,8 @@
               "target": "#school",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "优秀经验能够接续传承"
         },
         {
           "aspect": "渐进接入",
@@ -1022,7 +1073,8 @@
               "target": "#school",
               "status": "研究方向"
             }
-          ]
+          ],
+          "short_vision": "从小范围试点逐步接入"
         },
         {
           "aspect": "投入评价",
@@ -1039,7 +1091,8 @@
               "target": "#evolution",
               "status": "研究方向"
             }
-          ]
+          ],
+          "short_vision": "投入同时核算收益与负担"
         },
         {
           "aspect": "数据历史管理",
@@ -1061,7 +1114,8 @@
               "target": "#evolution",
               "status": "研究方向"
             }
-          ]
+          ],
+          "short_vision": "数据修订保留历史依据"
         },
         {
           "aspect": "跨学科",
@@ -1078,7 +1132,8 @@
               "target": "#evolution",
               "status": "研究方向"
             }
-          ]
+          ],
+          "short_vision": "共同能力支持更多学科"
         }
       ]
     },
@@ -1108,7 +1163,8 @@
               "target": "#longterm",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "日常缺口在校内及时补上"
         },
         {
           "aspect": "家庭经济负担",
@@ -1130,7 +1186,8 @@
               "target": "#agent",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "减少重复购买学习支持"
         },
         {
           "aspect": "城乡区域差异",
@@ -1152,7 +1209,8 @@
               "target": "#school",
               "status": "研究方向"
             }
-          ]
+          ],
+          "short_vision": "必要帮助跨越地域差异"
         },
         {
           "aspect": "学习机会公平",
@@ -1169,7 +1227,8 @@
               "target": "#school",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "不同起点都能获得支持"
         },
         {
           "aspect": "家长时间焦虑",
@@ -1186,7 +1245,8 @@
               "target": "#agent",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "家长少一些寻找与陪学"
         },
         {
           "aspect": "减负提质",
@@ -1208,7 +1268,8 @@
               "target": "#school",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "减轻负担也补上实际困难"
         },
         {
           "aspect": "校内教育支持",
@@ -1225,7 +1286,8 @@
               "target": "#agent",
               "status": "设计方案"
             }
-          ]
+          ],
+          "short_vision": "校内支持形成连续过程"
         },
         {
           "aspect": "优质经验共享",
@@ -1247,7 +1309,8 @@
               "target": "#evolution",
               "status": "研究方向"
             }
-          ]
+          ],
+          "short_vision": "优质教学经验更普遍可得"
         }
       ]
     }

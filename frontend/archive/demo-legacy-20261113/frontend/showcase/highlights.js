@@ -7,9 +7,9 @@
  if(!figures.length)return;
  const media=matchMedia('(prefers-reduced-motion: reduce)');
  const ns='http://www.w3.org/2000/svg';
- const motionEnabled=()=>!media.matches&&document.visibilityState!=='hidden'&&!document.body.classList.contains('is-launch-open');
+ const motionEnabled=()=>!media.matches&&document.visibilityState!=='hidden'&&!document.querySelector('dialog[open]');
  const active=new Set();
- const states=new Map(figures.map(figure=>[figure,{elapsed:0,manual:false,paused:false,lastStage:-1,profile:'a',morph:null}]));
+ const states=new Map(figures.map(figure=>[figure,{elapsed:0,manual:false,lastStage:-1,profile:'a',fade:null}]));
  const profiles={
   a:[[300,81],[410,152],[414,281],[300,250],[274,230],[264,194]],
   b:[[300,139],[360,181],[360,250],[300,284],[234,253],[186,150]],
@@ -30,22 +30,19 @@
    pressed(figure,'[data-hx-method]',button);
   }
  }
+ function finishFade(state){if(!state.fade)return;state.fade.animations.forEach(a=>a.cancel());state.fade.clone.remove();state.fade=null;}
  function setProfile(figure,key,animate=true){
   const state=states.get(figure),shape=figure.querySelector('[data-hx-radar-shape]');
   if(!shape||!profiles[key])return;
-  state.profile=key;
-  figure.dataset.hxProfile=key;
+  finishFade(state);const old=shape.cloneNode(true);old.removeAttribute('data-hx-radar-shape');old.classList.add('hx-radar-outgoing');old.setAttribute('aria-hidden','true');
+  state.profile=key;figure.dataset.hxProfile=key;
   pressed(figure,'[data-hx-profile-button]',figure.querySelector('[data-hx-profile-button="'+key+'"]'));
-  const ghost=figure.querySelector('.hx-radar-ghost');
-  if(ghost)ghost.setAttribute('points',points(profiles[key==='a'?'b':'a']));
-  if(animate&&!media.matches&&!state.paused&&active.has(figure)&&document.visibilityState!=='hidden'){
-   state.morph={from:parsePoints(shape.getAttribute('points')),to:profiles[key],elapsed:0};
-   start();
-  }else{
-   state.morph=null;
-   shape.setAttribute('points',points(profiles[key]));
+  const ghost=figure.querySelector('.hx-radar-ghost');if(ghost)ghost.setAttribute('points',points(profiles[key==='a'?'b':'a']));
+  shape.setAttribute('points',points(profiles[key]));syncRadarDots(figure);
+  if(animate&&motionEnabled()&&active.has(figure)&&shape.animate){
+   shape.before(old);const animations=[old.animate([{opacity:1},{opacity:0}],{duration:180,fill:'forwards'}),shape.animate([{opacity:0},{opacity:1}],{duration:180,fill:'forwards'})];
+   const fade=state.fade={clone:old,animations};Promise.all(animations.map(a=>a.finished)).then(()=>{if(state.fade===fade)finishFade(state);}).catch(()=>{});
   }
-  syncRadarDots(figure);
  }
  function syncRadarDots(figure,value){
   const state=states.get(figure),group=figure.querySelector('[data-hx-radar-dots]');
@@ -53,7 +50,7 @@
   const target=value||parsePoints(figure.querySelector('[data-hx-radar-shape]').getAttribute('points'));
   const activeIndex=Number(figure.dataset.hxDimensionActive||0),stem=group.querySelector('[data-hx-axis-stem]');
   if(stem){const anchor=target[activeIndex];stem.setAttribute('x2',String(Math.round(anchor[0]*100)/100));stem.setAttribute('y2',String(Math.round(anchor[1]*100)/100));}
-  // Keep the controls connected while profiles morph, including a focused dot.
+  // Keep the controls connected when profiles change, including a focused dot.
   target.forEach((point,index)=>{
    let dot=group.querySelector('[data-hx-dot-dimension="'+index+'"]');
    if(!dot){
@@ -68,7 +65,7 @@
   });
  }
  function flashRadarDot(dot){
-  if(media.matches||states.get(dot.closest('[data-hx-motion]'))?.paused||!dot.animate)return;
+  if(media.matches||!motionEnabled()||!dot.animate)return;
   dot.animate([{transform:'scale(1)'},{transform:'scale(2.1)'},{transform:'scale(1)'}],{duration:480,easing:'cubic-bezier(.22,1,.36,1)'});
   const ripple=document.createElementNS(ns,'circle');
   ripple.setAttribute('cx',dot.getAttribute('cx'));ripple.setAttribute('cy',dot.getAttribute('cy'));ripple.setAttribute('r','6');
@@ -98,9 +95,6 @@
  }
  figures.forEach(figure=>{
   const state=states.get(figure);
-  if(['system','method','time','ability','participation','evolution'].includes(figure.dataset.hxMotion)){
-   figure.dataset.hxPaused='false';
-  }
   figure.querySelectorAll('[data-hx-controls]').forEach(group=>{
    group.hidden=false;
    // Keep local taps and swipes local, including on browsers with global gestures.
@@ -145,7 +139,7 @@
   if(!motionEnabled())return false;
   return [...active].some(figure=>{
    const state=states.get(figure),type=figure.dataset.hxMotion;
-   return !state.paused&&(Boolean(state.morph)||(!state.manual&&['method','ability','participation','evolution'].includes(type)));
+   return !state.manual&&['method','ability','participation','evolution'].includes(type);
   });
  }
  function start(){if(!frame&&!ticking&&hasWork()){lastTime=0;frame=requestAnimationFrame(tick);}}
@@ -157,7 +151,6 @@
   lastTime=now;
   active.forEach(figure=>{
    const state=states.get(figure),type=figure.dataset.hxMotion;
-   if(state.paused)return;
    if(!state.manual){
     state.elapsed+=delta;
     if(type==='method')setStage(figure,Math.floor(state.elapsed/3200)%3);
@@ -168,14 +161,7 @@
      if(state.profile!==key)setProfile(figure,key,true);
     }
    }
-   if(state.morph){
-    state.morph.elapsed+=delta;
-    const t=Math.min(1,state.morph.elapsed/950),ease=1-Math.pow(1-t,3);
-    const value=state.morph.from.map((pair,index)=>pair.map((n,axis)=>n+(state.morph.to[index][axis]-n)*ease));
-    figure.querySelector('[data-hx-radar-shape]').setAttribute('points',points(value));
-    syncRadarDots(figure,value);
-    if(t===1)state.morph=null;
-   }
+
   });
   ticking=false;
   if(hasWork())frame=requestAnimationFrame(tick);
@@ -240,10 +226,10 @@
   const observer=new IntersectionObserver(entries=>{
    entries.forEach(({target,isIntersecting,intersectionRatio})=>{
     const visible=isIntersecting&&intersectionRatio>0;
-    target.classList.toggle('is-hx-visible',visible&&motionEnabled()&&!states.get(target).paused);
+    target.classList.toggle('is-hx-visible',visible&&motionEnabled());
     if(visible){
      active.add(target);target.classList.add('is-hx-revealed');target.classList.remove('hx-reveal-pending');
-    }else active.delete(target);
+    }else{active.delete(target);finishFade(states.get(target));}
    });
    start();
   },{threshold:[0,.08,.25],rootMargin:'0px 0px -3% 0px'});
@@ -252,12 +238,11 @@
  function updateMotion(){
   const enabled=motionEnabled();
   figures.forEach(figure=>{
-   figure.classList.toggle('is-hx-visible',enabled&&active.has(figure)&&!states.get(figure).paused);
+   figure.classList.toggle('is-hx-visible',enabled&&active.has(figure));
    if(media.matches){figure.classList.remove('hx-reveal-pending');figure.classList.add('is-hx-revealed');}
    const state=states.get(figure);
-   if(!enabled&&state.morph){
-    figure.querySelector('[data-hx-radar-shape]')?.setAttribute('points',points(profiles[state.profile]));state.morph=null;syncRadarDots(figure);
-   }
+   if(!enabled)finishFade(state);
+
   });
   if(!enabled&&frame){cancelAnimationFrame(frame);frame=0;lastTime=0;}
   start();
@@ -279,6 +264,7 @@
  addEventListener('showcase:entered',syncFeatures);media.addEventListener?.('change',syncFeatures);syncFeatures();
  media.addEventListener?.('change',updateMotion);
  document.addEventListener('visibilitychange',updateMotion);
+ new MutationObserver(updateMotion).observe(document.body,{subtree:true,attributes:true,attributeFilter:['open']});
  addEventListener('showcase:entered',updateMotion);
  start();
 })();

@@ -30,6 +30,7 @@ LEGACY_ANCHORS = {
     "/login.html": "overview",
 }
 ASSET_PATHS = {
+    "/favicon.ico",
     "/showcase/style.css", "/showcase/app.js", "/showcase/bank.js", "/showcase/data.json", "/showcase/pipeline.json",
     "/showcase/research-content.json", "/showcase/recordings.json", "/showcase/launch-lettering.svg",
     "/showcase/dataset.html", "/showcase/dataset.css", "/showcase/dataset-data.json",
