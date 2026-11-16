@@ -23,7 +23,7 @@ class ShowcaseTests(unittest.IsolatedAsyncioTestCase):
         self.addCleanup(self.tmp.cleanup)
         self.root = Path(self.tmp.name)
         self.frontend = self.root / "frontend"
-        for url in ASSET_PATHS | {"/showcase/index.html"}:
+        for url in ASSET_PATHS | {"/showcase/index.html", "/wenxia-demo/index.html"}:
             target = self.frontend / url.lstrip("/")
             target.parent.mkdir(parents=True, exist_ok=True)
             target.write_text("<!doctype html><h1>项目展示</h1>" if url.endswith(".html") else "public sample")

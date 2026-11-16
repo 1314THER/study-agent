@@ -64,7 +64,7 @@ macOS 双击「一键打开.command」会在后台启动服务并打开首页，
 
 ### 公开项目展示
 
-`demo.150.chat` 现以问侠申请书配套的独立技术路线页为首页，按“总体数据流 → 数据库与 LLM 协作 → Agent Loop → 学生答疑场景 → 长期 / 班级教学 → LoRA → Benchmark → B/C 部署”说明实现计划和验证边界。新前端单独位于 `frontend/wenxia-demo/`；页面说明中明确区分已有记录、拟议设计与待验证结果。
+`demo.150.chat` 的候选首页为问侠申请书配套的独立技术路线页，按“总体架构 → 项目意义 → 全国卷实录 → 数据库 / Agent / LoRA → Benchmark 与证据 → 部署与实施”说明实现计划和验证边界。新前端单独位于 `frontend/wenxia-demo/`；页面说明中明确区分已有记录、拟议设计与待验证结果。
 
 | 入口 | 用途 | 数据与 AI |
 |---|---|---|
@@ -76,7 +76,7 @@ macOS 双击「一键打开.command」会在后台启动服务并打开首页，
 
 旧展示页的原始记录与静态内容继续由 `docs/showcase-content-map.json` 和 `scripts/build_research_showcase.py --check` 校验；新技术路线页从 `outputs/问侠-原格式申请书大纲-v9-20261113/`、数据库与学生端设计文档及 Benchmark 方案整理。教师端、学校端、长期学情与新 Agent Loop 按“拟议设计”呈现，未将方案写成已完成结果。
 
-本地预览运行 `.venv/bin/python scripts/run_demo.py --port 8302`，打开 `http://127.0.0.1:8302/home.html`。展示服务独立使用 `backend.showcase:app`，不初始化主人数据库或 AI 模块。页面与验收见 [展示站说明](docs/showcase-demo.md)；本轮先在本地验收并推送 GitHub，再由 Workbench 手动同步到阿里云，具体步骤见 [演示站发布说明](docs/research-showcase-release.md)。
+前端本地预览运行 `python3 scripts/preview_wenxia.py --port 8303`，打开 `http://127.0.0.1:8303/`；服务边界检查可运行 `.venv/bin/python scripts/run_demo.py --port 8302`。展示服务独立使用 `backend.showcase:app`，不初始化主人数据库或 AI 模块。页面与验收见 [展示站说明](docs/showcase-demo.md)；本轮先在本地验收并推送 GitHub，再由 Workbench 手动同步到阿里云，具体步骤见 [演示站发布说明](docs/research-showcase-release.md)。
 
 ---
 

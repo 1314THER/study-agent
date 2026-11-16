@@ -33,7 +33,7 @@ LEGACY_ANCHORS = {
 }
 ASSET_PATHS = {
     "/favicon.ico",
-    "/wenxia-demo/site.css", "/wenxia-demo/site.js",
+    "/wenxia-demo/site.css", "/wenxia-demo/site.js", "/wenxia-demo/experience-data.js",
     "/wenxia-demo/assets/architecture-overall.svg",
     "/wenxia-demo/assets/scenario-evidence.svg", "/wenxia-demo/assets/scenario-teaching.svg",
     "/wenxia-demo/assets/mantis-icon.png",

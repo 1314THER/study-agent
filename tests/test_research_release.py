@@ -33,6 +33,7 @@ class ResearchReleaseTests(unittest.TestCase):
         self.assertEqual(manifest['git_head'], self.result['git_head'])
         self.assertNotIn('backend/database.py', manifest['files'])
         self.assertNotIn('frontend/showcase/fonts/build_subset.py', manifest['files'])
+        self.assertIn('frontend/wenxia-demo/experience-data.js', manifest['files'])
 
     def test_release_includes_independent_vision_assets_and_complete_static_content(self):
         target = self.directory / 'vision-roundtrip'
@@ -61,10 +62,12 @@ class ResearchReleaseTests(unittest.TestCase):
                 self.assertIn('href="' + feature['target'] + '"', change)
                 self.assertIn(feature['status'], text)
         self.assertNotIn('<table', page[page.index('id="vision"'):page.index('id="highlights"')])
-        self.assertEqual(page.count('class="vision-disclosure"'), 4)
-        self.assertEqual(page.count('class="vision-more"'), 4)
+        self.assertEqual(page.count('class="vision-card"'), 63)
+        self.assertEqual(page.count('class="vision-fallback"'), 63)
+        self.assertNotIn('vision-disclosure', page)
+        self.assertIn('id="vision-dialog"', page)
         for group in vision['groups']:
-            self.assertIn('aria-controls="vision-more-' + group['id'] + '"', page)
+            self.assertTrue('id="vision-' + group['id'] + '"' in page, group['id'])
 
     def test_modified_public_asset_fails_integrity_validation(self):
         target = self.directory / 'tampered'

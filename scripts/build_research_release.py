@@ -126,7 +126,7 @@ def validate_content(root: Path) -> None:
     read = lambda name: json.loads(checked_file(root, 'frontend/showcase/' + name).read_text())
     site_path = checked_file(root, 'frontend/wenxia-demo/index.html')
     site = site_path.read_text(encoding='utf-8')
-    required_sections = ('architecture', 'databases', 'agent', 'scenario', 'people-and-class',
+    required_sections = ('architecture', 'vision-goal', 'research', 'case-evidence', 'databases', 'agent', 'scenario', 'people-and-class',
                          'lora', 'benchmark', 'deployment', 'comparison', 'evidence', 'roadmap')
     for section in required_sections:
         if f'id="{section}"' not in site:
