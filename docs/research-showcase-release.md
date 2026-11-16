@@ -46,6 +46,16 @@ python3 scripts/build_research_release.py --verify-directory /tmp/study-research
 
 将本轮源文件、生成后的公开 HTML／JSON 和测试一起提交并推送，记录完整的 40 位提交 SHA。不要只推页面而漏掉新录制、题库清单、后端静态白名单或打包脚本。
 
+### 只更新 Demo 的 GitHub 脚本
+
+`deploy/update-research-demo-from-github.sh` 可在服务器 root 终端执行。它在独立目录拉取指定的完整提交，按公开白名单在服务器生成发布快照，再调用已有激活器先检查、后切换；网页、JSON 和后端来自同一个 GitHub 提交。它要求已有的独立 Demo 布局，不安装依赖或改写服务配置。8766 审核台及其数据库不在该脚本范围内。
+
+```bash
+bash deploy/update-research-demo-from-github.sh 721bf863c4b23b57669b8dabad04c826b6d69c5a
+```
+
+追加 `--check-only` 只校验候选，不切换。GitHub 网络中断时可重新运行；每次使用独立拉取目录，保留失败输出用于排查。快照仅在服务器内部生成，无须从本机上传压缩包。
+
 Workbench 可以上传已验收的发布包与配套激活脚本，也可以在**独立的源码目录**检出该提交后重新打包。不要在正在运行的正式站目录执行 `git pull` 来完成这次 demo-only 发布。例如在一个此前不存在的新目录中：
 
 ```bash
