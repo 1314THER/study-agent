@@ -90,7 +90,7 @@ window.WENXIA_DEMO = {
       ],
       "owner": "教学服务与客户端",
       "input": "已经提交的反馈、分级提示与展示确认",
-      "action": "向学生展示反馈；记录实际帮助暴露与辅助订正，不直接据此判定独立掌握。",
+      "action": "向学生展示反馈；记录实际帮助记录与辅助订正，不直接据此判定独立掌握。",
       "output": "TutorTurn、HintExposed、辅助作答修订",
       "rw": "W DB2：帮助条件、展示确认及新作答事实。"
     },
@@ -256,7 +256,7 @@ window.WENXIA_DEMO = {
     },
     "correction": {
       "label": "教师纠错",
-      "intro": "演示教师补充证据后，旧评分和旧学情怎样被新修订替代；并非这份实录已发生的事件。",
+      "intro": "演示教师补充证据后，旧评分和旧学情怎样被新修订替代。",
       "steps": [
         {
           "state": "received",
@@ -351,7 +351,7 @@ window.WENXIA_DEMO = {
       "code": "E3",
       "title": "当前学情",
       "type": "DB3 · Wiki / PostgreSQL 修订",
-      "source": "基于同题的拟议状态样本；不是已有学生档案",
+      "source": "基于同题的拟议状态样本",
       "record": "state_revision: demo-state-r3\nclaim: 本次求角 C 的推导需核对\ncertainty: 错误可定位，原因待核\nevidence_refs: [E1, E2]\nindependent_mastery: unknown",
       "context": "[E3 当前判断] 仅能定位本次错误；没有无提示新题证据，不推断长期不会或已经掌握。",
       "meaning": "Wiki 保存可读解释，PG 保存 revision、base_revision、证据与同步位点，支持反证和撤回。"
@@ -397,7 +397,7 @@ window.WENXIA_DEMO = {
     {
       "id": "E",
       "title": "学情、记忆与修订",
-      "initial": "旧状态、作答/帮助事件、教师反证",
+      "initial": "旧状态、作答/帮助事件、教师复核",
       "visible": "当前事件与允许读取的历史事实",
       "target": "有引用地新增、收窄或撤回判断，幂等处理事件",
       "failure": "重复计数、迟到事件丢失、反证未传播、版本被覆盖",
@@ -426,7 +426,7 @@ window.WENXIA_DEMO = {
       "title": "教师协作",
       "initial": "班级任务、作答、复核与未观测名单",
       "visible": "教师授权范围内的课程、量规和原始证据",
-      "target": "形成可下钻班级报告，纠错传播到后续任务",
+      "target": "形成可回查原答的班级报告，纠错传播到后续任务",
       "failure": "分母错误、越权查看、纠错未传播、净负担增加",
       "cost": "同质量下备课、阅读、复核和修正总时间"
     }
@@ -434,12 +434,12 @@ window.WENXIA_DEMO = {
   "lora": [
     {
       "title": "业务记录",
-      "body": "保留原始输入、实际输出和失败。下面来自本题教学记录的第三帧，不能直接当成高质量监督目标。",
+      "body": "保留原始输入、实际输出和失败。下面来自本题教学记录的第三帧，进入人工审核。",
       "sample": "给你一点提示：$C=\\frac{\\pi}{4},\\ \\tan\n\n再想想看？"
     },
     {
       "title": "人工校准",
-      "body": "拟议审核流程：接受、修改或拒绝分别记录。不完整提示应进入审核队列，不能把自动修补当成真实教师确认。",
+      "body": "拟议审核流程：接受、修改或拒绝分别记录。不完整提示应进入审核队列。",
       "sample": "review_state: pending\npossible_decision: reject_or_revise\nreason: 提示不完整，需人工确认教学目标与目标输出\nreviewer / diff / evidence: 待实际审核"
     },
     {

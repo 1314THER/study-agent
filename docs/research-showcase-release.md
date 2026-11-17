@@ -46,7 +46,50 @@ python3 scripts/build_research_release.py --verify-directory /tmp/study-research
 
 将本轮源文件、生成后的公开 HTML／JSON 和测试一起提交并推送，记录完整的 40 位提交 SHA。不要只推页面而漏掉新录制、题库清单、后端静态白名单或打包脚本。
 
-### 只更新 Demo 的 GitHub 脚本
+### Workbench 默认更新命令
+
+2026-11-17 起，按项目负责人的指定流程，从 `codex/wenxia-reviewer-demo` 分支拉取最新版，再在服务器构建、校验和激活 Demo。下面的命令在服务器 root 的 Bash 终端运行；仓库同版脚本位于 [`deploy/workbench-update-demo.sh`](../deploy/workbench-update-demo.sh)。
+
+```bash
+set -Eeuo pipefail
+
+DEMO_SOURCE=/root/study-agent-demo-source-$(date +%Y%m%d-%H%M%S)
+DEMO_OUTPUT=/root/study-agent-demo-release-$(date +%Y%m%d-%H%M%S)
+
+clone_repo() {
+git clone --depth 1 --single-branch --branch codex/wenxia-reviewer-demo \
+-c http.version=HTTP/1.1 -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=45 \
+https://github.com/1314THER/study-agent.git "$DEMO_SOURCE"
+}
+
+clone_ok=0
+for attempt in 1 2 3 4 5; do
+echo "== GitHub 拉取尝试 $attempt/5 =="
+if clone_repo; then clone_ok=1; break; fi
+rm -rf "$DEMO_SOURCE"
+if [ "$attempt" -lt 5 ]; then echo "失败，20 秒后重试..."; sleep 20; fi
+done
+[ "$clone_ok" = 1 ] || { echo "连续 5 次拉取失败，请稍后再跑。"; exit 1; }
+
+cd "$DEMO_SOURCE"
+[ -f frontend/showcase/handwriting.js ] || { echo "GitHub 未包含最新版。"; exit 1; }
+
+mkdir -p "$DEMO_OUTPUT"
+python3 -B scripts/build_research_release.py --output "$DEMO_OUTPUT"
+
+cd "$DEMO_OUTPUT"
+sha256sum -c SHA256SUMS
+release_id=$(python3 -c 'import json; print(json.load(open("release.json"))["release_id"])')
+DEMO_PACKAGE="$DEMO_OUTPUT/$release_id.tar.gz"
+DEMO_SHA=$(sha256sum "$DEMO_PACKAGE" | cut -d' ' -f1)
+
+bash activate-demo.sh "$DEMO_PACKAGE" "$DEMO_SHA" --check-only
+bash activate-demo.sh "$DEMO_PACKAGE" "$DEMO_SHA"
+
+curl -fsS https://demo.150.chat/health && echo " -- demo 健康检查通过"
+```
+
+### 按固定提交更新（备用脚本）
 
 `deploy/update-research-demo-from-github.sh` 可在服务器 root 终端执行。它在独立目录拉取指定的完整提交，按公开白名单在服务器生成发布快照，再调用已有激活器先检查、后切换；网页、JSON 和后端来自同一个 GitHub 提交。它要求已有的独立 Demo 布局，不安装依赖或改写服务配置。8766 审核台及其数据库不在该脚本范围内。
 

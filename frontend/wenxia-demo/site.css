@@ -1341,3 +1341,169 @@ html:not(.js-enabled) .response-format { display:none; }
 
 /* Keep the 63-entry catalog responsive during long-page scrolling. */
 .vision-entry { content-visibility:auto; contain-intrinsic-size:auto 52px; }
+
+/* Native chapter turns, using the legacy showcase's whole-panel perspective. */
+body { overflow-x:clip; }
+.reading-progress span { width:100%; transform:scaleX(0); transform-origin:left; transition:none; }
+.showcase-chapter { position:relative; scroll-margin-top:0; }
+.showcase-chapter.is-arriving {
+  transform-origin:50% 0;
+  transform:perspective(1800px) translate3d(0,var(--chapter-y,0px),var(--chapter-depth,0px)) rotateX(var(--chapter-tilt,0deg)) scale(var(--chapter-scale,1));
+  will-change:transform;
+  backface-visibility:hidden;
+}
+.chapter-turn {
+  display:grid;
+  grid-template-columns:auto minmax(0,1fr) auto;
+  align-items:baseline;
+  gap:18px;
+  position:relative;
+  margin-top:44px;
+  padding:23px 0 4px;
+  border-top:1px solid var(--line);
+  text-decoration:none;
+}
+.chapter-turn::before {
+  content:'';
+  position:absolute;
+  top:-1px;
+  left:0;
+  width:100%;
+  height:1px;
+  background:var(--blue);
+  transform:scaleX(0);
+  transform-origin:left;
+}
+.chapter-turn.is-in-view::before { transform:scaleX(1); transition:transform 1.15s cubic-bezier(.2,.7,.2,1); }
+.chapter-turn>span:first-child { color:var(--muted); font-size:12px; }
+.chapter-turn strong { color:var(--ink); font-size:16px; font-weight:500; line-height:1.6; }
+.chapter-turn-arrow { color:var(--blue); font-size:23px; transition:transform .2s ease; }
+.chapter-turn:hover .chapter-turn-arrow { transform:translate(3px,-3px); }
+.chapter-turn:hover strong { color:var(--blue); }
+.section-heading h2,.research-question-heading h2 { text-wrap:balance; }
+.section-heading p,.research-question-heading p,.opening-lede { text-wrap:pretty; }
+.opening { padding-top:62px; }
+.opening h1 { max-width:1100px; font-size:clamp(34px,3.5vw,52px); }
+.opening-lede { max-width:1000px; }
+.research-questions { padding-top:46px; }
+.research-question-grid { gap:28px; }
+.research-question-grid article { padding:20px 0; background:none; border:0; border-top:1px solid var(--line); }
+.review-response { margin-top:20px; background:none; border-left:0; padding:18px 0 0; border-top:1px solid var(--line); }
+.content-section { padding-top:80px; padding-bottom:44px; }
+.section-heading { max-width:1000px; }
+.section-heading p { max-width:860px; }
+@media (max-width:760px) {
+  .opening { padding-top:32px; }
+  .opening h1 { font-size:clamp(30px,7.8vw,44px); }
+  .research-questions { padding-top:30px; }
+  .research-question-grid { gap:12px; }
+  .content-section { padding-top:48px; padding-bottom:28px; }
+  .chapter-turn { gap:10px; margin-top:28px; padding-top:18px; }
+  .chapter-turn strong { font-size:14px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  .showcase-chapter.is-arriving { transform:none; will-change:auto; }
+  .chapter-turn::before { transform:scaleX(1); }
+  .chapter-turn.is-in-view::before,.chapter-turn-arrow { transition:none; }
+}
+@media print {
+  .showcase-chapter.is-arriving { transform:none; will-change:auto; }
+  .chapter-turn { display:none; }
+}
+
+/* Each part has its own card, with smaller cards for parallel teaching units. */
+.proposal-note,.context-note {
+  margin:16px 0 0;
+  padding:12px 16px;
+  border-left:2px solid #637b98;
+  background:#15191f;
+  color:#bbc5d2;
+  font-size:14px;
+  line-height:1.75;
+}
+.data-readiness-note { background:#15191f; border-left-color:#637b98; }
+.data-readiness-note b { color:#c4d3e7; }
+.evidence-columns .evidence-limit { border-top-color:#637b98; }
+.evidence-limit .evidence-label { color:#a9bdd7; }
+.learning-chain { gap:16px; }
+.review-response { grid-template-columns:160px repeat(2,minmax(0,1fr)); }
+main > section.section-shell {
+  margin-block:24px;
+  padding:36px;
+  background:#111214;
+  border:1px solid #34363b;
+  border-radius:16px;
+}
+main > section:first-child { margin-top:28px; }
+main > section > .section-heading { margin-bottom:26px; }
+main > section .section-heading h2 { font-size:clamp(25px,2.4vw,34px); }
+main > .opening h1 { font-size:clamp(32px,3.2vw,48px); }
+main > .status-legend {
+  margin-block:8px 24px;
+  padding:14px 22px;
+  background:#111214;
+  border:1px solid #34363b;
+  border-radius:10px;
+}
+.chapter-turn { grid-column:1/-1; margin-top:28px; padding-top:18px; }
+.vision-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+.research-question-grid { gap:16px; }
+.research-question-grid > article,
+.vision-grid > .vision-card,
+.learning-grid > .learning-card,
+.object-explainer > article,
+.lifecycle-lanes > article,
+.scope-gates > article,
+.adoption-grid > article,
+.context-receipt-grid > article,
+.learning-chain > article,
+.class-assignment-flow > article {
+  min-width:0;
+  padding:20px;
+  background:#191b1f;
+  border:1px solid #363a42;
+  border-radius:10px;
+}
+.vision-grid > .vision-card { display:block; }
+.vision-card .vision-kicker { display:block; padding:0; margin-bottom:10px; font-size:14px; }
+.vision-card h3 { margin-bottom:16px; font-size:21px; }
+.vision-card p + p { margin-top:16px; }
+.vision-card:hover { background:#191b1f; }
+.db-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; }
+.db-grid .db-card { display:flex; min-width:0; padding:22px; background:#191b1f; border:1px solid #363a42; border-radius:10px; }
+.db-card h3 { margin:12px 0 8px; font-size:21px; }
+.db-card .db-intro { margin-bottom:16px; }
+.db-card ul { margin:0 0 16px; font-size:14px; }
+.db-card .db-tech { margin-top:auto; }
+.loop-flow { gap:12px; }
+.loop-flow article { border-radius:10px!important; }
+.experience { background:#17191d; border-color:#3a3e46; border-radius:12px; }
+.sources > .chapter-turn { grid-column:1/-1; }
+@media (max-width:1000px) {
+  main > section.section-shell { padding:28px; }
+  .db-grid { grid-template-columns:1fr; }
+  .review-response { grid-template-columns:1fr 1fr; }
+}
+@media (max-width:760px) {
+  main > section.section-shell { margin-block:16px; padding:22px 18px; border-radius:12px; }
+  main > section:first-child { margin-top:18px; }
+  main > section > .section-heading { margin-bottom:22px; }
+  main > .status-legend { padding:12px 16px; margin-bottom:16px; }
+  .vision-grid { grid-template-columns:1fr; gap:12px; }
+  .review-response { grid-template-columns:1fr; }
+  .research-question-grid > article,
+  .vision-grid > .vision-card,
+  .learning-grid > .learning-card,
+  .object-explainer > article,
+  .lifecycle-lanes > article,
+  .scope-gates > article,
+  .adoption-grid > article,
+  .context-receipt-grid > article,
+  .learning-chain > article,
+  .class-assignment-flow > article,
+  .db-grid .db-card { padding:16px; }
+  .chapter-turn { margin-top:24px; }
+}
+@media print {
+  main > section.section-shell { background:transparent; break-inside:auto; }
+}

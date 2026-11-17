@@ -74,7 +74,7 @@
     });
     const full = document.documentElement.scrollHeight - innerHeight;
     const progress = $('#reading-progress-bar');
-    if (progress) progress.style.width = `${full > 0 ? Math.min(100, Math.max(0, window.scrollY/full*100)) : 0}%`;
+    if (progress) progress.style.transform = `scaleX(${full > 0 ? Math.min(1, Math.max(0, window.scrollY/full)) : 0})`;
     scrollPending = false;
   }
   const requestReading = () => { if (!scrollPending) { scrollPending=true; requestAnimationFrame(updateReading); } };
@@ -171,7 +171,7 @@
       });
       visionList.append(groupSection);
     });
-    if (visionMeta) visionMeta.textContent = `显示 ${visible} / 63 条 · 按对象与教学过程筛选；条目原状态沿用 2026-10-26 快照。映射入口指向新版说明，不表示该功能已完成。`;
+    if (visionMeta) visionMeta.textContent = `显示 ${visible} / 63 条 · 按对象与教学过程筛选`;
     $$('.vision-group').forEach((group) => group.hidden = !group.querySelector('.vision-entry'));
     requestReading();
   }
@@ -193,7 +193,7 @@
       if (count !== 63) throw new Error('愿景条目数不符合 63 项快照');
       renderVisionCatalog();
     } catch {
-      if (visionMeta) visionMeta.textContent = '旧站愿景数据暂时无法载入；可以从旧站档案核对全部 63 项。';
+      if (visionMeta) visionMeta.textContent = '应用愿景暂时无法加载，可打开完整愿景档案查看。';
     }
   }
 
@@ -201,8 +201,8 @@
     error:['T0 · 初次作答','当前判断：本题联立求角步骤出现错误','依据：原答片段“C=π/3”。这是一次观察，错误原因未知。','是否会在无提示条件下识别关系；是否能迁移到新题；延迟保持。','必要时用短问题检查概念理解，再安排无提示新题。','DB2 追加本次原答；DB3 只提出有边界的暂定判断。'],
     hint:['T1 · 提示后订正','当前判断：本题在帮助条件下订正正确','依据：学生看过涉及求 C 与两角展开的提示后，完成了同题推导。','能否独立选择方法、迁移至未见题、间隔后保持。','记录帮助等级；选择一道不暴露方法标签的新题。','DB2 新增 HelpExposure 与辅助订正；DB3 不升级为独立掌握。'],
     independent:['T2 · 无提示新题（方案示例）','当前判断：在一个新题上独立完成目标步骤','依据：假设新题未暴露过且无提示，操作正确并引用原答。','是否能迁移至更复杂题族；是否能延迟保持；单题偶然性。','安排不同题族的延迟复测，而不是重复原题。','DB2 新增独立作答事实；DB3 只把判断范围扩到该目标的一次迁移表现。'],
-    delayed:['T3 · 延迟复测（方案示例）','当前判断：该目标在一次间隔复测中再次完成','依据：假设延迟新题正确；时间间隔、题族与帮助条件都要入记录。','不能据两次表现推断整章掌握；其他方法和条件仍未观察。','保留低负担的后续抽查；依据课程节奏安排，不持续加题。','DB2 追加延迟事件；DB3 可增强该目标的证据并记录适用范围。'],
-    teacher:['T4 · 教师反证（方案示例）','当前判断：撤回由误读原答支持的旧结论','依据：假设教师复核发现学生使用了另一条有效路径，并提供对应原答位置。','该纠正不证明后续所有任务均正确；教师反证也需限于所指对象。','撤回相关补救任务，改为一项无提示迁移检查。','DB2 追加教师评分修订；DB3 保留旧版本、撤回无支持主张，重算个人任务和班级汇总。']
+    delayed:['T3 · 延迟复测（方案示例）','当前判断：该目标在一次间隔复测中再次完成','依据：假设延迟新题正确；时间间隔、题族与帮助条件都要入记录。','其他方法、适用条件和整章表现仍需后续观察。','保留低负担的后续抽查；依据课程节奏安排，不持续加题。','DB2 追加延迟事件；DB3 可增强该目标的证据并记录适用范围。'],
+    teacher:['T4 · 教师复核（方案示例）','当前判断：撤回由误读原答支持的旧结论','依据：假设教师复核发现学生使用了另一条有效路径，并提供对应原答位置。','复核结论适用于本次作答；后续任务继续通过新证据验证。','撤回相关补救任务，改为一项无提示迁移检查。','DB2 追加教师评分修订；DB3 保留旧版本、撤回无支持主张，重算个人任务和班级汇总。']
   };
   function renderLongitudinal(id) {
     const row = longitudinalData[id]; if (!row) return;
@@ -212,7 +212,7 @@
   $$('[data-longitudinal]').forEach((button) => button.addEventListener('click',() => renderLongitudinal(button.dataset.longitudinal)));
 
   const classDemo = {
-    before:['4 / 9','有效作答中被归为“联立求角”错误','原答：由另一条有效边角路径求出三角形高。系统初判为关键步骤缺失。','暂记：本题路径需要教师核对；新题迁移未知。','待教师确认；不得在疑点未清时追加重复补练。','教师复核前，班级报告按 9 份有效答卷计算。'],
+    before:['4 / 9','有效作答中被归为“联立求角”错误','原答：由另一条有效边角路径求出三角形高。系统初判为关键步骤缺失。','暂记：本题路径需要教师核对；新题迁移未知。','教师复核后，再确定是否需要补充练习。','教师复核前，班级报告按 9 份有效答卷计算。'],
     after:['3 / 9','有效作答中被归为“联立求角”错误','教师定位到 S07 的原答与有效替代路径，改判为本题正确。','撤回“关键步骤缺失”；记录该替代方法本题有效，迁移仍未知。','取消重复补练，安排一题无提示新题检查方法选择。','仅修订 S07 的记录：4/9 → 3/9；1 份识别未知、2 人缺交继续单列，历史报告可回查。']
   };
   function renderClassDemo(id) {
@@ -255,8 +255,8 @@
   $$('[data-training]').forEach((button) => button.addEventListener('click',() => selectTraining(Number(button.dataset.training))));
   const models = {
     '4B':['资源下限档','4B · 低资源能力边界','固定教学任务、数据库和工具，测证据使用、动作遵循与有限提示。报告无法稳定完成的任务和转复核负担；硬件、时延与成功任务成本均待实测。'],
-    '9B':['重点适配档','9B · 完整系统的重点研究档','固定系统比较基座与 LoRA，分项报告解题、批改、引导、学情维护和教师协作的质量、重大错误及校内运行资源。当前尚无这套新架构的封存任务成绩。'],
-    '27B':['高资源对照档','27B · 质量收益与资源代价','在相同任务和允许信息下，观察复杂解法、开放诊断及长上下文任务是否值得增加资源。与 4B、9B 分别计量，其他档位不作为隐藏兜底。']
+    '9B':['重点适配档','9B · 完整系统的重点研究档','固定系统比较基座与 LoRA，分项报告解题、批改、引导、学情维护和教师协作的质量、重大错误及校内运行资源。计划通过封存任务评测验证。'],
+    '27B':['高资源对照档','27B · 质量收益与资源代价','在相同任务和允许信息下，观察复杂解法、开放诊断及长上下文任务是否值得增加资源。分别记录与 4B、9B 的质量差异和资源消耗。']
   };
   $$('[data-model]').forEach((button) => button.addEventListener('click',() => {
     const note=models[button.dataset.model]; if(!note)return;
@@ -303,8 +303,8 @@
     $('#record-state').replaceChildren(...state.childNodes);
     const warning=$('#record-warning');
     warning.hidden=frameIndex!==2;
-    warning.textContent=frameIndex===2?'这一帧的提示在保存记录中不完整，原文保持不变。新方案需要在交付前检查内容完整性，不能把本帧视为合格提示。':'';
-    $('#record-meta').textContent=`模型 ${teaching.model} · ${dateText(teaching.recorded_at)}（北京时间） · local_production_code / 真实模型 API · 会话 ${teaching.session.session_id}`;
+    warning.textContent=frameIndex===2?'此帧提示在“\\tan”处中断。':'';
+    $('#record-meta').textContent=`模型 ${teaching.model} · ${dateText(teaching.recorded_at)}（北京时间） · 本地业务流程录制 · 会话 ${teaching.session.session_id}`;
   }
   function renderComparison() {
     const entry=recordings.cases.find((item)=>item.id===diagnosticCase);
@@ -324,7 +324,7 @@
     $('#comparison-output').hidden=!raw;
     pressed('[data-comparison-format]',(button)=>button.dataset.comparisonFormat===(raw?'raw':'math'));
     $('[data-comparison-format="math"]').disabled=condition==='system';
-    $('#comparison-meta').textContent=`${labels[condition]} · ${result.model} · ${dateText(result.recorded_at)} · 构造输入的单例实录；完整输出按录制原文展示，不作为胜负统计。`;
+    $('#comparison-meta').textContent=`${labels[condition]} · ${result.model} · ${dateText(result.recorded_at)} · 示例输入的模型记录`;
   }
   $$('[data-frame]').forEach((button)=>button.addEventListener('click',()=>{if(recordings){frameIndex=Number(button.dataset.frame);renderFrame();}}));
   $('#frame-prev').addEventListener('click',()=>{if(recordings && frameIndex>0){frameIndex--;renderFrame();}});
@@ -376,4 +376,158 @@
     requestReading();
   }
   Promise.allSettled([loadRecordings(),loadPipeline(),loadVisionCatalog()]);
+})();
+
+// The legacy showcase brings the entire chapter forward with native scrolling.
+// Keep its perspective, scroll geometry and damping; the article stays in the DOM.
+(() => {
+  'use strict';
+  const chapters = [...document.querySelectorAll('main > section')];
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const header = document.querySelector('.site-header');
+  const states = chapters.map((chapter, index) => {
+    chapter.classList.add('showcase-chapter');
+    const heading = chapter.querySelector('h1,h2');
+    const next = chapters[index + 1];
+    if (next) {
+      const turn = document.createElement('a');
+      turn.className = 'chapter-turn';
+      turn.href = `#${next.id}`;
+      const label = document.createElement('span');
+      label.textContent = '接下来';
+      const title = document.createElement('strong');
+      title.textContent = next.querySelector('h1,h2')?.textContent || '';
+      const arrow = document.createElement('span');
+      arrow.className = 'chapter-turn-arrow';
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '↗';
+      turn.append(label, title, arrow);
+      chapter.append(turn);
+    }
+    return {chapter, heading, mode:'idle', progress:0, target:0, lastAt:0};
+  });
+  let frame = 0;
+  let firstLayout = true;
+  let lastY = scrollY;
+  let navigationUntil = 0;
+  const clamp = value => Math.max(0, Math.min(1, value));
+  function layoutTop(element) {
+    let top = 0;
+    for (let node = element; node; node = node.offsetParent) top += node.offsetTop;
+    return top;
+  }
+  function settle(state) {
+    state.mode = 'complete';
+    state.progress = state.target = 1;
+    state.chapter.dataset.arrivalState = 'complete';
+    state.chapter.classList.remove('is-arriving');
+    for (const name of ['y','depth','tilt','scale']) state.chapter.style.removeProperty(`--chapter-${name}`);
+  }
+  function paint(state) {
+    const rest = 1 - state.progress;
+    const mobile = innerWidth <= 820;
+    const distance = mobile ? Math.min(145, Math.max(95, innerWidth * .3)) : Math.min(235, Math.max(170, innerHeight * .25));
+    state.chapter.style.setProperty('--chapter-y', `${(distance * rest).toFixed(2)}px`);
+    state.chapter.style.setProperty('--chapter-depth', `${(-(mobile ? 110 : 185) * rest).toFixed(2)}px`);
+    state.chapter.style.setProperty('--chapter-tilt', `${(-(mobile ? 4.2 : 6.5) * rest).toFixed(3)}deg`);
+    state.chapter.style.setProperty('--chapter-scale', (1 - .018 * rest).toFixed(5));
+  }
+  function draw() {
+    frame = 0;
+    const now = performance.now();
+    const delta = scrollY - lastY;
+    lastY = scrollY;
+    const inset = header?.offsetHeight || 72;
+    const start = innerHeight * 1.08;
+    const end = Math.max(inset + 70, innerHeight * .54);
+    const jumped = Math.abs(delta) > Math.max(480, innerHeight * .9);
+    // Read untransformed layout once, then write. Transforms cannot move the target.
+    const positions = states.map(state => ({
+      state, top:layoutTop(state.heading || state.chapter) - scrollY,
+      bottom:layoutTop(state.chapter) + state.chapter.offsetHeight - scrollY
+    }));
+    let playing = false;
+    for (const {state, top, bottom} of positions) {
+      if (reduced.matches) { if (state.mode !== 'complete') settle(state); continue; }
+      if (state.mode === 'complete' && top > start + 80) state.mode = 'idle';
+      if (top > start || bottom <= inset) {
+        if (state.mode === 'arriving') settle(state);
+        continue;
+      }
+      if (firstLayout || jumped || now < navigationUntil || top <= end || delta < -8) {
+        if (state.mode !== 'complete') settle(state);
+        continue;
+      }
+      if (state.mode === 'idle') {
+        state.mode = 'arriving';
+        state.progress = 0;
+        state.lastAt = now;
+        state.chapter.dataset.arrivalState = 'arriving';
+        state.chapter.classList.add('is-arriving');
+      }
+      if (state.mode !== 'arriving') continue;
+      state.target = clamp((start - top) / (start - end));
+      const speed = Math.abs(delta);
+      const tau = speed > 160 ? 55 : speed > 60 ? 110 : 210;
+      state.progress += (state.target - state.progress) * (1 - Math.exp(-(now - state.lastAt) / tau));
+      state.lastAt = now;
+      if (Math.abs(state.target - state.progress) < .001) state.progress = state.target;
+      if (state.progress >= .999) settle(state);
+      else {
+        paint(state);
+        playing ||= Math.abs(state.target - state.progress) >= .001;
+      }
+    }
+    firstLayout = false;
+    if (playing) schedule(true);
+  }
+  function schedule(continuing = false) {
+    if (frame) return;
+    if (continuing !== true) for (const state of states) state.lastAt = performance.now();
+    frame = requestAnimationFrame(draw);
+  }
+  function navigate(target) {
+    const state = states.find(item => item.chapter === target?.closest('.showcase-chapter'));
+    if (state) settle(state);
+    navigationUntil = performance.now() + 1400;
+    schedule();
+  }
+  document.addEventListener('click', event => {
+    if (event.button || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = event.target.closest?.('a[href^="#"]');
+    if (link) navigate(document.getElementById(link.hash.slice(1)));
+  }, true);
+  document.addEventListener('focusin', event => navigate(event.target));
+  addEventListener('hashchange', () => navigate(document.getElementById(location.hash.slice(1))));
+  addEventListener('scroll', schedule, {passive:true});
+  addEventListener('resize', schedule, {passive:true});
+  addEventListener('pageshow', () => { firstLayout = true; schedule(); });
+  reduced.addEventListener('change', schedule);
+  if ('ResizeObserver' in window) {
+    const resize = new ResizeObserver(() => schedule());
+    chapters.forEach(chapter => resize.observe(chapter));
+  }
+  const handoffs = new IntersectionObserver(entries => {
+    entries.forEach(entry => entry.target.classList.toggle('is-in-view', entry.isIntersecting));
+  }, {threshold:.4});
+  document.querySelectorAll('.chapter-turn').forEach(turn => handoffs.observe(turn));
+  // Chapter controls and math fonts change the layout after the browser's first
+  // fragment jump. Align a newly opened deep link once that layout is ready.
+  const initialHash = location.hash;
+  const freshNavigation = performance.getEntriesByType('navigation')[0]?.type === 'navigate';
+  let userMoved = false;
+  for (const name of ['wheel','touchstart','pointerdown','keydown']) {
+    addEventListener(name, () => { userMoved = true; }, {once:true, passive:true});
+  }
+  const loaded = document.readyState === 'complete' ? Promise.resolve() : new Promise(resolve => addEventListener('load', resolve, {once:true}));
+  Promise.all([loaded, document.fonts?.ready]).then(() => {
+    if (!initialHash || !freshNavigation || userMoved || location.hash !== initialHash) return;
+    const target = document.getElementById(decodeURIComponent(initialHash.slice(1)));
+    if (!target) return;
+    navigate(target);
+    requestAnimationFrame(() => {
+      if (!userMoved) target.scrollIntoView({block:'start', behavior:'instant'});
+    });
+  });
+  schedule();
 })();
